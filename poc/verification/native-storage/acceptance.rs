@@ -54,13 +54,27 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 static ROOT: OnceLock<PathBuf> = OnceLock::new();
 fn place(label: &str) -> PathBuf {
     let root = ROOT.get_or_init(|| {
-        let p = std::env::var_os("NATIVE_STORAGE_VERIFY_ARTIFACTS")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                std::env::temp_dir().join(format!("native-storage-verifier-{}", std::process::id()))
-            });
-        fs::create_dir_all(&p).unwrap();
-        p
+        if let Some(path) = std::env::var_os("NATIVE_STORAGE_VERIFY_ARTIFACTS") {
+            let path = PathBuf::from(path);
+            fs::create_dir_all(&path).unwrap();
+            return path;
+        }
+        let mut suffix = 0u64;
+        loop {
+            let path = std::env::temp_dir().join(format!(
+                "native-storage-verifier-{}-{suffix}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return path,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    suffix = suffix
+                        .checked_add(1)
+                        .expect("temporary root suffix exhausted");
+                }
+                Err(error) => panic!("reserve temporary root {}: {error}", path.display()),
+            }
+        }
     });
     let p = root.join(format!("{label}-{}", NEXT.fetch_add(1, Ordering::SeqCst)));
     fs::create_dir(&p).unwrap();

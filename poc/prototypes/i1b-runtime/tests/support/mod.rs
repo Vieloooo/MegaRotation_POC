@@ -12,14 +12,23 @@ pub const STOP: i64 = 2_000_000;
 pub const START: u64 = 1_000_000;
 static ID: AtomicU64 = AtomicU64::new(0);
 
+/// Reserve a fresh directory even when separate sandbox runs reuse a PID.
+pub fn unique_temp_dir(prefix: &str) -> PathBuf {
+    loop {
+        let counter = ID.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("{prefix}-{}-{counter}", std::process::id()));
+        match fs::create_dir(&path) {
+            Ok(()) => return path,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("reserve temporary directory {}: {error}", path.display()),
+        }
+    }
+}
+
 pub struct TestDir(PathBuf);
 impl TestDir {
     pub fn new() -> Self {
-        let counter = ID.fetch_add(1, Ordering::Relaxed);
-        let path =
-            std::env::temp_dir().join(format!("i1b-runtime-{}-{counter}", std::process::id()));
-        fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(unique_temp_dir("i1b-runtime"))
     }
 
     pub fn config(&self) -> Config {

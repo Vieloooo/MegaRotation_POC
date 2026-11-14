@@ -48,13 +48,25 @@ fn wall_pause() {
 }
 fn dir(label: &str) -> PathBuf {
     let root = ROOT.get_or_init(|| {
-        let p = std::env::var_os("I1B_VERIFY_ARTIFACT_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                std::env::temp_dir().join(format!("i1b-independent-{}", std::process::id()))
-            });
-        fs::create_dir_all(&p).unwrap();
-        p
+        if let Some(path) = std::env::var_os("I1B_VERIFY_ARTIFACT_DIR") {
+            let path = PathBuf::from(path);
+            fs::create_dir_all(&path).unwrap();
+            return path;
+        }
+        let mut suffix = 0u64;
+        loop {
+            let path = std::env::temp_dir()
+                .join(format!("i1b-independent-{}-{suffix}", std::process::id()));
+            match fs::create_dir(&path) {
+                Ok(()) => return path,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    suffix = suffix
+                        .checked_add(1)
+                        .expect("temporary root suffix exhausted");
+                }
+                Err(error) => panic!("reserve temporary root {}: {error}", path.display()),
+            }
+        }
     });
     let path = root.join(format!("{label}-{}", COUNT.fetch_add(1, Ordering::SeqCst)));
     fs::create_dir(&path).unwrap();

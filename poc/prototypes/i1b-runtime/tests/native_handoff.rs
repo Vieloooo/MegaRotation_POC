@@ -13,7 +13,7 @@ use std::{
 
 #[test]
 fn abort_before_first_poll_drops_captures_without_invoking_factory() {
-    let path = std::env::temp_dir().join(format!("i1b-native-handoff-{}", std::process::id()));
+    let path = support::unique_temp_dir("i1b-native-handoff");
     let outcome = Runner::new(
         Config::default()
             .with_storage_directory(&path)
@@ -62,3 +62,4 @@ impl Drop for MarkDrop {
         self.0.store(true, Ordering::SeqCst);
     }
 }
+mod support;

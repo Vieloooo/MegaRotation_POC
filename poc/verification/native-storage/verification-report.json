@@ -172,5 +172,11 @@
     "ReadMany ranges2\u20133 and scatter reads2chunks were exercised. Actual artifacts were <=85bytes and journal blob data <=64KiB; arbitrary trait-size/large-iovec behavior is outside these finite traces.",
     "Different directory creation orders are fixture setup differences; only the subsequent protocol suffix is compared for S7. S10 compares complete same-input records without deleting logical fields.",
     "External wall caps protect verification execution; production process-watchdog integration remains separate."
-  ]
+  ],
+  "test_harness_followup": {
+    "report": "poc/verification/native-storage/temp-allocation-correction.json",
+    "status": "FIXED",
+    "change": "PID-reuse-safe temporary allocation only; original protocol/source evidence remains unchanged.",
+    "default_prototype_rechecks": "68/68 passed three default runs; final two reused sandbox PIDs and preserved earlier roots"
+  }
 }

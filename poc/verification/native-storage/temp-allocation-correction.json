@@ -1,0 +1,172 @@
+{
+  "baseline": "5073e3ae6dfd19886de28c8c0bc5ec34d283e63d",
+  "finding": "Default test artifact roots were keyed only by PID; sandbox PID reuse caused AlreadyExists and the native_handoff path could reuse/delete an old directory.",
+  "failure_evidence": "poc/artifacts/verification/native-storage/5073e3a/integrated-tests.log",
+  "status": "FIXED",
+  "scope": "Test-helper allocation only; no protocol/dependency/assertion/contract changes.",
+  "allocation": "Atomic create_dir reserves a new counter-suffixed path. AlreadyExists retries; other failures remain errors.",
+  "explicit_artifact_directories": "I1B_VERIFY_ARTIFACT_DIR and NATIVE_STORAGE_VERIFY_ARTIFACTS behavior unchanged; caller-provided root used as before.",
+  "builder_cleanup": "Only newly reserved owned paths are eligible for existing cleanup; existing paths are skipped.",
+  "helpers": {
+    "poc/verification/i1b-runtime/acceptance.rs": {
+      "before_sha256": "c75ada20d77276a20be07ae13b6845dd9d328fe3d2311238f3c1f2a30bfc321b",
+      "after_sha256": "54b217aa42590d6440213c77f4d5e992cf8d41bc9c8605992f93db1d44024b48"
+    },
+    "poc/verification/native-storage/acceptance.rs": {
+      "before_sha256": "433620ce30aa7a6e47b349b98d182668aebcae3af1d3a8c49f706c248a0b97b8",
+      "after_sha256": "4b9b6f1617abb626390fcd8f71158e8d575ef713a805d7e0f5f09be3d7ad774c"
+    },
+    "poc/prototypes/i1b-runtime/tests/support/mod.rs": {
+      "before_sha256": "c66e3fb96f792816454dc8c053bc9189228a93c46e437c01dbb55da358e81c33",
+      "after_sha256": "16cfc601166cf0cb2291affdd3c5ea8028233470eabf7c964f613eb591015998"
+    },
+    "poc/prototypes/i1b-runtime/tests/native_handoff.rs": {
+      "before_sha256": "2a3cef68b910f5627e728267c0f6b931ba2590934aab018b4b50a7265d4ae1d3",
+      "after_sha256": "0d912ba0b00985608a40d6aabaa7ee1d386b7106fdf59a933c6ddce27e0196f5"
+    },
+    "poc/verification/i1/acceptance.rs": {
+      "before_sha256": "add8161a41975d6734217ee5581f2c064c91dfd5ee8ea59b6900742e7eb04bed",
+      "after_sha256": "027b2aadbe26d638c4caad01b13a0dbca24ed269b1f305c1d09c1e1092c72650"
+    }
+  },
+  "default_runs": [
+    {
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "60s",
+        "./poc/scripts/bootstrap.sh",
+        "test",
+        "--manifest-path",
+        "prototypes/i1b-runtime/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "artifact_overrides": false,
+      "exit_code": 0,
+      "passed": 68,
+      "wall_seconds": 10.346717962063849
+    },
+    {
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "60s",
+        "./poc/scripts/bootstrap.sh",
+        "test",
+        "--manifest-path",
+        "prototypes/i1b-runtime/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "artifact_overrides": false,
+      "exit_code": 0,
+      "passed": 68,
+      "wall_seconds": 4.7908613393083215
+    },
+    {
+      "command": [
+        "timeout",
+        "--kill-after=5s",
+        "60s",
+        "./poc/scripts/bootstrap.sh",
+        "test",
+        "--manifest-path",
+        "prototypes/i1b-runtime/Cargo.toml",
+        "--locked",
+        "--offline"
+      ],
+      "artifact_overrides": false,
+      "exit_code": 0,
+      "passed": 68,
+      "wall_seconds": 4.673921573907137,
+      "old_files_preserved": true,
+      "new_roots": [
+        "/tmp/i1b-independent-34-1",
+        "/tmp/native-storage-verifier-185-1"
+      ]
+    }
+  ],
+  "focused_i1": {
+    "command": [
+      "timeout",
+      "--kill-after=5s",
+      "60s",
+      "./poc/scripts/bootstrap.sh",
+      "test",
+      "--locked",
+      "--offline",
+      "-p",
+      "sim-runtime",
+      "--test",
+      "i1_acceptance"
+    ],
+    "exit_code": 0,
+    "passed": 15,
+    "wall_seconds": 5.893597614951432,
+    "scope": "non-socket default cases; socket controls remain ignored"
+  },
+  "evidence_preservation": {
+    "old_roots": 145,
+    "old_files": 964,
+    "missing_roots": [],
+    "modified_or_missing_files": [],
+    "snapshot": "temp-allocation-old-evidence.json"
+  },
+  "new_retained_roots": [
+    "/tmp/i1-verifier-journal-290-0",
+    "/tmp/i1-verifier-journal-290-1",
+    "/tmp/i1-verifier-journal-290-10",
+    "/tmp/i1-verifier-journal-290-11",
+    "/tmp/i1-verifier-journal-290-12",
+    "/tmp/i1-verifier-journal-290-13",
+    "/tmp/i1-verifier-journal-290-14",
+    "/tmp/i1-verifier-journal-290-15",
+    "/tmp/i1-verifier-journal-290-16",
+    "/tmp/i1-verifier-journal-290-17",
+    "/tmp/i1-verifier-journal-290-18",
+    "/tmp/i1-verifier-journal-290-19",
+    "/tmp/i1-verifier-journal-290-2",
+    "/tmp/i1-verifier-journal-290-20",
+    "/tmp/i1-verifier-journal-290-21",
+    "/tmp/i1-verifier-journal-290-22",
+    "/tmp/i1-verifier-journal-290-23",
+    "/tmp/i1-verifier-journal-290-24",
+    "/tmp/i1-verifier-journal-290-25",
+    "/tmp/i1-verifier-journal-290-26",
+    "/tmp/i1-verifier-journal-290-27",
+    "/tmp/i1-verifier-journal-290-28",
+    "/tmp/i1-verifier-journal-290-29",
+    "/tmp/i1-verifier-journal-290-3",
+    "/tmp/i1-verifier-journal-290-30",
+    "/tmp/i1-verifier-journal-290-31",
+    "/tmp/i1-verifier-journal-290-32",
+    "/tmp/i1-verifier-journal-290-33",
+    "/tmp/i1-verifier-journal-290-34",
+    "/tmp/i1-verifier-journal-290-4",
+    "/tmp/i1-verifier-journal-290-5",
+    "/tmp/i1-verifier-journal-290-6",
+    "/tmp/i1-verifier-journal-290-7",
+    "/tmp/i1-verifier-journal-290-8",
+    "/tmp/i1-verifier-journal-290-9",
+    "/tmp/i1b-independent-1604-0",
+    "/tmp/i1b-independent-34-0",
+    "/tmp/native-storage-verifier-1755-0",
+    "/tmp/native-storage-verifier-185-0"
+  ],
+  "contract_sha256_unchanged": "ea70b261f2b0e57ac0a75c549a49a33a64196b97c37421866866f3aaf474010d",
+  "format_checks": "main and prototype cargo fmt --all -- --check PASS",
+  "diff_check": "PASS",
+  "same_pid_collision_regression": {
+    "status": "PASS",
+    "existing_roots": [
+      "/tmp/i1b-independent-34-0",
+      "/tmp/native-storage-verifier-185-0"
+    ],
+    "new_roots": [
+      "/tmp/i1b-independent-34-1",
+      "/tmp/native-storage-verifier-185-1"
+    ],
+    "observation": "Repeated sandbox PIDs34/185 allocated suffix1 atomically; suffix0 evidence unchanged."
+  }
+}

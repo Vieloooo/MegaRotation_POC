@@ -1,0 +1,22 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--manifest-path",
+    "prototypes/i1b-runtime/Cargo.toml",
+    "--locked",
+    "--offline"
+  ],
+  "artifact_overrides": false,
+  "exit_code": 0,
+  "passed": 68,
+  "wall_seconds": 4.673921573907137,
+  "old_files_preserved": true,
+  "new_roots": [
+    "/tmp/i1b-independent-34-1",
+    "/tmp/native-storage-verifier-185-1"
+  ]
+}

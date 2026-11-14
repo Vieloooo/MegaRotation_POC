@@ -24,13 +24,18 @@ mod transport;
 const T: u64 = 1_000_000;
 static NEXT: AtomicU64 = AtomicU64::new(0);
 fn temp(label: &str) -> PathBuf {
-    let p = std::env::temp_dir().join(format!(
-        "i1-verifier-{label}-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir(&p).unwrap();
-    p
+    loop {
+        let path = std::env::temp_dir().join(format!(
+            "i1-verifier-{label}-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        match fs::create_dir(&path) {
+            Ok(()) => return path,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("reserve temporary directory {}: {error}", path.display()),
+        }
+    }
 }
 fn cid() -> Vec<u8> {
     vec![0x33; 32]

@@ -230,5 +230,11 @@
     "Fixed rate1 offsets only; nonzero drift/slew, real-network synchronization and hardware power-loss durability remain outside these results.",
     "The complete upstream Commonware suite was not rerun; ordinary Spawner code preservation was checked byte-for-byte.",
     "Full Session Program validity/first-receive admission vs native deterministic validity still requires the separate accepted mapping and safety argument."
-  ]
+  ],
+  "test_harness_followup": {
+    "report": "poc/verification/native-storage/temp-allocation-correction.json",
+    "status": "FIXED",
+    "change": "PID-reuse-safe temporary allocation only; original protocol/source evidence remains unchanged.",
+    "default_prototype_rechecks": "68/68 passed three default runs; final two reused sandbox PIDs and preserved earlier roots"
+  }
 }

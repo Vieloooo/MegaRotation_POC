@@ -1,0 +1,19 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "sim-runtime",
+    "--test",
+    "i1_acceptance"
+  ],
+  "exit_code": 0,
+  "passed": 15,
+  "wall_seconds": 5.893597614951432,
+  "scope": "non-socket default cases; socket controls remain ignored"
+}

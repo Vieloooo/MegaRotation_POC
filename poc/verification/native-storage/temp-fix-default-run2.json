@@ -1,0 +1,17 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--manifest-path",
+    "prototypes/i1b-runtime/Cargo.toml",
+    "--locked",
+    "--offline"
+  ],
+  "artifact_overrides": false,
+  "exit_code": 0,
+  "passed": 68,
+  "wall_seconds": 4.7908613393083215
+}
