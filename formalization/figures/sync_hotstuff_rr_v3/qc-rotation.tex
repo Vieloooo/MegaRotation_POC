@@ -1,0 +1,45 @@
+% Native TikZ fragment. Representative messages; time is not drawn to scale.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!65,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt},
+  progress/.style={draw=rrTeal,fill=rrTeal!4,rounded corners=2pt,
+    align=center,inner sep=5pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,11.7);
+  \node[align=center] at (2.1,0) {Current leader\\$L(g,t)$};
+  \node[align=center] at (7.8,0) {Correct replica\\$P$};
+  \node[align=center] at (13.5,0) {Successor leader\\$L(g,t+1)$};
+  \foreach \x in {2.1,7.8,13.5} \draw[lane] (\x,.5)--(\x,10.8);
+
+  \node[phase] at (.1,.9) {Terminal certification admits the next term immediately};
+  \draw[msg] (2.1,1.5)--node[lab] {terminal DATA proposal $T$} (7.8,2.0);
+  \draw[msg] (2.1,1.5)--(13.5,2.0);
+  \node[state,minimum width=11.8cm] at (7.9,2.7)
+    {Vote for $T$ in $(g,t)$; start its $2\Delta$ timer at the local DATA vote.\\
+     Broadcast DATA votes; terminal certificate $N_{g,t}=\QC_{g,t}(T)$ forms.};
+  \draw[msg] (7.8,3.45)--node[lab] {$N_{g,t}$ + complete history} (13.5,3.9);
+  \node[progress,minimum width=11.8cm] at (7.9,4.65)
+    {Validate the terminal QC and enter $(g,t+1)$ with the same generation $g$.\\
+     Close term $t$'s missing-proposal test; keep its pending commit timers running.};
+  \draw[msg] (13.5,5.45)--node[lab,above] {$\mathrm{PROPOSE}(Y,N_{g,t})$} (7.8,5.9);
+  \node[progress,minimum width=11.8cm] at (7.9,6.65)
+    {Validate $Y$ and its history; vote immediately in the new term.\\
+     Start $Y$'s own $2\Delta$ timer; certification and further proposals continue.};
+
+  \node[phase] at (.1,7.6) {Old and new commit timers overlap};
+  \node[state,minimum width=11.8cm] at (7.9,8.35)
+    {$T$ commits when its original timer expires, even if the active term is later.\\
+     A valid current-generation quit proof first cancels all pending timers in $g$.};
+  \node[state,draw=rrAmber,fill=rrAmber!3,minimum width=11.8cm] at (7.9,9.8)
+    {Catch-up while $g$ is active: relay a valid current-generation DATA QC's full history.\\
+     Start a $2\Delta$ timer if the block has neither a timer nor a local commit.\\
+     ANCHOR QCs start no commit timer.};
+  \node[anchor=west,align=left,text width=15.4cm,font=\fontsize{9}{10.5}\selectfont] at (.1,11.2)
+    {Illustration of the normal path. The diagram does not assert a fixed proposal/QC latency.\\
+     No L1 update is needed for this handoff: the generation's leader schedule is already installed.};
+\end{tikzpicture}

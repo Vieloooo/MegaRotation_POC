@@ -1,0 +1,41 @@
+The existing multisignature service decides whether to intervene.
+It can observe regional health, the current export session, accepted
+DATA progress and operational reports. Missing-block and delivery-rate
+tests belong to this policy. They are not consensus-layer transitions
+or additional certificate predicates.
+
+The interface is:
+\[
+ \text{verified observations and reports}
+ \ \longrightarrow\
+ \text{future L1 STATUS and MSIG records}.
+\]
+Other participants may run monitors and send reports. Only finalized,
+authorized L1 controls can affect public eligibility or cause Force.
+A report delivered to one region cannot change that region's
+independent replay result.
+
+To exclude a failed region and force a handoff, the controller explicitly
+schedules OFF and MSIG. To force a handoff without changing eligibility,
+it schedules MSIG alone. ON restores future selection eligibility.
+There is no mandatory restoration lease, service credit or cross-region
+fairness obligation.
+
+The certifier checks the control's authorization, source completeness,
+activation position and target version. It does not verify whether an
+internal missing-block threshold was met. A committee instruction has
+the same external meaning regardless of the report that motivated it.
+The committee cannot supply a preferred retained block; replay uses
+the actual pre-payload $G$.
+
+This version leaves detection thresholds, report quality, signing policy,
+response time and intervention frequency to a separate governance design.
+Continuous Hard Force is permitted, even during preparation or before
+the new session has produced DATA. Such interference can prevent
+progress without changing already accepted output.
+
+If a region is offline and no valid MSIG is submitted, the consensus
+layer does not force a switch. The L1 service bound starts at actual
+submission; it excludes detection, decision and signature-collection
+delay. Recovery liveness therefore needs the separate committee
+response and service-opportunity conditions of \cref{sec:progress}.

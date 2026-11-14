@@ -1,0 +1,19 @@
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\small]
+\node[font=\sffamily\bfseries\large,anchor=west] at (-1.4,1.25) {Regular rotation: fixed term, skip unavailable regions};
+\node[font=\sffamily\footnotesize,anchor=west] at (-1.4,.72) {Passive status updates change eligibility; they do not interrupt the current term. Time flows down.};
+\foreach \x/\title in {0/{Current region $R_i$},6.1/{Successor $R_{i'}$},12.3/{Proposer / verifier}} {
+ \node[box,font=\sffamily\bfseries] at (\x,0) {\title};
+ \draw[lane] (\x,-.4)--(\x,-12.7);
+}
+\node[box] at (0,-1.5) {Finish application batch $B$\\and drain its confirmation};
+\node[box] at (6.1,-1.5) {Prewarm and fetch history\\no early new-region ordering};
+\draw[msg] (0,-3.2)--node[lab,above] {Final $X_b$, receipt $F_b$, ancestry and status snapshot} (6.1,-3.2);
+\node[box,draw=safe,fill=safe!6] at (6.1,-4.55) {Verify finality and term boundary\\derive $i'=\mathrm{NextLive}(i,\chi_j)$};
+\node[box] at (12.3,-4.55) {Term exhausted; no forced handoff pending\\the bound status snapshot filters successors};
+\node[box] at (6.1,-6.5) {Install anchor $X_b$\\start batch $b+1$ in a new session};
+\node[box] at (6.1,-8.35) {Finalize with the new regional SMR\\preserve all old batch bytes and signatures};
+\draw[msg] (6.1,-9.9)--node[lab,above] {New finalized stream + NORMAL transition witness} (12.3,-9.9);
+\node[box,draw=safe,fill=safe!6] at (12.3,-11.45) {Derive authorized history\\check data and execution relations};
+\node[box,align=left] at (2.6,-11.45) {No extra committee entry is required for this rotation.\\Boundary readiness: $T_{\rm old-final}+\delta_X+T_{\rm verify}$.\\New-session bootstrap and new-batch finality are additional.};
+\node[font=\sffamily\footnotesize,anchor=west,align=left] at (-1.4,-13.5) {Regional leader changes inside $R_i$ are separate from this cross-region transition.\\An active-region failure at this boundary takes precedence; passive eligibility updates do not trigger forced rotation.};
+\end{tikzpicture}

@@ -1,0 +1,1683 @@
+\documentclass[11pt,a4paper,onecolumn]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,tabularx,array,enumitem}
+\usepackage{float}
+\usepackage{needspace}
+\usepackage[section]{placeins}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage[framemethod=default]{mdframed}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={An L1-Authorized Sequencing Service with Regional Failover},
+pdfsubject={Proposed protocol: model, algorithms, proofs and complexity}}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{fancyhdr}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small An authorized sequencing service}\rhead{\small Regional PBFT revision}
+\cfoot{\thepage}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\Sig}{\mathsf{Sign}}
+\newcommand{\Ver}{\mathsf{Verify}}
+\newcommand{\QC}{\mathsf{QC}}
+\newcommand{\RC}{\mathsf{RC}}
+\newcommand{\Cfg}{\mathsf{Cfg}}
+\newcommand{\gv}{v_{\mathrm G}}
+\newcommand{\lv}{v_{\mathrm L}}
+\newcommand{\PC}{\mathsf{PC}}
+\newcommand{\AB}{\mathsf{AB}}
+\newcommand{\NV}{\mathsf{NV}}
+\newcommand{\botv}{\bot}
+\newcommand{\pre}{\preceq}
+\newcommand{\wt}{\operatorname{wt}}
+\newcommand{\id}{\operatorname{id}}
+\newcommand{\tip}{\operatorname{tip}}
+\newcommand{\parh}{\operatorname{parent}}
+\newcommand{\Tag}[1]{\mathsf{#1}}
+\newcommand{\Proc}[1]{\textnormal{\textsc{#1}}}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{assumption}[definition]{Assumption}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{proposition}[definition]{Proposition}
+\theoremstyle{remark}\newtheorem{example}[definition]{Example}
+\newtheorem{remark}[definition]{Remark}
+\newcounter{protocol}
+\newenvironment{protocol}[2]{\refstepcounter{protocol}\label{#1}\begin{mdframed}[nobreak=true,linewidth=.6pt,skipabove=10pt,skipbelow=10pt,innertopmargin=8pt,innerbottommargin=8pt]\small\raggedright\noindent\textbf{Protocol \theprotocol. #2}\par\smallskip}{\end{mdframed}}
+\crefname{protocol}{Protocol}{Protocols}
+\Crefname{protocol}{Protocol}{Protocols}
+\crefname{definition}{Definition}{Definitions}
+\crefname{assumption}{Assumption}{Assumptions}
+\crefname{lemma}{Lemma}{Lemmas}
+\crefname{theorem}{Theorem}{Theorems}
+\crefname{proposition}{Proposition}{Propositions}
+\title{An L1-Authorized Sequencing Service with Regional Failover\\
+\large A PBFT Protocol for Verifiable Mini-Block Streams}
+\author{}\date{28 September 2026}
+\begin{document}
+\begin{center}
+{\Large\bfseries An L1-Authorized Sequencing Service\\with Regional Failover\par}
+\vspace{.5em}
+{\normalsize A PBFT Protocol for Verifiable Mini-Block Streams\par}
+\vspace{.4em}{\small 28 September 2026}
+\end{center}
+\begin{abstract}
+We specify a sequencing service authorized by a layer-one (L1) chain whose
+producer rotates within and between geographic regions. Regional Practical
+Byzantine Fault Tolerance (PBFT) commits yield certified previews; explicit
+global agreement and Friendly Finality Gadget (FFG) links yield durable
+delivery and geographic activation. Producer push, peer pull and a cross-region backbone separate data
+transport from confirmation. We give complete protocols, illustrative traces,
+agreement and verification proofs, and latency and communication bounds for
+normal service, local faults and regional outages. The regional normal path uses
+quadratic message traffic without per-batch authenticated-broadcast completion.
+View-change evidence and global report agreement are accounted for separately.
+This is a proposed protocol;
+consumer execution and publication lie outside its interface.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+The purpose of the service is to deliver a continuous, verifiable transaction
+stream under L1-authorized production rights. At any time one geographic region
+is active, and one sequencer in that region produces ordered mini-blocks.
+A local failure transfers production to another regional member; a regional
+outage transfers it to another region. A proposer consumes the stream through
+the same interface before and after these changes. 
+
+\begin{figure}[H]\centering
+\input{figures/service-architecture-pbft.tex}
+\caption{The sequencing service and its external interfaces. Boxes denote participant roles and regional groups; committee sizes and
+fault bounds are specified in Section~\ref{sec:model}.}
+\label{fig:architecture}
+\end{figure}
+
+The active region commits ordered mini-block batches; consumers receive leader
+pushes and repair gaps by pulling from regional peers. Backbone synchronization
+supplies the data and reports for global checkpoints. Local view changes preserve
+the regional certified prefix. Geographic changes retain the global control
+prefix, including every finalized delivery, and discard only its unretained
+preview tail. A concrete synchronous report protocol precedes FFG voting,
+making convergence and finality explicit.
+
+
+\section{System Model and Setup}\label{sec:model}
+\subsection{Participants, weights, and authorization}
+The fixed sequencer set is $V=\biguplus_{i=1}^{m}V_i$, partitioned into $m$ regions.
+Write $V_i=\{S_{i,1},\ldots,S_{i,n_i}\}$ and $N=|V|$. Sequencer $S_{i,j}$ has
+weight $\omega_{i,j}>0$; equivalently $w_{S_{i,j}}=\omega_{i,j}$. For a set $U$,
+\[
+ \wt(U)=\sum_{S\in U}w_S,\qquad W_i=\wt(V_i),\qquad W=\wt(V).
+\]
+A quorum of committee $Q\subseteq V$ contains distinct members of weight
+$>2\wt(Q)/3$. A strict threshold is used throughout. Sender order means the lexicographic
+order of configured pairs $(i,j)$. $P$ is an external
+proposer consuming the stream; execution and publication by $P$ are outside
+this ordering service. Clients submit transaction bytes to the active region.
+
+L1 installs a configuration
+\begin{equation}\label{eq:cfg}
+ \Cfg_c=(c,V,\{V_i\},w,\mathcal L,\Theta,G_0).
+\end{equation}
+Here $c$ is the configuration identifier, $\mathcal L$ contains one ordered
+cyclic list of every member of each region and one cyclic list of all regions,
+and $G_0$ fixes the initial region, stream tip and finalized genesis checkpoint.
+The parameter collection $\Theta$ contains regional and global delay bounds
+$\Delta_R(i),\Delta_G$, regional retry duration $T_V(i)$, global epoch duration
+$T_G$, regional batch limits $b_R,B_R$, global report limits $b_G,B_G$,
+announcement period $T_A$, and complete request deadlines $\theta_R,\theta_G,\theta_P$.
+The $b$ limits count mini-blocks or regional records as specified below; the
+$B$ limits are bytes including the corresponding complete evidence.
+Positive integers $K_G,N_G$, also in $\Theta$, bound consecutive global
+no-progress epochs and planned global tenure. All timing parameters and size
+limits are positive, $b_R,b_G$ are integers at least one, and byte limits admit
+a complete minimal batch and at least one relative regional outcome proof.
+All domains and size limits are fixed by $c$.
+When the active region is clear, suppress the argument $i$ on $\Delta_R,T_V$.
+L1 delegates local primary changes and finalized geographic changes through
+this configuration; they require no additional L1 transaction.
+
+\subsection{Cryptographic and communication interfaces}
+$\Tag{Send}_{S\to T}(m)$ is an authenticated point-to-point transmission.
+$\Sig_S(m)$ and $\Ver_S(m,\sigma)$ are signing and verification; honest
+signatures are unforgeable. $\Hash$ is a collision-resistant binding hash of a
+canonical, length-delimited encoding. Every signed tuple includes a type tag,
+$c$, and its instance indices. Semantic identifiers exclude witness encodings
+and signer subsets. No signature aggregation is assumed. $\botv$ denotes
+absence of a value; it is not a mini-block.
+
+The global layer uses synchronized epoch boundaries. Regional retries use
+local elapsed-time timers at the same rate; a member never advances its timer
+because of an unverified peer claim. Between responsive honest nodes, a
+complete admitted object arrives and is verified within $\Delta_R$ regionally
+or $\Delta_G$ globally. Actual regional delay is $\delta_R\leq\Delta_R$.
+The bounds include retrieval of referenced bytes, queueing and verification,
+including view-change bundles. They are workload/capacity assumptions,
+not consequences of a short digest or a bounded number of messages.
+
+\begin{assumption}[Faults and persistent state]\label[assumption]{ass:env}
+The Byzantine set $B\subseteq V$ is fixed within $c$ and
+$\wt(V_i\setminus B)>2W_i/3$ in every region. Historical honest keys remain
+uncompromised. Honest members persist votes, retired views, prepared and commit
+certificates, and authorizations before sending the corresponding messages.
+Restart does not erase any signing restriction.
+\end{assumption}
+Honest nodes verify full bodies before PREPARE or global endorsement. They
+retain and serve every prepared batch and its evidence while its sequence is
+unresolved, and committed regional data and adopted global prefixes throughout
+$c$. Unresolved evidence is kept across local timeouts; a geographic activation
+may discard its unadopted data from the service output, but not signing history.
+
+For regional progress and global agreement/progress we separately assume:
+\begin{itemize}
+\item A fixed responsive honest global set $H_G$ has $\wt(H_G)>2W/3$
+throughout the analyzed execution and meets the global delay bound.
+\item In a live regional interval a fixed honest set $H_i\subseteq V_i$ has
+$\wt(H_i)>2W_i/3$ and meets the regional bound throughout entry and retries.
+\end{itemize}
+A healthy eligible successor $j$ has $\wt(H_G\cap V_j)>2W_j/3$ and the regional
+bound on that set. This may be the recovered current region. Whole-region
+outages are permitted only insofar as the global envelope still holds.
+A live consumer has a complete-object one-way bound $\Delta_P$ to a responsive
+holder; its actual delay is $\delta_P\leq\Delta_P$. Configure
+$\theta_R\geq2\Delta_R$, $\theta_G\geq2\Delta_G$, and
+$\theta_P\geq2\Delta_P$ to include a complete request and response, with
+verification and service already included in each one-way bound. A consumer
+uses $\theta_P$ regardless of its supplier's region.
+Local certificate safety does not require these timing bounds; end-to-end
+progress additionally needs the capacity and tenure conditions stated later.
+
+\subsection{Views, sequences, and heights}\label{sec:indices}
+A global view $\gv$ authorizes one region $V_i$. Within it, $u\geq1$ is a
+regional batch sequence number and $\lv\geq0$ is a PBFT retry view \emph{for
+that sequence}. Thus the primary is indexed by $(\gv,u,\lv)$; $\lv$ resets to
+zero when $u$ advances. Retries preserve $u$ and the committed predecessor.
+For the configured local list $(L_{i,0},\ldots,L_{i,n_i-1})$, define
+\begin{equation}\label{eq:primary}
+ \ell_i(u,\lv)=L_{i,(u-1+\lv)\bmod n_i}.
+\end{equation}
+There is one outstanding sequence. The base primary rotates after each
+committed batch, and each failed retry advances to the next member. This is
+the local planned-rotation policy; there is no separate failed-GAP counter.
+A new global view restarts $u=1,\lv=0$ at its inherited stream tip.
+
+\begin{table}[htbp]\centering\small
+\begin{tabularx}{\textwidth}{@{}p{.16\textwidth}Y@{}}\toprule
+Symbol & Meaning\\\midrule
+$i$ & Active geographic region; an identity, not a round.\\
+$\gv$ & Global view, incremented at every finalized geographic activation,
+including recovery in the same region.\\
+$u$ & Batch sequence in $\gv$; advances only after a regional commit certificate.\\
+$\lv$ & PBFT retry of $u$; increases on its timer while $u$ is unresolved.\\
+$\alpha$ & Author view of a batch; remains fixed when a later primary re-proposes it.\\
+$e$ & Global checkpoint epoch, occupying $[(e-1)T_G,eT_G)$.\\
+$h$ & Mini-block height; continues from the inherited tip across activations.\\\bottomrule
+\end{tabularx}
+\caption{Indices for the regional PBFT and global control layers.}
+\end{table}
+Write $M_h$ for mini-block $h$, $q_h$ for its prefix digest, and $L\pre L'$
+when stream $L$ is a prefix of $L'$. For example, retrying sequence $u=7$
+from $\lv=0$ to $1$ changes its primary but not its parent or sequence number.
+If a batch authored at $\alpha=0$ is retained, its author and bytes remain
+unchanged. Committing it permits sequence $8$ to start in view zero.
+
+\section{Service Specification}\label{sec:spec}
+The service exports signed, ordered mini-blocks through
+\[
+ \Tag{Preview}_P(\gv,h,M_h,\pi_R),\qquad
+ \Tag{Deliver}_P(h,M_h,\pi_G),
+\]
+where $\pi_R$ is regional commit evidence and $\pi_G$ is global finality evidence.
+Raw producer pushes produce neither event. A preview is stable across local
+PBFT retries and primary changes within its global view. A delivery is
+append-only across geographic changes. A consumer persists its delivered log
+$L_P$ and a separately labeled regional preview suffix. A geographic activation
+may replace only the preview beyond the globally retained prefix.
+
+Here $P$ is the external proposer receiving the stream, $M_h$ is the complete
+signed mini-block at height $h$, and $\gv$ identifies the global view in which
+the regional commitment was obtained. The symbols $\pi_R$ and $\pi_G$ denote
+\emph{evidence packages}, not individual signatures: the regional package
+establishes producer authorization and regional commitment of the block;
+the global package establishes inclusion in a finalized adopted prefix.
+Both are checked with the complete mini-block bytes and the verification
+evidence missing from the receiver's trusted history. Section~\ref{sec:consumerproofs} lists
+their components using the objects defined in Section~\ref{sec:objects}.
+
+\begin{definition}[Authorized, verifiable stream]\label{def:service}
+Except with negligible cryptographic failure, the service requires:
+\begin{enumerate}[label=\textnormal{(\roman*)}]
+\item \emph{Validity and integrity.} Every output mini-block has its complete
+body, matching commitment and authorized original producer. Each delivered
+position is emitted once.
+\item \emph{Agreement.} Honest consumers' delivered logs are pairwise
+prefix-compatible at all times, and each grows monotonically. Regional
+certified histories are prefix-compatible within one global view.
+\item \emph{Progress.} In a live region, an outstanding sequence eventually
+commits a valid batch. Under the global envelope, sufficient tenure and bounded
+backlog, new mini-blocks are eventually adopted and delivered. After finitely
+many unsuccessful geographic selections, a continuously healthy eligible
+region resumes service, possibly through recovery in the same region.
+\item \emph{Verification.} Complete correctly certified ranges pass the
+specified predicates. Changed bytes, reordered or discontinuous ranges,
+unauthorized producers and conflicting finalized histories are rejected.
+\end{enumerate}
+\end{definition}
+Validity concerns ordered bytes and authority, not Ethereum Virtual Machine (EVM) execution. Each batch
+contains at least one mini-block, but a mini-block may contain no transactions.
+Progress therefore promises neither inclusion of a particular transaction nor
+censorship resistance or ordering fairness. A previously prepared batch may
+survive a primary change; an honest replacement is not entitled to overwrite it.
+
+Regional decision latency is measured from a primary's complete proposal to
+regional commitment; preview latency ends at the consumer's verified Preview.
+Delivery latency ends at finalized Deliver. Recovery includes detection and
+state transfer; planned handoff starts at its due boundary. Regional and
+backbone communication, and body bytes and certificate bits, are counted
+separately.
+
+\Needspace{20\baselineskip}
+\section{Protocol Objects and Interfaces}\label{sec:objects}
+
+There are three histories, with different indices. A mini-block $M_h$ contains
+ordered transactions. A regional record $R_u$ records the committed result of
+batch sequence $u$, which can contain several mini-blocks. A global checkpoint
+$C_e$ records adopted progress and authority at epoch $e$, even if no new
+mini-block is adopted. Regional retries change $\lv$, not $u$; only commitment
+creates the next regional record. Thus a failed retry creates neither a new
+$R_u$ nor a GAP record.
+
+We distinguish an object's \emph{semantic value}, its identifier (a hash of
+that value), and its \emph{witness} (the data, signatures and certificates used
+to verify it). A PBFT phase message is a signed wrapper referring to the batch
+value. Alternative valid certificate encodings do not change that value.
+As specified in Section~\ref{sec:model}, uppercase tags such as TXLIST,
+MINIBLOCK, ORDER and BATCH are fixed message-type labels encoded with their
+arguments. For example, $\Hash(\Tag{TXLIST},\mathcal X_h)$ hashes a tagged
+transaction list; TXLIST is not itself the list or a variable.
+
+\paragraph{Verification convention.}
+The displayed arguments of predicates such as $\Proc{ValidBatch}(I,x)$ are
+abbreviations: each check also receives the complete witness, configuration
+and verified predecessor/authority context described with that predicate.
+A digest alone is not sufficient input. Evidence may refer to an already
+verified anchor; a receiver missing the referenced history first obtains and
+verifies it. The consumer verification order is given in \cref{alg:pull}.
+
+\subsection{Activation and the regional predecessor chain}\label{sec:activationobjects}
+An activation has a canonical semantic record $A$ and a detached finality
+witness $\pi_A$. For a rotation checkpoint at epoch $r$ with identifier $g_r$
+and its finalizing child identifier $g_{r+1}$, the record is
+\[
+ A=(c,r,g_r,g_{r+1},\gv,i,h,q,t_{\rm act}),\qquad
+ t_{\rm act}=(r+1)T_G.
+\]
+Here $\gv,i,h,q$ are the successor view, region and retained tip named by the
+rotation; $t_{\rm act}$ is its fixed start. Checkpoint records and the inductive finality checks are specified in
+Sections~\ref{sec:gobjects} and~\ref{sec:finality}. Genesis instead
+fixes $A_0=(c,\Tag{GENESIS},0,i_0,h_0,q_0,0)$ with trusted witness $G_0$;
+$i_0,h_0,q_0$ are the genesis region and tip. Signature subsets are part of
+$\pi_A$, never of $A$. In particular, $C_r$ selects the successor,
+$C_{r+1}$ is its finalizing child, and activation occurs at the start of epoch
+$r+2$. The activation record names these earlier checkpoints; it is not
+another finality vote. Genesis $A_0$ is a separate, explicitly tagged case.
+
+The regional history begins at an initialization record $R_0$ and subsequently
+contains one record $R_u$ for each committed sequence. A record identifies its
+predecessor, the committed batch and the resulting data tip. At activation
+define the initial regional record
+\[
+ R_0=((c,\gv,0),\Hash(A),\Tag{INIT},h,q).
+\]
+Its witness is $\pi_A$ (or $G_0$), not a regional vote. For sequence
+$I=(c,\gv,u)$, let $p_u=\Hash(R_{u-1})$ be its certified predecessor identifier.
+Here $R_{u-1}$ means the result of the previous committed sequence, or the
+initialization record when $u=1$. An ordinary committed result has the format
+\[
+ R_u=(I,p_u,d,h_1,q_{h_1}),
+\]
+where $d$ identifies the committed batch and $(h_1,q_{h_1})$ is the resulting
+mini-block tip. Section~\ref{sec:batchvalues} defines the batch value $x$, with
+$d=\Hash(x)$; Section~\ref{sec:pbftobjects} defines its commit witness $\RC_u$.
+The INIT marker distinguishes $R_0$ from these ordinary records. There is no
+PBFT commit certificate for initialization: its authority comes from the
+activation or genesis witness.
+
+\subsection{Mini-blocks and immutable batch values}\label{sec:batchvalues}
+For an ordered transaction list $\mathcal X_h$, a batch authored in retry
+$\alpha$ by $\ell_i(u,\alpha)$ contains
+\begin{align}
+ H_h&=(c,\gv,u,\alpha,h,q_{h-1},\Hash(\Tag{TXLIST},\mathcal X_h)),\label{eq:block}\\
+ q_h&=\Hash(\Tag{MINIBLOCK},H_h),\qquad
+ M_h=(H_h,\mathcal X_h,\Sig_{\ell_i(u,\alpha)}(\Tag{ORDER},H_h)).\nonumber
+\end{align}
+The header $H_h$ binds the configuration, global view, sequence, original
+author view, block height, previous mini-block digest and transaction-list
+commitment, in that order. It is distinct from the hash function $\Hash$.
+The complete object $M_h$ contains this header, the ordered transaction byte
+strings $\mathcal X_h$, and the author's ORDER signature. The digest $q_h$
+binds the preceding prefix through $q_{h-1}$ as well as the current contents;
+the ordered-list encoding retains multiplicities and list length.
+An empty transaction list has a canonical commitment. A proposal value is
+\begin{equation}\label{eq:proposal}
+ x=(I,\alpha,p_u,h_0,q_{h_0},h_1,q_{h_1}),\quad 1\leq h_1-h_0\leq b_R.
+\end{equation}
+The starting pair $(h_0,q_{h_0})$ is the tip in $R_{u-1}$; the ending pair
+$(h_1,q_{h_1})$ is the proposed new tip. The new blocks are precisely
+$M_{h_0+1},\ldots,M_{h_1}$, so $b_R$ bounds their count. The original-author
+view $\alpha$ is part of $x$ and stays fixed if another primary carries the
+batch. The value $x$ describes the batch; the witness supplies its contents.
+Its witness contains every mini-block in the range and the original author's
+signature $\Sig_{\ell_i(u,\alpha)}(\Tag{BATCH},I,\alpha,p_u,\Hash(x))$.
+$\Proc{ValidBatch}(I,x)$ verifies this signature, the activated region,
+certified predecessor, consecutive heights and parent digests, identical author
+view throughout the batch, every ORDER signature and body commitment, and the
+configured complete size bound $B_R$. The per-position checks are denoted
+$\Proc{ValidMiniBlock}$. No execution or state-root check is implied.
+A later primary may carry $x$ unchanged; its new signature belongs to the PBFT
+wrapper and does not replace the original ORDER or BATCH signatures.
+The size bound $B_R$ applies to one complete batch with its evidence; a
+NEWVIEW bundle may contain witnesses for several reported batches.
+
+For example, suppose $R_6$ is the committed result of sequence 6 and has tip
+$(100,q_{100})$. Sequence 7 then has $I=(c,\gv,7)$ and $p_7=\Hash(R_6)$.
+A batch authored in view zero for mini-blocks 101--103 has
+\[
+ x=(I,0,p_7,100,q_{100},103,q_{103}).
+\]
+$R_6$ is not mini-block 6: it identifies a committed batch outcome whose tip
+happens to be 100. If a later retry re-proposes this batch, its $\alpha=0$,
+$p_7$, contents and original signatures remain fixed. Only commitment creates
+$R_7$ with tip 103 and permits sequence 8 to begin. A timeout alone leaves
+sequence 7 unresolved.
+
+\subsection{PBFT certificates and view-change objects}\label{sec:pbftobjects}
+This layer certifies and, if necessary, re-proposes the immutable batch.
+Three view indices have different roles: $\alpha$ identifies its original
+author, $v=\lv$ is the retry currently processing it, and a reported prepared
+certificate may come from an earlier retry $a$. Changing $v$ need not change
+$\alpha$ or the batch.
+
+For a statement $m$, $\QC_Q(m)$ contains signatures by distinct members of $Q$
+of total weight $>2\wt(Q)/3$. $\Proc{VerifyQC}$ verifies each signature and this
+threshold. For retry $v=\lv$, let $d=\Hash(x)$ and define phase statements
+\[
+ m_{\mathrm{phase}}=(\Tag{phase},I,v,p_u,d),\qquad
+ \mathsf{phase}\in\{\mathsf{PREPREPARE},\mathsf{PREPARE},\mathsf{COMMIT}\}.
+\]
+A PREPREPARE is signed by $\ell_i(u,v)$. All members, including the primary,
+send PREPARE under the same rule. A prepared certificate $\PC_v(x)$ consists
+of that signed PREPREPARE and $\QC_{V_i}(m_{\mathrm{PREPARE}})$.
+Its portable verifier checks the parent, indices, $0\leq\alpha\leq v$,
+primary signature, quorum, and batch witness. It need not contain the NEWVIEW proof previously checked
+by honest prepare signers. The honest-supermajority assumption is essential
+to this certificate abstraction.
+
+The semantic regional outcome and its witness are
+\begin{equation}\label{eq:rc}
+ R_u=(I,p_u,d,h_1,q_{h_1}),\qquad
+ \RC_u=(v,\QC_{V_i}(m_{\mathrm{COMMIT}}),x,\text{batch witness}).
+\end{equation}
+Thus $R_u$ is the agreed result, while $\RC_u$ is evidence that the result
+committed. The former can be named by a stable hash; the latter carries the
+COMMIT quorum and batch needed to verify that claim. A prepared certificate
+$\PC_v(x)$ certifies the preceding phase and does not by itself authorize a
+consumer Preview.
+$\Proc{VerifyRC}$ checks the COMMIT quorum, $\alpha\leq v$, the complete valid
+batch and its exact predecessor, and equality of the resulting $R_u$.
+The committing retry $v$ and the signer subset are excluded from $R_u$'s
+identifier. The same batch can commit in different retries without creating
+different semantic outcomes. There is no regional GAP outcome: a timeout
+retries the unresolved $u$ rather than certifying its absence.
+
+For target retry $v\geq1$, a VIEWCHANGE from member $S$ is
+\[
+ \mathsf{VC}_{S,v}=(\Tag{VIEWCHANGE},I,v,p_u,\mathsf{pc}_S),
+\]
+with $S$'s signature. Here $\mathsf{pc}_S$ is its highest prepared certificate
+from a retry $a<v$, including the full batch witness, or $\botv$ if none exists.
+The certificate bytes are a detached witness to a signed semantic summary
+$(a,\Hash(x))$; alternative signature subsets are the same report value.
+Here $a$ is the retry in which the batch became prepared, not necessarily
+its original-author view $\alpha$. The field $\mathsf{pc}_S$ refers to that
+prepared information and its witness; $\botv$ reports that none is known.
+A NEWVIEW witness $\NV_v$ is a set of such origin-signed reports of distinct
+senders with weight $>2W_i/3$, all for $(I,v,p_u)$ and fully verified.
+If any report is non-bottom, $\Proc{Select}(\NV_v)$ is the batch with the
+highest prepared retry. Two different values at that same retry are invalid;
+under the fault assumption they cannot both have prepared certificates.
+If all reports are bottom, $\Proc{Select}(\NV_v)=\botv$ and the primary may
+author a fresh valid batch at $\alpha=v$.
+The signed NEWVIEW binds $(I,v,p_u,\Hash(\NV_v),\Hash(x))$ and carries a new
+PREPREPARE for $x$. Its hash uses the sender-sorted list of semantic
+VIEWCHANGE summaries, with all signatures and certificate subsets detached.
+Receivers check the reported selection themselves.
+The bundle $\NV_v$ and the signed NEWVIEW are different objects: the bundle
+contains the members' VIEWCHANGE reports, while the new primary's message
+binds that bundle and its selected batch. Selection compares prepared retry
+indices $a$, not original-author indices $\alpha$. For example, a batch
+authored at $\alpha=0$ but prepared in retry 2 is ranked by 2 in a later
+NEWVIEW. As stated above, portable prepared and commit certificates do not
+require a recursive NEWVIEW history; the voting protocol checks the applicable
+NEWVIEW before sending PREPARE.
+
+\subsection{Global records and retained state}\label{sec:gobjects}
+The global control state is
+\[
+ \mathcal S=(\gv,i,A,h,q,R,z,e_{\gv},p),
+\]
+Its fields describe authority, adopted data and a possible future handoff:
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}p{.20\textwidth}Y@{}}\toprule
+Fields & Meaning\\\midrule
+$\gv,i,A$ & Current global view, authorized region and canonical activation
+record; the finality witness for $A$ is detached.\\
+$h,q$ & Height and digest of the globally adopted mini-block tip.\\
+$R$ & Last adopted regional result record. This cursor is an $R_u$ (or $R_0$),
+not an integer sequence number or a quorum certificate.\\
+$z,e_{\gv}$ & Global no-data-progress counter and current view's activation
+epoch. Their updates are specified by the global transition and activation rules.\\
+$p$ & Empty, or one pending rotation package. It is distinct from the
+regional predecessor digest $p_u$.\\\bottomrule
+\end{tabularx}
+\end{center}
+A regional outcome always advances $h$; global HOLD and CONFIRM need not do so.
+Initially these fields are fixed in $G_0$.
+A control checkpoint at epoch $e$ is
+\begin{equation}\label{eq:global}
+ C_e=(c,e,g_{e-1},\mu,\mathcal S_e,\Hash(\mathbf r_e)),\qquad
+ g_e=\Hash(\Tag{CHECKPOINT},C_e),
+\end{equation}
+where $\mu\in\{\Tag{ADVANCE},\Tag{HOLD},\Tag{ROTATE},\Tag{CONFIRM}\}$ and
+$\mathbf r_e$ is the common report vector defined below. The predecessor is
+$C_{e-1}$; even a no-progress epoch creates a new control record. Thus $C_e$
+contains the configuration, epoch, preceding checkpoint digest, action,
+resulting control state and report commitment. The action labels have the
+following meanings in \cref{alg:gtransition}: ADVANCE adopts a higher data
+tip; HOLD has no new data tip; ROTATE records a pending successor while
+retaining the parent's tip; CONFIRM preserves a still-pending rotation without
+adopting another range. ROTATE is a selection, not immediate activation.
+
+The pending package used by that rule is
+\[
+ p=(\gv+1,j,h,q,R,e,\Lambda_j,\mathsf{reason}).
+\]
+It records the successor global view and region, retained tip and regional
+cursor, selection epoch, and the sender-ordered list $\Lambda_j$ of true READY
+reporters in region $j$. Their origin-signed reports are its detached evidence.
+The reason is RECOVERY when the failure guard holds and PLANNED otherwise,
+with recovery taking precedence when both guards hold, as in
+\cref{alg:gtransition}.
+
+Genesis fixes $C_0$, its complete prefix and identifier
+$g_0=\Hash(\Tag{CHECKPOINT},C_0)$. At time zero, the start of epoch one,
+its initial state is
+\[
+ \mathcal S_0=(0,i_0,A_0,h_0,q_0,R_0,0,1,\varnothing).
+\]
+Genesis $C_0$ is trusted as justified and finalized; it does not require a
+quorum link or a transition from a nonexistent predecessor.
+A checkpoint is \emph{justified} by a quorum link from a justified ancestor,
+starting at genesis; it is \emph{finalized} when its justified direct child has
+a quorum link from it. Ancestors of a finalized checkpoint are finalized too.
+Both predicates are made algorithmic below.
+
+
+A report from $S\in V_j$ is
+\[
+ r_{S,e}=(c,e,g_{e-1},A_e,\mathcal R_{S,e},\mathsf{ready}),
+\]
+with an origin signature. $A_e$ is empty or the canonical activation record
+for the parent's already finalized pending rotation, with $\pi_{A_e}$ detached. $\mathcal R_{S,e}$ is a prefix of the
+regional outcome chain extending the effective state's cursor, with complete
+new bodies and witnesses; at most $b_G$ outcomes and $B_G$ complete bytes are
+admitted. A report may contain no extension. A true $\mathsf{ready}$ is the
+signer's promise that it holds and retains the parent's entire adopted stream
+and evidence and is prepared to join region $j$ at the next geographic
+activation. It binds $(c,e,g_{e-1},\gv+1,j,h,q)$. Readiness is re-collected for each
+parent; old acknowledgments cannot authorize a different tip.
+
+Here the \emph{effective state} is the parent checkpoint's state after applying
+any already-finalized activation due at the epoch's start, as in
+\cref{alg:global,alg:finality}. That activation preserves $(h,q)$ but installs
+the new authority and regional $R_0$. The view in the READY binding is the
+effective $\gv$, so $\gv+1$ refers to the next view after this activation.
+The report's $A_e$ describes that epoch-start activation, if present; the
+state's $A$ describes the authority currently in force.
+$\mathcal R_{S,e}$ is the consecutive list of newly reported regional records
+after the effective cursor, with the corresponding commit certificates and
+batch bodies supplied as witnesses. The limit $b_G$ counts these records,
+whereas $b_R$ counts mini-blocks within one batch; $B_G$ counts complete report
+bytes. A report does not truncate a committed batch. The READY field concerns
+possession of the parent's adopted prefix, not commitment of the proposed
+extension or a guarantee of future availability.
+
+Every non-bottom report must satisfy $\Proc{ValidReport}$: verify origin,
+epoch and parent; validate the activation proof; validate the complete regional
+extension under the effective global view; enforce size bounds and require its
+bytes. Readiness alone never proves a range extending the parent. A signer may
+lie about readiness, but a regional ready quorum contains honest data holders.
+An honest node that accepts a complete report becomes a server for its body.
+All honest members transmit true READY once its local condition holds; the
+precise originating rule appears in \cref{alg:global}.
+
+The vector $\mathbf r_e=(r_{S,e})_{S\in V}$ uses configured sender order and
+has bottom at an absent or equivocated origin. Record hashes include semantic
+fields only: report signatures, regional certificate signer subsets and
+activation witnesses are detached. The semantic value of $\mathcal R_{S,e}$
+is the ordered regional record list, not its certificate encodings.
+
+For external verification, $\Proc{ValidCheckpoint}(C_{e-1},C_e,\mathbf r_e)$
+checks the epoch and parent hash, the report-vector commitment, every non-bottom
+origin-signed report and its complete relative witness, and equality of the
+action/state to \cref{alg:gtransition}'s deterministic result (including any
+valid ancestor activation). Proofs may reference an already verified anchor;
+a new receiver must obtain the missing ancestry. A report vector by itself is
+not a portable agreement proof: a global vote certificate authenticates that
+this checkpoint was endorsed after report agreement. The consumer checks both
+the transition predicate and the FFG certificates; it need not reconstruct
+private message-arrival times in the report protocol.
+
+\subsection{Evidence for the two service outputs}\label{sec:consumerproofs}
+The packages $\pi_R$ and $\pi_G$ from Section~\ref{sec:spec} collect the evidence
+used by the existing consumer checks in \cref{alg:pull}. Relative to the
+receiver's already verified history, their required components are:
+\begin{itemize}
+\item \textbf{Regional evidence $\pi_R$.} The activation record and its witness
+authorize the global view and initial $R_0$. A contiguous chain of committed
+regional records reaches an outcome covering $M_h$; each new record has its
+$\RC$ and complete batch witness. The receiver verifies original-author
+signatures, predecessor continuity and the COMMIT certificates, and checks
+that the activation's fixed start time has been reached before Preview.
+\item \textbf{Global evidence $\pi_G$.} A checkpoint covers the block in its
+adopted prefix. Its checkpoint/report transition witnesses, missing regional
+commit evidence and authority transitions establish that prefix. A
+justification chain from a trusted anchor and the adjacent finalizing link
+establish finality as specified in \cref{alg:finality}; finality of a descendant
+also finalizes its ancestors. The receiver obtains and verifies the new block
+bodies before Deliver and processes intervening activations as in
+\cref{alg:pull}.
+\end{itemize}
+Already verified objects may be referenced; a new receiver obtains the missing
+ancestry. A prepared certificate alone is insufficient for Preview, and a
+regional commit certificate alone is insufficient for Deliver. The packages
+use the portable certificate predicates of Section~\ref{sec:pbftobjects};
+they do not add a requirement to reconstruct old NEWVIEW histories.
+
+\subsection{Data transport and mathematical state}\label{sec:transport}
+The logical data messages are
+\begin{align*}
+ &\Tag{ANNOUNCE}(c,\gv,\mathsf{objectID},h_0,h_1,\mathsf{kind}),\\
+ &\Tag{GET}(c,\mathsf{objectID},[h_0,h_1]),\\
+ &\Tag{DATA}(c,\mathsf{objectID},\mathsf{body},\mathsf{witness}).
+\end{align*}
+ANNOUNCE advertises available data, GET requests an identified range, and DATA
+returns its content and verification evidence. The objectID identifies the
+requested protocol object; kind distinguishes the advertised object/evidence
+category. The body contains the requested records or transaction bytes, and
+the witness contains the signatures, certificates and referenced history
+needed for verification. These are abstract interfaces; the notation does not
+prescribe a serialization or an additional consensus message.
+An object identifier binds a header, range and evidence type, not a peer address.
+A supplier is free to be different from its original producer. A DATA response
+is useful only if the entire requested object verifies against that identifier
+and the receiver's certified context. Requests and replies need channel
+authentication; their embedded producer statements and certificates remain
+independently verifiable.
+
+
+A sequencer persists its configuration, certified regional chain, accepted
+global checkpoint chain, justified/finalized checkpoints, retained complete
+objects and signing history. For the outstanding regional sequence it also
+persists the highest retired retry, highest prepared certificate, and accepted
+PREPREPARE and votes in each retry. Local timer origins are never reset to
+re-enter a retired retry. A consumer persists its newest finalized control
+anchor, highest activated global view, delivered log, preview suffix, authority
+proofs and missing-object queue. These are mathematical states, not software
+container requirements.
+
+\section{The Protocol}\label{sec:protocol}
+
+\subsection{Regional PBFT and transferable confirmation}\label{sec:regional}
+The region runs a signed, weighted PBFT instance for each $I=(c,\gv,u)$.
+PREPREPARE, PREPARE and COMMIT certify a batch before the next sequence begins.
+Messages first pass the admission rules below; admitted messages are then
+authenticated and checked for conflict evidence before phase-specific discard.
+Only the scheduled primary's authenticated channel can supply PREPREPARE or
+NEWVIEW. PREPARE, COMMIT and VIEWCHANGE are received from their named signer's
+channel. For each active sequence/retry, sender and message type, admit at most
+two distinct bounded packet encodings before expensive signature verification;
+ignore exact retransmissions without spending a second allowance. An honest
+sender's prescribed packet cannot be displaced by another sender's channel.
+Certificate relay admits two variants per sender and sequence. Future domains
+outside the next retry or sequence are ignored rather than allocated state.
+Bodies have configured size limits and the request quotas of the transport
+protocol. Conflict evidence has its own bounded slot. Liveness assumes fair
+service of these per-peer queues; unlimited wire flooding is outside this
+abstract communication envelope.
+
+\begin{protocol}{alg:regional}{One regional PBFT sequence}
+\textbf{Entry:} verify $R_{u-1}$ and its witness. For $u=1$, enter at the fixed
+global activation boundary; otherwise enter when its predecessor certificate
+first becomes available. Record entry time $a_S$ at member $S$ and start $v=0$.
+A complete PREPREPARE may carry a missing predecessor certificate.
+\begin{enumerate}[label=\textbf{R\arabic*.}]
+\item \textbf{Propose.} In view zero, primary $\ell_i(u,0)$ authors a valid
+batch with $\alpha=0$, signs PREPREPARE and multicasts it with its full witness.
+In view $v>0$, use only the NEWVIEW procedure below: carry its selected batch,
+or author at $\alpha=v$ if its selection is bottom. Push new mini-block bytes
+to consumers; these bytes alone authorize no Preview.
+\item \textbf{Prepare.} Accept the first valid PREPREPARE for the current
+$(I,v,p_u)$ from its scheduled primary. Require the complete batch, $\alpha=0$
+when $v=0$, and a valid matching NEWVIEW when $v>0$. Persist and multicast
+PREPARE once for $(I,v)$. Never prepare a different digest in that retry.
+The primary follows the same rule. Buffer an early proposal until local entry
+into its sequence/retry; a future message alone never advances the retry.
+\item \textbf{Commit vote.} On a matching PREPARE quorum for the accepted
+proposal, persist $\PC_v(x)$ and the full batch, update the highest prepared
+certificate, and multicast COMMIT once for $(I,v)$. Do so only while this
+retry is active and has not been retired. COMMIT packets contain the signed
+phase statement; they need not repeat the prepared certificate.
+\item \textbf{Commit and export.} Collect matching COMMIT signatures; once
+their weight exceeds $2W_i/3$, assemble $\RC_u$ with the complete batch.
+A complete valid $\RC_u$ for any retry,
+including an older one, commits $R_u$. Old-retry COMMIT messages may be
+accumulated for certificate assembly without reopening old-retry voting. Persist it, relay the certificate once
+to every regional member, and announce it to consumers. Relay only the first
+accepted certificate for this semantic outcome; alternative signer encodings
+do not trigger another relay. Bodies already cached need not be retransmitted.
+A member can accept this proof without having voted in that retry.
+\item \textbf{Advance.} Stop voting for sequence $u$ after committing. Start
+$u+1$ only from this certified $R_u$, with retry zero and a new entry timer.
+Continue serving older certificates and bodies. On learning a finalized
+replacement global view, obey its activation and stop new old-view votes.
+\end{enumerate}
+\end{protocol}
+
+\begin{protocol}{alg:localchange}{PBFT timeout, VIEWCHANGE, and NEWVIEW}
+\textbf{Parameters:} $T_V\geq8\Delta_R$. Retry $v$ begins locally at
+$a_S+vT_V$ while sequence $u$ remains unresolved.
+\begin{enumerate}[label=\textbf{V\arabic*.}]
+\item \textbf{Retire and report.} At entry to $v\geq1$, first persist the
+retirement of all retries $<v$ and stop issuing their PREPARE/COMMIT messages.
+Sign one immutable VIEWCHANGE to primary $\ell_i(u,v)$, reporting the highest
+prepared certificate then known, or bottom. Include its complete witness.
+Lower-view messages arriving later do not reopen voting or alter this signed
+snapshot. A valid COMMIT certificate remains acceptable at any time.
+\item \textbf{Construct.} At time $a_{\ell_i(u,v)}+vT_V+2\Delta_R$, an honest
+primary that has not committed selects a fully available valid VIEWCHANGE
+quorum. To make its choice deterministic, process available reports in sender
+order and take the shortest prefix whose weight exceeds $2W_i/3$.
+If no such quorum is available, do not propose; the next timeout still occurs.
+Compute $\Proc{Select}(\NV_v)$, obtain its full batch, or build a fresh batch
+if it is bottom, and multicast the signed NEWVIEW and PREPREPARE with all
+report evidence and batch bodies. A primary signs at most one NEWVIEW per $(I,v)$.
+\item \textbf{Validate.} A receiver verifies every report, its parent and
+prepared certificate, the NEWVIEW primary and selection, and the complete
+selected batch. Once in retry $v$, it may accept this proposal and run R2--R4.
+Its own earlier prepared value may differ if the checked NEWVIEW selects a
+higher prepared view; it does not impose a separate veto. A prepared
+certificate alone is not a commit.
+\item \textbf{Continue.} If the primary equivocates, withholds a required
+object or fails to gather a quorum, keep the signing restrictions and retry at
+the next local boundary. Do not invent a GAP, advance $u$, clear prepared
+state, or interpret a timeout as a certificate of producer misbehavior.
+\end{enumerate}
+\end{protocol}
+
+A recovered node restores its signing history before joining. It may receive
+certificates and serve data immediately. If it missed a timer origin or cannot
+establish safe current retry timing, it abstains until a later sequence's
+certified predecessor or a new global activation. No historical votes are
+backfilled. Regional liveness assumes a responsive quorum through the sequence;
+a whole-region outage is recovered by the independent global layer.
+
+The one-outstanding-sequence design makes the certified predecessor its stable
+checkpoint. Retrying retains the same parent and carries at most one prepared
+value per report. Portable prepared/commit certificates need no recursive
+NEWVIEW history: quorum signers have already checked those justifications.
+The next sequence is gated by commitment, but has no mandatory $n_i$-round
+completion interval. Producer signatures remain those of the original author,
+even when a different primary completes the prepared batch.
+
+\begin{example}[A batch and a failed primary]
+With ten equal-weight members, seven signatures form a quorum. The primary
+proposes mini-blocks 101--110 after a certificate for 100. Seven PREPARE votes
+form a prepared certificate and seven COMMIT votes certify the batch. If that
+primary fails after enough members prepare, the next primary's VIEWCHANGE
+quorum must preserve any batch protected by a possible COMMIT quorum. It
+re-proposes the selected batch with its original signatures; it cannot replace
+it merely because it prefers a different ordering.
+\end{example}
+
+\Needspace{.95\textheight}
+\subsection{Push delivery and missing-data repair}\label{sec:pull}
+\begin{protocol}{alg:pull}{Stream transport and consumer acceptance}
+\textbf{State at a receiver:} current delivered tip; a separate preview suffix;
+certified authority; missing objects. A request is bounded to one configured
+range. Larger gaps are divided into consecutive requests.
+\textbf{Parameters:} announcement period $T_A$; request deadlines $\theta_R$
+within a region and $\theta_G$ over the backbone; an external consumer uses
+$\theta_P$ on either path.
+\begin{enumerate}[label=\textbf{D\arabic*.}]
+\item \textbf{Push and announce.} The active leader pushes each complete
+mini-block and subsequently its regional certificate to subscribed consumers.
+Holders announce their latest certified tip every $T_A$ and on a new certificate.
+Each producer pushes each mini-block body at most once per subscribed consumer.
+An announcement is a retrieval hint, not a confirmation event.
+\item \textbf{Detect a gap.} A later position, an announced certified tip,
+a checkpoint referencing unavailable bytes, or an expected-service timer may
+reveal missing data. Request the exact missing header/body/certificate range
+from the leader or a listed holder. A timer alone does not fabricate an empty
+mini-block or replace the producer.
+\item \textbf{Pull.} Try regional members in configured order without repetition;
+after an unsuccessful attempt of its applicable deadline, try the next. For globally adopted
+objects, also try the global holders via the backbone. Use $\theta_G$ for an
+internal cross-region request and $\theta_P$ for a consumer request.
+Each reply is capped at the requested size. Verify the complete response;
+discard mismatched or incomplete objects and continue. After exhausting a list,
+retry it after $T_A$. An honest holder responds with the requested retained
+bytes and original evidence. Cache verified mini-block bodies by their content
+digest across all proposal, report and certificate wrappers. Request only
+missing bodies and metadata, with at most one outstanding attempt per body
+at a receiver; cancel retries once a matching body arrives by push or pull.
+An already in-flight response may still consume bandwidth and is counted below.
+\item \textbf{Preview.} Check $\Proc{ValidBatch}$ and the full contiguous
+regional outcome chain with $\Proc{VerifyRC}$ on every $\RC$. Check that the
+activation proof authorizes the receiver's current global view and its fixed
+activation time has been reached. Append verified positions in order
+to the preview suffix and emit $\Tag{Preview}$. Missing predecessors prevent
+output. Stop extending an old global view after learning its finalized successor.
+\item \textbf{Deliver.} On a verified finalized global checkpoint covering a
+new range, retrieve all missing bodies. Verify its finality links, every new
+regional certificate and mini-block, exact predecessor continuity and the global
+authority transitions. Append only previously undelivered positions and emit
+$\Tag{Deliver}$ for each. Reject any attempt to replace the delivered prefix.
+\item \textbf{Handoff.} Require the control proof to extend the receiver's
+newest verified finalized anchor. An ancestor/replayed proof does not change
+authority. Record a newer finalized anchor and process every not-yet-applied
+finalized activation in its verified ancestry in increasing global view order,
+including during catch-up. Queue each until its fixed activation boundary.
+At each activation, adopt that rotation's retained tip and global view, keep all
+delivered data and evidence, and remove preview entries beyond that retained tip.
+Do not skip an intermediate activation or its preview truncation; missing
+ancestry prevents advancing authority. Accept new producer data only under
+the new activation proof.
+Old signed statements remain eligible as historical evidence.
+\end{enumerate}
+\end{protocol}
+
+The peer serving a range need not be its producer. Verification binds the
+original producer and certified range, so changing a transport path changes
+neither the accepted content nor its authorization. Repairing a packet loss
+is separate from certifying a service failure. During normal operation the
+proposer receives one primary full-data push, not a full copy from every voter.
+
+\begin{figure}[htbp]\centering
+\input{figures/stream-pipeline-pbft.tex}
+\caption{The regional PBFT data path and the global control path. A regional
+commit certificate authorizes Preview; global finality authorizes Deliver.
+A proposal may contain several mini-blocks, and dependent sequences wait for
+commitment. The diagram does not assign consumer execution or publication to
+the sequencing service.}
+\label{fig:stream}
+\end{figure}
+
+\begin{example}[A missing middle mini-block]
+The consumer has 100 and receives 101 and 103 but not 102. It asks a regional
+holder for 102 and any missing range certificate. A response with a different
+body fails the committed digest check; a correct response restores the chain
+101--102--103. The receiver then outputs the eligible contiguous range once.
+Receiving 103 first never permits skipping position 102.
+\end{example}
+
+
+\subsection{Local authority and geographic recovery}
+Local primary selection is fixed by \eqref{eq:primary} and the checked
+NEWVIEW rule. A newly authored batch uses its current primary's producer key;
+a carried batch preserves its original author view and key. Thus a local
+primary change neither rewrites committed bytes nor reassigns authorship of a
+prepared batch. Authentication of a batch is distinct from permission to
+commit it: only the PBFT certificate establishes the latter.
+
+A timeout cannot unlock a committed sequence. If a region loses its responsive
+quorum, local progress can stop without producing any outcome. The global
+protocol can nevertheless activate another region, or restart the recovered
+current region in a fresh global view. That activation fixes a new $R_0$ and
+new signing domains without waiting for the old unfinished sequence. It retains
+every globally adopted entry; unadopted previews have only regional stability.
+
+\subsection{Backbone synchronization and global report agreement}\label{sec:global}
+Global epoch $e$ occupies $[(e-1)T_G,eT_G)$. Admit at most two bounded packet
+encodings per authenticated protocol sender, message type and active epoch for
+FFG votes, link-certificate export and finality announcements, deduplicating
+exact repeats before signature checks. Honest prescribed packets fit these
+separate allowances. A relay does not use another origin's authenticated queue.
+Broadcast's per-invocation quota is specified in Appendix A. Its control participants are all of
+$V$, independent of the active production region. Logical signed control
+messages use the backbone; complete bodies are pushed on the primary path or
+pulled and cached as in \cref{alg:pull}. An honest recipient of a validated
+report serves its body thereafter. The synchronized protocol consumes a message
+only when this complete object is available.
+
+\begin{protocol}{alg:global}{A complete global epoch}
+\textbf{Common initial state:} $C_{e-1}$, its justification proof, the adopted
+stream and any older finality proofs. $C_0$ is justified and finalized.
+\begin{enumerate}[label=\textbf{G\arabic*.}]
+\item \textbf{At epoch start.} If the parent has a pending rotation already
+finalized by an earlier link, verify that proof and apply its activation once.
+Each member snapshots the earliest contiguous known extension from the resulting
+cursor that fits the configured bounds, taking the longest such prefix and
+never truncating a certified batch. An honest member sets READY true exactly
+when it holds the complete verified parent prefix and evidence and is ready
+to start the next global view from that prefix in its configured region;
+otherwise it sets false and
+continues pulling the missing state. A healthy eligible member with these data
+must set true. It signs one report; READY binds the parent's exact tip and
+the next global view after any pre-transition activation. No extension is required.
+\item \textbf{Report agreement.} Run $N$ parallel instances of
+\cref{alg:ab}, with domain $(\Tag{REPORT},c,e,g_{e-1})$, round length $\Delta_G$
+and validity predicate $\Proc{ValidReport}$. After $N\Delta_G$, replace every
+missing or equivocated origin by $\botv$ to obtain $\mathbf r_e$.
+No global target is selected before this completion.
+\item \textbf{Derive the target.} Apply \cref{alg:gtransition} to the common
+parent, activation proof and report vector. Construct exactly $C_e$ in
+\eqref{eq:global}. Retain its complete adopted prefix and transition evidence.
+\item \textbf{FFG vote.} At elapsed time $N\Delta_G$, each eligible member
+signs $(\Tag{FFG},c,e-1,g_{e-1},e,g_e)$ after the checks in
+\cref{alg:finality}. Disseminate the vote through the backbone.
+\item \textbf{Certificate.} By $(N+1)\Delta_G$, responsive honest members
+have a quorum of votes. They form and disseminate the link certificate.
+By $(N+2)\Delta_G$, process justification and finality. Push or announce the
+new checkpoint and proof to consumers; missing data remains retrievable.
+\item \textbf{Boundary.} Set $T_G\geq(N+3)\Delta_G$; the remaining margin
+makes the certificates and newly activated regional initialization available
+before the next common boundary. Carry the adopted state to epoch $e+1$.
+\end{enumerate}
+\end{protocol}
+
+Report agreement is an explicit, deliberately conservative convergence mechanism.
+It already selects a unique control chain under synchrony. FFG supplies the
+chosen two-link finality and activation rule on that chain; it is not invoked
+as an unexplained solution to inconsistent reports. This construction pays for
+report agreement even during a good epoch. It neither implements every Ethereum
+fork-choice rule nor asserts Ethereum's performance for this different protocol.
+
+A planned global view change becomes due $N_G$ checkpoint epochs after
+activation; $K_G$ consecutive no-progress epochs trigger recovery.
+
+\begin{protocol}{alg:gtransition}{Global state transition and region selection}
+\textbf{Input:} common parent state, any finality-based activation applied at
+epoch start, and $\mathbf r_e$. Copy every field of the resulting effective
+parent state; change only fields explicitly assigned below. The global mode
+$\mu$ records the first applicable output rule.
+\begin{enumerate}[label=\textbf{T\arabic*.}]
+\item \textbf{Pending, not activated.} If a rotation remains pending, output
+$\Tag{CONFIRM}$ with exactly the same stream tip, region and pending package.
+No new regional data is adopted.
+\item \textbf{Available extension.} Otherwise, among valid reported regional
+chains rooted at the effective cursor, choose the longest one; break an exact
+equality by its semantic digest. Let its endpoint be $(R^+,h^+,q^+)$, or retain
+the parent cursor if no extension exists. These chains are compatible by
+\cref{lem:rcunique}. Put $z^+=0$ if $h^+>h$, and $z^+=z+1$ otherwise.
+\item \textbf{Eligible successor.} A region $j$ is ready if true READY
+reports for the parent's exact tip have total weight $>2W_j/3$.
+A change is due if $e-e_{\gv}\geq N_G$ or $z^+\geq K_G$.
+If due and a different region is ready, choose the first such region after $i$
+in the configured cyclic list. Otherwise, if $z^+\geq K_G$, no different region
+is ready and $i$ is ready, choose $j=i$ for recovery. If a region is selected,
+output $\Tag{ROTATE}$, retain the \emph{parent's} tip and cursor, and store
+\[
+ p=(\gv+1,j,h,q,R,e,\Lambda_j,\mathsf{reason}).
+\]
+Here $\Lambda_j$ is the sender-ordered list of all true READY origin
+identities from $V_j$ in $\mathbf r_e$. Its detached evidence is their
+origin-signed reports; certificate encodings are not stored in $p$.
+Set $\mathsf{reason}=\Tag{RECOVERY}$ if $z^+\geq K_G$ and
+$\Tag{PLANNED}$ otherwise, giving recovery precedence when both guards hold.
+The successor starts with $u=1,v=0$ and its configured first primary. ROTATE does not
+simultaneously adopt a new range: its readiness proof refers to the retained tip.
+The proposed regional extension remains a preview. Selection of $j=i$ uses
+the same finality and activation rules, with a fresh global view $\gv+1$ and $R_0$;
+it does not reuse old instance identifiers or erase signing history.
+\item \textbf{No rotation.} Otherwise adopt $(R^+,h^+,q^+)$, set the failure
+count to $z^+$, and output ADVANCE if the data tip grows or HOLD otherwise.
+If no region is selected, service can continue in the current global view.
+\end{enumerate}
+\end{protocol}
+
+An honest reporter takes the earliest contiguous committed extension that fits
+the bounds; it never drops an intervening outcome or truncates a certified batch.
+Global no-progress means no new adopted mini-block, not low transaction volume
+or dissatisfaction with a producer's ordering policy.
+
+\Needspace{.65\textheight}\subsection{Finality, activation and consumer verification}\label{sec:finality}
+\begin{protocol}{alg:finality}{FFG links and geographic activation}
+\textbf{Persistent state:} signed FFG history; justified and finalized checkpoints.
+\begin{enumerate}[label=\textbf{F\arabic*.}]
+\item \textbf{Before voting.} Verify the target derived by \cref{alg:global},
+its complete adopted data and its parent justification. Sign at most one
+statement for a target epoch. Never sign a pair with source/target epochs
+$s_1<s_2<t_2<t_1$, nor a target conflicting with the known finalized prefix.
+The concrete epoch protocol uses only $(e-1,e)$ links.
+\item \textbf{Verify a link.} A link $C_s\Rightarrow C_t$ contains
+$\QC_V(\Tag{FFG},c,s,g_s,t,g_t)$, the identified checkpoints and an ancestry
+path. Require $s<t$, exact matching hashes and a justified source.
+A valid link justifies its target.
+\item \textbf{Finalize.} A justified $C_e$ is finalized by a link to its direct
+child $C_{e+1}$. Ancestors are finalized too. An independently verifiable proof
+contains the justification chain back to an already trusted anchor and this
+adjacent link. Equal stream roots at different epochs do not mean equal
+checkpoint identities.
+\item \textbf{Activate.} If a pending ROTATE $C_r$ is finalized by the link
+$C_r\Rightarrow C_{r+1}$, its successor starts at the fixed boundary beginning
+epoch $r+2$, namely time $(r+1)T_G$. Before that boundary it verifies the finality
+proof and retained data. The proof fixes $R_0$, global view, region and initial
+leader for the new service. A node missing these objects does not start.
+\item \textbf{Represent activation.} At the start of epoch $r+2$, apply this
+proof to the strict ancestor ROTATE: set $(\gv,i)$ to its named successor,
+$A$ to the canonical activation record just verified, $R=R_0$, $z=0$, $e_{\gv}=r+2$, and $p=\varnothing$;
+preserve $(h,q)$. The first subsequent global target records this pre-transition
+before evaluating \cref{alg:gtransition}. Checkpoints $C_r$ and
+$C_{r+1}$ remain unchanged. New regional data cites the activation proof.
+\end{enumerate}
+\end{protocol}
+
+At the activation boundary, every responsive honest global member has the
+same semantic activation record and valid finality witnesses, and full retained
+data under the epoch budget. A healthy selected
+region therefore starts from one common $R_0$, including after recovery in the
+same region. An unavailable chosen region
+cannot begin service; global epochs still run, detect the continued lack of
+progress and attempt a later successor. A READY quorum proves possession at
+its signing point, not immunity from a subsequent regional outage.
+
+An old region disconnected from the control plane can continue to show signed
+previews to stale clients. It cannot extend the accepted global history after
+its replacement. All newly adopted data must match the effective global view
+of the common global state. Consumers learn replacement from a finality proof,
+not from an unauthenticated redirect or a private timeout.
+
+\begin{example}[Local failure and geographic failure]
+Suppose regional certificate $\RC_u$ covers position 110. If its primary stops,
+VIEWCHANGE/NEWVIEW retries the next unfinished sequence from 110, preserving
+any prepared batch required by its view-change proof. Now suppose the whole region becomes unreachable while the global
+adopted tip is 100 and 101--110 exists only as regional preview. After $K_G$
+no-progress epochs, a ready region can be named by ROTATE at $C_r$. CONFIRM at
+$C_{r+1}$ finalizes that record, and the new region starts at epoch $r+2$ from
+100. The consumer keeps every delivered position and drops only the unretained
+preview. Had the global chain already adopted 110, the handoff would have to
+retain 110, even if its checkpoint had not yet finalized when the outage began.
+\end{example}
+
+\Needspace{20\baselineskip}
+
+\subsection{Equivocation and invalid inputs}\label{sec:evidence}
+\begin{protocol}{alg:evidence}{Transferable conflict evidence}
+\textbf{Input:} two origin-signed statements by the same configured member.
+Verify both signatures, configuration, type and the comparison key below.
+Return evidence exactly when the semantic contents differ under one key:
+\begin{itemize}
+\item ORDER: $(c,\gv,u,\alpha,h)$; BATCH: $(c,\gv,u,\alpha)$.
+\item PREPREPARE, PREPARE or COMMIT: $(I,v)$ within that message type.
+\item VIEWCHANGE or NEWVIEW: $(I,v)$ within that message type and sender.
+Alternative witnesses for the same semantic report are not a conflict.
+\item REPORT: $(c,e,g_{e-1},S)$ for the report's origin $S$.
+\item FFG: equal target epochs and different source/target statements, or
+source/target epoch pairs satisfying $s_1<s_2<t_2<t_1$ in either order.
+\end{itemize}
+Store and propagate at most one evidence pair per signer, type and comparison
+key. Evidence never changes committee weights or thresholds within $c$.
+\end{protocol}
+Cross-retry votes are not automatically equivocation. Different certificates
+for the same committed batch, later authorized authorship, relaying conflicting
+origin values during global broadcast, and silence are not double-signing
+proofs. Timeout only triggers recovery. Penalty amounts and adjudication lie
+outside this service.
+
+\section{Correctness and Soundness}\label{sec:proofs}
+All results concern the fixed configuration and fault/delivery envelope in
+Section~\ref{sec:model}. Cryptographic failures contribute a negligible error;
+the remaining arguments are deterministic.
+
+\begin{lemma}[Quorum intersection]\label[lemma]{lem:intersection}
+Two quorums of a committee of weight $W_Q$ intersect in weight greater than
+$W_Q/3$. Under a Byzantine bound below $W_Q/3$, they share an honest signer.
+\end{lemma}
+\begin{proof}
+For signer sets $U,U'$, $\wt(U\cap U')\geq\wt(U)+\wt(U')-W_Q>W_Q/3$.
+For an intersection with responsive honest members, use the bound on the union
+of Byzantine and potentially unavailable members.
+\end{proof}
+
+\begin{lemma}[Authenticated origin broadcast]\label[lemma]{lem:ab}
+In \cref{alg:ab}, all responsive honest members return the same value or bottom.
+If the origin is honest and responsive, they return its valid input. Every
+non-bottom output has a valid witness. The protocol terminates in $n$ rounds,
+where $n$ is the committee size, if at least one member is honest and responsive
+and complete-object delivery respects the round bound.
+\end{lemma}
+\begin{proof}
+Consider a value retained by an honest responsive member in round $r$. If its
+chain contains an honest responsive signer at position $k$, that signer sent
+the length-$k$ prefix to all responsive members in round $k$. Every such member
+receives it by that deadline and either retains it or already has two values.
+If the chain has no honest responsive signer, its length is at most $n-1$.
+The retaining member extends and forwards it for round $r+1$, unless it already
+forwarded that value, in which case its earlier send suffices. A length-$n$
+chain necessarily contains an honest responsive signer. Thus every value
+retained honestly is, by round $n$, retained by every honest responsive member
+or meets a receiver that already has two values.
+
+If any honest responsive member has two values, apply this fact to both:
+all such members end with two values and return bottom. Otherwise a nonempty
+honest set propagates its sole value to all others, so all return it. If all
+sets are empty, all return bottom. An honest origin signs only its own input;
+unforgeability and first-round delivery exclude a second value or empty set.
+Every retained value passed the fixed validity predicate, and fixed deadlines
+ensure termination. The proof needs agreement on singleton-versus-multiple
+outputs; cap-two sets need not contain the same pair when an origin sends three
+or more different values.
+\end{proof}
+
+
+\begin{lemma}[Prepared uniqueness and carryover]\label[lemma]{lem:prepared}
+For fixed $(I,v,p_u)$, two valid prepared certificates cannot name different
+batches. If a batch $x$ has a valid COMMIT quorum in retry $v$, every valid
+prepared certificate for $I$ in a later retry names $x$.
+\end{lemma}
+\begin{proof}
+Two PREPARE quorums intersect in an honest member, which prepares only one
+digest for $(I,v)$. For carryover, let $H_x$ be the honest signers of the COMMIT
+quorum for $x$. Their weight exceeds $W_i/3$, and each persisted $\PC_v(x)$
+before its COMMIT. Consider the earliest later retry $v'>v$ with a prepared
+certificate for a different batch. At least one honest prepare signer checked
+its NEWVIEW quorum. That VIEWCHANGE quorum intersects $H_x$ in an honest
+member $S$. Member $S$ could not have sent its VIEWCHANGE for $v'$ before
+issuing the older COMMIT: retirement would then prohibit that COMMIT.
+It therefore reported a prepared certificate from a retry at least $v$.
+By minimality of $v'$, all such certificates below $v'$ name $x$. The highest
+reported prepared retry also lies in this interval and names $x$. The checked
+NEWVIEW must select $x$, contradicting the honest PREPARE for a different
+batch. The argument concerns signatures whenever assembled, so also covers
+withheld COMMIT quorums revealed after a view change.
+\end{proof}
+
+\begin{theorem}[Regional PBFT safety]\label[theorem]{thm:bb}
+Within a global view, all valid commit certificates for one sequence have the
+same semantic outcome. Certified outcomes form one chain from authorized $R_0$,
+and every committed batch has valid content and original producer authority.
+These claims do not require a regional communication bound.
+\end{theorem}
+\begin{proof}
+Within one retry, two conflicting COMMIT quorums require honest signers of
+conflicting prepared certificates, excluded by \cref{lem:prepared}. Between
+retries, the carryover part of that lemma excludes a conflicting prepared
+certificate and hence any conflicting COMMIT quorum. Every COMMIT quorum
+contains an honest signer that validated the full batch and its proposal
+justification. The semantic $R_u$ depends on the batch and predecessor, not
+on the retry that collected a certificate. Induction from $R_0$ proves a unique
+outcome chain: honest members enter $u$ only after verifying its predecessor,
+and all certificates for $u-1$ give the same predecessor. Hash binding and
+producer signatures establish the range, ordering and author. Persistence
+prevents restart from invalidating these signing restrictions.
+\end{proof}
+
+\begin{lemma}[Unique exported regional chain]\label[lemma]{lem:rcunique}
+Valid regional extensions of the same activated $R_0$ are prefix-compatible,
+including across local primary changes or after an interrupted retry.
+\end{lemma}
+\begin{proof}
+Apply \cref{thm:bb} at the first sequence where two alleged chains differ.
+A geographic activation has a new global-view identifier and therefore a new
+$R_0$; the global protocol separately determines its retained prefix.
+\end{proof}
+
+\begin{theorem}[Regional PBFT progress]\label[theorem]{thm:regional-live}
+Suppose the sequence starts from a common certified predecessor and a fixed
+honest regional quorum remains responsive through entry and retries. If
+$T_V\geq8\Delta_R$, a valid batch commits within
+\begin{equation}\label{eq:slotbound}
+ D_i=n_iT_V+7\Delta_R
+\end{equation}
+of the first responsive honest entry. In view zero, an honest primary's
+complete proposal commits within $3\delta_R$ of its send.
+\end{theorem}
+\begin{proof}
+Let $a=\min_{S\in H_i}a_S$. At activation all entries coincide. Otherwise the
+first honest holder relays the predecessor certificate immediately, so all
+responsive entries lie in $[a,a+\Delta_R]$. A proposal carrying that certificate
+also permits entry; message order cannot prevent the recipient from joining.
+The honest primary's view-zero proposal reaches all by one actual delay,
+PREPARE votes by two, and COMMIT votes by three. Only commitment starts the
+next sequence.
+
+For retry $v\geq1$, all unresolved responsive members enter in
+$[a+vT_V,a+vT_V+\Delta_R]$. If an honest member already committed and therefore
+omits a VIEWCHANGE, its certificate reaches the others within $\Delta_R$ and
+the sequence is done. Otherwise all honest VIEWCHANGE reports reach an honest
+primary by $a+vT_V+2\Delta_R$. Its own scheduled construction time is no
+earlier than this time and no later than $a+vT_V+3\Delta_R$. Complete honest
+reports alone form a quorum. The primary selects from fully verified objects;
+no missing Byzantine witness is required. Its NEWVIEW reaches all by
+$a+vT_V+4\Delta_R$, PREPARE votes by $+5\Delta_R$, COMMIT votes by
+$+6\Delta_R$, and the relayed certificate by $+7\Delta_R$. These events precede
+the earliest next timeout. Early NEWVIEW messages are buffered, not rejected.
+The cyclic schedule reaches a responsive honest primary within at most $n_i$
+retries; \eqref{eq:slotbound} conservatively includes their preceding timers.
+A selected old batch remains valid and contains at least one mini-block;
+otherwise the honest primary supplies a new batch, allowing empty transaction
+lists. No particular client's inclusion is needed.
+\end{proof}
+
+\begin{theorem}[Global agreement and authority]\label[theorem]{thm:global}
+Under the global envelope, all responsive honest members derive the same $C_e$
+in every epoch, justify it and finalize $C_{e-1}$. Adopted data prefixes are
+monotone. A finalized ROTATE authorizes its unique named successor at the
+specified boundary and preserves all previously globally adopted data.
+\end{theorem}
+\begin{proof}
+Induct from genesis. The previous certificate phase makes the parent,
+justification and required activation proof common before the epoch begins.
+The report-validity predicate is consequently common. \Cref{lem:ab} supplies
+the same report vector. The transition is deterministic; by
+\cref{lem:rcunique}, its eligible regional extensions are compatible. Every
+responsive honest member therefore derives the same target and retains its
+complete adopted data.
+
+Their weight exceeds $2W/3$, so their FFG votes establish the parent-to-child
+link in one $\Delta_G$, and certificate dissemination finishes in another.
+Both source and target epochs increase, satisfying honest signing constraints.
+The target is justified and its parent finalized. ADVANCE extends the data
+prefix; HOLD and CONFIRM retain it; ROTATE retains its parent's prefix and stores
+one pending successor. Activation consumes the finality proof of that strict
+ancestor and cannot mutate an existing checkpoint. This also holds when the
+region is unchanged: the new global view separates all regional signing domains,
+and its $R_0$ inherits the same retained global tip. Induction gives monotone
+prefixes and a unique authorization chain. A conflicting certified target at
+one epoch would also require an honest FFG double vote by quorum intersection.
+\end{proof}
+The FFG vocabulary follows Casper~\cite{ffg}. This proof establishes it on our
+explicit synchronous control chain; it does not assume that FFG alone makes
+inconsistent reports converge.
+
+\begin{theorem}[Verification soundness and stream safety]\label[theorem]{thm:sound}
+\Cref{alg:pull} satisfies the validity, integrity, agreement and verification
+clauses of \cref{def:service}. Regional previews are prefix-compatible across
+local changes. A global view change cannot remove a delivered entry.
+\end{theorem}
+\begin{proof}
+An ORDER signature binds the producer to the header, and hash binding fixes
+its ordered body and predecessor. \Cref{lem:rcunique} supplies one certified
+regional chain with checked author and PBFT primary transitions.
+\Cref{thm:global} supplies one global chain with monotone adopted prefixes and
+unique geographic transitions. Finalized checkpoints lie on that chain.
+Consumers verify these objects and append only complete, contiguous, previously
+undelivered positions. Thus their delivered logs are prefixes of one sequence
+and grow monotonically.
+
+Changing contents or their order breaks a commitment; changing the parent,
+position, view or global view changes a signed header. A substituted producer
+requires either a valid authorization for that position or a forged signature.
+A substituted confirmed history requires conflicting regional or global
+certificates, excluded above. Serving the same object through a different peer
+supplies none of these missing proofs. Correct complete evidence passes the
+specified checks. At handoff, the retained tip includes every prior globally
+adopted entry, hence every delivered entry. Applying every intervening activation
+in order truncates an old preview at its first discarded suffix, even if a later
+global view reuses those positions. Only an unretained preview is removed.
+\end{proof}
+
+\begin{lemma}[Data retention and repair]\label[lemma]{lem:pull}
+A globally justified checkpoint has responsive honest holders of its complete
+adopted prefix. For a bounded requested object, if $a$ attempted suppliers fail
+before a responsive honest holder, retrieval takes at most $(a+1)\theta$ after
+the first request, where $\theta$ is the complete attempt deadline. Regional
+preview repair has the analogous bound during a live regional interval.
+\end{lemma}
+\begin{proof}
+Responsive honest global members have weight $>2W/3$, possess the common adopted
+prefix and retain it before voting. A verified vote quorum also intersects this
+responsive set. Thus its data cannot exist solely at unavailable holders.
+Each unsuccessful attempt costs at most $\theta$; an honest holder returns the
+complete original object within that deadline. Its verification is independent
+of the supplier being the producer. The local claim uses the responsive holders
+after regional dissemination. Multiple chunks incur the sum of their bounds.
+\end{proof}
+
+\begin{theorem}[Service liveness]\label[theorem]{thm:live}
+Assume the global envelope, a healthy eligible region that remains available,
+and the capacity and minimum-tenure conditions in
+\cref{sec:latency}. A finite sequence of failed local leaders is bypassed.
+Following a regional outage and finitely many unproductive successor regions,
+a healthy successor, possibly the recovered current region, resumes confirmation
+and global delivery. During continuing
+healthy service, live consumers' delivered logs grow without bound.
+\end{theorem}
+\begin{proof}
+By \cref{thm:regional-live}, a responsive honest primary is reached and the
+outstanding sequence commits within $D_i$. Retrying cannot discard a batch
+protected by a COMMIT quorum. Each committed batch advances the stream by at
+least one mini-block, even if all its transaction lists are empty.
+
+If global progress stops, the common counter reaches $K_G$. Responsive members
+of a healthy eligible region retain the global prefix and originate true READY
+reports, even if an old PBFT sequence has no commit certificate. Their
+weight gives a ready quorum. Report agreement delivers these reports without
+completion of the failed instance. Distinct-region selections advance along
+the cyclic list and cannot skip a continuously ready healthy region. If no
+different region is ready, a ready current region is selected for recovery.
+Thus after finitely many unsuccessful selections a healthy region is activated.
+ROTATE and its confirming child finalize its authorization, and the clock fixes
+the common start from a fresh $R_0$. The failed global view's decisions cannot
+block these new instances. The minimum-tenure
+condition allows a healthy successor to finish local recovery and report a new
+batch before geographic guards replace it again.
+
+Pull and report propagation supply that batch's data. The configured report
+budget admits contiguous extensions and drains a bounded backlog. Subsequent
+FFG links finalize adopted data; \cref{lem:pull} delivers it to live consumers.
+Repeating this argument gives unbounded growth. It requires neither cooperation
+from the failed region nor inclusion of a particular client transaction.
+\end{proof}
+
+\begin{proposition}[Sound equivocation evidence]\label[proposition]{prop:evidence}
+Every accepted evidence pair in \cref{alg:evidence} identifies incompatible
+statements signed by the named member. An honest member following the relevant
+signing rules cannot produce such a pair.
+\end{proposition}
+\begin{proof}
+Both signatures authenticate the exact comparison domain. Each listed predicate
+violates its sign-once rule or the FFG surround rule. Different permitted retries,
+views, configurations or relayed origin values do not by themselves satisfy
+these predicates. Unforgeability excludes attributing an unsigned statement to
+an honest member. This proves attribution of conflicting statements, not fault
+attribution for an unanswered request or the size of a financial penalty.
+\end{proof}
+
+\section{Latency, Communication and Synchronization}\label{sec:complexity}
+\subsection{Timing and capacity}\label{sec:latency}
+For one complete bounded range, let
+\begin{equation}\label{eq:pullbound}
+ F_R=(a_R+1)\theta_R,\qquad F_G=(a_G+1)\theta_G,
+\end{equation}
+where $a_R,a_G$ count failed attempts before a usable holder. A useful announced
+tip is discovered within $A_R=T_A+\Delta_R$ regionally and
+$A_G=T_A+\Delta_G$ globally. For a consumer path use $A_P=T_A+\Delta_P$,
+using the live-consumer bound defined in the model. For $J$ sequential
+chunks, use $\sum_{j=1}^J(a_j+1)\theta_j$. Let $S_G$ denote this bound for all
+missing handoff state and $F_P$ the corresponding consumer repair bound using $\theta_P$.
+
+Let $Q_{\rm adopt}$ bound the report epochs needed to adopt a retrievable regional outcome
+and all its still-unadopted predecessors while the global view stays active,
+after an honest participating reporter holds those complete objects.
+This is a workload bound, not a consequence of the maximum packing limits.
+In a live epoch, an honest reporter includes the longest fitting contiguous
+prefix, so at least one complete pending outcome can be adopted. If there are
+at most $J_0$ pending outcomes up to a target when that reporter holds them,
+$Q_{\rm adopt}\leq J_0$ suffices: later outcomes are appended behind that target and cannot
+overtake it. These are adoption epochs executing ADVANCE/HOLD, not epochs
+spent on pending ROTATE/CONFIRM. Let $F_{\rm sync}$ be the sum of the per-chunk
+global pull bounds for obtaining those objects; it equals $F_G$ for one bounded
+request and is larger when several sequential requests are required.
+A configured arrival envelope and adequate sustained byte service
+can give a uniform $J_0$; otherwise use the actual backlog for that target.
+The limits $b_G,B_G$ must permit each individual outcome and its relative
+evidence in full. Nominal rates $b_G/T_G,B_G/T_G$ are only packing upper bounds;
+they do not establish a service rate when outcomes have variable sizes.
+With $D_i$ from \eqref{eq:slotbound}, define
+\[
+ L_{\rm sync}=A_G+F_{\rm sync}+Q_{\rm adopt}T_G,\qquad
+ L_{\rm start}=\max_i D_i.
+\]
+To prevent repeatedly replacing a healthy newly activated region before it can
+produce a reportable batch, require
+\begin{equation}\label{eq:tenure}
+ \min\{K_G,N_G\}T_G>L_{\rm start}+L_{\rm sync}+2T_G.
+\end{equation}
+The extra epochs cover report-cutoff alignment and the adopting epoch. This is
+a conservative sufficient condition, not an optimal timer setting.
+
+\subsection{Normal service and missing-data cases}
+
+Let $L_{\rm build}$ bound deliberate batch accumulation and $L_{\rm queue}$
+the wait for the previous sequence to commit. Once a view-zero primary sends
+its complete proposal, the good-case bounds are
+\begin{align}
+ L_{\rm regional}&\leq3\delta_R,\label{eq:fast}\\
+ L_{\rm preview}&\leq L_{\rm build}+L_{\rm queue}+4\delta_R+\delta_P.
+ \label{eq:preview}
+\end{align}
+One delay carries PREPREPARE, one PREPARE and one COMMIT; a fourth conservatively
+relays a full commit certificate. $\delta_P$ bounds the complete consumer path.
+Batch construction must fit the admitted proposal interval for the regional
+progress theorem; that theorem uses immediately eligible input, including empty
+transaction lists. There is no forced $n_i$-round completion after success.
+The reference does not pipeline dependent sequences: the next starts only on
+a verified predecessor certificate. $3\delta_R$ is an upper latency bound, not
+a lower bound from which a throughput ceiling can be inferred.
+
+After regional certification, a conservative finalized-delivery bound in a
+continuing healthy global view is
+\begin{equation}\label{eq:deliver}
+ L_{\rm final}\leq A_G+F_{\rm sync}+(Q_{\rm adopt}+3)T_G+A_P+F_P.
+\end{equation}
+Besides backlog, this budgets one report-alignment epoch, one adopting epoch
+and its confirming successor. An unadopted preview cancelled at a handoff has
+no finalized-delivery promise. A committed batch carries at most $b_R$ mini-blocks.
+Sustained throughput depends on accumulation, actual phase delays and capacity;
+end-to-end delivery is also limited by global outcome and byte budgets.
+
+\begin{table}[htbp]\centering\small
+\begin{tabularx}{\textwidth}{@{}p{.33\textwidth}Y@{}}\toprule
+Delivery case & Additional cost after data exists\\\midrule
+Primary push succeeds & Primary data/certificate path; no consumer pull.\\
+Known gap, first supplier honest & At most $\theta_R$, $\theta_G$, or $\theta_P$ for its path.\\
+$a$ suppliers fail first & At most $(a+1)\theta$ for one bounded range.\\
+Gap discovered by periodic announcement & Add the relevant $A_R,A_G$ or $A_P$.\\
+$J$ missing chunks & Sum their attempt and verification bounds.\\
+No retained reachable copy & No finite retrieval or lossless-recovery bound.\\\bottomrule
+\end{tabularx}
+\caption{Repair changes transport, not the confirmation predicate.}
+\end{table}
+
+\subsection{Local and geographic recovery}\label{sec:recoverybounds}
+
+For $q$ unsuccessful PBFT retries followed by a responsive honest primary,
+measured from the first honest entry of the unresolved sequence, a conservative
+preview bound is
+\begin{equation}\label{eq:localrecover}
+ L_R(q)\leq qT_V+7\Delta_R+\delta_P.
+\end{equation}
+Add at most one $T_V$ when measuring from a fault inside an already running
+retry, and $A_P+F_P$ for consumer discovery/repair. A retry with an honest
+primary may commit a batch authored earlier; recovery here means stream
+progress, not necessarily new authorship. A primary that succeeds intermittently
+still commits data, while the base primary rotates after each committed batch.
+For a newly activated region, $D_i$ bounds its first commitment from its
+synchronized start. Local timers and prepared state are never cleared merely
+to meet a latency estimate.
+
+For a geographic outage or an interrupted regional instance requiring a fresh
+global view, let $L_{\rm tail}$ bound the time until the last
+previously produced but unadopted old-region range advances the global tip.
+Such late data resets the no-progress counter, so this term cannot be silently
+omitted. Let $T_{\rm ready}$ cover successor synchronization and READY-report
+alignment; for a cold successor, $T_{\rm ready}\leq S_G+T_G$ once its inputs are
+available. If the next chosen region is healthy, a conservative bound is
+\begin{equation}\label{eq:georecover}
+\begin{split}
+ L_G\leq{}&L_{\rm tail}+T_G+K_GT_G+T_{\rm ready}+2T_G\\
+          &{}+L_R(q)+A_P+F_P.
+\end{split}
+\end{equation}
+The terms cover detection alignment, the no-progress guard, readiness,
+ROTATE/CONFIRM and the fixed activation boundary, and first successor preview.
+Readiness and guard formation may overlap; the bound does not subtract that
+overlap. To obtain a new finalized Deliver, add \eqref{eq:deliver} for the
+successor range. For a planned geographic handoff measured from its due boundary,
+omit $L_{\rm tail}+T_G+K_GT_G$, retaining any readiness wait and the finality
+stages. Each unsuccessful selected region adds another such detection and
+transition interval. No finite bound follows without a global quorum, usable
+honest backbone paths, retained bytes, transfer capacity and an eventual healthy
+eligible successor. Recovery in the same region uses this bound and the same
+READY reports and ROTATE/CONFIRM epochs. It adds no message type, quorum or
+round to normal service; it still pays the global recovery delay.
+
+
+\subsection{Control communication and verification}\label{sec:controlcost}
+Let $n=n_i$ in a regional instance. Let $\kappa$ bound signature-plus-signer
+bits. Let $\lambda_R$ bound a regional value's metadata, original producer signatures
+and relative predecessor evidence, including inherited evidence signatures but
+excluding its new PBFT phase signatures and bodies. Let $\lambda_G$ bound one global
+report's metadata and all relative evidence, including its regional commit
+certificates and activation/finality signatures, but excluding only the new
+authenticated-broadcast chain signatures and bulk bodies. These bounds include any missing proof ancestry;
+checking a digest does not reconstruct it. A direct multicast counts as $n$
+point-to-point transmissions. Let $E$ be the number of directed edges in the
+connected backbone dissemination graph; a flooded logical message traverses
+each admitted edge at most once. Body transfers use their actual route lengths.
+
+PREPREPARE, all-to-all PREPARE and all-to-all COMMIT use $O(n^2)$ messages and
+$O(n^2(\lambda_R+\kappa))$ control bits in a stable view. Each commit certificate
+contains $O(n)$ signatures. The conservative R4 rule lets every member relay
+one full certificate to all peers, adding $O(n^2)$ messages and
+$O(n^2\lambda_R+n^3\kappa)$ bits. This cost is included even in the good case.
+No aggregation or constant-size certificate is silently assumed.
+
+Each VIEWCHANGE sent to the next primary contains at most one prepared
+certificate: $O(\lambda_R+n\kappa)$ control bits. NEWVIEW contains at most $n$ such
+reports, so its multicast costs $O(n^2\lambda_R+n^3\kappa)$ bits. Report delivery and
+NEWVIEW use $O(n)$ logical point-to-point messages, in addition to the
+$O(n^2)$ phase traffic. Our complete-object variant includes every reported
+batch witness; without deduplication these retries add $O(n^2B_R)$ body bytes.
+An honest primary admits at most one report per origin and chooses a quorum
+of complete reports; an arbitrary stream of invalid packets is not admitted
+protocol work. Each receiver votes for at most one valid proposal per retry; the admission
+rule also caps attempted expensive verification of other encodings per sender. Capacity must cover
+these bounds, including verification of all certificates in a NEWVIEW.
+
+Global report agreement runs $N$ signed broadcasts in parallel. In a
+committee of size $k$, each origin's invocation forwards at most two semantic
+values per member. Across $k$ origins there are $O(k^2)$ logical multicasts;
+each signature chain has at most $k$ signatures. Let $\lambda$ bound an
+origin value's semantic metadata and detached evidence in bits, excluding bulk
+bodies and these new forwarding-chain signatures; use $\lambda=\lambda_G$
+for global reports. Hence
+\begin{align}
+ C_{\rm direct}(k,\lambda)&=O(k^3(\lambda+k\kappa)),\label{eq:directcost}\\
+ C_{\rm backbone}(k,\lambda)&=O(Ek^2(\lambda+k\kappa)).\label{eq:backbonecost}
+\end{align}
+These are control-bit costs, with $O(k^3)$ direct or $O(Ek^2)$ backbone-edge
+transmissions. Signature generation is $O(k^2)$. If $v_F$ bounds the verification
+work of one detached validity witness, uncached endpoint checking is at most
+$O(k^3(k+v_F))$ operations; backbone forwarding can add
+$O(Ek^2(k+v_F))$. Previously checked witnesses can be cached by semantic digest.
+
+\begin{table}[htbp]\centering\small
+\begin{tabularx}{\textwidth}{@{}p{.30\textwidth}p{.18\textwidth}Y@{}}\toprule
+Component & Transmissions & Control bits\\\midrule
+Regional PBFT phases & $O(n_i^2)$ & $O(n_i^2(\lambda_R+\kappa))$\\
+Regional certificate relay & $O(n_i^2)$ & $O(n_i^2\lambda_R+n_i^3\kappa)$\\
+One view change & $O(n_i)$ & $O(n_i^2\lambda_R+n_i^3\kappa)$\\
+Global report agreement & $O(EN^2)$ & $O(EN^2(\lambda_G+N\kappa))$\\
+Global FFG and link export & $O(EN)$ & $O(EN\lambda_G+EN^2\kappa)$\\\bottomrule
+\end{tabularx}
+\caption{Unaggregated reference costs. Regional rows count direct transmissions;
+global rows count backbone-edge transmissions. Bulk bodies are additional.}
+\end{table}
+
+With $q$ unsuccessful retries followed by success, regional phase, view-change
+and export traffic is $O((q+1)n_i^2)$ messages and
+$O((q+1)(n_i^2\lambda_R+n_i^3\kappa))$ control bits. Under a continuously live region,
+the cyclic schedule reaches an honest responsive primary after at most
+$n_i-1$ preceding identities. Weight below one third does not imply that fewer
+than one third of the identities are faulty or unavailable. Consequently the
+worst first-success bound can still be cubic in $n_i$ in total messages; the
+improvement is quadratic normal-view traffic and the removal of compulsory
+cubic authenticated-broadcast completion from \emph{every} successful batch.
+For comparison, a regional completion that runs $n_i$ signed origin
+broadcasts for every batch has $O(n_i^3)$ direct transmissions and
+$O(n_i^3(\lambda_R+n_i\kappa))$ control bits under the forwarding rule in Appendix A.
+PBFT needs no such completion after a successful batch. Global report agreement
+still uses signed broadcast and may dominate system cost.
+
+These are admitted protocol-work bounds, not a bound on unauthenticated
+network traffic or the cost of an unlimited packet flood. A normal phase
+receiver checks $O(n_i)$ new PBFT phase signatures; verifying one full
+NEWVIEW or all admitted certificate variants can cost $O(n_i^2)$ such phase
+signatures. Add the original-author and inherited-proof checking work of each
+admitted witness: one batch in a normal proposal and up to $n_i$ batch/prepared
+witnesses in one NEWVIEW, before caching. This work is included in the
+complete-object delay premise and is not bounded by committee size alone.
+Batch execution is outside the service.
+Over duration $T$ with $U$ new-certificate events, the all-holder announcement
+policy costs $O(N\lceil T/T_A\rceil+NU)$ logical messages; multiply flooded
+backbone announcements by at most $E$. For $J$ bounded pull requests with at
+most $a$ failed suppliers each, requests/replies add $O((a+1)J)$ messages and
+their path lengths. $Z$ forwarded conflict proofs add $O(EZ)$ transmissions
+and their actual proof sizes. These interval costs and consumer subscriptions
+are separate from per-batch agreement.
+
+\subsection{Payload and retained state}\label{sec:payloadcost}
+Let $X$ be the distinct body bytes requested in an interval, including speculative
+objects later discarded, and $M$ the sum of missing bytes over $R$ receivers.
+Then $M\leq RX$; if one of the $R$ receivers already holds everything,
+$M=(R-1)X$ when all others need the full range. A transfer plan sending each
+needed content digest once per receiver uses $M$ body bytes. The primary path,
+however, pushes per mini-block and may repeat identical bodies at different
+positions. Define $M_0$ as the sum of all primary-push body sizes across their
+destinations: normal loss-free service with no repair costs $M_0$ body bytes.
+Let $M_r$ be the sum of still-missing
+body sizes entering repair. With at most $a$ failed attempts per repaired body,
+each response capped at its requested length,
+\begin{equation}\label{eq:payload}
+ B_{\rm body}\leq M_0+(a+1)M_r\leq(a+2)M.
+\end{equation}
+The last inequality assumes $M_0,M_r\leq M$, as when each receiver has at most
+one primary push and one sequential repair campaign per initially missing body.
+Pure pull with no primary push gives $(a+1)M$. A late primary push racing a
+successful pull explains the extra copy; cancellation cannot retract in-flight
+bytes. Body caching is shared across all origin-report wrappers, not just
+across repetitions of the same report identifier.
+Announcements, requests and certificates are additional control traffic.
+Physical link-byte cost multiplies each transfer by its route length; it is
+not the $E$ factor for a flooded compact control envelope.
+
+The leader sends one primary full copy to $P$ while regional validators obtain
+the proposal for voting. Global report verification can require every responsive
+global member to fetch newly adopted bodies. Backbone/pull avoids copying full
+bodies along every logical vote edge, but does not eliminate those required
+replicas. If caching is disabled, conservative complete-object bounds are
+$O(n_i^2(B_R+\lambda_R+n_i\kappa))$ bits per regional retry, including
+uncached certificate/body relay and full NEWVIEW bundles, and
+$O(EN^2(B_G+\lambda_G+N\kappa))$ for global report exchange. In a healthy view-zero
+batch, shared body caching reduces regional body replication to $O(n_iB_R)$
+bytes, while the unaggregated certificate-relay bit term remains cubic.
+
+A full replica retains $O(8X_{\rm history}+A_{\rm history})$ bits, where $X$ is
+body bytes and $A$ is evidence bits. Constant byte/bit conversions are suppressed
+in the preceding asymptotic bounds. A cold handoff pays for
+both missing data and missing evidence; a hot handoff may fetch only a new
+authorization proof. No constant-size root reconstructs unavailable bytes.
+Pruning requires a separately specified archive/retrieval rule; the reference
+retains the configuration's history.
+
+
+\subsection{Limits and security interpretation}\label{sec:limits}
+Regional certificate safety survives arbitrary message delay under the fixed
+fault bound and persistent-state assumptions. Its timer-based progress proof
+requires the stated regional interval and complete-object capacity. The global
+report protocol still requires continuous synchronous rounds: violating its
+round bounds removes its agreement guarantee. In particular, restoring a
+network after inconsistent global target votes does not by itself supply an
+unspecified stalled-epoch recovery procedure. Regional PBFT does not repair
+that global-layer limitation.
+
+If responsive global weight is at most $2W/3$, finality and geographic recovery
+may stop even when a successor region is locally healthy. A failed region may
+therefore prevent its own replacement by removing too much global weight.
+Prepared data withholding is resisted within a live region because honest
+signers retain full bytes; this gives no retrieval guarantee after all such
+holders become unreachable. Unbounded backlog or insufficient tenure also
+invalidates the progress bounds. None of these failures can be hidden by
+counting only message headers. Execution correctness, transaction fairness,
+financial penalties and service under arbitrary partitions are outside the
+proved properties.
+
+\section*{Relation to Existing Protocols}
+The regional construction instantiates the PREPREPARE/PREPARE/COMMIT and
+prepared-certificate view-change structure of PBFT~\cite{pbft}. Weighted
+quorums, a single outstanding batch, retry counters reset per sequence, fixed
+bounded-skew retry timing and immutable original-author metadata are explicit
+choices of this specification. The safety and progress arguments above prove
+these choices rather than importing the original implementation's performance
+or its full partial-synchrony machinery. The global layer retains signed-chain
+broadcast following Dolev and Strong~\cite{ds}, and adjacent FFG-style finality
+links~\cite{ffg}. Authenticated global report agreement selects its target
+before FFG voting. All necessary algorithms, validity predicates and proofs
+are given here; the cited protocols identify the designs' origins.
+
+\appendix
+\section{Complete Authenticated Broadcast}\label{app:ab}
+Fix a committee $Q$ of $n$ identities, origin $o\in Q$, common instance domain
+$J$, deterministic complete-object validity predicate $F_J$, and round length
+$\Delta$. The special input value $\botv$ has an empty witness. Invalid or absent
+traffic is not a signed bottom input, although the algorithm's bottom output
+can represent an absent, ambiguous or genuinely bottom-valued origin. The
+calling protocols intentionally treat these outputs identically.
+
+For semantic value $z$, a length-$r$ chain is
+\[
+ \Gamma_r=((p_1,\sigma_1),\ldots,(p_r,\sigma_r)),\quad p_1=o,
+\]
+\[
+ \sigma_k=\Sig_{p_k}(\Tag{CHAIN},J,o,z,k,\Gamma_{k-1}),\qquad \Gamma_0=().
+\]
+$\Proc{ChainValid}$ checks $1\leq r\leq n$, distinct configured identities,
+first signer $o$, and each nested signature. The detached witness $\omega_z$
+must satisfy $F_J(z,\omega_z)$. Different valid witnesses are not different
+semantic values. Receivers obtain the complete required body before accepting;
+honest forwarding members become servers for it.
+
+\begin{protocol}{alg:ab}{Signed synchronous broadcast of one origin's value}
+\textbf{State at $p\in Q$:} retained set $A_p=\varnothing$, of at most two
+semantic values; forwarded set $F_p=\varnothing$. Round $r$ has send boundary
+$(r-1)\Delta$ and receive deadline $r\Delta$; there are $n$ rounds.
+\begin{enumerate}[label=\textbf{A\arabic*.}]
+\item \textbf{Origin at round 1.} For valid input $z$, send
+$(J,o,z,\Gamma_1,\omega_z)$ to all members, including itself. Mark $z$ forwarded
+at the origin. Self-delivery is immediate.
+\item \textbf{Receive.} For the currently active $(J,o)$, admit at most two
+distinct bounded packet encodings from each authenticated immediate protocol
+sender over the invocation, deduplicating exact repeats before charging quota.
+Each honest sender forwards at most two values, so its prescribed packets fit.
+Ignore packets outside active invocations without allocating new state.
+Verify the admitted chain and complete witness. Associate a
+length-$r$ chain only with round $r$; buffer early arrivals and ignore an object
+not completely valid by $r\Delta$. Enforce configured limits and admission
+quotas while reserving every prescribed honest message.
+\item \textbf{At deadline $r\Delta$.} Process valid length-$r$ packets in
+semantic-digest order. Retain $z$ and its witness if already retained or if
+$|A_p|<2$; ignore other values for this call. If $r<n$, $z$ is retained but not
+forwarded, and some received valid chain for $z$ omits $p$, append $p$'s signature
+and multicast the length-$(r+1)$ chain at this boundary. Mark it forwarded.
+Forward at most once per retained value per origin over the whole invocation.
+Continue prescribed forwarding after retaining two values.
+\item \textbf{At deadline $n\Delta$.} After processing, return the sole element
+of $A_p$ if $|A_p|=1$, otherwise return $\botv$. Retain a non-bottom witness.
+\end{enumerate}
+\end{protocol}
+
+A round-$r$ send reaches responsive honest receivers by $r\Delta$ by the
+complete-object premise. If a chain already contains $p$, its earlier prefix
+was signed and disseminated by $p$, so $p$ does not append itself twice.
+Parallel calls have independent origin identifiers and cap-two state. For
+global reports, $F_J$ accepts bottom or an origin-signed valid report
+for the fixed parent and epoch. The round count is $n$, not a count inferred
+from the stake threshold. \Cref{lem:ab} proves this concrete algorithm.
+
+
+\begin{thebibliography}{9}\small
+\setlength{\itemsep}{2pt}
+\bibitem{pbft} M. Castro and B. Liskov.
+\emph{Practical Byzantine Fault Tolerance}. OSDI 1999, pp. 173--186,
+Sections 4.2 and 4.4.
+\url{https://www.usenix.org/legacy/events/osdi99/full_papers/castro/castro_html/node4.html}.
+\bibitem{ffg} V. Buterin and V. Griffith.
+\emph{Casper the Friendly Finality Gadget}. 2017.
+\url{https://arxiv.org/abs/1710.09437}.
+\bibitem{ds} D. Dolev and H. R. Strong.
+\emph{Authenticated Algorithms for Byzantine Agreement}.
+SIAM Journal on Computing 12(4):656--666, 1983.
+\url{https://doi.org/10.1137/0212045}.
+
+\end{thebibliography}
+\end{document}

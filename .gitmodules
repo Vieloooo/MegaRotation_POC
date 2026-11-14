@@ -1,0 +1,3 @@
+[submodule "megaeth_specs"]
+	path = megaeth_specs
+	url = https://github.com/megaeth-labs/specification.git

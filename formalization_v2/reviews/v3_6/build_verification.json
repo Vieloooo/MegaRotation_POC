@@ -1,0 +1,19 @@
+{
+  "version": "3.6",
+  "status": "fresh review complete; source completion and transport coverage gaps remain; candidate not fully accepted",
+  "pdf_pages": 67,
+  "compile": "latexmk/pdflatex passed",
+  "compile_warnings": [],
+  "protocol_boxes": 6,
+  "render": "67 pages rendered and all five contact sheets inspected; corrected observer figure inspected separately",
+  "frozen_model": "English Model and Chinese section 2 match v3.1 byte-for-byte",
+  "missing_markdown_links": [],
+  "main_sha256": "ef6d858b8ead057dd77f1a43e4198d47ceceb016e5c7b826eb941878b59d96d5",
+  "pdf_sha256": "b73711d72f1b9ce17d5d8c5e8ca23b213b15d3065e1bdeae5e2706d57ab74953",
+  "review_reports": [
+    "fresh_safety.md",
+    "fresh_liveness.md",
+    "fresh_transport.md"
+  ],
+  "summary": "verdict_zh.md"
+}

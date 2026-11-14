@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="800" height="760" preserveAspectRatio="xMinYMin meet" viewBox="0 0 800 760" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="800" height="760"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-760)" style="clip-path: url(#clip)">
+		<g transform="">
+			<text x="215.95458984375" y="725" style="font-family: GuideCJK; font-size: 25px;fill: rgb(8%,23%,32%); stroke:none;" transform="translate(0,1450) scale(1,-1)">图 2  cursor 与 D 为什么会不同步</text>
+			<text x="208.0" y="693.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(32%,41%,47%); stroke:none;" transform="translate(0,1386) scale(1,-1)">上下两行是同一起点的不同后续，不能串成同一次执行</text>
+			<rect x="20" y="410" width="760" height="220" rx="18" ry="18" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(95%,96%,97%); fill-rule: evenodd;"/>
+			<text x="45" y="595" style="font-family: GuideCJK; font-size: 21px;fill: rgb(12%,41%,65%); stroke:none;" transform="translate(0,1190) scale(1,-1)">A  正常交付</text>
+			<rect x="40" y="445" width="220" height="115" rx="13" ry="13" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(91%,95%,98%); fill-rule: evenodd;"/>
+			<text x="112.0" y="523.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(12%,41%,65%); stroke:none;" transform="translate(0,1046) scale(1,-1)">共同起点</text>
+			<text x="121.7578125" y="489.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,978) scale(1,-1)">C = 108</text>
+			<text x="121.7578125" y="465.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,930) scale(1,-1)">D = 108</text>
+			<rect x="290" y="445" width="220" height="115" rx="13" ry="13" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(91%,95%,98%); fill-rule: evenodd;"/>
+			<text x="311.28076171875" y="523.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(12%,41%,65%); stroke:none;" transform="translate(0,1046) scale(1,-1)">Inbox 接纳 109、110</text>
+			<text x="371.7578125" y="489.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,978) scale(1,-1)">C = 110</text>
+			<text x="371.7578125" y="465.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,930) scale(1,-1)">D = 108</text>
+			<rect x="540" y="445" width="220" height="115" rx="13" ry="13" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(91%,95%,98%); fill-rule: evenodd;"/>
+			<text x="593.0" y="523.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(12%,41%,65%); stroke:none;" transform="translate(0,1046) scale(1,-1)">节点执行完成</text>
+			<text x="621.7578125" y="489.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,978) scale(1,-1)">C = 110</text>
+			<text x="621.7578125" y="465.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,930) scale(1,-1)">D = 110</text>
+			<path d="M 260,502 L 290,502 Z" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 2.2;"/>
+			<polygon points="290 502, 281 497.7, 281 506.3" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(12%,41%,65%); fill-rule: evenodd;"/>
+			<path d="M 510,502 L 540,502 Z" style="stroke: rgb(13%,45%,36%); stroke-linecap: butt; stroke-width: 2.2;"/>
+			<polygon points="540 502, 531 497.7, 531 506.3" style="stroke: rgb(13%,45%,36%); stroke-linecap: butt; stroke-width: 1; fill: rgb(13%,45%,36%); fill-rule: evenodd;"/>
+			<rect x="20" y="95" width="760" height="260" rx="18" ry="18" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(95%,96%,97%); fill-rule: evenodd;"/>
+			<text x="45" y="320" style="font-family: GuideCJK; font-size: 21px;fill: rgb(67%,39%,9%); stroke:none;" transform="translate(0,640) scale(1,-1)">B  没有新批次，后来满足窗口补位条件</text>
+			<rect x="40" y="175" width="220" height="115" rx="13" ry="13" style="stroke: rgb(12%,41%,65%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(91%,95%,98%); fill-rule: evenodd;"/>
+			<text x="112.0" y="253.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(12%,41%,65%); stroke:none;" transform="translate(0,506) scale(1,-1)">共同起点</text>
+			<text x="121.7578125" y="219.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,438) scale(1,-1)">C = 108</text>
+			<text x="121.7578125" y="195.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,390) scale(1,-1)">D = 108</text>
+			<rect x="290" y="175" width="220" height="115" rx="13" ry="13" style="stroke: rgb(39%,45%,50%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,96%,97%); fill-rule: evenodd;"/>
+			<text x="333.5" y="253.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(39%,45%,50%); stroke:none;" transform="translate(0,506) scale(1,-1)">窗口尚未处理完</text>
+			<text x="371.7578125" y="219.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,438) scale(1,-1)">C = 108</text>
+			<text x="352.4296875" y="195.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,390) scale(1,-1)">D 等待在 108</text>
+			<rect x="540" y="175" width="220" height="115" rx="13" ry="13" style="stroke: rgb(67%,39%,9%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(100%,94%,87%); fill-rule: evenodd;"/>
+			<text x="574.0" y="253.0" style="font-family: GuideCJK; font-size: 19px;fill: rgb(67%,39%,9%); stroke:none;" transform="translate(0,506) scale(1,-1)">窗口补位条件满足</text>
+			<text x="621.7578125" y="219.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,438) scale(1,-1)">C = 108</text>
+			<text x="621.7578125" y="195.0" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,390) scale(1,-1)">D = 120</text>
+			<path d="M 260,232 L 290,232 Z" style="stroke: rgb(60%,69%,74%); stroke-linecap: butt; stroke-width: 2.2;"/>
+			<polygon points="290 232, 281 227.7, 281 236.3" style="stroke: rgb(60%,69%,74%); stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,69%,74%); fill-rule: evenodd;"/>
+			<path d="M 510,232 L 540,232 Z" style="stroke: rgb(67%,39%,9%); stroke-linecap: butt; stroke-width: 2.2;"/>
+			<polygon points="540 232, 531 227.7, 531 236.3" style="stroke: rgb(67%,39%,9%); stroke-linecap: butt; stroke-width: 1; fill: rgb(67%,39%,9%); fill-rule: evenodd;"/>
+			<rect x="75" y="115" width="120" height="34" style="stroke: rgb(86%,89%,92%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,89%,92%); fill-rule: evenodd;"/>
+			<rect x="195" y="115" width="530" height="34" style="stroke: rgb(67%,39%,9%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,94%,87%); fill-rule: evenodd;"/>
+			<text x="95.4296875" y="126" style="font-family: GuideCJK; font-size: 16px;fill: rgb(12%,19%,23%); stroke:none;" transform="translate(0,252) scale(1,-1)">普通至 108</text>
+			<text x="334.330322265625" y="126" style="font-family: GuideCJK; font-size: 17px;fill: rgb(67%,39%,9%); stroke:none;" transform="translate(0,252) scale(1,-1)">实际 D 的 109–120：deposit-only</text>
+			<text x="161.99999999999997" y="51" style="font-family: GuideCJK; font-size: 17px;fill: rgb(8%,23%,32%); stroke:none;" transform="translate(0,102) scale(1,-1)">D 补了十二个高度，并不代表认证扫描也越过了这十二个高度。</text>
+		</g>
+	</g>
+</svg>

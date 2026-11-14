@@ -1,0 +1,160 @@
+{
+  "NewState(uint64,uint64,uint256)": {
+    "hash": "0xa04a773924505a418564363725f56832f5772e6b8d0dbd6efce724dfe803dae6"
+  },
+  "finalizedState()": {
+    "hash": "0x9fdb54a7d5166ad437306792e4e4d36f79bfd6535f989854323d87075c5a0f1b",
+    "raw": "0x0000000000000000000000000000000000000000000000000000000001af7b5a0000000000000000000000000000000000000000000000000000000001a1e2f715b9adc618b72a9b56828647d8cc34eaa018f64d250fb2ba905b22e82afc765a",
+    "words": [
+      28277594,
+      27386615,
+      9826635870022875420187284109027722317331371775849338120598284902073158628954
+    ]
+  },
+  "getVersion()": {
+    "hash": "0x0d8e6e2c57adc345ec368f8ef04086c6d0755cce2a120fdc5ef519d407cc20c0",
+    "raw": "0x000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "words": [
+      3,
+      0,
+      0
+    ]
+  },
+  "permissionedProver()": {
+    "hash": "0x313df7b126e0ccc83e0b623b050466b8772bec1e988826c322ad7b5584603660",
+    "raw": "0x0000000000000000000000004fd0ac6922da5c96b6f94202ece60e8fe3bf3947",
+    "words": [
+      455663844985534031983202929953598818836927166791
+    ]
+  },
+  "l1_latest_height": 26210703,
+  "l1_latest_utc": "2026-10-17T07:12:47+00:00",
+  "newstate_count": 8,
+  "rows": [
+    {
+      "l1_height": 26201821,
+      "l1_time": 1792114307,
+      "espresso_height": 27239995,
+      "tx": "0x3153a924adcb9b8947f0aeb7177e7051ee78c4d9030d3d26afa510c06be2a3aa",
+      "l1_utc": "2026-10-16T01:31:47+00:00",
+      "espresso_timestamp": 1792108224.63,
+      "espresso_utc": "2026-10-15T23:50:24.630000+00:00",
+      "header_to_l1_inclusion_seconds": 6082.369999885559,
+      "l1_time_asia_shanghai": "2026-10-16T09:31:47+08:00"
+    },
+    {
+      "l1_height": 26201830,
+      "l1_time": 1792114427,
+      "espresso_height": 27249432,
+      "tx": "0xc331e8bef69f68a2f79e7e1ed2e8589633aaa77685510976fc7c332f2aa4bfed",
+      "l1_utc": "2026-10-16T01:33:47+00:00",
+      "espresso_timestamp": 1792114216.222,
+      "espresso_utc": "2026-10-16T01:30:16.222000+00:00",
+      "header_to_l1_inclusion_seconds": 210.77800011634827,
+      "l1_time_asia_shanghai": "2026-10-16T09:33:47+08:00"
+    },
+    {
+      "l1_height": 26204217,
+      "l1_time": 1792143143,
+      "espresso_height": 27279995,
+      "tx": "0xfdc77b517dae79d28fc4e3b574634921187c505f0cdf04917266a5d17b9f2b2e",
+      "l1_utc": "2026-10-16T09:32:23+00:00",
+      "espresso_timestamp": 1792133180.802,
+      "espresso_utc": "2026-10-16T06:46:20.802000+00:00",
+      "header_to_l1_inclusion_seconds": 9962.197999954224,
+      "l1_time_asia_shanghai": "2026-10-16T17:32:23+08:00"
+    },
+    {
+      "l1_height": 26204227,
+      "l1_time": 1792143263,
+      "espresso_height": 27295706,
+      "tx": "0xb0d001705fc660226f7fa921d35b1b638b4eee275ea597ff9ea57ed43ce369d6",
+      "l1_utc": "2026-10-16T09:34:23+00:00",
+      "espresso_timestamp": 1792143032.346,
+      "espresso_utc": "2026-10-16T09:30:32.346000+00:00",
+      "header_to_l1_inclusion_seconds": 230.65400004386902,
+      "l1_time_asia_shanghai": "2026-10-16T17:34:23+08:00"
+    },
+    {
+      "l1_height": 26206611,
+      "l1_time": 1792171919,
+      "espresso_height": 27319995,
+      "tx": "0x034325bb3817f94c9f47b435e358aea365fd41478ec5bbab4ac371254aaea8e4",
+      "l1_utc": "2026-10-16T17:31:59+00:00",
+      "espresso_timestamp": 1792158815.107,
+      "espresso_utc": "2026-10-16T13:53:35.107000+00:00",
+      "header_to_l1_inclusion_seconds": 13103.892999887466,
+      "l1_time_asia_shanghai": "2026-10-17T01:31:59+08:00"
+    },
+    {
+      "l1_height": 26206620,
+      "l1_time": 1792172027,
+      "espresso_height": 27339869,
+      "tx": "0x3c16e9ffa3867951cb7da8c846aeb6d80ab9bb16beb66fc759d2e174fc02b60a",
+      "l1_utc": "2026-10-16T17:33:47+00:00",
+      "espresso_timestamp": 1792171819.35,
+      "espresso_utc": "2026-10-16T17:30:19.350000+00:00",
+      "header_to_l1_inclusion_seconds": 207.65000009536743,
+      "l1_time_asia_shanghai": "2026-10-17T01:33:47+08:00"
+    },
+    {
+      "l1_height": 26209005,
+      "l1_time": 1792200719,
+      "espresso_height": 27359995,
+      "tx": "0x818610656180507a384a6e3350b8f8138c660a94d485fb29d1fac7f6ad94468f",
+      "l1_utc": "2026-10-17T01:31:59+00:00",
+      "espresso_timestamp": 1792184383.013,
+      "espresso_utc": "2026-10-16T20:59:43.013000+00:00",
+      "header_to_l1_inclusion_seconds": 16335.986999988556,
+      "l1_time_asia_shanghai": "2026-10-17T09:31:59+08:00"
+    },
+    {
+      "l1_height": 26209013,
+      "l1_time": 1792200815,
+      "espresso_height": 27386615,
+      "tx": "0x35e8128a42a3f80cd12ce5ea871a58021b09a4eae32137e810a8a2511c2207dd",
+      "l1_utc": "2026-10-17T01:33:35+00:00",
+      "espresso_timestamp": 1792200617.967,
+      "espresso_utc": "2026-10-17T01:30:17.967000+00:00",
+      "header_to_l1_inclusion_seconds": 197.0329999923706,
+      "l1_time_asia_shanghai": "2026-10-17T09:33:35+08:00"
+    }
+  ],
+  "last_update_age_seconds": 20352,
+  "espresso_header_spacing": {
+    "from": 27419731,
+    "to": 27419830,
+    "count": 100,
+    "mean_seconds": 0.6412424246470133,
+    "median_seconds": 0.5590000152587891,
+    "min_seconds": 0.018000125885009766,
+    "max_seconds": 10.879000186920166
+  },
+  "l1_snapshot_asia_shanghai": "2026-10-17T15:12:47+08:00",
+  "measurement_notes": [
+    "Read-only sample of public Ethereum RPC and the officially documented Espresso query endpoint.",
+    "Espresso header spacing measures timestamp differences between consecutive returned headers, not submission-to-finality latency.",
+    "Header-to-L1-inclusion differences compare declared Espresso header timestamps with Ethereum block timestamps; they do not isolate proving time or Ethereum finalization time.",
+    "Eight NewState logs were retrieved in successful contiguous ranges from L1 block 26201703 through 26210703; three earlier 3000-block queries returned HTTP 403 and are excluded.",
+    "These observations are a dated operational sample, not an SLA or a bound on future behavior.",
+    "No test transaction was submitted and no independent end-to-end consensus-proof verification was performed."
+  ],
+  "sources": {
+    "official_contract_directory": "https://docs.espressosys.com/network/network/networks",
+    "espresso_query_api": "https://query.main.net.espresso.network",
+    "ethereum_rpc": "https://ethereum-rpc.publicnode.com",
+    "light_client_contract": "0x95ca91cea73239b15e5d2e5a74d02d6b5e0ae458",
+    "light_client_explorer": "https://etherscan.io/address/0x95ca91cea73239b15e5d2e5a74d02d6b5e0ae458"
+  },
+  "derived_summary": {
+    "fresh_sample_count": 4,
+    "fresh_header_to_l1_inclusion_seconds_min": 197.0329999923706,
+    "fresh_header_to_l1_inclusion_seconds_max": 230.65400004386902,
+    "fresh_update_intervals_seconds": [
+      28836,
+      28764,
+      28788
+    ],
+    "latest_registered_espresso_header_age_at_l1_snapshot_seconds": 20549.03299999237
+  }
+}

@@ -1,0 +1,371 @@
+{
+  "model_limit": "Hand-built rule abstractions; no network/parser implementation or general model proof",
+  "delayed_forward_deadlock": {
+    "scope": "One transient complete-object deadline violation; outside continuous global envelope",
+    "events": [
+      {
+        "round": 2,
+        "from": "H0",
+        "to": "H1",
+        "result": "complete length-2 chain misses 2*Delta deadline; rejected"
+      },
+      {
+        "round": 2,
+        "from": "H0",
+        "to": "H2",
+        "result": "complete length-2 chain misses 2*Delta deadline; rejected"
+      }
+    ],
+    "byzantine_origin_outputs": [
+      "x",
+      "BOTTOM",
+      "BOTTOM"
+    ],
+    "honest_FFG_targets": [
+      "X",
+      "Y",
+      "Y"
+    ],
+    "honest_target_weights": {
+      "X": "1/4",
+      "Y": "1/2"
+    },
+    "quorum": "> 2/3",
+    "certificate_possible_with_B_withholding": false,
+    "after_healing": "No justified C_e; adjacent e+1 cannot start; same-epoch retargeting forbidden"
+  },
+  "healthy_depth_backpressure": {
+    "scope": "Fully healthy allowed configuration; intentional backpressure, not theorem refutation",
+    "parameters": {
+      "N": 4,
+      "regions": 1,
+      "tau_R": 1,
+      "Delta_R": 0.1,
+      "Delta_G": 1,
+      "T_G": 7,
+      "N_R": 1,
+      "K_G": 5,
+      "N_G": 5,
+      "d_R": 1,
+      "b_G": 1,
+      "b_R": 1
+    },
+    "tenure_lhs": "35",
+    "tenure_rhs": "261/10",
+    "epochs": [
+      {
+        "epoch": 1,
+        "start_time": 0,
+        "installed_height": 0,
+        "reported_tip": null,
+        "new_batch_height": 1,
+        "target_adopted_height": 0
+      },
+      {
+        "epoch": 2,
+        "start_time": 7,
+        "installed_height": 0,
+        "reported_tip": 1,
+        "new_batch_height": null,
+        "target_adopted_height": 1
+      },
+      {
+        "epoch": 3,
+        "start_time": 14,
+        "installed_height": 1,
+        "reported_tip": null,
+        "new_batch_height": 2,
+        "target_adopted_height": 1
+      },
+      {
+        "epoch": 4,
+        "start_time": 21,
+        "installed_height": 1,
+        "reported_tip": 2,
+        "new_batch_height": null,
+        "target_adopted_height": 2
+      },
+      {
+        "epoch": 5,
+        "start_time": 28,
+        "installed_height": 2,
+        "reported_tip": null,
+        "new_batch_height": 3,
+        "target_adopted_height": 2
+      },
+      {
+        "epoch": 6,
+        "start_time": 35,
+        "installed_height": 2,
+        "reported_tip": 3,
+        "new_batch_height": null,
+        "target_adopted_height": 3
+      },
+      {
+        "epoch": 7,
+        "start_time": 42,
+        "installed_height": 3,
+        "reported_tip": null,
+        "new_batch_height": 4,
+        "target_adopted_height": 3
+      },
+      {
+        "epoch": 8,
+        "start_time": 49,
+        "installed_height": 3,
+        "reported_tip": 4,
+        "new_batch_height": null,
+        "target_adopted_height": 4
+      }
+    ],
+    "new_batch_times": [
+      0,
+      14,
+      28,
+      42
+    ]
+  },
+  "weighted_identity_silence": {
+    "scope": "Allowed weighted configuration, with honest identity last in installed order",
+    "Byzantine_identities": 100,
+    "honest_identities": 1,
+    "Byzantine_weight": "1/5",
+    "honest_weight": "4/5",
+    "N_R": 100,
+    "tau_R_seconds": "3/100",
+    "T_G_seconds": "21/2",
+    "K_G": 40,
+    "N_G": 40,
+    "L_i_seconds": "7576/25",
+    "initial_silent_seconds": "300",
+    "tenure_lhs": "420",
+    "tenure_rhs": "16727/50"
+  },
+  "global_quorum_outage": {
+    "scope": "All honest, active 40%-weight region offline; global responsive-quorum assumption fails",
+    "remaining_weight": "3/5",
+    "global_quorum": "> 2/3",
+    "successor_region_READY_fraction": "1",
+    "global_ROTATE_can_certify": false
+  },
+  "premature_rotation_starvation": {
+    "scope": "All availability and timing premises hold; minimum-tenure inequality is violated",
+    "first_silent_term_seconds": 10,
+    "residence_seconds": 6,
+    "tenure_lhs": "2",
+    "required_rhs": "271/10",
+    "epochs": [
+      {
+        "epoch": 1,
+        "active_region": 1,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 2,
+        "active_region": 1,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 3,
+        "active_region": 1,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 4,
+        "active_region": 2,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 5,
+        "active_region": 2,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 6,
+        "active_region": 2,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 7,
+        "active_region": 1,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 8,
+        "active_region": 1,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 9,
+        "active_region": 1,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 10,
+        "active_region": 2,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 11,
+        "active_region": 2,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 12,
+        "active_region": 2,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 13,
+        "active_region": 1,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 14,
+        "active_region": 1,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 15,
+        "active_region": 1,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 16,
+        "active_region": 2,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 17,
+        "active_region": 2,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 18,
+        "active_region": 2,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 19,
+        "active_region": 1,
+        "slots": [
+          1,
+          2
+        ],
+        "mode": "HOLD",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 20,
+        "active_region": 1,
+        "slots": [
+          3,
+          4
+        ],
+        "mode": "ROTATE",
+        "adopted_height": 0
+      },
+      {
+        "epoch": 21,
+        "active_region": 1,
+        "slots": [
+          5,
+          6
+        ],
+        "mode": "CONFIRM",
+        "adopted_height": 0
+      }
+    ],
+    "infinite_extension": "Every three epochs reset to identical state modulo region/view/epoch labels"
+  }
+}

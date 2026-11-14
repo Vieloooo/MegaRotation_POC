@@ -1,0 +1,98 @@
+--- baseline/main_v2.tex
++++ main_v2.tex
+@@ -245,8 +245,8 @@
+ original producer signatures. Certificate view and original authorship view
+ therefore need not coincide.
+ 
+-This threshold is the conservative weighted adaptation of Sync HotStuff's
+-majority certificate: every certificate contains an honest signer, and honest
++This vote threshold is the conservative weighted adaptation of Sync HotStuff's
++majority certificate: every vote certificate contains an honest signer, and honest
+ stake alone can form one. Its temporal argument below supplies safety;
+ we do not transfer a count-based fault bound to stake without this check.
+ Producer and vote signatures bind the session, view, position and block
+@@ -297,9 +297,9 @@
+ \end{figure}
+ 
+ \Cref{fig:pipeline-communication} expands this pipeline into the message flow
+-among four regional sequencers. The drawing does not assign them equal stake:
+-both vote certificates and post-commit receipts use the weighted threshold
+-$>2W_i/3$.
++among four regional sequencers. The drawing does not assign them equal stake.
++Vote certificates require weight $>2W_i/3$; post-commit receipts require
++matching endorsements of weight $>W_i/3$.
+ 
+ \begin{figure}[H]\centering
+ \input{figures/v2-major/regional-communication-pipeline.tex}
+@@ -332,7 +332,7 @@
+ Quit view $v$ upon either of the following events:
+ \begin{itemize}
+ \item Receive BLAME signatures for $v$ from distinct members of total
+-weight $>2W_i/3$: broadcast this blame certificate.
++weight $>W_i/3$: broadcast this blame certificate.
+ \item Detect leader equivocation: broadcast the two messages signed by $L$.
+ These are \Tag{PROPOSE}/\Tag{NEWVIEW} messages identifying conflicting blocks,
+ or two \Tag{NEWVIEW} messages selecting different anchors in view $v$.
+@@ -411,12 +411,12 @@
+ mechanism is added in this version.
+ 
+ \subsection{Confirmation receipts and slashing}\label{sec:receipt}
+-After committing $B_k$, an honest member signs its confirmed block digest and
+-position, and sends that endorsement to peers and subscribed consumers.
+-A quorum of matching endorsements, with the block and any missing ancestry,
+-implements the abstract receipt $\pi_h$ for every mini-block covered by that
+-committed prefix. This adapter hides timer and voting details from the stream
+-interface. A raw vote QC is not accepted as this receipt.
++After committing $B_k$, an honest member signs a CONFIRM statement binding
++the session, block digest and position, and sends it to peers and subscribed
++consumers. Matching CONFIRM endorsements from distinct members of weight
++$>W_i/3$, with the block and any missing ancestry, form the receipt $\pi_h$
++for its committed prefix. CONFIRM signatures are domain-separated from VOTE
++and follow the local commit rule. A raw vote QC is not a receipt.
+ 
+ Let $D=(\mathit{chainId},\mathit{contract},\mathit{cfgId},i,\mathit{sid})$
+ identify the chain, adjudicating contract, fixed configuration, region and
+@@ -555,7 +555,7 @@
+ 
+ Thus all correct members can vote for this proposal by $t-\Delta_R$,
+ without a conflicting vote in that view. Their weight exceeds $2W_i/3$, so
+-each obtains $Q_v(B_k)$ by $t$. Every quorum contains an honest signer;
++each obtains $Q_v(B_k)$ by $t$. Every vote certificate contains an honest signer;
+ therefore no conflicting block can certify. The wait before STATUS ensures
+ a member entering the next view has this certificate or one of higher rank.
+ \end{proof}
+@@ -584,8 +584,9 @@
+ A direct commitment preserves every earlier direct commitment by
+ \cref{lem:extension}; committing ancestors preserves the same order.
+ Hence no position has two committed blocks. Projection fixes both the
+-batch-command sequence and mini-block sequence. Every accepted receipt
+-contains an honest post-commit endorsement. Signature verification and hash
++batch-command sequence and mini-block sequence. Receipt weight $>W_i/3$
++exceeds faulty weight, so each receipt contains an honest post-commit
++endorsement. Signature verification and hash
+ binding fix producer authority, transaction order and ancestry, while the
+ consumer appends only contiguous entries. Retrieval changes the supplier,
+ not the verified value.
+@@ -604,16 +605,18 @@
+ certificate, after which the leader can propose every $2\Delta_R$ or faster.
+ Even for the earliest entrant, the first fresh proposal triggers a vote by
+ $6\Delta_R$ after entry, and the $p$th by $(2p+4)\Delta_R$. Timely arrivals
+-are processed before deadline tests, so correct members do not blame an honest
+-leader. Its nonconflicting proposals commit after their timers.
++precede deadline tests, so honest members never blame this leader; faulty
++weight alone cannot reach the $>W_i/3$ threshold. Thus no BLAME certificate
++can force it to quit, and its proposals commit after their timers.
+ 
+ A Byzantine leader either sustains this proposal progress or causes a quit
+ through a missed deadline or equivocation. If view changes continue, the
+ cyclic list reaches an honest leader; if they stop, the continuing
+ nonconflicting proposal chain commits. A prefix committed at only some
+ members survives handover and is committed everywhere through a later
+-descendant. Correct holders disseminate confirmations and answer requests;
+-poll-fetch therefore repairs missing objects. Finally, a persistently
++descendant. Honest members alone can supply the $>W_i/3$ weight required
++for BLAME and, after commitment, matching confirmations. Dissemination and
++poll-fetch ensure delivery. Finally, a persistently
+ submitted eligible command selected in an honest-serving interval is included
+ in a committed batch. This last step uses the stated input-service condition,
+ not an inferred anti-censorship guarantee.

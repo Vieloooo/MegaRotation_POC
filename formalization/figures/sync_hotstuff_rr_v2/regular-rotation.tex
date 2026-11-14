@@ -1,0 +1,43 @@
+% Native TikZ fragment. The public DONE certificate gates votes, not proposals.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!65,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt},
+  gate/.style={draw=rrTeal,fill=rrTeal!5,rounded corners=2pt,
+    align=center,inner sep=5pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,11.4);
+  \node[align=center] at (2.1,0) {Current leader\\$L(g,t)$};
+  \node[align=center] at (7.8,0) {Correct replica\\$P$};
+  \node[align=center] at (13.5,0) {Successor leader\\$L(g,t+1)$};
+  \foreach \x in {2.1,7.8,13.5} \draw[lane] (\x,.5)--(\x,10.6);
+
+  \node[phase] at (.1,.85) {Terminal certification may trigger an early proposal};
+  \draw[msg] (2.1,1.5)--node[lab] {terminal proposal $T$} (7.8,2.0);
+  \draw[msg] (2.1,1.5)--(13.5,2.0);
+  \node[state,minimum width=8.9cm] at (10.2,2.65)
+    {Vote for $T$ in $(g,t)$ and start its $2\Delta$ timer.\\
+     Terminal QC $N_{g,t}=\QC_{g,t}(T)$ forms.};
+  \draw[msg] (7.8,3.25)--node[lab] {$N_{g,t}$} (13.5,3.65);
+  \draw[msg] (13.5,4.1)--node[lab] {optional early $\mathrm{PROPOSE}(Y,N_{g,t})$} (7.8,4.55);
+  \node[state,draw=rrAmber,minimum width=11.8cm] at (7.9,5.25)
+    {Buffer $Y$. A terminal QC alone does \textbf{not} permit a DATA vote in term $t+1$.\\
+     The old terminal commit timer continues; generation $g$ is unchanged.};
+
+  \node[phase] at (.1,6.1) {Terminal commitment supplies the voting gate};
+  \node[gate,minimum width=11.8cm] at (7.9,6.8)
+    {After the original terminal timer completes, broadcast $\mathrm{DONE}(g,t,T)$.\\
+     Collect $f+1$ matching DONE signatures into $\DC_{g,t}(T)$.};
+  \draw[msg,draw=rrTeal] (7.8,7.55)--node[lab] {$\DC_{g,t}(T)$ + complete history} (13.5,8.0);
+  \node[gate,minimum width=11.8cm] at (7.9,8.7)
+    {Verify $\DC_{g,t}(T)$ and import its committed prefix. Enter $(g,t+1)$.\\
+     Now validate and vote for buffered $Y$; start $Y$'s $2\Delta$ timer.};
+  \draw[msg] (7.8,9.45)--node[lab] {DATA votes for $Y$; normal pipeline resumes} (13.5,9.9);
+  \node[anchor=west,align=left,font=\fontsize{9}{10.5}\selectfont] at (.1,10.85)
+    {No L1 transaction and no recovery on this path. Each replica applies the same gate locally.\\
+     DONE reports an original timed terminal commit; QC receipt or imported commit does not issue DONE.};
+\end{tikzpicture}

@@ -1,0 +1,89 @@
+Sync HotStuff RR v2: verification and delivery record
+Date: 11 October 2026
+Source: formalization/sync_hotstuff_rr_v2.tex
+Final PDF: output/pdf/sync_hotstuff_rr_v2.pdf
+PDF pages: 15
+Source SHA-256: 03ffd3b633bec864f668259d373809abede93f174755badf38f801d2fc3cb904
+PDF SHA-256: 7e242171151cd7ab11426d195a2dfec3845f6ff6d4b32b79e9ec1a94d9fcd59c
+
+AUTHORIZED VARIANT
+The user selected the first, terminal-commit-gated variant for this manuscript,
+while retaining immediate-terminal-QC rotation as the preferred later
+optimization. Proposal transmission may precede admission. Successor DATA
+votes require the predecessor terminal commit certificate.
+
+PROTOCOL BOUNDARY
+- Fixed n=2f+1 committee and at most f permanently Byzantine members.
+- Complete-message synchrony, including required history and validation, <=Delta.
+- L1 schedule L(g,t) is finalized, immutable and available before entry.
+- Any complete admissible current-generation quit proof freezes all generation
+  timers; successor entry is always (g+1,0).
+- Recovery uses SH STATUS, lock, leader-selected NEWVIEW and no-timer ANCHOR
+  re-vote. It runs no agreement protocol over CBs and no recovery L1 transaction.
+- A terminal certificate has f+1 post-timer DONE signatures, including at least
+  one actual correct timer commitment. Imported commits cannot create DONE.
+- Old proofs do not re-open completed recovery; future proofs wait for entry.
+
+REVIEW 1: PROOF-DESIGN VERIFIER
+The complete live source was reviewed for safety and liveness, then the final
+updated passages were rechecked.
+Final confirmation:
+"The prior safety and liveness verdict remains valid for the updated passages.
+No new Critical Error or Justification Gap was found."
+Scope: the abstract commit-gated protocol and explicit model/service
+assumptions; no implementation, actual L1, capacity-limited network, or
+immediate-QC optimization claim.
+
+REVIEW 2: INDEPENDENT VERIFIER
+A separate verifier received the live source without the author's reasoning
+history. It reviewed protocol admission, timer protection, locks, unique
+extensibility, height progress, requests, timing and communication.
+Final confirmation:
+"The prior qualified verdict remains valid; the updated passages introduce
+no Critical Error or Justification Gap."
+The last targeted recheck covered opening-bound signatures and one DATA vote
+per slot, terminal-vote-or-DONE-import dissemination, first-processing time c_t,
+and the DONE/timer case split for the throughput bound.
+
+ADDITIONAL PERFORMANCE AUDIT
+An independent timing/complexity audit checked:
+- speculative first-child buffering versus DATA-vote admission;
+- a+2Delta entry, a+4Delta NEWVIEW, a+6Delta ANCHOR QC,
+  a+7Delta first DATA proposal, and surviving timers by a+9Delta;
+- buffered term envelope c_(t+1)-c_t <=2Delta+(2K-1)delta;
+- DATA vote/QC/DONE byte charges with explicit signatures and ancestry;
+- request fairness along both generation and term schedule dimensions.
+No remaining attack or gap was reported in those reviewed branches.
+
+FINDINGS RESOLVED DURING REVIEW
+1. Each p=1,...,K now has a separate explicit progress-check deadline.
+   A partially completed K-block term cannot escape later deficiency checks.
+2. Progress is counted by admitted positions supported by DATA votes or DATA
+   QCs, rather than falsely requiring every node to vote every earlier block.
+3. Certificate deduplication is semantic and includes type/view/rank.
+   Different ranked certificates for the same block are not suppressed.
+4. STATUS explicitly carries CB(g,*) as E_(g+1), removing witness-index ambiguity.
+5. Recovery control counts exclude old DATA/DONE backlog charged to its
+   originating blocks and terms.
+6. Height dissemination and good-case timing distinguish terminal votes from
+   already-known DONE. Timing uses first local processing, not redelivery.
+7. References distinguish assumptions, lemmas and theorems correctly.
+
+FINAL ARTIFACT CHECKS
+- TeX Live/latexmk compilation succeeded, no warnings or over/underfull boxes.
+- The Codex standalone LaTeX compiler also reported success.
+- Final PDF has 15 A4 pages, four native TikZ execution diagrams, and red
+  protocol-box differences relative to the original standard-synchronous SH.
+- Every final rendered page was visually inspected; protocol and diagram pages
+  were checked for legibility, overlap, clipping and consistent timing labels.
+- The main .tex is standalone: its diagrams are embedded. Matching TikZ
+  fragments are retained under formalization/figures/sync_hotstuff_rr_v2/.
+- Original sync_hotstuff_rr.tex and main_v3.tex were not changed.
+
+LIMITS
+These reviews establish a checked mathematical specification under its explicit
+assumptions. They are not mechanized verification or deployment certification.
+Request liveness additionally uses the stated finite-predecessor input-service
+assumption and both schedule fairness conditions. Communication excludes
+arbitrary Byzantine flooding. Immediate-QC rotation remains an unproved
+optimization with an explicit finality-starvation counterexample.

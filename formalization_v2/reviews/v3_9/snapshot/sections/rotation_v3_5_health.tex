@@ -1,0 +1,177 @@
+\subsubsection{Multisignature health policy}
+\label{sec:health-policy}
+The honest, coordinated committee of \cref{ass:committee} runs the
+following signing policy. This restricts which new controls it issues;
+honesty alone did not imply these restrictions. Health and operational
+reports can request an intervention, but their accuracy or delivery time
+is not a premise of the results below. No report, including an emergency
+report, bypasses the policy's finite credits.
+
+The policy never changes an issued control's target, activation time or
+priority. Every submitted MSIG still reaches the first-crossing check of
+\cref{alg:force}: the first due record matching the entry branch version
+takes precedence over AUTO, and other due records are consumed as stated
+there. A regular handoff does not invalidate its target. No controller
+decision postpones a matching MSIG until completion, revokes accepted
+DATA, or selects an older retained anchor.
+
+\paragraph{State and credits.}
+The controller advances one verified replay cursor monotonically and
+retains a durable signing journal across restarts and service replacement.
+Let $\kappa$ identify its observed accepted tip by chain, DATA height,
+block hash and provenance. For each $\kappa$, three initially unused bits
+$f[\kappa],\ell[\kappa],c[\kappa]\in\{0,1\}$ permit at most one MSIG,
+one health lease, and one optional CLEAR, respectively. A lease concerns
+one region. Let $d_i$ count DATA produced by region $i$ and accepted into
+the controller's observed $G$. A further bit $u_i[d_i]\in\{0,1\}$ permits
+at most one lease for $i$ at that count. All these bits are initially zero;
+using a credit sets its bit to one permanently.
+
+The journal binds each reservation to its exact operation and records
+signature release, actual submission, finalization and canonical
+processing. It also retains each region's outstanding lease. Every
+signing path reserves its credits durably \emph{before} releasing a
+signature. Stale targets, failed or uncertain submissions, expiry and
+abandoned operations never refund a credit. Retries use the same exact
+record and control identity, not a newly signed replacement. If an
+operation may never have been submitted, a retry must still satisfy the
+advance-announcement condition for a first submission.
+
+Only a newly observed accepted tip provides a new $\kappa$; only newly
+accepted DATA from $i$ advances $d_i$. Force, recovery, cooldown, Ready,
+raw publication and receipt formation do neither. Re-reading old history
+never moves the cursor backwards or resets a bit. In particular, accepted
+DATA from another region cannot replenish $u_i$. Missing control or
+namespace evidence pauses new signing decisions.
+
+\paragraph{Controller actions.}
+Managed regions start with governance flag ON. This module issues only
+the following health controls, each under the existing authorization and
+advance-announcement rules. An exhausted credit leaves an operational
+request unsigned and without public effect.
+\begin{enumerate}[label=\textbf{H\arabic*)},itemsep=3pt]
+\item \textbf{Interrupt a branch.}
+At the verified cursor, if $f[\kappa]=0$, reserve that credit, bind the
+observed $\beta$, and submit one future MSIG with \emph{empty attached
+configuration}. Choose its timestamp using the actual submission time.
+If its target later becomes stale, do not retarget it or refund its
+credit. Health exclusion, when requested, uses the separate lease action.
+
+\item \textbf{Lease an OFF status.}
+For region $i$, require $\ell[\kappa]=u_i[d_i]=0$ and no outstanding
+lease for $i$. Reserve both credits. First submit an independent
+STATUS ON$(i)$ at a finite future threshold $\theta_{\rm on}$, and wait
+until that exact record is finalized and available. At the proposed
+OFF submission time $s_{\rm off}$, choose a threshold satisfying
+\[
+ s_{\rm off}+T_{\rm L1}+\epsilon_E+\eta
+ <\theta_{\rm off}<\theta_{\rm on}.
+\]
+If no such threshold remains, abandon the OFF before releasing its
+signature; keep the pending ON and the spent credits. Otherwise submit
+an independent STATUS OFF$(i)$ with activation threshold
+$\theta_{\rm off}$. Never issue a
+second OFF for this lease. Do not start another lease for $i$ until all
+its issued records have been canonically processed and any unissued OFF
+has been definitively abandoned. An uncertain submission remains pending.
+
+\item \textbf{Clear a cooldown, optionally.}
+The default is to await automatic expiry. To clear it early, require
+$c[\kappa]=0$, reserve that credit, and submit one authorized future
+CLEAR for the named region. A recovery report or ON does not clear a
+cooldown, replenish a credit, or reopen a closed branch.
+\end{enumerate}
+
+The lease's ON withdraws temporary exclusion; it does not certify
+recovery or future synchrony. Its activation is already scheduled before
+OFF can be submitted, so restoration needs no later recovery report or
+unsigned controller promise. Sequence order need not equal activation
+order. If one Espresso timestamp jump crosses both thresholds, the
+independent STATUS records apply OFF and then ON in that prelude; the
+lease may have no effective exclusion interval.
+
+Empty attached configuration is material here. A scheduled MSIG with
+attached OFF and an independent ON at a later threshold can first become
+due in the same block. Then all independent STATUS records run first,
+and the MSIG's attached OFF can overwrite that ON. The new policy avoids
+this case; it does not reinterpret an older record that contains such
+configuration.
+
+\paragraph{Administrative scope and adoption.}
+An explicit permanent administrative removal is separate from health
+leasing and removes that region from the managed-region service claim.
+Before scheduling that OFF, stop new leases for the region and reconcile
+its pending health controls; an already issued ON retains its original
+effect. Unlimited administrative or emergency signing outside this
+module invalidates its finite-intervention guarantee. Such a bypass
+cannot be treated as an uncounted benign exception.
+
+The following restoration result concerns execution of this policy from
+genesis, with its clean journal and managed flags initialized ON. For
+adoption into an existing execution, separately inventory the finite
+backlog of reserved, released or submitted legacy operations; preserve
+every issued record's original semantics. Its outstanding MSIG count
+adds to the bound below. Legacy OFF records need not have restoration
+ONs, so restoration is not claimed until they are explicitly reconciled.
+In particular, a corrective ON for legacy attached OFF must be submitted
+after observing its canonical processing, not merely assigned a later
+threshold. No bound on legacy cleanup or controller catch-up is assumed.
+
+\begin{proposition}[Finite controls at a fixed accepted prefix]
+\label{prop:finite-controls}
+Suppose the actual accepted prefix is a fixed $G^*$ from time $s_0$
+onward. Write $h^*=h(G^*)$ and let $h_0\le h^*$ be the controller's
+observed accepted height at $s_0$. After $s_0$, it makes at most
+$h^*-h_0+1$ new reservations of each of MSIG, health lease and CLEAR.
+If $N_0$ previously reserved MSIG operations can still cause a Force,
+including operations whose signatures have not yet been released, then
+at most
+\[
+ N_0+h^*-h_0+1
+\]
+effective MSIG Forces occur after $s_0$.
+\end{proposition}
+\begin{proof}
+The controller's monotone cursor can only visit accepted tips on the
+ancestor chain of $G^*$, at heights $h_0,\ldots,h^*$. Each such key has
+one credit of each kind. Reservations under earlier keys are already
+in the prior journal, and their pending MSIGs are included in $N_0$.
+Each issued MSIG has at most one effect under \cref{alg:force}; stale
+records and exact retries do not add effects. This also covers delayed
+ingestion of already accepted DATA. If $h_0=h^*$, at most one new MSIG
+reservation remains, rather than a new credit after each beta change.
+\end{proof}
+
+\begin{proposition}[Restoration after finite health exclusion]
+\label{prop:health-restoration}
+Consider a region that remains managed under the policy from genesis,
+and suppose Espresso timestamps keep growing as in \cref{sec:progress}.
+If $G$ eventually stops growing, that region eventually has governance
+flag ON permanently. The same conclusion holds, even if other regions
+continue advancing $G$, whenever this region contributes only finitely
+many accepted DATA blocks.
+\end{proposition}
+\begin{proof}
+For a fixed $G$ tail, \cref{prop:finite-controls} leaves only finitely
+many lease reservations, including the finite prior journal. Independently,
+if region $i$ contributes only finitely many accepted DATA blocks, its
+observed counts $d_i$ range over a finite set. Each count permits at most
+one lease, irrespective of other regions' progress.
+
+Every issued OFF has a previously finalized independent ON with a finite
+later threshold. Growing timestamps eventually cross it. The two records
+end in ON even when their first crossings coincide. A later lease for
+the same region cannot overlap this processing, and new MSIGs have no
+attached status changes. With finitely many leases, the last issued OFF
+is therefore eventually undone. A lease abandoned before OFF release
+cannot prevent restoration. The initial flag is already ON if no OFF
+was issued.
+\end{proof}
+
+These are control-policy results. ON still leaves cooldown and authority
+checks in the eligibility rule. AUTO may continue to interrupt work, and
+global growth may replenish MSIG credits indefinitely. The results do
+not establish timely receipt formation, useful service for every region,
+or request acceptance. They supply finite committee interference for a
+fixed-$G$ argument without strengthening the frozen service conditions
+into recurring successful intervals or an accurate failure oracle.

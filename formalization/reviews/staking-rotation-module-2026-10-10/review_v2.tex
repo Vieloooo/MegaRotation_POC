@@ -1,0 +1,106 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype,amsmath,amssymb,enumitem,booktabs,tabularx}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\begin{document}
+\begin{center}
+{\Large\bfseries Staking and Rotation Module: Review of v2}\\[4pt]
+10 October 2026
+\end{center}
+\textbf{Frozen source:} \texttt{formalization/staking\_rotation\_module\_v2.tex}.
+\textbf{SHA-256:}\\
+\texttt{9f4af9b6859de169b9ddab8da892e6c985c0b2d5e100ba953ffbae24fe84a453}.
+
+\section*{Summary}
+\textbf{Final verdict.} Three independent verifier passes found no remaining
+Critical Error or Justification Gap in the two stated propositions and
+reviewed transition rules at this high-level interface scope. The v1
+findings are resolved. This is conditional composition verification:
+the external BFT, terminal closure, L1, seed and adjudication contracts
+remain assumptions.
+
+\textbf{List of findings:} None remaining within that scope.
+
+\begin{tabularx}{\linewidth}{@{}lXX@{}}
+\toprule
+Version & Design and review & Disposition\\\midrule
+v1 & Initial complete candidate; three independent security reviews &
+Preserved. Progress/churn claims and lifecycle branches required repair.\\
+v2 & Patches to the recorded v1 findings; three independent rechecks &
+Current high-level design, conditional on its explicit service contracts.\\
+\bottomrule
+\end{tabularx}
+
+\section*{Detailed verification log}
+\begin{enumerate}[leftmargin=*,itemsep=7pt]
+\item \textbf{Churn and penalty accounting.}
+Lines 141--144 restrict amount budgets to voluntary queued changes.
+Lines 163--174 omit incumbents below the minimum remaining balance,
+record mandatory departures, charge voluntary exits by old frozen weight,
+and construct positive successor weights. The penalty counterexample to
+v1 no longer contradicts the claimed bound. Post-freeze debit effects are
+expressly separated from historical verification and collateral adequacy.
+
+\item \textbf{Request and membership lifecycle.}
+Lines 154--176 prohibit refund after reservation, remove canceled records,
+and consume selected requests at freeze. Lines 317--320 promote selected
+joins, retire recorded departures, clear the plan and reset the actual
+epoch-start timestamp. A new member can subsequently request exit;
+the same plan cannot be applied twice.
+
+\item \textbf{Idle and missing-plan branches.}
+Lines 321--326 set the result to idle and skip selection when a due plan
+is unready. An idle predecessor or a newly installed epoch selects the
+first eligible region; only a non-idle within-epoch transition scans after
+the predecessor region. Empty eligible sets produce idle. Lines 330--331
+reject an idle advance that changes neither configuration nor authority.
+
+\item \textbf{Unique authority and simultaneous triggers.}
+Lines 312--316 check the expected counter/session, process due control
+events, authenticate the trigger, and verify terminal closure. An idle
+step retains exactly the stored anchor. Lines 329--334 atomically consume
+the predecessor and record the successor. The exact-session off latch
+survives a later live update until retirement. These rules serialize
+epoch expiry, quota expiry, and status changes in the finalized L1 log.
+
+\item \textbf{Prefix preservation and delayed receipts.}
+The external closure contract preserves all old finalized or finalizable
+prefixes and excludes later old-session continuation. Opening requires
+the finalized authority and checkpoint data. Lines 340--347 check the
+original authorization, native historical finality, opening anchor and,
+for a closed session, inclusion in the recorded closing prefix.
+Proposition 1 therefore follows by induction over authority transitions.
+
+\item \textbf{Actual retirement and timely claims.}
+Lines 177--187 start the liability clock at actual configuration retirement.
+Claims accepted on L1 at or before the evidence deadline remain effective;
+release occurs strictly after it and excludes encumbered funds.
+Attribution to the position/signing domain and exactly-once payment
+preserve historical responsibility. Proposition 2 follows under the
+external adjudication contract and makes no claim to replenish prior losses.
+
+\item \textbf{Progress and randomness scope.}
+Lines 407--423 distinguish installing a configuration from opening and
+serving an eligible region. FIFO and withdrawal progress additionally
+require continued installations, maturity, positive budgets and dependency
+progress. Frozen plans precede the one accepted seed; no fairness theorem
+independent of committee filtering or operator behavior is asserted.
+\end{enumerate}
+
+\section*{Verification boundary and build checks}
+The result does not establish that an arbitrary regional BFT offers the
+required terminal-closure adapter. If the old region cannot safely close,
+the specification waits. It does not prove unconditional failover, bounded
+withdrawal, a remaining-collateral lower bound after penalties, or a
+per-region Byzantine stake bound from permissionless admission.
+
+The frozen v2 source compiled successfully with the Codex LaTeX compiler
+and with the local LaTeX toolchain. Its six-page PDF was rendered and all
+pages visually inspected; the final build reported no overfull boxes or
+undefined references. Version 1 and the referenced \texttt{main\_v3.tex}
+were preserved. Compilation and layout checks are distinct from the
+conditional security verdict above.
+\end{document}

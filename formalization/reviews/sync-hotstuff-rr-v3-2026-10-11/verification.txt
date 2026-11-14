@@ -1,0 +1,119 @@
+Sync HotStuff RR v3: verification and delivery record
+Date: 11 October 2026
+Source: formalization/sync_hotstuff_rr_v3.tex
+Final PDF: output/pdf/sync_hotstuff_rr_v3.pdf
+PDF pages: 14
+Source SHA-256: aa5c4c1a457fb0c1ada8444ab6322ffdcd921d5f9b19cef8ddd21702c80d6f85
+PDF SHA-256: 66b03b652d02f8a1e849e43342c42d2dbf5c559842c61b4617a1765c94fad91c
+Proof-review source SHA-256: 589a53e323145335a2080a3103f758d81e5832f53c23b6a6d3efe56541e120fa
+Changes after the proof-review snapshot were layout only: a Needspace directive
+and ragged-right complexity table columns.
+
+AUTHORIZED VARIANT
+The user requested an optimized v3 with immediate terminal-QC rotation and
+clarified that a term allows at least one batch, potentially more (K >= 1).
+The user added prospective PoS exclusion of proven equivocating sequencers.
+Normally completed terms certify K fresh batches; faulty terms may produce
+none and require recovery. Positive quota does not force Byzantine output.
+
+PROTOCOL AND MODEL BOUNDARY
+- Fixed n=2f+1 voting committee, at most f permanent Byzantine identities.
+- Complete correct-to-correct processing, including dependencies, <= Delta.
+- Finalized immutable L1 authority specifies L(g,t); recovery waits for both
+  the Delta drain interval and the next authority's availability.
+- Normal handoff uses the terminal DATA QC immediately. Existing commit timers
+  survive; no DONE certificate or predecessor commitment gates successor votes.
+- One complete admissible quit proof freezes all current-generation timers.
+  Every recovery targets (g+1,0), using SH entry locks, STATUS, NEWVIEW, and
+  timerless ANCHOR re-certification.
+- A valid current-generation DATA QC starts a 2Delta catch-up timer when the
+  replica has no timer or commitment for that key. This also covers embedded
+  DATA QCs in admitted ancestry. ANCHOR and old-generation QCs do not start it.
+- PoS removal changes future proposer eligibility, not voting membership.
+  Every revealed equivocator has a finite generation cutoff beyond which it
+  is never scheduled. Fault identities cannot reenter or be replenished.
+- L1 authority, evidence inclusion, finality and epoch activation must progress
+  independently of L2 commitment. Schedule and input fairness are explicit.
+- A positive physical message-delay lower bound is not used in the main
+  safety or eventual-progress proof. Explicit pacing is an optional profile.
+
+REVIEW 1: SAFETY AND PROOF-DESIGN VERIFIER
+Final confirmation on the revised source:
+"The revised proof is valid under its explicitly stated model assumptions.
+My identified Critical Error and Justification Gaps are resolved; no remaining
+finding in this review."
+The final recheck covered initialization, immediate proposer self-voting,
+the pacing first-exposure policy and adjusted deadlines, the last-term
+QC-or-BLAME argument, per-term complaint costs, and distinct limitations for
+exclusion failure versus L1 authority unavailability.
+
+REVIEW 2: INDEPENDENT VERIFIER
+A separate verifier reviewed the source without the author's reasoning history.
+Final confirmation:
+"Qualified pass. In the updated formalization/sync_hotstuff_rr_v3.tex, I found
+no remaining Critical Error or Justification Gap in the safety, eventual-height,
+request-liveness, or optional-pacing arguments under the stated model."
+The qualification concerns the abstract model: L1 readiness/exclusion, the
+fixed non-replenished fault set and fairness are assumptions, not demonstrated
+properties of a deployed PoS service. The result does not establish dynamic
+voting-membership safety or a uniform end-to-end recovery bound.
+
+ADDITIONAL LIVENESS AND TIMING AUDIT
+The liveness reviewer checked immediate-QC rotation, DATA catch-up timers,
+the protected honest-initializer window, finite equivocation-generation
+indices, and the infinite-generation versus final-generation case split.
+The identified optional-pacing first-exposure gap and finite-index/last-term
+clarifications were corrected before the two final reviews above.
+
+FINDINGS RESOLVED DURING REVIEW
+1. Correct replicas learning only DATA QCs now obtain local catch-up timers;
+   the proof does not assume every replica DATA-votes every earlier block.
+2. Initial entry skew and common authority/genesis are explicit safety premises.
+3. Correct proposers immediately self-process and vote their own fresh block.
+4. Recovery entry is max(local freeze + Delta, authority readiness), preserving
+   Delta entry skew without assuming the next L1 record was prepublished.
+5. Finite exclusion bounds generation indices named by revealed proofs;
+   it does not falsely bound interruptions by f or assume instant slashing.
+6. The final-generation proof treats terminal-QC knowledge, terminal voting,
+   and deficient progress checks separately.
+7. The optional pacing profile prohibits earlier exposure of signed proposals
+   through QCs/history and specifies compatible progress-check deadlines.
+8. Partial BLAME traffic is charged per term; L1 cost is separate from local
+   post-freeze recovery communication.
+9. Exclusion failure and authority-availability failure have distinct stated
+   consequences; the perpetual-equivocation example is not claimed for both.
+
+MAIN CHECKED CONCLUSIONS
+- Safety/validity depend on authenticated synchrony and unique authority,
+  not fairness, exclusion, or a message-delay lower bound.
+- A DATA timer and complete relay at s, with no freeze through s+3Delta,
+  gives local commitment by s+2Delta and all-correct commitment by s+3Delta.
+- Absence of newly elected Byzantine leaders alone does not exclude a delayed
+  proof of an older current-generation equivocation.
+- After equivocation generations cease, a correct initializer's first block
+  commits at all correct replicas even if QC rotation reaches a withholding
+  Byzantine successor; its earliest honest timeout complaint is too late.
+- Eventual exclusion, schedule fairness and the fixed fault set give eventual
+  unbounded committed height. Fair input service then gives request liveness.
+- Optional explicit pacing gives pre-handoff local/all-correct commitment
+  under (K-1)rho > 2Delta / (K-1)rho > 3Delta, respectively.
+
+FINAL ARTIFACT CHECKS
+- TeX Live/latexmk compilation succeeded: 14 A4 pages, no warnings,
+  overfull/underfull boxes, unresolved references or compilation errors.
+- The Codex standalone LaTeX compiler also reported success.
+- All final rendered pages were visually inspected; protocol and diagram
+  pages were additionally inspected at full resolution for clipping,
+  overlap, legibility and timing labels.
+- Four native TikZ execution diagrams are embedded in the standalone source;
+  matching fragments are in formalization/figures/sync_hotstuff_rr_v3/.
+- Protocol-box changes relative to standard-synchronous SH are marked red.
+- Original sync_hotstuff_rr.tex, main_v3.tex and v2 were preserved.
+
+LIMITS
+These are mathematical reviews of an explicit abstract specification, not
+mechanized verification or deployment certification. The voting committee
+remains fixed; stake-weighted or dynamic membership needs a separate argument.
+Eventual L1 exclusion/readiness does not supply a uniform latency or numerical
+bound on aborted generations. Communication counts admitted protocol traffic,
+not arbitrary Byzantine flooding; complete-history byte costs remain explicit.

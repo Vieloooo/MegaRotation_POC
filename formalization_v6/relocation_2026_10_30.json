@@ -1,0 +1,10 @@
+{
+  "from": "formalization_v5",
+  "to": "formalization_v6",
+  "date": "2026-10-30",
+  "note": "Moved the current Part 0 and Part 1; compatibility symlinks remain at the old paths. Only relative links to documents that stay in formalization_v5 were rewritten; the text is otherwise unchanged.",
+  "files": [
+    {"file": "part0_model_goals_zh_v0_8.md", "sha256_before": "8c2aebf425de3b157912b6a50063409463ae868a0d4ba85a29b90a0d82108db6", "sha256_after": "8c2aebf425de3b157912b6a50063409463ae868a0d4ba85a29b90a0d82108db6"},
+    {"file": "part1_module_interfaces_zh_v0_3.md", "sha256_before": "0984da1918267e47676d14e4ae080a076759e72b4df8714ae8c431194aee9196", "sha256_after": "d7cd11ebd856ec936d266fe07b8dd5b4e28b97c5858ba75d1261883556dc0717"}
+  ]
+}

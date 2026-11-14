@@ -1,0 +1,22 @@
+% Native TikZ: specified regional contract and unfinished outer protocol.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\small,line cap=round,line join=round,
+  box/.style={draw,rounded corners=2pt,align=center,fill=white,inner sep=5pt},
+  flow/.style={-{Stealth[length=2mm]},semithick},
+  pending/.style={flow,dashed},
+  lab/.style={font=\footnotesize,align=center,fill=white,inner sep=2pt}
+]
+  \node[box,text width=3.45cm,minimum height=1.20cm] (local) at (2.02,4.12)
+    {Regional agent $\mathcal A_i$\\\footnotesize certified local log and state};
+  \node[box,text width=4.0cm,minimum height=1.20cm] (interface) at (7.52,4.12)
+    {Region-origin output interface\\\footnotesize authenticate sender; verify state transition};
+  \draw[flow] (local.east) -- node[lab,above] {regional proof} (interface.west);
+  \node[box,dashed,text width=7.2cm,minimum height=1.20cm] (cft) at (7.02,1.85)
+    {CFT election, log replication, and rotation\\\footnotesize unspecified: terms, voting, persistence, handoff, commit rule};
+  \draw[pending] (interface.south) -- node[lab,right] {outer messages} (cft.north);
+  \node[box,dashed,text width=2.2cm,minimum height=1.20cm] (deliver) at (12.90,1.85)
+    {$\mathrm{GlobalDeliver}$\\\footnotesize TBD};
+  \draw[pending] (cft.east) -- (deliver.west);
+  \node[lab,text width=11.0cm] at (7.25,.42)
+    {$\mathrm{LocalCommit}_i \ne \mathrm{GlobalCommit}$.\\Regional correctness does not itself provide cross-region durability or finality.};
+\end{tikzpicture}

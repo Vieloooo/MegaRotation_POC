@@ -1,0 +1,229 @@
+--- before/sync_hotstuff_rr_v3_1.tex
++++ after/sync_hotstuff_rr_v3_1.tex
+@@ -55,7 +55,7 @@
+ \crefname{protocol}{Protocol}{Protocols}
+ \Crefname{protocol}{Protocol}{Protocols}
+ \title{Sync HotStuff RR v3.1\\\large Proposal Timers and Terminal-QC Handoff}
+-\author{}\date{11 October 2026}
++\author{}\date{12 October 2026}
+ \begin{document}
+ \maketitle
+ \begin{abstract}
+@@ -100,43 +100,58 @@
+ liveness using an explicit input-fairness assumption. Normally completed
+ terms contain $K$ fresh blocks. A faulty term can produce none and be
+ replaced. Terms are defined by certified block counts, not fixed physical
+-durations. The local entry time defined below is not a shared timestamp.
++durations. Replicas use a global clock but may enter a term at different times.
+ 
+ \section{Model and service assumptions}
+ \label{sec:model}
+ There are $n=2f+1$ fixed voting members, at most $f$ permanently Byzantine.
+-
+-
+-\begin{assumption}[Authenticated Synchronous Communication + Global Clock]
++Initialization uses a common genesis and initial authority; correct
++replicas enter $(0,0)$ within $\Delta$ of one another.
++
++\Needspace{9\baselineskip}
++\begin{assumption}[Authenticated synchronous communication and global clock]
+ \label{ass:network}
+-
++\leavevmode\par
+ \begin{itemize}
+-    \item Messages are sent through an authenticated communication channel. 
+-    \item The actual message delay is $\delta$, with a synchronous communication upper bound be $\Delta$. 
+-    \item Every nodes shares the same global clock. 
++    \item Messages use authenticated communication channels.
++    \item The actual delay of a correct-to-correct message is $\delta\le\Delta$;
++    $\delta$ may differ across messages.
++    \item All replicas share a global clock.
+ \end{itemize}
+ \end{assumption}
+-
++The delay bound includes delivery and processing of complete validation
++dependencies. Each replica records its own entry and voting events on
++the global clock.
+ 
+ \begin{assumption}[Finalized authority]
+ \label{ass:authority}
+-For each view $v = (g, t)$, L1 $\tagg{AUTH}_g$ specifying a unique leader $L(g,t)$ for every
+-term $t$, drawn from the fixed committee. The authority leadership finality time in L1 is  $d(g)$. 
+-We assume that by $d_r(g)$, all the nodes in the BFT take the leadership as the common knowledge. 
++L1 is a public bulletin board. For each generation $g$, it supplies one
++immutable authority $\tagg{AUTH}_g$ specifying a unique leader $L(g,t)$
++from the fixed committee for every term $t$. At the finite global time
++$d(g)$, that authority is finalized and simultaneously available to all
++correct replicas, including frozen ones. L1 progresses independently
++of L2 commitment.
+ \end{assumption}
+-
++An authority may be finalized in advance. The L1 epoch and recovery
++generation need not coincide.
+ 
+ \begin{assumption}[Accountability]
+ \label{ass:exclusion}
+ Every admissible leader-equivocation proof revealed to a correct replica
+ is eventually submitted to L1 and processed. For each exposed identity $p$,
+-there is a finite generation cutoff $G_p$ such that
++let $g_{\mathrm{bad}}$ be the generation identified by the first such proof
++revealed to a correct replica. This is the generation of the proved
++equivocation, not necessarily the generation current at revelation.
++There is a finite removal generation $G_p>g_{\mathrm{bad}}$ such that
+ \[
+  L(g,t)\ne p\quad\text{for every }g\ge G_p\text{ and every }t\ge0.
+ \]
+ Exclusion is permanent. The finite Byzantine identity set cannot be
+ replenished by new corruptions, joins, or replacement identities.
+ \end{assumption}
++Both $g_{\mathrm{bad}}$ and $G_p$ are generation indices. No fixed bound
++on $G_p-g_{\mathrm{bad}}$ is assumed. Exclusion takes effect in future
++authorities without rewriting a finalized assignment.
+ This is an enforced eligibility property, not an economic claim that a
+ deposit deters faults. Timeout BLAME alone is not equivocation evidence.
+ Excluded proposers may remain faulty voters within the same $f$ bound.
+@@ -198,6 +213,7 @@
+ Validation checks signatures, authority, the opening and term admission,
+ position and height, the parent rule in \cref{tab:parent}, parent QCs,
+ hash links, and application validity throughout the required ancestry.
++Leader authorization is checked against the public L1 authority.
+ Every relevant ancestor includes its signed proposal and block data;
+ a chain of certificate hashes alone is insufficient. Dependencies can
+ come from the message or a validated local cache. Correct senders provide
+@@ -228,8 +244,8 @@
+ \paragraph{Active and frozen generations.}
+ New proposals, DATA/ANCHOR votes, and ordinary term transitions require
+ the current generation to be \tagg{Unfrozen}. A frozen generation still
+-accepts evidence, old votes, QCs, and L1 authority proofs, and executes
+-recovery. No complete commitment is withdrawn.
++accepts evidence, old votes, and QCs, observes the L1 bulletin board, and
++executes recovery. No complete commitment is withdrawn.
+ 
+ \begin{table}[htbp]\centering\small
+ \caption{Parent selection for the next fresh position $j$ of term $(g,t)$.}
+@@ -337,7 +353,7 @@
+ \[
+  \RR{e_r(g+1,0)=\max\{a_r+\Delta,d(g+1)\},}
+ \]
+-\RR{install $\tagg{AUTH}_{g+1}$}. Fix the highest-ranked certificate $Q_r$
++\RR{read $\tagg{AUTH}_{g+1}$ from L1}. Fix the highest-ranked certificate $Q_r$
+ among the retained lock and known valid QCs from generations through $g$
+ as the entry lock. Enter \RR{$(g+1,0)$, mark it unfrozen, and start its
+ progress clock}. Send
+@@ -387,10 +403,16 @@
+ buffered proof. No correct replica can complete recovery from $g$ before
+ the first correct freeze of $g$.
+ 
+-[Todo: revise accordingly here]
+-Inductively $|a_r-a_s|\le\Delta$ and, by authority relay,
+-$|d_r(g+1)-d_s(g+1)|\le\Delta$. Taking coordinatewise maxima preserves
+-this bound. Thus the stated entry rule gives the next skew bound.
++All replicas use the same public availability time $d(g+1)$. Hence
++\[
++\begin{aligned}
++ |e_r(g+1,0)-e_s(g+1,0)|
++ &=\big|\max\{a_r+\Delta,d(g+1)\}
++          -\max\{a_s+\Delta,d(g+1)\}\big|\\
++ &\le |a_r-a_s|\le\Delta.
++\end{aligned}
++\]
++This gives the next generation's entry bound directly.
+ A buffered proof may freeze the next generation immediately after entry;
+ it does not erase that entry event or change its target.
+ \end{proof}
+@@ -422,7 +444,7 @@
+ Here $q$ is a correct replica's verified QC receipt, not an adversary's
+ private assembly time. Ordinary term-entry skew is at most $2\Delta$
+ in this unfrozen execution, whereas recovery-generation entry skew is
+-$\Delta$. No global term-start timestamp is agreed.
++$\Delta$. A common clock does not require simultaneous term entry.
+ 
+ \begin{figure}[htbp]\centering
+ \begin{tikzpicture}[x=1cm,y=-1cm,font=\small,
+@@ -620,11 +642,13 @@
+ \end{lemma}
+ \begin{proof}
+ Each identified leader is Byzantine, since correct leaders sign one
+-opening and one DATA block per position. For each identity ever exposed,
+-the first revelation invokes a finite cutoff $G_p$. Any admissible
+-equivocation of that identity has $g<G_p$. There are finitely many such
+-identities and finitely many preceding generation indices. Later revelation
+-of an old proof does not enlarge this set or restart an old recovery.
++opening and one DATA block per position. For each identity $p$ ever exposed,
++its first revealed proof names $g_{\mathrm{bad}}$ and accountability gives
++a finite $G_p>g_{\mathrm{bad}}$. Any admissible equivocation by $p$ must
++belong to a generation $g<G_p$: at $g\ge G_p$, the public authority
++never assigns $p$ a leader position. The union of these finite ranges
++over the finite exposed identity set is finite. A proof revealed later
++still names its original generation and cannot restart a completed recovery.
+ \end{proof}
+ This does not bound interruptions by $f$. An identity can cause several
+ before exclusion becomes effective.
+@@ -752,8 +776,9 @@
+ generation with the same still-eligible $F$. QCs and heights can grow
+ while no non-genesis block commits. A finite quota, including $K=n$,
+ does not exclude this execution when the model supplies no lower bound
+-that forces a long enough proposal window. Permanent exclusion prohibits
+-this infinite reuse of a revealed identity.
++that forces a long enough proposal window. After the first revelation
++identifies $g_{\mathrm{bad}}$, the specified finite $G_p$ prohibits reusing
++the same leader in every later generation; the execution removes that condition.
+ 
+ \paragraph{D. Start the handoff bound at private QC formation.}
+ Let $F$ lead a $K=1$ term, with correct successor $H_0$ and another correct
+@@ -801,8 +826,8 @@
+ Quit and recovery & $O(n^2)$ per recovery &
+ $O(n^2(A+n\sigma))$ for proof, STATUS, NEWVIEW, and ANCHOR votes\\
+ Local proposal timers & No messages & No extra vote or QC phase\\
+-L1 control service & Accounted separately & Evidence submission, finality,
+-authority proofs, and epoch activation\\
++L1 bulletin board & External service & Evidence submission, public authority
++reads, and eligibility updates\\
+ \bottomrule
+ \end{tabularx}
+ \end{center}
+@@ -820,7 +845,8 @@
+ normally completed $K$-block terms, backup forwarding costs $O(n/K)$
+ messages per block; complaints cost at most $O(n^2/K)$ per block.
+ Votes and old DATA processed during recovery remain charged to their
+-originating positions.
++originating positions. The bulletin-board model requires no BFT relay of
++L1 finality proofs; its service costs are separate from these message counts.
+ 
+ \paragraph{History and retrieval costs.}
+ The displayed bounds cover complete bundles. Malformed or incomplete
+@@ -845,12 +871,20 @@
+ The backup adds no mandatory $\Delta$ wait: a leader acts as soon as
+ its parent QC is available. It does add the stated $O(n)$ terminal traffic.
+ 
++\Needspace{13\baselineskip}
+ \paragraph{Recovery.}
+-With $e=\min_r e_r(g+1,0)$ and a correct initializer, the first DATA
+-proposal reaches all by $e+6\Delta$ and a surviving window commits it
+-everywhere by $e+8\Delta$. If the next authority was already available
+-at first quit $a$, then $e=a+\Delta$ and the bound becomes $a+9\Delta$.
+-Otherwise authority readiness adds waiting. Eventual exclusion and
++Let $a=\min_r a_r$ be the first correct quit time. The common L1
++availability time gives
++\[
++ e=\min_r e_r(g+1,0)=\max\{a+\Delta,d(g+1)\}.
++\]
++With a correct initializer, the first DATA proposal reaches all by
++$e+6\Delta$ and an uninterrupted window commits it everywhere by
++\[
++ \max\{a+\Delta,d(g+1)\}+8\Delta.
++\]
++If $d(g+1)\le a+\Delta$, this is $a+9\Delta$; otherwise recovery
++waits for the public authority. Eventual exclusion and
+ authority availability give no numerical bound on the last equivocation,
+ number of aborted generations, or end-to-end recovery delay. Quantitative
+ bounds require corresponding L1 and scheduling bounds.
+@@ -866,6 +900,8 @@
+ including proposals in attached history\\
+ Normal QC delivery & General catch-up relay & One backup send per replica
+ per terminal QC, to the next leader\\
++L1 availability & Replica-specific readiness and authority relay &
++Public authority at the common time $d(g)$\\
+ Term start & Local admission & Explicit $e_r(g,t)$ at first validated
+ terminal-QC entry; recovery uses the stated max rule\\
+ Equivocation & Checks spread across steps & Verified evidence before

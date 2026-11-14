@@ -1,0 +1,35 @@
+% Native TikZ: overlapping timers; horizontal time is schematic, not to scale.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\small,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=2mm]},semithick},
+  lab/.style={font=\footnotesize,align=center,fill=white,inner sep=2pt},
+  block/.style={draw,rounded corners=2pt,fill=white,align=center,inner sep=4pt}
+]
+  \draw[flow] (1.7,5.77) -- (13.72,5.77) node[above left,font=\footnotesize] {time (schematic)};
+  \node[block,text width=2.62cm] (b0) at (3.35,4.83)
+    {$B_k$\\\footnotesize batch of mini-blocks};
+  \node[block,text width=2.62cm] (b1) at (7.55,4.83)
+    {$B_{k+1}$\\\footnotesize carries $QC(B_k)$};
+  \node[block,text width=2.62cm] (b2) at (11.75,4.83)
+    {$B_{k+2}$\\\footnotesize carries $QC(B_{k+1})$};
+  \draw[flow] (b0.east) -- node[lab,above] {$\approx2\delta_R$} (b1.west);
+  \draw[flow] (b1.east) -- node[lab,above] {$\approx2\delta_R$} (b2.west);
+  \node[lab,anchor=east] at (1.70,3.50) {$B_k$};
+  \node[lab,anchor=east] at (1.70,2.62) {$B_{k+1}$};
+  \node[lab,anchor=east] at (1.70,1.74) {$B_{k+2}$};
+  \draw[semithick] (2.08,3.50) -- (9.02,3.50);
+  \draw[semithick] (4.18,2.62) -- (11.12,2.62);
+  \draw[semithick] (6.28,1.74) -- (13.22,1.74);
+  \foreach \x/\y in {2.08/3.50,4.18/2.62,6.28/1.74}{
+    \draw (\x,\y-.12) -- (\x,\y+.12);
+  }
+  \foreach \x/\y in {9.02/3.50,11.12/2.62,13.22/1.74}{
+    \fill (\x,\y) circle (1.6pt);
+  }
+  \node[lab] at (5.56,3.50) {proposal to local commit: $\delta_R+2\Delta_R$};
+  \node[lab] at (7.66,2.62) {overlapping commit timer};
+  \node[lab] at (9.76,1.74) {overlapping commit timer};
+  \node[lab,anchor=west] at (9.13,3.72) {local commit};
+  \node[lab,text width=12.0cm] at (7.55,.55)
+    {QC formation gates the next proposal; timer expiry gates local commit.\\Export to $P$ additionally requires signed decisions and a regional certificate.};
+\end{tikzpicture}

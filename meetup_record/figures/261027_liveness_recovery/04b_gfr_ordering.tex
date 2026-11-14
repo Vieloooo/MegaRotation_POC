@@ -1,0 +1,34 @@
+% Part 5 v0.1 sections 4--5: three queue event classes; Force is an Espresso prelude.
+\begin{tikzpicture}
+\path[use as bounding box] (-.1,-.1) rectangle (23.4,18.0);
+\node[heading] at (11.65,17.4) {GFR：先按公共时间排序，再按固定规则更新 G};
+\node[note,anchor=west] at (.5,16.6) {先比较时间键；同键优先级从左到右。Force 不单独进入主队列，而是在 Espresso 块开头处理。};
+
+\node[box,draw=rose,fill=forceB,text width=6.0cm,minimum height=1.8cm] (keyr) at (3.5,15.0) {\textbf{优先级 0：RESUME}\\键 $=\operatorname{ts}(L)+M_a$\\L1 收录块时间 + 提前量};
+\node[box,draw=orange,fill=regularB,text width=6.0cm,minimum height=1.8cm] (keyt) at (11.65,15.0) {\textbf{优先级 1：Expire(h)}\\键 $=t(h)+W_{\rm exp}$\\L2 固定块时间 + 接纳时限};
+\node[box,draw=blue,fill=regionA,text width=6.0cm,minimum height=1.8cm] (keye) at (19.8,15.0) {\textbf{优先级 2：Espresso 块}\\键 $=\theta_q$\\Espresso 块头时间戳};
+\draw[flow] (keyr) -- (keyt); \draw[flow] (keyt) -- (keye);
+
+\node[subheading,anchor=west] at (.5,13.2) {A. Force 阈值早于过期键，实际激活的 Espresso 块却晚于过期键};
+\node[card,fill=gray!3,text width=21.3cm] at (11.65,11.95) {\textbf{Force：}L1 记录时间 19:40；阈值 $\theta_a=19{:}59$；目标分支 7。\\
+  起初 G 到 108，109 的过期键为 20:00。J500 之后的下一个 Espresso 块是 J501，时间戳为 20:01。
+};
+\node[box,draw=blue,fill=regionA,text width=6.0cm,minimum height=1.8cm] (a1) at (3.5,9.65) {\textbf{19:58：Espresso J500}\\未达到 Force 阈值\\假设仍缺 109，G 保持到 108};
+\node[box,draw=rose,fill=forceB,text width=6.0cm,minimum height=1.8cm] (a2) at (11.65,9.65) {\textbf{20:00：Expire(109)}\\先关闭分支 7\\G 停在 108，进入 HALT};
+\node[box,draw=blue,fill=regionA,text width=6.0cm,minimum height=1.8cm] (a3) at (19.8,9.65) {\textbf{20:01：Espresso J501}\\开头检查 Force：目标已关闭\\指令失效，旧 109 也不能追加};
+\draw[flow] (a1) -- (a2); \draw[flow] (a2) -- (a3);
+\node[note,anchor=west,text=rose,text width=22.2cm] at (.5,8.15) {19:59 只是 Force 的阈值，不会产生一个抢在 20:00 之前执行的独立事件。GFR 先处理 Expire，再处理 J501。};
+
+\node[subheading,anchor=west] at (.5,7.15) {B. RESUME 与 Espresso 同键：先固定恢复锚点，再开出新 session};
+\node[note,anchor=west,text width=22.2cm] at (.5,6.4) {进入紧急状态、服务恢复后：RESUME 所在 L1 块时间为 21:45；取 $M_a=15$ 分钟，键为 22:00；目标 h 对应未来的 22:05。};
+\node[box,draw=rose,fill=forceB,text width=6.0cm,minimum height=1.8cm] (b1) at (3.5,4.95) {\textbf{22:00：RESUME（类别 0）}\\G 对齐到该次 D[h]\\固定锚点，新分支等待开出};
+\node[box,draw=blue,fill=regionA,text width=6.0cm,minimum height=1.8cm] (b2) at (11.65,4.95) {\textbf{22:00：J600（类别 2）}\\在 RESUME 之后开出 session\\该新 session 的块不能同块接纳};
+\node[box,kept,fill=settled,text width=6.0cm,minimum height=1.8cm] (b3) at (19.8,4.95) {\textbf{J601 或更晚}\\状态准备、生产与发布完成后\\h+1 等合格普通块进入 G};
+\draw[recover] (b1) -- (b2); \draw[flow] (b2) -- (b3);
+
+\node[card,draw=green,fill=green!4,text width=21.3cm] at (11.65,2.55) {\textbf{同键主队列：RESUME $\to$ Expire $\to$ Espresso。}\\
+  \textbf{Espresso 块内部：Force $\to$ 完成待开的 session $\to$ 验收并连续追加普通块。}
+};
+\node[note,anchor=west,text width=22.2cm] at (.5,1.15) {上图给出排序键，实际执行仍须满足 R-WAIT，并取得 RESUME 所需的派生数据；缺输入时停在该事件等待。};
+\node[note,anchor=west,text width=22.2cm] at (.5,.45) {同键 Expire 先于 Espresso，因此缺失块不能靠截止键上的 Espresso 块首次进入 G。节点读取较晚，也按同一顺序重放。};
+\end{tikzpicture}

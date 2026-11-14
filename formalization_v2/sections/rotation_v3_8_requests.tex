@@ -1,0 +1,301 @@
+% Version 3.8 candidate: local request gossip and regional first-DATA reports.
+% Replaces sec:requests up to, but not including, Faithful publication.
+\subsection{Requests, input reports, and retained data}
+\label{sec:requests}
+A request is \defterm{admissible} when it passes the application's admission
+checks. Its logical identity distinguishes a retransmission from a new
+client command. Let $\operatorname{enc}(x)$ be its canonical authenticated
+representation: transport wrappers and alternate encodings of the same
+authentication proof do not create a new request. Each node retains
+requests in first-receipt FIFO order; repeated delivery does not change
+that order. Different nodes need not have the same order.
+
+A request is finally removed only when its identity occurs in $G$.
+Regional commitment, regular handoff and discarded speculative suffixes
+do not remove it. The first-DATA primary rule below replaces the original
+oldest-pending selection at that position. After the primary, and at
+later positions, a correct leader fills the remaining capacity by its
+ordinary local FIFO, skipping identities already in the exact parent
+ancestry or batch and rechecking application validity after earlier batch
+entries. This is a change to correct-leader batching, not a stronger
+input-delivery or common-order assumption.
+
+\paragraph{Request relay within an installed snapshot.}
+On first complete receipt of an authenticated admissible request $x$, a
+correct node persists its pending entry. For each authenticated installed
+snapshot of its region in which it is a member, it dispatches the full
+request to that snapshot's members, once per request and snapshot.
+Learning or installing such a snapshot also schedules the same individual
+relays for retained requests. Receivers apply the same first-receipt rule.
+An authenticated relay is not a certificate that $x$ is admissible after
+every future parent; that check remains local to batch construction.
+
+The request store and pending relay actions have a persistent owner in
+Waiting, Ready, Active, Frozen, Completed and Terminated. Closed and
+\texttt{RequestClose} do not delete them or block request transport.
+This action signs no BFT vote, changes no lock, and starts no timer or
+entry. It adds no Ready gate and waits for no whole-pool transfer.
+For one installed snapshot, a correct member's dispatched full request
+reaches and is processed by every correct member within its existing
+$\Delta_i$ bound. In particular, immediate first-receipt dispatch gives
+this bound from that complete receipt handler. This is a bound on the
+specified within-snapshot messages, not on discovering a new roster,
+dispatching an arbitrary backlog, or transferring between disjoint
+rosters. The latter awareness obligation remains separate below.
+
+\subsubsection{The first-DATA report}
+\label{sec:input-report}
+Order requests by
+\[
+ \operatorname{key}(x)=
+   \bigl(|\operatorname{enc}(x)|,\Hash(\operatorname{enc}(x))\bigr),
+\]
+lexicographically, with $\tagg{EMPTY}$ after every request key. Hash binding
+identifies the actual canonical body. Every fixed request has finitely
+many predecessors in this order, since they are byte strings of bounded
+length. This order provides no practical latency bound.
+
+For a completely validated parent $P$, let $E_v(P)$ contain the pending
+requests whose full bytes node $v$ holds, that are admissible immediately
+after $P$, fit alone in a DATA batch, and whose identities are absent from
+the complete ancestry of $P$. The ancestry includes the inherited prefix
+and uncommitted speculative blocks. Maintain a key-ordered index of
+retained requests and its eligible projection for the exact parent.
+Parent and request processing completes the required admission and
+ancestry filtering before exposing this projection to the report action.
+The index is never reused for another parent hash or native state.
+
+This selection uses the same abstract batch-processing scope as the
+original pending-admissible batch builder. It introduces no
+\texttt{AcquirePending} query or acquisition wait. The complete-handler
+timing below does not bound an extra deferred pool scan, native import
+or background eligibility rebuild. If an implementation leaves such
+work outside completed message/batch processing, its old timing bound
+has not thereby been proved. An index alone is not a measured CPU or
+bandwidth guarantee.
+
+\paragraph{Context and emission.}
+For $V=(\beta,r,g,t)$, write $P=A_{\beta,r,g,t}$. A report signs the chain,
+protocol domain, type $\tagg{INPUT\_REPORT}$, session, assigned region,
+configuration, $\tagg{AUTH}_{r,g}$ reference, $(g,t,j=0)$, the generation's
+opening identity, and $P$'s hash, DATA height and physical position,
+together with one request key or $\tagg{EMPTY}$. Denote this full context
+by $\mathit{RC}$. Its boundary and authority are authenticated by the
+original admission rules; a claimed pair alone is insufficient.
+Alternate QC encodings do not change $\mathit{RC}$.
+
+A correct member emits its report in the ordinary-term entry handler
+for $t>0$, after validating the preceding terminal QC and exact parent.
+For $t=0$, it emits on complete validation of the NEWVIEW in the entered
+generation, after the exact opening is known. Require the original
+fresh-action gate, an entered current unfrozen generation, and a
+DATA-producing term. Persist one report for $\mathit{RC}$ before sending:
+choose $\min E_v(P)$, or $\tagg{EMPTY}$ if this set is empty, and send the
+signed report and the chosen request's full authenticated bytes to
+$L(V)$. Resends repeat that report. Later arrivals do not amend it.
+Historical validation never creates a missing fresh report.
+
+The original immediate NEWVIEW forwarding and ANCHOR vote remain
+independent. They wait for neither a report nor a report certificate.
+If both messages share a packet, parse them independently: a bad report
+does not suppress a valid ANCHOR vote or original Quit evidence.
+Reports create no QC rank, lock, timer, commitment, entry permission or
+new Quit proof. Fresh report signing obeys retirement; retaining and
+relaying existing reports do not reopen its signing gate.
+
+\paragraph{Correct-leader collection and batching.}
+For the exact $\mathit{RC}$, a correct leader retains distinct-member
+reports only after checking their signatures, snapshot and context.
+For each nonempty retained report it also checks the full body, key,
+admission after $P$, individual fit and ancestry exclusion. Ignore
+incomplete or invalid contributions; count a member at most once.
+Once these reports have weight $>F$ and the original parent/ANCHOR QC
+is available, construct the first DATA as follows. If any reported key
+is nonempty, execute the minimum reported request first as the
+\defterm{primary}, then fill by ordinary FIFO. Otherwise use ordinary
+valid batching, possibly empty. New requests may therefore be included
+even when all saved reports are EMPTY. A singleton primary fits by its
+eligibility test. Correct reports alone have sufficient weight; the
+leader never waits for Byzantine replies or an identifiable event
+called ``all correct replies received.''
+
+Attach the signed report keys, contexts and member identities as a
+separate regional validation sidecar. The selected body is already in
+the ordinary DATA batch. Other validators need not obtain nonselected
+request bodies. The original signed DATA, PROPOSE, votes, QCs and FINAL
+objects, and their hash encodings, are unchanged.
+
+\paragraph{Full regional validation.}
+For every DATA proposal at $j=0$, require the original full validation
+and a report set of distinct snapshot members with weight $>F$ for its
+exact historical $\mathit{RC}$. If any key is nonempty, check that its
+minimum is the batch's first request, with matching authenticated bytes,
+admission immediately after $P$, individual fit and no identity in the
+parent ancestry. Check the entire batch and exclude another occurrence
+of the primary identity. For all-EMPTY reports apply ordinary batch
+validity; an empty batch is allowed, not required.
+
+Validators do not compare the witness with their own queues, require
+their own report, or apply current-time/current-$G$ tests to a historical
+report. Correct reporter selection supplies the local-minimum fact;
+the common predicate checks the supplied signed minimum and selected
+body. A fictitious selected key cannot pass that body check.
+For later DATA positions and DRAIN, validate the required first-DATA
+sidecars in their own-session ancestry; DRAIN creates no new primary.
+Apply this rule in Vote, recovery histories, own-session receipt
+processing and Completion. Earlier-term current-generation proposals
+retain the original Vote eligibility after local advancement. Old and
+future generations retain their original archival/buffering behavior.
+
+Evidence-first processing still inspects original signed material even
+when a report wrapper is invalid or incomplete. Report validation must
+not hide an existing admissible DATA/DRAIN or NEWVIEW equivocation.
+Different sidecar signer sets or encodings for the same proposal are
+witness variants: proposal identity, deduplication and timer identity
+remain $(\beta,r,g,t,j,\Hash(B))$.
+
+\subsubsection{Regional evidence and the original public result}
+\label{sec:input-report-carriage}
+Write $R_0$ for the original complete regional result of
+\cref{sec:delivery}, with every original DATA, FINAL, proposal, QC,
+ancestry, boundary, authority, native-validation and public-source object
+required by that interface. It is not merely the public kernel.
+An augmented regional bundle is
+\[
+ R_+=(R_0,W_R),
+\]
+where $W_R$ supplies all report sidecars needed for augmented own-session
+validation. Correct regional senders forward and retain complete $R_+$;
+STATUS/NEWVIEW histories, receipt relays, Completion and retirement
+ownership transfers preserve the applicable $W_R$. References must be
+resolvable within the existing complete-message bound. A receipt's
+original public representation alone need not provide augmented
+own-session Completion inputs.
+
+The Publish Layer's input remains exactly $R_0$. Erasure removes only
+the new separately framed sidecars; it preserves all old required
+objects, signatures and established public denotations. For the same
+DATA and original witness, the public record is the same old-format
+record, with zero additional REPORT bytes. The primary occupies ordinary
+application capacity. Original public size/load limits and the original
+$T_{\rm pub}$ starting event remain unchanged; no service bound applies
+to bare requests or reports.
+
+The honest-FINAL argument now traces an actual correct signature to a
+timer-origin Vote that checked both original validity and the report
+predicate. It therefore proves existence of a genuine historical
+report witness without making it a public fetch dependency. FINAL still
+binds no generation or term and does not authenticate a publisher's
+chosen alternate witness. Cross-session inherited anchors retain the
+historical kernel rule. All independent global extension, branch,
+reference and Force-cutoff checks remain necessary.
+
+Keep block data and receipts needed for recovery and checkpoint
+verification. Before finalized Espresso inclusion, keep complete $R_0$
+results available to the Publish Layer and direct readers. After
+finalization, other regions may obtain them from authenticated Espresso
+history. Regional sidecars remain with their required data/evidence
+owners; public erasure is not permission to release their last required
+copy. Global promotion alone authorizes no archival deletion.
+
+\subsubsection{Preserved timing and conditional request progress}
+\label{sec:input-report-progress}
+\begin{proposition}[Local report timing]
+\label{prop:v38-report-timing}
+Under the original complete-handler scope, entry preparation and active
+unfrozen/unclosed interval of the correct-leader progress argument, the
+new rule meets the original fresh-position BLAME deadlines. Ordinary
+first DATA is voted by all correct members within $4\Delta$ of first
+correct term entry; initial/recovery term zero retains $6\Delta$.
+\end{proposition}
+\begin{proof}
+Let $e$ be first correct entry. In an ordinary term, the preceding
+terminal proposal's complete forwarding and correct votes disseminate
+its QC to all correct members by $e+2\Delta$, independently of the
+successor's proposal. Every correct report is sent at that local entry
+and reaches a correct leader by $e+3\Delta$. Correct weight exceeds $F$;
+the complete first proposal is voted everywhere by $e+4\Delta$.
+
+In initial/recovery term zero, the original prepared entry skew is
+$\Delta$. A correct initializer sends its NEWVIEW by $e+3\Delta$;
+complete processing everywhere by $e+4\Delta$ sends the independent
+ANCHOR votes and reports. Both correct-only inputs reach the leader by
+$e+5\Delta$, and first DATA is voted by $e+6\Delta$. DRAIN adds no report.
+Every later position costs at most $2\Delta$. The $p$th fresh vote is
+therefore no later than $e+(2p+4)\Delta$, and hence no later than each
+member's original deadline $e_v+(2p+4)\Delta$. At equality messages
+precede progress callbacks. Arbitrary authority/native preparation
+waits retain their original eventual scope; no new bound is asserted.
+\end{proof}
+
+Complete forwarding carries the same common report predicate to every
+correct recipient, without a private-queue veto. The original
+protecting-QC, lock and timer arguments therefore still apply to an
+actual augmented-valid Vote. The old last-check bound for a faulty term
+also applies: report collection never suppresses progress checks, and a
+correct terminal vote still forwards every dependency needed for other
+correct votes. A correct initializer still proposes by $e+5\Delta$,
+retains its protected commit window and forms a complete receipt by
+$e+9\Delta$. Thus the existing prepared regional DATA-response bounds
+survive this rule. This reasoning replaces the sharper old ordinary
+handoff latency; it does not retain a $2\Delta$ first-vote claim.
+
+\begin{proposition}[Request inclusion from accepted report awareness]
+\label{prop:v38-request-inclusion}
+Fix a request $x$ that fits alone and remains admissible after the
+relevant accepted parent states until inclusion. Suppose infinitely
+many accepted term-first DATA have a genuine report witness containing
+a correct signer whose eligible retained set contained $x$ at its
+report event. Then $x$ enters $G$. The implication permits arbitrary
+changes of roster between sessions.
+\end{proposition}
+\begin{proof}
+Suppose $x$ never enters $G$. At any such accepted first DATA, its exact
+parent ancestry cannot contain $x$: accepting that ancestry would
+already include $x$. The aware correct reporter chooses $y$ with
+$\operatorname{key}(y)\le\operatorname{key}(x)$; the certificate minimum
+is an actual executed request $z$ with
+$\operatorname{key}(z)\le\operatorname{key}(y)$.
+Its identity is absent from the exact parent ancestry. Upon acceptance
+that ancestry is the global prefix preceding the new DATA, including
+ancestors accepted in the same EXPORT, so $z$ spends a previously
+unaccepted predecessor identity.
+
+There are finitely many canonical byte strings with key at most
+$\operatorname{key}(x)$. Let $\Phi_x(G)$ count their distinct logical
+identities absent from $G$. It is finite, never increases as $G$
+extends, and strictly decreases at each counted accepted first DATA
+while $x$ is absent. Infinitely many such decreases are impossible.
+Discarded speculative commitments do not spend this potential; accepted
+predecessors cannot be spent twice because every later accepted parent
+contains them. Recovery and Force never roll back $G$.
+\end{proof}
+
+Each DATA-producing term has at most $K$ positions. Every genuine DATA
+history contains its term's first DATA at most $K-1$ DATA steps earlier;
+contiguous acceptance cannot skip that ancestor. Thus unbounded accepted
+DATA contains infinitely many distinct accepted term-first blocks,
+even when recovery changes their historical proposal contexts. The
+same counting applies to a region's repeated accepted contributions.
+It remains necessary to prove awareness for sufficiently many of these
+genuine witnesses, not for a publisher's claimed term annotation.
+
+Immutable reports are compatible with this implication. A late request
+can leave an old EMPTY certificate usable for its exact term, but that
+context has only finitely many DATA positions. A finite prefix of
+execution events contains only finitely many pre-dissemination reports;
+delayed publication cannot turn that stock into infinitely many
+term-first blocks. A changed parent, generation, term or branch/session
+requires the corresponding new report context.
+
+This does not yet derive full request inclusion from the frozen
+changing-membership ingress prose. The within-snapshot relay above
+establishes awareness after an actual member's complete receipt, and
+retention supports its later reports. It does not prove that disjoint
+future rosters receive $x$ before issuing their first reports. Infinitely
+many such rosters could each contribute an EMPTY-report block before
+their own later delivery event. Per-node eventual delivery alone does
+not rule out that order. The candidate leaves this node-level
+cross-roster obligation explicit, without a new ownership gate,
+whole-pool service, public request publication or stable-membership
+restriction.

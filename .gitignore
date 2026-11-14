@@ -1,0 +1,43 @@
+.DS_Store
+.agents/
+.codex/
+__pycache__/
+*.pyc
+
+# Local build dependencies and intermediate renders; retain build scripts.
+node_modules/
+**/.build/*
+!**/.build/*.py
+!**/.build/*.mjs
+
+# LaTeX compilation intermediates anywhere in the repository.
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.loa
+*.lol
+*.run.xml
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+*.xdv
+*.dvi
+*.thm
+*-blx.bib
+_minted*/
+
+# Isolated PoC local outputs
+.build/
+poc/target/
+poc/node_modules/
+poc/artifacts/

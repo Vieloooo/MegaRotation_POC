@@ -1,0 +1,26 @@
+% Event-triggered recovery with native new-view anchor recertification.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\footnotesize,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=1.8mm]},semithick},
+  box/.style={draw,rounded corners=2pt,align=center,fill=white,inner sep=5pt},
+  lab/.style={fill=white,inner sep=1pt,align=center}
+]
+  \node[box,minimum width=3.85cm] (trigger) at (2.05,2.16)
+    {BLAME quorum\\or leader equivocation};
+  \node[box,minimum width=3.90cm] (quit) at (6.66,2.16)
+    {Quit; cancel timers;\\wait $\Delta_R$; send STATUS};
+  \node[box,minimum width=4.37cm] (next) at (11.60,2.16)
+    {Next leader waits $2\Delta_R$;\\NEW-VIEW selects old anchor};
+  \draw[flow] (trigger.east) -- (quit.west);
+  \draw[flow] (quit.east) -- (next.west);
+
+  \node[box,minimum width=4.37cm] (recertify) at (11.60,.57)
+    {Re-vote old anchor in new view;\\no commitment timer};
+  \node[box,minimum width=3.90cm] (qc) at (6.66,.57)
+    {Form current-view QC\\for the unchanged anchor};
+  \node[box,minimum width=3.85cm] (resume) at (2.05,.57)
+    {Resume the pipeline\\with a fresh child};
+  \draw[flow] (next.south) -- (recertify.north);
+  \draw[flow] (recertify.west) -- (qc.east);
+  \draw[flow] (qc.west) -- (resume.east);
+\end{tikzpicture}

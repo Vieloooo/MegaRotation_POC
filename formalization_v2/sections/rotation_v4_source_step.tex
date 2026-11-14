@@ -1,0 +1,227 @@
+% Version 4: retained source bytes and dependency-complete regional processing.
+\paragraph{Node-level source retention.}
+\label{sec:source-step}
+\label{sec:source-retention}
+Each correct regional member keeps a durable \tagg{PublicStore} shared
+by its source reader, interpreter, manager, engines and publication
+workers. It retains content as well as cursors and indexes. The store
+has the following distinct components.
+\begin{table}[htbp]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.24\linewidth}Y@{}}\toprule
+Component & Retained content\\\midrule
+Raw Espresso source & Every acquired complete relevant namespace,
+including rejected or malformed records; headers, finality/linkage
+proofs, authenticated absence, and canonical source order.\\
+Object dictionary & Actual object bytes, content commitments,
+authenticated source identities and occurrence paths. An index without
+the bytes is not a retained object.\\
+L1 source objects & Every obtained finalized authority, control,
+header and registry/completeness proof, with its authentication inputs;
+pending controls as well as applied controls.\\
+Regional witnesses & Full validation bundles actually used by correct
+regional actions, committed DATA and receipt dependencies. Possession
+does not itself make a private object public in an EXPORT.\\
+Prepared anchors & Exact executable continuation objects and their
+validated provenance, separately keyed by anchor, configuration,
+region and native format.\\
+Replay state & Verified checkpoint, exact canonical subposition,
+pending boundary, source-availability cursors, and typed pending fetches.
+The source-availability cursor is distinct from the interpreter cursor.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+At each source-availability event, retain the entire authenticated raw
+namespace and its evidence before advancing the availability cursor,
+releasing the input buffer, or making a relay depend on it. Rejection
+by P6 never deletes raw evidence. Likewise retain each acquired L1
+object before advancing its authority-fetch cursor. Regional validation
+retains the witness it used, so a later required complete send does not
+reconstruct that witness from an archive. Correct FINAL and complete
+receipt sends obey the full-bundle rule of \cref{sec:admission}; a
+reference is used only when its receiver can resolve it within the
+existing regional delay bound.
+
+Beta replacement, session closure, advancement of $G$, checkpoint
+compaction and worker exit do not delete these objects. Cancellation
+removes a consumer, not the store's retention responsibility. Transfer
+outstanding sends and ownership durably before releasing resources.
+Restart restores the exact store and replay subposition; loss of required
+bytes requires hydration before the prepared timing claim can resume.
+These are protocol storage rules, not an additional storage service.
+
+\paragraph{Finite initial hydration and pruning.}
+\label{sec:source-hydration}
+Choose a fixed authenticated source cut $q_0$ when beginning this
+retention discipline. Hydrate the raw source interval still legally
+referenceable after that cut and all exact objects designated by the
+starting checkpoint. Under the unrestricted historical-reference rule,
+this includes relevant raw namespaces back to the authorized source
+origin, including rejected records. Merely retaining accepted ancestry
+is insufficient. Also prepare the fixed anchor's provenance and the
+authority and state dependencies of the assigned handoff.
+Retain every newly available namespace beyond $q_0$ while hydration
+runs. Neither a new beta nor a later source height restarts the fixed
+old task or changes its target to a moving cut.
+
+The interval and each admitted payload are finite. Eventual historical
+retrieval gives a finite completion time for that fixed set; the anchor
+and finite AUTH prefix have their separate eventual-availability
+premises. Taking a finite maximum imposes no bound on arbitrary archive catch-up.
+The selected-region preparation service is stated separately in
+\cref{ass:ready-service}. It does not include all future
+L1 objects that an arbitrary sidecar might name.
+
+A replay checkpoint may compact computation without deleting
+referenceable bytes. Deduplication and equivalent lossless storage are
+allowed while exact content and source-occurrence mappings remain
+available to the modeled handler. A hash or an only-eventually-readable
+archive is not a replacement for those bytes. Pruning requires a
+protocol proof that no future supported reference, checkpoint,
+anchor, pending validation or publication duty can need the object.
+Advancing $G$ or terminating its producing engine does not prove this.
+The present rule supplies no finite-storage bound.
+
+\paragraph{Common public-kernel completeness.}
+\label{sec:record-completeness}
+For a logical EXPORT at position $p$, the common public basis consists
+of its actual objects, the authenticated earlier source objects its
+baseline references denote, and the objects established by its
+protocol-authorized checkpoint. A private newer checkpoint does not
+change this basis. Exact content-identity or source-identity aliases
+are resolved under \cref{sec:logical-carrier}; an explicit redundant
+occurrence position is not required. The dictionary must establish the
+actual object and its permissible source occurrence. An unresolved
+sender assertion or a name without a supplied public object cannot
+complete a kernel. L1 objects retain their own authentication interface
+and need not first occur in Espresso.
+
+The required kernel comprises actual DATA/covering-path bytes, FINAL
+signatures, its fixed incoming context, and the source inputs needed
+for the independent public gates. An old raw object can be evidence
+even if its containing record's DATA was rejected. This never grants
+retroactive append permission. A cache hit cannot make a privately
+held or genuinely absent object publicly supplied. A cache miss for a
+specified legal public object requires retrieval and resumption at the
+same position; the prepared retention invariant below rules out such
+an Espresso byte miss in the timed cohort.
+
+Check typed identities, actual hashes, the signed domain, current pair
+and fixed snapshot before deeper public validation. A false outer base,
+version or interval hint is not a gate. Verify FINAL signatures under
+that snapshot, then apply \tagg{CheckFINAL} and the actual global gates.
+A publisher-selected PROPOSE, recovery $\tagg{AUTH}_{r,g}$ path, L1
+reference proof sidecar or unbound native claim is not a kernel input.
+Its optional verification cannot delay public replay. The correct
+signer's full regional checks justify intrinsic input validity by
+\cref{prop:final-kernel-soundness}; they do not justify a new private
+public-basis object or an arbitrary sidecar assertion.
+
+An absent required DATA object or invalid signature makes that kernel
+incomplete or invalid. Continue with independently complete kernels;
+no whole-record validity flag suppresses a valid neighbor. In contrast,
+a missing complete namespace, applicable control prefix or genuine
+current canonical boundary input pauses that operation. It is never
+zero weight or an empty candidate set. Optional regional evidence is
+retained and routed to its own engine; a complete genuine Quit retains
+its original evidence-first handling, while an incomplete optional
+admission path is not a public source dependency.
+
+Terminal DATA's validation and durable commit precede the successor
+wait in \tagg{ResolveBoundary}. Packet preparation and whole-record
+prechecks cannot invert this order. Save the exact subposition and
+expose the accepted prefix before any later boundary wait.
+
+\paragraph{Immediate regional source relay.}
+A \tagg{SOURCESTEP} is an authenticated message to an installed fixed
+regional snapshot. It carries its chain/protocol domain and sender,
+the source height and full header, complete relevant namespace or
+absence, finality/linkage evidence and canonical record order. It
+identifies the maintained verified predecessor checkpoint, supplies
+applicable complete L1 controls and the available fixed-boundary
+inputs, and supplies required exact public bytes not already resolvable
+by the recipient under the existing complete-message contract. The
+recipient never trusts a sender-selected new checkpoint.
+
+On acquiring a complete raw source input, each correct member retains
+and sends it in that availability event, before waiting for its own P6
+result. Inventory the actual inline and retained source objects without
+first fetching the union of all optional witness targets. This relay
+need not know which region replay will select. Native preparation does
+not delay it. Missing mandatory boundary evidence remains an explicit
+wait and is supplied in a later complete dependency event. An initial
+raw relay is not falsely described as a complete boundary operation
+when that evidence is absent. Equal packets are deduplicated by source
+position and commitment without suppressing the first correct relay.
+
+A sender includes full required bytes unless recipient resolution is
+already covered by the regional full-bundle contract. Its own cache hit
+alone does not justify omitting bytes at a recipient. Acquisition of an
+additional exact dependency immediately resumes its saved operation;
+there is no independent polling tick or replay job.
+
+\paragraph{Receive, commit and activate.}
+The receiver authenticates and retains the input, then processes the
+contiguous dependency-complete prefix from its maintained checkpoint.
+Out-of-order source inputs wait for their predecessors. For each ready
+block it executes P6, including P5, the public-kernel checks and ordered
+per-DATA transactions. Each transaction records its accounting,
+boundary and subposition and exposes the accepted DATA before any
+later wait. A duplicate cannot repeat a committed prelude, count or
+boundary. Local receive times do not replace canonical timestamps.
+
+The same complete event delivers the verified transition to the Session
+Manager. When the exact anchor continuation and remaining full Ready
+inputs are already prepared, the Manager checks the fixed handoff and
+live activation predicate and performs Ready/initial Enter once. It
+attaches the already executable object; it does not import a database
+or reconstruct native state here. No old lock, vote or entry time is
+inherited. A Force-created version still cannot export in its triggering
+block.
+
+On closure, persist the version-wide \tagg{Closed} gate and control
+routing obligations atomically. Every entry, fresh action and callback
+checks that gate by its own beta. Worker scans, archive copies and
+retirement completion are not prerequisites to gating the old version
+or entering a valid new pair. A complete old-session context still
+invokes the existing complete-close handler and multicast under
+\cref{sec:retirement}, even for Waiting, Completed or Terminated records.
+Unresolved snapshot context remains pending. The original per-session
+$c_v$, $4\Delta$ drain and evidence duties remain unchanged; recording
+\tagg{Closed} alone neither starts that drain clock nor permits exit.
+
+\begin{proposition}[Retained public source bytes]
+\label{prop:retained-public-bytes}
+After fixed-cut hydration, a continuously online history-following
+member that executes the retention rules keeps every legally
+referenceable acquired Espresso object and its authentication evidence.
+If $J_q$ first becomes final at real time $a$, the required Espresso
+bytes through $q$ are available to that member by $a+T_E$, without a
+new archive read for a previously acquired object.
+\end{proposition}
+\begin{proof}
+Hydration establishes the claim through the fixed cut. At each later
+availability event, insertion of the entire raw namespace precedes the
+availability-cursor advance and any rejection. Old aliases resolve to
+retained bytes; actual new objects reside in this namespace. An absent
+object is not fabricated. No retry, checkpoint or worker transition
+removes referenceable content. Induction over source positions preserves
+the claim. Every predecessor through $q$ became final no later than $a$,
+so the stated visibility premise supplies its new source bytes and
+Espresso evidence by $a+T_E$. Older hydrated bytes remain present.
+This is an Espresso-byte assertion, not a deadline for new L1 authorities.
+\end{proof}
+
+\paragraph{Prepared regional processing.}
+\label{sec:source-step-timing}
+When source bytes, authority and exact executable continuation are
+resident, the complete receive handler validates them, performs the
+canonical public transition and checks the guarded initial entry.
+No historical fetch or native import is silently charged to the
+regional communication bound.
+
+The complete-message contract bounds delivery and processing of its
+declared inputs. Initial preparation has the separate scope and origin
+of \cref{ass:ready-service}. Returning-node catch-up outside that scope
+remains eventual. The source-availability cursor, canonical interpreter
+cursor and local Ready event can differ; none supplies authority to
+execute an unannounced Force.

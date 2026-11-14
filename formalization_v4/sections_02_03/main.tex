@@ -1,0 +1,38 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,tabularx,array,enumitem,needspace,float}
+\usepackage{flafter}
+\usepackage{xcolor,tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{assumption}[definition]{Assumption}
+\numberwithin{equation}{section}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\QC}{\mathsf{QC}}
+\newcommand{\FC}{\mathsf{FC}}
+\newcommand{\TB}{\mathrm{TB}}
+\newcommand{\tagg}[1]{\mathsf{#1}}
+\definecolor{rrBlue}{HTML}{2563EB}
+\definecolor{rrTeal}{HTML}{0F766E}
+\definecolor{rrOrange}{HTML}{B45309}
+\title{Regional Sequencer Rotation\\Draft Sections 2 and 3}
+\author{}
+\date{25 October 2026}
+\begin{document}
+\maketitle
+\setcounter{section}{1}
+\input{section_02_model_assumptions.tex}
+\clearpage
+\input{section_03_shared_objects.tex}
+\end{document}

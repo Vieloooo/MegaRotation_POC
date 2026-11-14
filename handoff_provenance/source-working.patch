@@ -1,0 +1,600 @@
+diff --git a/formalization_v10/01_l1_authority_zh_v0_1.md b/formalization_v10/01_l1_authority_zh_v0_1.md
+index f6d1d1f..6f03fd6 100644
+--- a/formalization_v10/01_l1_authority_zh_v0_1.md
++++ b/formalization_v10/01_l1_authority_zh_v0_1.md
+@@ -112,7 +112,7 @@ Window = {
+ 
+ Enabled_regions 是 $\mathcal R$ 的子集，$S_\beta(i)=1$ 当且仅当 $i$ 在其中；region_order 是 $\mathcal R$ 的循环排列，对应 $\mathcal L_\beta$；L1_floor 是非负整数，对应 $\lambda_\beta$。Window 两个字段为 L2 heights，分别对应 $h_{\min,s}$ 和 $h_{\max,s}$，满足 [00 §2.2](00_arch_zh_v0_1.md) 的窗口约束。
+ 
+-**选区参考。** 输入 Ref 用来选择授权历史，记录为 `BlockRef{h, os, block_id}`。h 为 L2 height，os 为 L1-origin height，block_id 为 [00 §3.2](00_arch_zh_v0_1.md) 的连接标识 $\mathrm{id}(\cdot)$；这些字段必须从已验证的来源 block 取得。Ref 在 Plan 中按这份记录绑定，完整 block 和验证材料由读取方另行保存。Ref 的取值由 GFR 的交接边界确定：regular handoff 取前驱 session 的初始 anchor，后继实例实际采用的 anchor 由 GFR 另行选定（[09 §4.3](09_finality_rules_zh_v0_1.md)）；Force 与 RESUME 取新分支的起始 anchor（[09 §4.4、§4.6](09_finality_rules_zh_v0_1.md)）。
++**选区参考。** 输入 Ref 用来选择授权历史，记录为 `BlockRef{h, os, block_id}`。h 为 L2 height，os 为 L1-origin height，block_id 为 [00 §3.2](00_arch_zh_v0_1.md) 的连接标识 $\mathrm{id}(\cdot)$；这些字段必须从已验证的来源 block 取得。Ref 在 Plan 中按这份记录绑定，完整 block 和验证材料由读取方另行保存。Ref 的取值由 GFR 的交接边界确定：regular handoff 取前驱 session 的初始 anchor，后继实例实际采用的 anchor 由 GFR 另行选定（[09 §4.3](09_finality_rules_zh_v0_1.md)）；Force 与 RESUME 取新分支的起始 anchor（[09 §4.4、§4.6](09_finality_rules_zh_v0_1.md)）。RESUME 同时将新分支的 L1 floor 设为恢复 anchor 的实际 origin，因此首个 session 按该 origin 查询快照和禁任集合。
+ 
+ **规则参数与协议配置。** 公开协议配置具有唯一版本／内容标识 config_ref；它是按协议编码的非空比特串，指向完整的规则、参数及规范编码，同一标识下的配置不可改写。配置中的 `RuleSpec{rule_id, version, params}` 描述一条公开确定规则：rule_id 与 version 唯一指定算法，params 是该算法格式规定的固定参数字节。取不到配置或不能解析参数时，不能将它当作已验证规则。
+ 
+@@ -251,7 +251,7 @@ flowchart TB
+ 
+ **输出。** 成功返回 `ForceRecorded(c, L1_position)`，并写入控制日志；检查失败返回 REJECT。
+ 
+-**处理。** 验证治理签名、控制序号和 policy 格式。成功后更新控制序号和日志。这条记录的激活时刻为 $\mathrm{act}(U)=\mathit{ts}_{\rm L1}(\ell_U)+M_a$（§3.1）；$M_a$ 保证所有 GFR 读取者在处理到 $\mathrm{act}(U)$ 之前已能读到它（[09 §3.4](09_finality_rules_zh_v0_1.md) 的 R-WAIT）。本接口只记录控制意图；激活后它是否有效、从哪个 anchor 开出新分支，由 GFR 处理（[09 §4.4](09_finality_rules_zh_v0_1.md)）。
++**处理。** 验证治理签名、控制序号和 policy 格式。成功后更新控制序号和日志。这条记录的激活时刻为 $\mathrm{act}(U)=\mathit{ts}_{\rm L1}(\ell_U)+M_a$（§3.1）。Force 和 RESUME 何时可作为下一事件处理，取决于 [09 §3.4](09_finality_rules_zh_v0_1.md) 的公共输入覆盖条件：处理键 $x$ 前，Espresso 前缀须覆盖 $x$，L1 finalized 前缀须完整覆盖 $x-M_a$，并提供该转移所需的验证材料。因此处理到 $\mathrm{act}(U)$ 时，输入已包含本条控制记录；$M_a$ 的公告预算只保证正常服务下控制日志覆盖及时就绪（[09 §3.5](09_finality_rules_zh_v0_1.md)）。本接口只记录控制意图；激活后它是否有效、从哪个 anchor 开出新分支，由 GFR 处理（[09 §4.4](09_finality_rules_zh_v0_1.md)）。
+ 
+ ### 3.10 SubmitResume(c, policy, h_res, sig)
+ 
+diff --git a/formalization_v10/04_publisher_zh_v0_1.md b/formalization_v10/04_publisher_zh_v0_1.md
+index 0d9d7e7..304ecbd 100644
+--- a/formalization_v10/04_publisher_zh_v0_1.md
++++ b/formalization_v10/04_publisher_zh_v0_1.md
+@@ -1,8 +1,8 @@
+ # 模块 04：Publisher（v10 工作稿 v0.1）
+ 
+-日期：2026-11-09。上一版：[v9 v0.1](../formalization_v9/04_publisher_zh_v0_1.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；来源为 [arch v0.2 §4.6、§2.5、§5.2](../formalization_v8/arch_zh_v0_2.md) 与 [Part 0 v0.8 §2.8](../formalization_v6/part0_model_goals_zh_v0_8.md)。
++日期：2026-11-10。上一版：[v9 v0.1](../formalization_v9/04_publisher_zh_v0_1.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；来源为 [arch v0.2 §4.6、§2.5、§5.2](../formalization_v8/arch_zh_v0_2.md) 与 [Part 0 v0.8 §2.8](../formalization_v6/part0_model_goals_zh_v0_8.md)。
+ 
+-本版相对 v9 的改动：Publisher 不读时钟，PUB-1…5 不变；PUB-4 推论的前提与发布余量加入 $\delta_G$。
++本版相对 v9 的改动：Publisher 不读时钟，PUB-1…5 不变；PUB-4 推论的前提与发布余量加入 $\delta_G$；§3.2 澄清公共正文引用与 GFR 所需材料的边界。
+ 
+ ## 1. 定位与直觉
+ 
+@@ -63,7 +63,9 @@ EvidenceTask = {
+ 
+ Missing 列出待补数据，完整后为空；recorded_at 在核对之前为 $\bot$，之后保存 `{q, message_index}` 及读取依据。一次提交尝试不自动把 phase 置为 RECORDED；只有实际公开日志的验证结果才能填入 recorded_at。
+ 
+-**Publication 消息。** 提交到 Espresso 的消息是 RegionalResult 的规范编码。若同一 cid 的 ancestor blocks 或 anchor 来源已在其他 publication 中完整公开，可以按引用省略；GFR 在其 publication 索引中合并这些对象（[09 §4.7](09_finality_rules_zh_v0_1.md)）。
++**Publication 消息。** 提交到 Espresso 的消息沿用 RegionalResult 的规范编码。目标及其同 cid physical ancestors 的正文若已在其他 publication 中公开，可以按 hash 引用原公开对象，无需重发；引用按规范编码、正文 hash 和 parent 连接核对。仅在本地缓存持有正文，不能代替公共日志中的公开对象。GFR 在 publication 索引中合并对象并保留其原始公开位置（[09 §3.2、§4.7](09_finality_rules_zh_v0_1.md)）。
++
++消息仍可携带或引用 anchor 来源材料 $\pi_A$；RegionalResult、Manager 的 AnchorEvidence 检查及本模块 Offer 的来源验证不变。GFR 对已由公共重放确定起点的选定 descriptor，只以至少一份有效目标最终证明和 anchor 之后到目标的完整 physical 正文确定 $q_{\rm avail}$；额外旧 anchor 证明不参与这个截止判定。后代完整结果可覆盖同链祖先，无需祖先各自另发证明，但不能用证书替代缺失正文。GFR 所需材料的公开完整性，与 Publisher 接收并验证完整 RegionalResult 的接口要求分别判定。
+ 
+ **EvidenceTask。** Descriptor 与 evidence 采用 [02 §3.2](02_session_program_zh_v0_1.md) 的类型；accused_pid 是 descriptor 的 Plan committee 中、公钥等于证据所指控公钥的 pid；phase 取 QUEUED、SUBMITTED 或 RECORDED；L1_result 在尚未处罚时为空，成功后记录 Authority 的处理结果和 L1 位置。任务身份由 cid 与证据的规范内容确定，重复观察不重复安排同一交付。这里的 RECORDED 表示 L1 处理完成，和 PublicationTask 的 Espresso 收录分开。
+ 
+diff --git a/formalization_v10/08_da_zh_v0_1.md b/formalization_v10/08_da_zh_v0_1.md
+index e77d5b2..00ca348 100644
+--- a/formalization_v10/08_da_zh_v0_1.md
++++ b/formalization_v10/08_da_zh_v0_1.md
+@@ -97,4 +97,4 @@ DA-S1、DA-S2 是安全性质，对所有执行成立；DA-L1、DA-L2、DA-RET 
+ 
+ **DA-RET — Retrievability of accepted data（liveness）。** 每份已被 Batch Inbox 接纳的批次 payload，在 Derivation、状态准备或 RESUME 仍需要它时都可以取回。它由两部分组成：保留期 $T_{\rm ret}$ 之内由 DA-L2 保证；保留期之后由 A-CUSTODY 保证。DA-RET 是系统层的组合保证，不是 DA 服务单独提供的性质。
+ 
+-违反 DA-RET 时，派生停在该输入处等待，不把未知内容当成空；依赖派生的强制包含路径与 RESUME（[09 §3.4](09_finality_rules_zh_v0_1.md) 的 R-WAIT）也随之等待。安全不受影响。
++违反 DA-RET 时，派生停在该输入处等待，不把未知内容当成空；依赖派生的强制包含路径也随之等待。若缺失数据是计算某条 RESUME 的 ResumeCut 所必需的，该切面尚不可用，GFR 可重放的前缀停在该事件之前（[09 §3.4、§4.6](09_finality_rules_zh_v0_1.md)），取得切面后才原子完成替换。安全不受影响。
+diff --git a/formalization_v10/09_finality_rules_zh_v0_1.md b/formalization_v10/09_finality_rules_zh_v0_1.md
+index b4d6128..6d01049 100644
+--- a/formalization_v10/09_finality_rules_zh_v0_1.md
++++ b/formalization_v10/09_finality_rules_zh_v0_1.md
+@@ -1,10 +1,12 @@
+ # 模块 09：最终性规则——Global Finality Rule、Derivation Rule 与原生结算（v10 工作稿 v0.1）
+ 
+-日期：2026-11-09。上一版：[v9 v0.2](../formalization_v9/09_finality_rules_zh_v0_2.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；来源为 [arch v0.2 §4.4、§4.5、§4.10、§5](../formalization_v8/arch_zh_v0_2.md) 与 [261027 §8](../meetup_record/261027.md)。
++日期：2026-11-10。上一版：[v9 v0.2](../formalization_v9/09_finality_rules_zh_v0_2.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；来源为 [arch v0.2 §4.4、§4.5、§4.10、§5](../formalization_v8/arch_zh_v0_2.md) 与 [261027 §8](../meetup_record/261027.md)。
+ 
+-本版相对 v9 v0.2 的改动只涉及时间模型（[00 §2.3](00_arch_zh_v0_1.md)），事件、排序键、全序、R-WAIT 与状态机都不变，重放仍只读公开日志：
++本版相对 v9 v0.2 的改动涉及时间模型（[00 §2.3](00_arch_zh_v0_1.md)）与 GFR 的重放输入条件，保留事件、排序键、全序及既有交接和 RESUME 语义：
+ 
+-- §3.2 SessionEnd：$\tau_s^{\rm stop}$ 是 honest replicas 按本地时钟停止的键，真实停止时刻相差至多 $\delta_G$。
++- §3.2、§4.3 SessionEnd：区分 honest replicas 的本地停止签名键 $\tau_s^{\rm stop}$ 与公开截止键；明确日志覆盖截止且前序事件已处理后才执行交接，以及两条交接路径的 anchor。
++- §3.4、§4.2、§4.8：以公共日志覆盖和必需验证材料定义可重放的输入；保留 `WAIT{next_position, missing}`，输入不足不推进位置，也不把未知验证结果当成拒绝。
++- §3.2、§4.2、§4.7：按有效最终证明与完整 physical 正文定义 $q_{\rm avail}$，区分公开位置与实际接纳位置，并对整个新增 virtual 区间检查截止与过期。
+ - §3.5：公告预算改为精确式 $M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$；发布余量与原生窗口分别加入 $\delta_G$、$\delta_{\rm L1}$；新增 Espresso 假设不成立时的说明。
+ - §4.4 第 5 步：$T_{\rm init}$ 解释为真实准备预算时扣去 $\delta_G$。
+ 
+@@ -56,7 +58,7 @@ GFR 的规则可以用一句话概括：**$G$ 只接纳当前负责实例的、
+ 
+ ## 3. GFR：事件与排序
+ 
+-GFR 是一个确定的重放器：它把 L1 与 Espresso 两份 finalized 日志合并成一条全序的事件流，再用 §4 的状态机逐个处理。取得相同日志前缀的读取者，得到相同的事件流和相同的结果。本节回答两个问题：有哪些事件（§3.1–§3.2），按什么顺序处理（§3.3–§3.4）。§3.5 的预算只用于时序结论。
++GFR 是一个确定的重放器：它把 L1 与 Espresso 两份 finalized 日志合并成一条全序的事件流，再用 §4 的状态机逐个处理。给定覆盖某一重放位置的完整公共日志和所需验证材料，处理到该位置的读取者得到相同的事件流和相同的结果。本节说明有哪些事件（§3.1–§3.2）、按什么顺序处理（§3.3），以及处理所需的输入（§3.4）。§3.5 的预算只用于时序结论。
+ 
+ ### 3.1 两份日志与时间键
+ 
+@@ -65,7 +67,7 @@ GFR 读取两份日志：
+ - **L1 finalized 日志**（[00 §1.2](00_arch_zh_v0_1.md)）：其中的控制记录（Force、RESUME，[01 §3.1](01_l1_authority_zh_v0_1.md)）改变生产安排。
+ - **Espresso finalized 日志**（[00 §1.4](00_arch_zh_v0_1.md)）：其中的 publication 携带区域结果，即 physical blocks 和它们的区域最终证明。
+ 
+-每个事件有一个非负实数**时间键**，所有键使用同一坐标。Espresso block $J_q$ 的键是它的 timestamp $\theta_q$。L1 上的控制记录以收录它的 L1 block 的 timestamp 加公告提前量 $M_a$ 为键，也就是 [01 §3.1](01_l1_authority_zh_v0_1.md) 的激活时刻。因此，读取者处理到键 $x$ 时，需要的公开历史是：Espresso 中 timestamp 小于 $x$ 的 blocks，以及 L1 中 timestamp 不超过 $x-M_a$ 的 blocks（§3.4）。
++每个事件有一个非负实数**时间键**，所有键使用同一坐标。Espresso block $J_q$ 的键是它的 timestamp $\theta_q$。L1 上的控制记录以收录它的 L1 block 的 timestamp 加公告提前量 $M_a$ 为键，也就是 [01 §3.1](01_l1_authority_zh_v0_1.md) 的激活时刻。确定键 $x$ 处的事件顺序，需要 Espresso 前缀覆盖到 timestamp 至少为 $x$ 的 block，以及 L1 前缀覆盖到 timestamp 至少为 $x-M_a$ 的 block；完成转移还需相应验证材料（§3.4）。
+ 
+ 键只决定重放顺序，不要求读取者在对应的真实时刻完成处理。较晚取得日志的读取者按同一顺序重放，得到同样的结果。
+ 
+@@ -79,11 +81,11 @@ GFR 处理五类事件：两类来自 L1，一类来自 Espresso，另外两类
+ | L1 | $\mathsf{Resume}(p)$ | 控制序号、新 policy、目标 height $h_{\rm res}$；同一交易的 CursorSet | $\mathrm{act}(p)=\mathit{ts}_{\rm L1}(p.\ell)+M_a$ |
+ | 定时器 | $\mathsf{Expire}(h)$ | $G$ 的下一缺失高度 $h=h_G+1$ | $\mathit{ts}^*(h)+W_{\rm exp}$ |
+ | 定时器 | $\mathsf{SessionEnd}(s)$ | 当前负责的 session $s$ | $\theta_s^{\rm end}$ |
+-| Espresso | $\mathsf{Espresso}(q)$ | block $J_q$ 中首次完整公开的区域结果 | $\theta_q$ |
++| Espresso | $\mathsf{Espresso}(q)$ | block $J_q$ 的公开对象，以及截至该位置可接纳的完整结果（含缓存候选） | $\theta_q$ |
+ 
+ **Force 与 RESUME。** Force 记录 $U=(c,\beta_{\rm target},\mathcal P_{\rm new})$ 收录于 L1 block $\ell_U$；RESUME 记录 $(c,\mathcal P_{\rm new},h_{\rm res})$ 位于 L1 位置 $p=(\ell,j,k)$，$p.\ell$ 为其 height 分量。两者的激活时刻都只由收录 block 决定。由于 $\mathit{ts}_{\rm L1}$ 严格递增，两条控制记录同键，当且仅当它们在同一个 L1 block 中。
+ 
+-**Expire。** 给定逐高度过期时长 $W_{\rm exp}>0$。Expire 只针对 $G$ 的下一缺失高度 $h=h_G+1$，表示“$G$ 不再等待高度 $h$”：到这个键仍没有结果覆盖 $h$，$h$ 就已来不及按时进入派生链（§3.5）。$G$ 增长后，待处理的 Expire 随之换成新的下一高度，所以任何时刻至多有一个 Expire 待处理。
++**Expire。** 给定逐高度过期时长 $W_{\rm exp}>0$。Tail 为 NEXT 或 PENDING 时，Expire 只针对 $G$ 的下一缺失高度 $h=h_G+1$，表示“$G$ 不再等待高度 $h$”：到这个键仍没有结果覆盖 $h$，$h$ 就已来不及按时进入派生链（§3.5）。$G$ 增长后，待处理的 Expire 随之换成新的下一高度，所以任何时刻至多有一个 Expire 待处理。Tail 为 HALT 时没有待处理的 Expire。
+ 
+ **SessionEnd。** 给定发布余量 $T_{\rm grace}>0$，session $s$ 的公开截止键为
+ 
+@@ -91,9 +93,20 @@ $$
+ \theta_s^{\rm end}:=\tau_s^{\rm stop}+T_{\rm grace}.
+ $$
+ 
+-$\tau_s^{\rm stop}$ 是 honest replicas 按本地时钟停止新共识签名的键（BFT-7）；由 BFT-7 的推论，真实停止时刻不晚于 $\tau_s^{\rm stop}+\delta_G$。$\theta_s^{\rm end}$ 之后，GFR 不再接受 $s$ 的结果；两者之间的余量用于把已有结果发布出去。停止前形成、但被隐藏到截止后才公开的有效证书，不能再扩展该 session 的全局前缀。只有当前持有 NEXT 的 session 才有待处理的 SessionEnd（§4.3）。
++$\tau_s^{\rm stop}$ 是 honest replicas 按本地时钟停止新共识签名的键（BFT-7）；由 BFT-7 的推论，真实停止时刻不晚于 $\tau_s^{\rm stop}+\delta_G$。在公开键 $\theta_s^{\rm end}$ 及其后，GFR 不再接受 $s$ 的结果；两者之间的余量用于把已有结果发布出去。停止前形成、但被隐藏到截止键及其后才公开的有效证书，不能再扩展该 session 的全局前缀。只有当前持有 NEXT 的 session 才有待处理的 SessionEnd（§4.3）。
+ 
+-**Espresso block。** $J_q$ 中的 publication 携带区域结果的组成部分：区域最终证明、必要 bodies 和 context 来源（包括 ancestor 或 anchor 结果）。一份结果 $\mathit{Res}$ 的**首次完整公开高度** $q_{\rm avail}(\mathit{Res})$，是它的全部组成部分首次在 Espresso 前缀中齐备的 height；这些部分可以分布在多份 publication 中。$q_{\rm avail}$ 只根据已完整读取的公开历史计算，不使用本地接收时间。$\mathit{Res}$ 在 $\mathsf{Espresso}(q_{\rm avail})$ 中参加接纳（§4.2），$\theta_{q_{\rm avail}}$ 就是它的公开时刻。
++**Espresso block 与首次完整公开位置。** Publication 可以携带区域最终证明、physical block 正文及 anchor 来源等材料。对 GFR 已选定的 descriptor $\nu$ 和目标 physical block $B$，固定 $A=\nu.\mathit{anchor}$，其起点及身份已由公共重放确定（§4.3、§4.4、§4.6）。结果以 $\mathit{result\_key}=(\nu.\mathrm{cid},\mathsf H(B))$ 标识。沿用记号 $q_{\rm avail}(\mathit{Res})$，其值只由该结果键、选定的 $\nu$ 与公共日志决定，是满足以下两项的最小 Espresso height $q$：
++
++1. 截至 $J_q$ 的 finalized 日志中，存在至少一份最终证明 $\pi_{\rm fin}$，使 $\mathsf{CheckFINAL}(\nu,B,\pi_{\rm fin})=\mathrm{true}$。
++2. 从 $A$ 之后到 $B$（包含 $B$）的完整 hash-linked physical chain 中，每个 block 的正文都已在该前缀公开。按协议的规范编码核对正文的 hash、目标身份及逐块 parent 连接；链从 $A$ 接出，并以 $B$ 为末端。
++
++若尚无满足两项的前缀，$q_{\rm avail}=\bot$。证明和正文可以分布在多份 publication 中；此前公开的正文可按 hash 引用原公开对象，无需重发。只有引用而没有相应公开正文，不满足第二项；本地缓存可以加速读取，不能补上公共日志中缺失的正文。多份有效证明按“存在至少一份”确定最早位置，额外证明或可选材料晚到不推迟 $q_{\rm avail}$，读取者先取得哪一份证明也不改变它（出处记录见 §4.7）。
++
++若以同 cid 后代 $B^+$ 的最终证明覆盖 $B$，先按上述定义核验以 $B^+$ 为目标的完整结果，再以该结果及其 $q_{\rm avail}$ 按 §4.2 接纳所覆盖的同链祖先。祖先无需各自另发最终证明；后代证书也不能替代从 $A$ 到 $B^+$ 所需的任一 physical 正文。链中没有 physical block 的 heights 由 $\mathrm{Virt}$ 唯一确定为 padding，不存在需要另行发布的 padding 正文。
++
++GFR 已通过公共重放确定 $A$，单份 publication 额外携带或引用的旧 anchor 证明 $\pi_A$ 不参与 $q_{\rm avail}$。这里定义的是 GFR 的公开完整性，不改变 RegionalResult 的接口，也不取消 Manager／Publisher 验证尚未选定候选时使用的 AnchorEvidence（[02 §3.2](02_session_program_zh_v0_1.md)、[04 §3.2](04_publisher_zh_v0_1.md)）。L1 验证输入和 ResumeCut 仍分别满足 §3.4 的输入条件，不以本地取得它们的时刻重定 Espresso 公开位置。
++
++候选在选定前已公开时，可以缓存公开对象及其原始位置；选定后按同一历史核对 $q_{\rm avail}$，不把选定时刻或本地补齐时刻当作首次公开。$\theta_{q_{\rm avail}}$ 是完整结果的公开键；它可在该次 Espresso 事件中参加接纳，也可在 context 获选后的较后 Espresso 事件中参加接纳。后一情形的接纳键 $x$ 可以晚于公开键，仍须逐项检查 §4.2 的接纳条件。
+ 
+ ### 3.3 全序
+ 
+@@ -119,21 +132,24 @@ $$
+ 
+ Force 激活时，GFR 已经处理的 Espresso blocks 恰好是 $J_0,\dots,J_{q^*-1}$，其中 $q^*=q^*(\mathrm{act}(U))$。读取者一旦取得一份末端 timestamp 至少为 $\mathrm{act}(U)$ 的 watermark，就能确定 $q^*$，而且这个值不会再变：由 E-S，任意两份 finalized 前缀互为前缀，且 $\theta_q$ 不递减。因此 Force 的快照（§4.4）只依赖 E-S，不依赖 E-L 或 E-TS。RESUME 的快照 $D_L$ 只依赖 L1 与 DA（§4.6）。
+ 
+-### 3.4 R-WAIT
++### 3.4 可重放的输入
+ 
+-处理时间键为 $x$ 的事件之前，要求：
++给定当前重放状态，时间键为 $x$ 的下一事件只有在以下公共输入齐备时才能完成：
+ 
+-- L1 finalized 前缀覆盖 timestamp 至少为 $x-M_a$ 的 block；
+-- 若事件不是 Espresso block，已取得 timestamp 至少为 $x$ 的 Espresso watermark，并完整读取此前前缀；
+-- 若事件是 RESUME，resumeReader 能取得其 ResumeCut（所需 DA 数据可得）。
++- **Espresso 覆盖。** 已验证的 finalized 前缀完整覆盖到 timestamp 至少为 $x$ 的 block，即提供键 $x$ 的 watermark。处理 $\mathsf{Espresso}(q)$ 时，$J_q$ 及此前完整日志本身就提供这项覆盖，无需另一个更晚的 block。
++- **L1 控制日志覆盖。** 已验证的 finalized L1 前缀完整覆盖到 timestamp 至少为 $x-M_a$ 的 block，包括该 block 的全部记录。
++- **转移所需的验证材料。** 已提供当前转移实际使用的公共对象和计算依据。若验证 origin、metadata、强制前缀或计算 Plan 等还需要更晚的 finalized L1 输入，也须提供这部分输入；控制日志覆盖本身不保证这些材料齐备。
++- **RESUME 切面。** 若事件是 RESUME，resumeReader 提供绑定该条 L1 记录具体位置的 ResumeCut（§4.6、§5.5）。
+ 
+-第一条保证键不大于 $x$ 的控制记录都已读到，因为这样的记录收录于 timestamp 不超过 $x-M_a$ 的 L1 block。第二条保证键小于 $x$ 的 Espresso blocks 都已读到。两条合起来，下一个事件是什么由已读历史唯一确定；否则读取者可能把“尚未读到”误当成“不存在”。
++Espresso 覆盖保证键小于 $x$ 的 blocks 都已读到；后续同键 blocks 按 Espresso height 排在已有同键 blocks 之后。L1 覆盖保证所有同键或更早的控制记录都已读到，因为它们收录于 timestamp 不超过 $x-M_a$ 的 L1 block。结合当前状态生成的定时器和 §3.3 的全序，这些输入确定下一事件；转移所需材料齐备后，该步结果确定。
+ 
+-缺少整段必需历史时等待，与完整读过历史后发现某份 publication 不完整，是两种情况。后者不阻塞其他事件；补齐后，按实际补齐的位置重新确定 $q_{\rm avail}$。
++**输入未齐与结果未完整公开。** 缺少必需日志、验证材料或 ResumeCut，表示当前转移尚不能完成：可重放的前缀停在该事件之前，读齐后仍在原位置处理，不能因本地缺材料而永久跳过一个结果。若已完整读过相关 Espresso 前缀，但公共历史中尚缺 §3.2 要求的有效最终证明或 physical 正文，则该结果当前不具备接纳资格，不阻塞其他事件；后续公开对象补齐时，仍按 §3.2 确定 $q_{\rm avail}$。数据已经公开但本地尚未读齐，属于前一种输入不足，不改变首次完整公开位置。
++
++读取者可以处理到所给输入支持的最后一个位置，无需知道全网当前最新的 finalized 位置。`AdvanceGlobal` 以 `WAIT{next_position, missing}` 报告尚缺输入（§4.8）。日志同步、拉取、重试及何时再次调用接口由在线调用方决定；GFR 的转移由公共输入决定，不以本地时钟作为触发条件。
+ 
+ ### 3.5 时序预算
+ 
+-本节的条件只用于“多快”的结论，不改变事件和顺序；不成立时仍执行同一个 R-WAIT。
++本节的条件只用于“多快”的结论，不参与公共重放确定性的论证，也不改变事件和顺序。不成立时，§3.4 的输入条件不变；L1 或 Espresso 进度不足时，可重放的位置可能暂时不前进。
+ 
+ - **公告。** 采用
+ 
+@@ -141,8 +157,8 @@ $$
+ M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}.
+ $$
+ 
+-  正常服务下，它使 R-WAIT 的 L1 条件不晚于 Espresso 一侧成立，L1 不拖慢 R-WAIT。*推导。* 处理键为 $x$ 的事件需要一个 timestamp 至少为 $x$ 的 Espresso block：Espresso block 事件本身，或 R-WAIT 第二条的 watermark。由 E-TS，这个 block 最早在真实时刻 $x-\Delta_{\rm ts}$ 提出。R-WAIT 第一条所需的 L1 block 是 timestamp 至少为 $x-M_a$ 的第一个 block，其 timestamp 小于 $x-M_a+b_{\rm L1}$；由 [00 §1.2](00_arch_zh_v0_1.md)，它在真实时刻 $x-M_a+b_{\rm L1}+\delta_{\rm L1}+T_{\rm L1}$ 之前 finalized 且可读。控制记录本身只需 $M_a\ge T_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$，已被蕴含。∎〔待确认 H1〕$b_{\rm L1}$ 一项假设该 block 在一个 slot 内出现；若改读 header timestamp，连续空 slot 会加大这一项，只影响本条“L1 不拖慢 R-WAIT”的结论。
+-- **Espresso 进度。** 若 $[x+\Delta_{\rm ts},\,x+\Delta_{\rm ts}+T_E]$ 内 Espresso 一直 live，由 E-L，到 $x+\Delta_{\rm ts}+T_E$ 时已有 timestamp 至少为 $x$ 的 finalized block，R-WAIT 的第二条成立。Non-live 期间只是等待；$q^*$ 仍然唯一。
++  正常服务下，它是使 L1 控制日志覆盖不晚于 Espresso 覆盖就绪的充分预算；它不保证这份 L1 前缀包含验证任一候选所需的 origin 或其他更晚输入。*推导。* 处理键为 $x$ 的事件需要一个 timestamp 至少为 $x$ 的 Espresso block：Espresso block 事件本身，或 §3.4 要求的 watermark。由 E-TS，这个 block 最早在真实时刻 $x-\Delta_{\rm ts}$ 提出。L1 控制日志覆盖所需的 block 是 timestamp 至少为 $x-M_a$ 的第一个 block，其 timestamp 小于 $x-M_a+b_{\rm L1}$；由 [00 §1.2](00_arch_zh_v0_1.md)，它在真实时刻 $x-M_a+b_{\rm L1}+\delta_{\rm L1}+T_{\rm L1}$ 之前 finalized 且可读。控制记录本身只需 $M_a\ge T_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$，已被蕴含。∎〔待确认 H1〕$b_{\rm L1}$ 一项假设该 block 在一个 slot 内出现；若改读 header timestamp，连续空 slot 会加大这一项，只影响本条“L1 控制日志覆盖不拖慢重放”的结论。
++- **Espresso 进度。** 若 $[x+\Delta_{\rm ts},\,x+\Delta_{\rm ts}+T_E]$ 内 Espresso 一直 live，由 E-L，到 $x+\Delta_{\rm ts}+T_E$ 时已有 timestamp 至少为 $x$ 的 finalized block，§3.4 的 Espresso 覆盖就绪。Non-live 期间这项覆盖可能不足；一旦前缀覆盖相应键，$q^*$ 仍由它唯一确定。
+ - **发布余量。** $T_{\rm grace}>T_{\rm pub}+T_E+\Delta_{\rm ts}+\delta_G$ 保证不晚于真实时刻 $\tau_s^{\rm stop}+\delta_G$ 交给诚实 Publisher 的结果赶上截止（[04 §4](04_publisher_zh_v0_1.md) PUB-4 的推论）。慢时钟 replica 在本地停止前形成的结果，在真实时间上可以晚到 $\tau_s^{\rm stop}+\delta_G$。
+ - **原生窗口。** 要声明“按时进入 $G$ 的 block 被原样派生”，还需
+ 
+@@ -173,7 +189,7 @@ $$
+ 
+ - $\mathsf{NEXT}(\nu)$：已选定 descriptor $\nu$，接纳该实例的后续结果。
+ - $\mathsf{PENDING}(\zeta)$：已按交接边界 $\zeta$ 计算 Plan，但没有合格区域；等待 Force 或 RESUME。
+-- $\mathsf{HALT}(\zeta)$：分支因 Expire 停止；只有 RESUME 能恢复。
++- $\mathsf{HALT}(\zeta)$：分支因 Expire 停止，或 RESUME 开出的安排已经过期（§4.6）；只有 RESUME 能恢复。
+ 
+ 交接边界 $\zeta$ 是 Boundary（§4.7），记录目标 session、选区参考 block、拟接续的 anchor 和窗口。Tail 描述公开职责，与某个本地 program 的运行状态分开。
+ 
+@@ -183,10 +199,11 @@ stateDiagram-v2
+     NEXT --> PENDING: 常规交接、Force、RESUME（Plan 返回 ⊥）
+     PENDING --> NEXT: Force、RESUME（Plan 成功）
+     PENDING --> PENDING: Force、RESUME（Plan 返回 ⊥）
+-    NEXT --> HALT: Expire
+-    PENDING --> HALT: Expire
++    NEXT --> HALT: Expire 或 RESUME 安排过期
++    PENDING --> HALT: Expire 或 RESUME 安排过期
+     HALT --> NEXT: RESUME（Plan 成功）
+     HALT --> PENDING: RESUME（Plan 返回 ⊥）
++    HALT --> HALT: RESUME 安排过期
+ ```
+ 
+ **转移总表。** 下表是 §4.2–§4.6 的摘要。
+@@ -197,36 +214,42 @@ stateDiagram-v2
+ | $\mathsf{SessionEnd}(s)$ | ν 属于 $s$ 时常规交接（§4.3） | 无 | 无 | 不变 |
+ | $\mathsf{Force}(U)$ | 有效时开新分支（§4.4） | 同左 | 无效 | 不变 |
+ | $\mathsf{Expire}(h)$ | 关闭分支 → HALT（§4.5） | 同左 | 无 | 不变 |
+-| $\mathsf{Resume}(p)$ | 开新分支（§4.6） | 同左 | 同左 | 替换为 $D_L$ 的前缀 |
++| $\mathsf{Resume}(p)$ | 开新分支；安排已过期则置为 HALT（§4.6） | 同左 | 同左 | 替换为 $D_L$ 的前缀 |
+ 
+ $G$ 只在两处改变：Espresso block 中的接纳只追加，RESUME 替换。每处理完一个事件，状态、Rec 与 pc 一起保存。
+ 
+ ### 4.2 Espresso block：接纳区域结果
+ 
+-**区域最终性的使用。** GFR 使用 [02 §4.1](02_session_program_zh_v0_1.md) 的 regional finality：$B$ regional finalized，当且仅当存在 $\pi_{\rm fin}$ 使 $\mathsf{CheckFINAL}(\nu,B,\pi_{\rm fin})=\mathrm{true}$。同 context 的后代证明覆盖其 ancestors；缺少 physical block 的高度，由决定链的 $\mathrm{Virt}$ 唯一展开。公开验证不重放观察者自己的接收时间，不能因为结果晚到就否定合法的历史决定；结果是否“晚”只由公开截止判断。
++**区域最终性的使用。** GFR 使用 [02 §4.1](02_session_program_zh_v0_1.md) 的 regional finality：通过 $\mathsf{CheckFINAL}(\nu,B,\pi_{\rm fin})$ 的证明覆盖 $B$ 及其同链 physical ancestors。覆盖关系不免除 §3.2 对这些 blocks 正文的公开要求。只有链中本来没有 physical block 的 heights，才由 $\mathrm{Virt}$ 唯一展开为 padding；实际 physical ancestor 的正文缺失不能当作 padding。公开验证不重放观察者自己的接收时间，不能因为结果晚到就否定合法的历史决定；GFR 的及时性分别按公开截止和接纳事件键检查。
+ 
+-**接纳条件。** 设 Tail 为 $\mathsf{NEXT}(\nu)$，当前处理键为 $x$。一个完整区域结果可以扩展 $G$，当且仅当以下条件同时成立：
++**接纳条件。** 设正在处理 $\mathsf{Espresso}(q)$，键为 $x=\theta_q$，Tail 为 $\mathsf{NEXT}(\nu)$，当前 $G$ 的末端高度为 $h_G$。对截至 $J_q$ 已按 §3.2 完整公开、目标为 $B$ 的结果 $\mathit{Res}$，若 $B.h>h_G$，本次拟追加的是整个 virtual 区间 $[h_G+1,B.h]$。它可以扩展 $G$，当且仅当以下条件同时成立：
+ 
+ 1. **负责性**：其 cid 等于 $\nu.\mathrm{cid}$，当前分支与 session 未关闭。
+-2. **证明与连续**：最终证明有效，physical ancestry 延续已接纳的同 context 前缀，或从选定 anchor 开始。
++2. **证明与连续**：最终证明有效，完整 physical chain 从选定 anchor 接出，并延续已接纳的同 cid 前缀；所有实际 physical ancestors 的正文和连接都已按 §3.2 核对。
+ 3. **窗口**：新 physical heights 位于该 session 的固定窗口 $[h_{\min,s},h_{\max,s}]$。
+ 4. **原生兼容**：metadata 与强制前缀按 [00 §3.4](00_arch_zh_v0_1.md) 计算，满足 origin 的 not-ahead 与 drift 条件，所需 L1 输入已 finalized。
+ 5. **公开截止**：$\theta_{q_{\rm avail}(\mathit{Res})}<\theta_s^{\rm end}$，等号不接纳。
+-6. **未过期**：对本次新增的每个 virtual height $h$，有 $x<\mathit{ts}^*(h)+W_{\rm exp}$。
++6. **整段未过期**：对每个 $h\in[h_G+1,B.h]$，有 $x<\mathit{ts}^*(h)+W_{\rm exp}$，其中包括由 $\mathrm{Virt}$ 产生的 padding heights。
++
++$q_{\rm avail}$ 是完整结果的公开位置，$x$ 是本次接纳事件的键；缓存候选稍后获选时，二者对应的时间键可以不同。公开截止使用 $\theta_{q_{\rm avail}}$，逐高度过期使用 $x$；接纳时仍须满足负责性。任一个必需 physical ancestor 的正文尚未公开，或任一个新增 virtual height 已到 Expire，都不能跳过它而接纳 $B$。
++
++**验证输入不足。** 若结果通过可先行完成的检查，但仍缺少验证 origin、metadata、强制前缀等所必需的 finalized 输入，则当前 Espresso 事件尚不能完成，不推进 pc；补齐后仍在该位置作出接纳判定。不能把读取者尚未取得所需输入解释为条件 4 失败，并永久跳过该结果。已有公共输入足以确定不满足接纳条件的结果仍按原规则排除；公共历史中尚缺 §3.2 所需证明或正文的结果则按 §3.4 处理。
+ 
+ 在 §3.3 的顺序下，条件 5、6 已经由先处理的定时器保证：键不大于 $x$ 的 Expire 若有效，已使 Tail 成为 HALT，而更高 heights 的过期键只会更晚；键不大于 $x$ 的 SessionEnd 已关闭 $s$，被条件 1 挡住。这里仍然列出它们，使单条接纳判断可以独立核对。
+ 
+-**接纳。** 对选定的 physical extension 计算 $\mathrm{Virt}$ 的新片段，追加到 $G$，并记录出处。一次接纳可以增加多个 virtual heights。例如前驱末端为 98、后继第一个 physical block 在 101，一次增加 99、100、101，其中 99、100 的来源是确定这段 padding 的后继证明。
++**接纳。** 对完整 physical extension 计算 $\mathrm{Virt}$，整个新增区间通过检查后，按高度从 $h_G+1$ 到 $B.h$ 追加到 $G$ 并记录出处。祖先可以此前已在 $G$，也可以与 $B$ 在同一 Espresso 事件中一起追加，无需在更早事件单独接纳或各自发布证明。例如前驱末端为 98、后继第一个 physical block 在 101，一次增加 99、100、101，其中 99、100 的来源是确定这段 padding 的后继证明；它们仍各自检查 Expire，但没有单独的 physical 正文发布义务。
+ 
+-合格扩展按规范编码 hash 排序处理，并去掉与已接纳前缀重复的部分。在 Byzantine 权重假设下，同一 context 的有效决定链可比较（BFT-1），排序不能替代这项性质。候选结果可以先被缓存；context 被选中后，缓存中的匹配结果按上述条件接纳，不需要再发布一轮。未选中的结果不能进入 $G$。
++合格扩展按规范编码 hash 排序处理，并去掉与已接纳前缀重复的部分；每次追加后，对下一扩展使用更新后的 $h_G$ 检查整个新增区间。在 Byzantine 权重假设下，同一 context 的有效决定链可比较（BFT-1），排序不能替代这项性质。候选结果可以先被缓存；context 被选中后，在本节的 Espresso 事件处理中，按原 $q_{\rm avail}$ 和当前键 $x$ 检查匹配结果，不需要再发布一轮。未选中的结果不能进入 $G$。
+ 
+ **接纳到上界。** 若本次接纳包含 $h_{\max,s}$ 的 physical block，立即按 §4.3 完成常规交接。新的 $\mathsf{NEXT}$ 产生后，在同一个 Espresso block 内对它重复本节，直到没有新的合格扩展。
+ 
+ ### 4.3 SessionEnd：常规交接
+ 
+-常规交接有两个触发点：接纳到 $h_{\max,s}$（§4.2），或 Tail 仍为 $s$ 的 $\mathsf{NEXT}$ 时处理到 $\mathsf{SessionEnd}(s)$。SessionEnd 只推进仍为 NEXT 的正常交接，不绕过 PENDING 或 HALT；session 已因接纳到上界关闭时，SessionEnd 没有效果。
++常规交接有两条路径：接纳到 $h_{\max,s}$ 的 physical block 时立即交接（§4.2）；否则在公开输入满足 §3.4、覆盖截止键 $\theta_s^{\rm end}$，且 §3.3 中排在 $\mathsf{SessionEnd}(s)$ 之前的事件全部处理后，若 Tail 仍为 $s$ 的 $\mathsf{NEXT}$，就执行 SessionEnd。这里要求 Espresso 前缀覆盖到 timestamp 至少为 $\theta_s^{\rm end}$ 的 block，L1 前缀覆盖到 timestamp 至少为 $\theta_s^{\rm end}-M_a$ 的 block；本地时钟到达截止值不触发交接。
+ 
+-**末端判据。** 若 $h_{\max,s}$ 的 physical block 已被接纳，以它为末端。否则以截止前最后接纳的 physical block 为末端；没有新 physical block 时，沿用该 session 的初始 anchor。两种情况下 session 都以 COMPLETE 关闭。例如上界为 100、截止时最后接纳的是 98，regular anchor 就是 98；规则不等待一个未必会产生的 block 100。
++SessionEnd 不绕过 PENDING 或 HALT。同键的 L1 控制和 Expire 先处理；若它们已改变职责，或 $s$ 已因接纳到上界关闭，就不再对 $s$ 交接。已失效的旧 SessionEnd 不产生第二次交接。同键 Espresso 结果排在 SessionEnd 之后，不能补入前驱截止前的结果。
++
++**末端判据。** 提前接满窗口时，以刚接纳的 $h_{\max,s}$ physical block 为末端。由 SessionEnd 交接时，以该前驱在严格早于截止键的合格公开历史中最后已接纳的 physical block 为末端；没有新 physical block 时，沿用该 session 的初始 anchor。两种情况下 session 都以 COMPLETE 关闭。例如上界为 100、截止时最后接纳的是 98，regular anchor 就是 98；规则不等待一个未必会产生的 block 100。
+ 
+ **后继职责。** 后继 $s^+=(\beta,r+1)$ 的窗口为
+ 
+@@ -272,7 +295,7 @@ Expire 不撤销已进入 $G$ 的块，也不生成替代块：$G$ 不能跳过
+ 
+ RESUME 从确定的派生结果重新建立生产起点。处理位于 L1 位置 $p_{\rm res}$、目标为 $h_{\rm res}$ 的 RESUME 时，记收录它的 L1 block 为 $L$，激活时刻为 $\mathit{ts}_{\rm L1}(L)+M_a$：
+ 
+-1. **取得切面。** 以 $p_{\rm res}$ 调用 resumeReader，取得 ResumeCut（§5.5）。其中 $D_L$ 是按 L1 顺序处理到这条 RESUME 的 CursorSet 为止的派生链（§5.1）；它绑定具体位置 $p_{\rm res}$，不只绑定 block $L$。缺 L1 或 DA 数据时在此等待，保留处理前的状态，不做一半替换。
++1. **取得切面。** 按 §3.4，在覆盖激活键的公共输入上，以 $p_{\rm res}$ 调用 resumeReader，取得 ResumeCut（§5.5）。其中 $D_L$ 是按 L1 顺序处理到这条 RESUME 的 CursorSet 为止的派生链（§5.1）；它绑定具体位置 $p_{\rm res}$，不只绑定 block $L$。缺 L1、DA 数据或其他必需验证材料时，本事件尚不能完成：保留处理前的状态与位置，不做一半替换；输入齐备后在同一位置原子完成本事件。
+ 2. **关闭旧分支。** 输出 BranchClosed（原因 RESUME）。RESUME 总是有效：它已经在同一笔 L1 交易中改写了 Inbox cursor，派生已经跟随它；GFR 若判它无效，$G$ 与 $D$ 将永久不一致。
+ 3. **对齐 $G$。** 执行
+ 
+@@ -280,11 +303,11 @@ $$
+ G\leftarrow D_L[\,h^0:h_{\rm res}\,],
+ $$
+ 
+-区间包含两端。新 anchor $A$ 为 ResumeCut.anchor，即 $D_L[h_{\rm res}]$ 对应的 Anchor，连接标识按 [00 §3.2](00_arch_zh_v0_1.md) 的派生 anchor 公式计算。$G$ 与 $D_L$ 的共同原生前缀保留；从第一个不同的原生 block 起，旧 $G$ 的后缀被撤销；新采纳部分的出处记为 DER。若旧 $G$ 本身是 $D_L$ 的前缀，则不撤销任何块，只接上后续部分。$D$ 本身不被截断或改写。
+-4. **开出。** 安装新分支 $\beta+1$ 与新 policy，L1 floor 不低于 $L$。记 Boundary $\zeta=\{$cause: RESUME, target_session: $(\beta+1,0)$, source_region: $\bot$, reference_block: $\mathrm{BlockRef}(A)$, anchor: $A$, window: $\{h_{\rm res}+1,h_{\rm res}+\mathrm{TB}\}\}$；source_region 为 $\bot$ 表示按新 policy 的循环排列从首项选区。立即以 $\zeta$ 调用 `Plan`：结果非 $\bot$ 时输出 SessionAssigned，Tail 置为 $\mathsf{NEXT}(\nu)$；否则 Tail 置为 $\mathsf{PENDING}(\zeta)$。Plan 只读 L1 历史与配置，激活时它所需的 L1 前缀已由 R-WAIT 保证。
++区间包含两端。新 anchor $A$ 为 ResumeCut.anchor，即 $D_L[h_{\rm res}]$ 对应的 Anchor，连接标识按 [00 §3.2](00_arch_zh_v0_1.md) 的派生 anchor 公式计算。旧 $G$ 与采用的派生前缀 $D_L[h^0:h_{\rm res}]$ 的共同原生前缀保留，旧 $G$ 超出该共同前缀的后缀被撤销，新采纳部分的出处记为 DER。$D$ 本身不被截断或改写。
++4. **开出。** 安装新分支 $\beta+1$。区域开关和循环顺序取自 RESUME 记录中的新 policy。新分支的 L1 floor 设为 $\lambda_{\beta+1}:=A.\mathit{os}$，即恢复 anchor 在 $D_L$ 中的实际 L1 origin。记 Boundary $\zeta=\{$cause: RESUME, target_session: $(\beta+1,0)$, source_region: $\bot$, reference_block: $\mathrm{BlockRef}(A)$, anchor: $A$, window: $\{h_{\rm res}+1,h_{\rm res}+\mathrm{TB}\}\}$。Source_region 为 $\bot$ 表示按新 policy 的循环排列从首项选区。先检查下文的「不能启动的安排」。若该安排可以启动，以 $\zeta$ 调用 `Plan`。因选区参考 block 与 L1 floor 都取自 $A$，新 session 的 L1 查询高度为 $\ell_s=A.\mathit{os}$，据此查询 $\mathsf{SnapshotAt}(\ell_s)$ 和 $\mathsf{Ban}(\ell_s)$（[01 §3.12](01_l1_authority_zh_v0_1.md)）。Plan 结果非 $\bot$ 时输出 SessionAssigned，Tail 置为 $\mathsf{NEXT}(\nu)$；否则 Tail 置为 $\mathsf{PENDING}(\zeta)$。完成本事件前，Plan 所需的 L1 历史也须满足 §3.4 的输入条件。
+ 5. **输出。** 输出 Resumed 事件，携带 control_seq、新分支、$A$ 与 $D_L$ 的引用。
+ 
+-**不能启动的安排。** 合约只要求 $h_{\rm res}$ 高于 Inbox cursor；若 $h_{\rm res}$ 取得过低，使新 session 的 SessionEnd 键已早于激活时刻，GFR 不把关闭事件插回已处理的历史，而是直接判定该安排不能启动：输出 SessionClosed（原因 EXPIRED），Tail 置为 $\mathsf{HALT}(\zeta)$，需要后续有效的 RESUME。Force 与常规交接开出的窗口都晚于其开出位置，不会出现这种情况。
++**不能启动的安排。** 令 $x=\mathit{ts}_{\rm L1}(L)+M_a$ 为本次 RESUME 的激活键。对齐 $G$ 后，下一缺失高度为 $h_{\rm res}+1$。如果该高度的 Expire 键 $\mathit{ts}^*(h_{\rm res}+1)+W_{\rm exp}$ 或新窗口的 SessionEnd 键 $\mathit{ts}^*(h_{\rm res}+\mathrm{TB}+1)+T_{\rm grace}$ **严格小于** $x$，就在本次 RESUME 内将 Tail 置为 $\mathsf{HALT}(\zeta)$，输出新 session 的 SessionClosed（原因 EXPIRED），并照常输出 Resumed。此分支不调用 `Plan`、不输出 SessionAssigned，也不把过期定时器插回已处理的历史。已完成的 $G$ 对齐保留，生产只能由后续 RESUME 恢复。若定时器的键等于 $x$，仍按 §3.3 的同键顺序在全部 L1 控制记录之后处理届时仍适用的定时器。
+ 
+ 恢复起点只依赖 L1、已接纳的 DA 数据和原生派生，不依赖旧 Espresso 上未结算的区域结果。“$G$ 已对齐 $D$”“新 session 已分配”“新普通块已进入 $G$”是三个不同步骤。
+ 
+@@ -320,7 +343,9 @@ PublicationEntry = {
+ GlobalSource = REGIONAL(result_key) | DER(resume_position, height)
+ ```
+ 
+-区域结果的 result_key 为 $(\mathrm{cid},\mathsf H(B))$，与 Publisher 的任务键相同（[04 §3.1](04_publisher_zh_v0_1.md)）。Available_objects 保存已验证公开的结果组成部分；locations 保存这些对象所在的 (Espresso height, message index)，索引从 0 开始；first_complete_q 即 §3.2 的 $q_{\rm avail}$，尚不完整时为 $\bot$。完整后，这些对象可以组装为 RegionalResult。
++区域结果的 result_key 为 $(\mathrm{cid},\mathsf H(B))$，与 Publisher 的任务键相同（[04 §3.1](04_publisher_zh_v0_1.md)）。Available_objects 保存已核对的公开最终证明与 physical 正文；locations 保存这些对象的原公开位置 (Espresso height, message index)，索引从 0 开始。正文按规范编码和 hash 解析引用，命中本地缓存仍须核对其公开位置。First_complete_q 即 §3.2 对该结果键定义的最小 $q_{\rm avail}$，不是某份具体 publication 或 RegionalResult 所携带全部字段的到齐位置；按已完整读取的相关历史仍不完整时为 $\bot$。选定前缓存的对象保留原位置，选定后据此核对；单纯本地缺读取或验证输入时沿用 §3.4，不把它记录为公共不完整。
++
++索引可以附带保存 $\pi_A$ 等来源材料，但它们不参与 first_complete_q。对同一结果键的多份有效最终证明，完整性按存在一份判定；可以保留全部公开证明及其位置。§4.2 的规范编码 hash 顺序用于合格扩展，现稿未另指定同一结果键下压缩保存单一代表证明的选择规则。这是具体出处记录的规范化问题，不能让代表证明或可选材料的选择改变 $q_{\rm avail}$、截止或接纳判定。
+ 
+ Sources 是以 virtual height 为键的 GlobalSource 表。REGIONAL 指向决定该片段的完整区域结果，padding 也可以引用覆盖它的后继证明；DER 指向采用的 RESUME L1 位置及派生 height。
+ 
+@@ -364,7 +389,7 @@ ReplayResult = {
+ }
+ ```
+ 
+-GlobalCheckpoint 保存完整 ReplayState 和支持它的两份公共日志切面（L1 位置、Espresso height）。验证时必须重建或核对相应状态；单独的末块 hash 不构成 checkpoint。ReplayResult 是 AdvanceGlobal 的返回：status 为 READY 或 `WAIT{next_position, missing}`，next_position 指向尚不能处理的事件，missing 列出缺少的日志、对象或恢复状态；WAIT 不抹去已完成的进度。
++GlobalCheckpoint 保存完整 ReplayState 和支持它的两份公共日志切面（L1 位置、Espresso height）。验证时必须重建或核对相应状态；单独的末块 hash 不构成 checkpoint。ReplayResult 是 AdvanceGlobal 的返回：status 为 READY 或 `WAIT{next_position, missing}`，next_position 指向尚不能完成的事件，missing 列出缺少的日志、对象或恢复状态；WAIT 不推进该事件的重放位置，也不抹去已完成的进度。
+ 
+ ### 4.8 接口
+ 
+@@ -390,7 +415,7 @@ flowchart TB
+ 
+ **Init(checkpoint, reads)。** 输入为 Genesis 配置或 GlobalCheckpoint；reads 为验证 checkpoint 所需的 L1／Espresso 前缀及恢复派生材料。Genesis 配置给出初始 virtual block、执行后状态、policy 和初始 Boundary（cause 为 GENESIS，窗口从 $h^0+1$ 开始）。从 genesis 初始化时，以初始 Boundary 调用 `Plan`，Tail 置为 NEXT 或 PENDING；从 checkpoint 恢复时，验证它与指定公共前缀的重放结果一致。输出初始重放状态 $\mathcal X_0$；缺验证材料时返回 WAIT；checkpoint 与公共重放结果不符时返回 REJECT。
+ 
+-**AdvanceGlobal(X, L1, E, resumeReader)。** 输入为当前状态 $\mathcal X$、已验证的 finalized L1 与 Espresso 日志前缀，以及 resumeReader，即 Derivation 的 `DeriveAtResume`（§5.5），它按具体 RESUME 位置返回 ResumeCut 或报告缺失数据。输出 ReplayResult $(\mathcal X',\Delta\mathrm{Rec},\mathit{events},\mathit{status})$；READY 表示已提供的可处理输入已处理完；输入日志不通过验证或不延续既有前缀时返回 REJECT。处理时按 §3.3 的全序逐个取下一事件，先检查 §3.4 的 R-WAIT，再按 §4.2–§4.6 处理。遇到 WAIT 时返回已完成的进度。未完整公开的单份 publication 暂不合格，不阻塞其他事件。
++**AdvanceGlobal(X, L1, E, resumeReader)。** 输入为当前状态 $\mathcal X$、已验证的 finalized L1 与 Espresso 日志前缀，以及 resumeReader，即 Derivation 的 `DeriveAtResume`（§5.5），它按具体 RESUME 位置返回 ResumeCut 或报告缺失数据。输出 ReplayResult $(\mathcal X',\Delta\mathrm{Rec},\mathit{events},\mathit{status})$；READY 表示已提供的可处理输入已处理完；输入日志不通过验证或不延续既有前缀时返回 REJECT。按 §3.3 的全序逐个取下一事件，在 §3.4 的输入条件满足时，按 §4.2–§4.6 完成转移并保存状态、Rec 与 pc。当前事件尚缺必需输入时，返回已完成的状态、记录和事件，status 为 `WAIT{next_position, missing}`；该未完成事件不推进 pc，不发布部分转移，也不撤销已经完成的前缀。按 §3.2 尚未完整公开的结果暂不合格，不阻塞其他事件（§3.4）。接口不负责拉取日志或安排重试；调用方何时补齐输入并再次调用，不改变原位置的判定。
+ 
+ **Chain(X)。** 只读返回同一处理位置上的 $(G,\mathrm{src}_G,pc)$，不推进日志。
+ 
+diff --git a/formalization_v10/10_pipelines_zh_v0_1.md b/formalization_v10/10_pipelines_zh_v0_1.md
+index 137ebef..36ee91f 100644
+--- a/formalization_v10/10_pipelines_zh_v0_1.md
++++ b/formalization_v10/10_pipelines_zh_v0_1.md
+@@ -1,8 +1,8 @@
+ # 端到端流程：常规交接、Force 交接与两类 RESUME 恢复（v10 工作稿 v0.1）
+ 
+-日期：2026-11-09。上一版：[v9 v0.2](../formalization_v9/10_pipelines_zh_v0_2.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；例子来源为 [261027](../meetup_record/261027.md)，以及 [v6 时间假设分析稿](../formalization_v6/recovery_timing_assumptions_zh.md)。
++日期：2026-11-10。上一版：[v9 v0.2](../formalization_v9/10_pipelines_zh_v0_2.md)。总览与共享模型见 [00 arch](00_arch_zh_v0_1.md)；例子来源为 [261027](../meetup_record/261027.md)，以及 [v6 时间假设分析稿](../formalization_v6/recovery_timing_assumptions_zh.md)。
+ 
+-本版相对 v9 的改动：§2.2 加入副本时钟误差 $\delta_G$ 与 L1 timestamp 误差 $\delta_{\rm L1}$，并写明时钟的部署前提；§2.3 的约束改为计入这两项的形式，$M_a$ 改用精确式，新增 $T_{\rm win}$、窗口末高度与交接三行；§2.6 的充分条件相应更新；§3.3 加入交接条件与窗口末高度条件；§3.4 的 1b、§4.4 的 $T_{\rm init}$ 按本地时钟陈述；§8 更新相关结论。各流程的高度、时刻与 L1 origin 不变。依据的设计决定见 [v9 时钟决定记录](../formalization_v9/clock_decisions_zh_v0_1.md)。
++本版相对 v9 的改动：§2.2 加入副本时钟误差 $\delta_G$ 与 L1 timestamp 误差 $\delta_{\rm L1}$，并写明时钟的部署前提；§2.3 的约束改为计入这两项的形式，$M_a$ 改用精确式，新增 $T_{\rm win}$、窗口末高度与交接三行；§2.6 的充分条件相应更新；§3.3 加入交接条件与窗口末高度条件；§3.4 的 1b、§4.4 的 $T_{\rm init}$ 按本地时钟陈述；§8 更新相关结论。另按 [09 §3.4](09_finality_rules_zh_v0_1.md) 的重放输入条件，在参数表与流程中区分 Espresso 覆盖、L1 控制日志覆盖和 ResumeCut。各流程的高度、时刻与 L1 origin 不变。依据的设计决定见 [v9 时钟决定记录](../formalization_v9/clock_decisions_zh_v0_1.md)。
+ 
+ v9 v0.2 按一组校准参数重算了全部例子。高度、时刻、L1 origin 和截止都放在同一条时间坐标上，可以逐项核对。v0.1 的高度是压缩示意，与时间例子互相矛盾；v9 v0.2 取消压缩。与 261027 和 v0.1 的数值差异集中列在 §8。标“v9 选定”或“本版选定”的参数是 v9 或本版补充的取值，不是 261027 或 v8 给出的。
+ 
+@@ -49,12 +49,12 @@ $$
+ | --- | --- | --- | --- |
+ | $b_{\rm L2}$ | 1 s | 261027 的例子 | 高度与时刻换算 |
+ | $b_{\rm L1}$ | 12 s | Ethereum slot | origin 与窗口换算 |
+-| $T_{\rm L1}$ | 19.2 min | 本例假设的 finalized＋读取预算；不是 Ethereum 的无条件最坏上界，实际最终化可停滞 | R-WAIT、$M_a$、$T_{\rm dep}$、RESUME 准备 |
++| $T_{\rm L1}$ | 19.2 min | 本例假设的 finalized＋读取预算；不是 Ethereum 的无条件最坏上界，实际最终化可停滞 | L1 控制日志覆盖、$M_a$、$T_{\rm dep}$、RESUME 准备 |
+ | $T_{\rm dep}$ | 20 min（v9 选定） | 须满足 $T_{\rm L1}+\delta_{\rm L1}+\delta_G\le T_{\rm dep}$ | 稳态 origin 滞后 |
+ | $T_{\rm drift}$ | 30 min | 本例采用 Fjord 参数 1 800 s；须核对实际采用的原生版本 | O3；RESUME 目标的上界 |
+ | $W_{\rm seq}$ | 12 h | 本例取 3 600 个 L1 block；12 h 是无 missed slot 的换算，MegaETH 部署值未核验 | 原生截止 |
+ | $W_{\rm exp}$ | 10 h | 261027 | 缺口容忍期（Expire） |
+-| $M_a$ | 20 min | 由 $M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$ 得出；261027 取 15 min | Force 与 RESUME 的激活时刻、R-WAIT |
++| $M_a$ | 20 min | 由 $M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$ 得出；261027 取 15 min | Force 与 RESUME 的激活键、L1 控制日志覆盖的公告预算 |
+ | $T_{\rm batch}$ | 1 h | 261027 | 交付预算 |
+ | $\Delta_{\rm ts}$ | 15 s（v9 选定） | 待核对 HotShot 的时间戳校验 | E-TS |
+ | $T_{\rm pub}$、$T_E$ | 各 30 s（v9 选定） | 待实测 | PUB-4 |
+@@ -75,7 +75,7 @@ $$
+ 
+ | 约束 | 代入 | 余量 | 不满足时的后果 |
+ | --- | --- | --- | --- |
+-| $M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$ | 20 min ≥ 19 min 43 s | 17 s | 部分 GFR 事件可能等待 L1 finalized。若取 261027 的 15 min，处理键为 $x$ 的事件要等到约 $x+4$ min 28 s（覆盖 $x-M_a$ 的 L1 block 的 timestamp 最多晚 12 s，产出再晚至多 $\delta_{\rm L1}$，再经 19.2 min finalized），$G$ 的确认约推迟 4.5 分钟；事件顺序不变 |
++| $M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1}$ | 20 min ≥ 19 min 43 s | 17 s | L1 控制日志覆盖可能晚于 Espresso 覆盖就绪。若取 261027 的 15 min，处理键为 $x$ 的事件所需控制日志覆盖可能到约 $x+4$ min 28 s 才就绪（覆盖 $x-M_a$ 的 L1 block 的 timestamp 最多晚 12 s，产出再晚至多 $\delta_{\rm L1}$，再经 19.2 min finalized），$G$ 的确认约推迟 4.5 分钟；事件顺序不变 |
+ | $T_{\rm L1}+\delta_{\rm L1}+\delta_G\le T_{\rm dep}$ | 19 min 16.001 s ≤ 20 min | 约 44 s | 到达 slot 时 schedule 选中的 origin 可能尚未 finalized，Build 与 Accept 等待 |
+ | $T_{\rm dep}+b_{\rm L1}\le T_{\rm drift}$ | 20 min 12 s ≤ 30 min | 9 min 48 s | 稳态 origin 违反 drift |
+ | $T_{\rm grace}>T_{\rm pub}+T_E+\Delta_{\rm ts}+\delta_G$ | 120 s > 75.001 s | 约 45 s | 停止前形成的结果可能错过公开截止 |
+@@ -89,7 +89,7 @@ $$
+ 
+ $T_{\rm prep}$ 下界的余量只有 999 ms，来自 $b_{\rm L2}$ 一项。〔待确认 G2〕这里按 [01 §3.10](01_l1_authority_zh_v0_1.md) 把取得 Espresso watermark 的等待计入 $T_{\rm ready}$；若不计入，左边再加 $\Delta_{\rm ts}+T_E=45$ s，须取 $T_{\rm prep}\ge26$ min。
+ 
+-在本例额外取 $T_{\rm ready}=5$ min、$\epsilon=2$ min 时，上述预算筛选得到 25–28 分钟；这不是已经证明的恢复可行区间。仍需验证 Espresso watermark、历史重放、DA 读取、填充执行与足够诚实权重的状态准备能在预算内完成。若这些工作不能受限，不能声称 25 分钟恢复。
++在本例额外取 $T_{\rm ready}=5$ min、$\epsilon=2$ min 时，上述预算筛选得到 25–28 分钟；这不是已经证明的恢复可行区间。仍需验证 Espresso watermark、历史重放、DA 读取、填充执行与足够诚实权重的状态准备能在预算内完成。若这些工作不能受限，不能声称 25 分钟恢复。$M_a$ 一行只保证 L1 控制日志覆盖的时序；候选验证若还需更晚的 finalized origin、metadata 或强制前缀输入，也须先取得，不能从该行推出其就绪时间。
+ 
+ ### 2.4 一个 height 的三条时限
+ 
+@@ -185,7 +185,7 @@ sequenceDiagram
+ 
+ ### 3.4 变体
+ 
+-**1a：c 没有决定 32 410。** a 在 09:00:10 以已就绪的最高候选 32 409 进入，并从 09:00:11 起在 cid(32 409) 上出块。GFR 在 SessionEnd(7,6) 的键 09:02:11 固定 regular anchor 32 409，选定 cid(32 409)。a 在 09:00:11–09:02:11 产生的约 120 个 block 已经缓存，在随后的 Espresso block 中一并接纳。内容没有损失，但这些 block 的全局确认推迟最多约 2 分钟。
++**1a：c 没有决定 32 410。** a 在 09:00:10 以已就绪的最高候选 32 409 进入，并从 09:00:11 起在 cid(32 409) 上出块。公共输入覆盖截止键且前序事件处理完后，GFR 在 SessionEnd(7,6) 的键 09:02:11 固定 regular anchor 32 409，选定 cid(32 409)。a 在 09:00:11–09:02:11 产生的约 120 个 block 已经缓存，在随后的 Espresso block 中一并接纳。内容没有损失，但这些 block 的全局确认推迟最多约 2 分钟。
+ 
+ **1b：32 410 的证书迟到。** 32 410 的投票都在各签名者本地 09:00:11 之前签出，真实时刻不晚于 09:00:11 $+\delta_G$（BFT-7 及其推论允许证书之后才组合或公开），但持有证书的一方直到 $\theta=$ 09:01:30 才公开它，仍早于 09:02:11。处理如下：
+ 
+@@ -214,11 +214,14 @@ sequenceDiagram
+ sequenceDiagram
+     participant M as 治理方 M
+     participant AUTH as Authority
++    participant ESP as Espresso
+     participant GFR as GFR
+     participant MGR as Manager（各区域）
+     participant PC as Program（c）
+     M->>AUTH: SubmitForce(U = (c, 7, P_new))，L1 10:10:00
+-    Note over GFR: 激活时刻 10:10:00 + M_a = 10:30:00，处理 Force
++    Note over AUTH,GFR: ≤ 10:29:12，L1 finalized 前缀完整覆盖 10:10:00
++    ESP->>GFR: 约 10:30:01，完整 finalized 前缀覆盖激活键 10:30:00
++    Note over GFR: 覆盖与验证材料齐备、前序事件已处理，按键 10:30:00 处理 Force
+     GFR-->>MGR: BranchClosed(7, FORCE)
+     GFR->>AUTH: Plan(P_new, (8,8), BlockRef(36 010), b, [37 921, 41 520])
+     GFR-->>MGR: SessionAssigned(ν：anchor 36 010，region c)
+@@ -233,8 +236,8 @@ sequenceDiagram
+ | --- | --- | --- | --- | --- |
+ | 1 | 约 10:05 | $\mathsf M$ 发现故障 | — | — |
+ | 2 | 10:10:00 | Authority.`SubmitForce`：$U=(c,7,\mathcal P_{\rm new})$ 收录于 L1 block 3 050；激活时刻 $\mathrm{act}(U)=10{:}10{:}00+M_a=10{:}30{:}00$ | GFR（经 L1） | W3 |
+-| 3 | ≤ 10:29:12 | 覆盖 $\mathrm{act}(U)-M_a=10{:}10{:}00$ 的 L1 block 3 050 已 finalized | — | — |
+-| 4 | 约 10:30:01 | 取得 timestamp 至少为 10:30:00 的 Espresso watermark（例如 $\theta=10{:}30{:}01$ 的 block），R-WAIT 满足。GFR 在键 10:30:00 处理 Force：此前已处理的 Espresso blocks 为 $J_0..J_{q^*-1}$；分支 7 仍是当前分支且未 HALT | — | — |
++| 3 | ≤ 10:29:12 | L1 finalized 前缀已完整读取到 block 3 050，覆盖 $\mathrm{act}(U)-M_a=10{:}10{:}00$，控制日志覆盖就绪 | — | — |
++| 4 | 约 10:30:01 | Espresso 完整 finalized 前缀提供 timestamp 至少为 10:30:00 的 watermark（例如 $\theta=10{:}30{:}01$ 的 block）；结合步骤 3 的 L1 覆盖与所需验证材料，输入满足 [09 §3.4](09_finality_rules_zh_v0_1.md)。前序事件已处理后，GFR 在键 10:30:00 处理 Force：此前已处理的 Espresso blocks 为 $J_0..J_{q^*-1}$；分支 7 仍是当前分支且未 HALT | — | — |
+ | 5 | 同上 | `BranchClosed{7, FORCE}`；新分支 8；$A$ 为 36 010（origin 2 900，09:40:00）；(7,8) 没有贡献 block，故新 session 为 (8,8)，来源区域 b | Manager.`ApplyLifecycle` | W13 |
+ | 6 | 同上 | 窗口 $h_{\min}=\max\{36\,011,\mathrm{slot}(10{:}30{:}00+T_{\rm init})+1\}=37\,921$（10:32:01），$h_{\max}=41\,520$；`Plan` 的 L1_reference_height 为 $\max\{2\,900,\lambda_8\}=3\,050$；region = c；`SessionAssigned{ν}`，Tail = NEXT(ν) | Manager | W1、W13 |
+ | 7 | 约 10:30:01 起 | 分支 7 的全部 cid（包括 b 的 Preparing 条目）以 FORCE 关闭 | Program.`Close` | W24 |
+@@ -274,17 +277,22 @@ sequenceDiagram
+     participant GFR as GFR
+     participant M as 治理方 M
+     participant AUTH as Authority / Inbox
+-    Note over ESP: 10:00 起 non-live；GFR 在 R-WAIT 等待
++    Note over ESP: 10:00 起 non-live；缺少覆盖后续事件键的完整 finalized 前缀
+     BAT->>DER: 交付 34 801–35 999
+     Note over DER: 约 10:35，D 到 35 999
+     Note over DER: 21:40，36 000 的原生截止 → D[36 000] deposit-only（示例观测切面约 21:59:24，另加处理时间）
+     DER-->>MGR: IncompatibilityFact(36 000)
+     Note over ESP: D2 00:00 恢复
++    ESP->>GFR: 新 finalized 前缀覆盖积压事件的键
++    Note over GFR: L1 控制日志覆盖与所需验证输入也已齐备
+     GFR->>GFR: 按键重放：SessionEnd(7,7)…(7,16)，Expire(36 000) → HALT
+     M->>AUTH: SubmitResume(c, P_new, h_res = 88 212)，L1 D2 00:05:12
+     AUTH->>DER: CursorSet(35 999 → 88 212)
++    Note over AUTH,GFR: ≤ D2 00:24:24，L1 finalized 前缀完整覆盖 D2 00:05:12
+     DER->>DER: 填充约 44 700 个 deposit-only block 到 88 212
++    ESP->>GFR: 本例在激活时已取得覆盖键 D2 00:25:12 的完整前缀
+     GFR->>DER: DeriveAtResume(p_res)，键 D2 00:25:12
++    DER-->>GFR: ResumeCut（绑定 p_res）；未取得时停在此事件之前
+     GFR-->>MGR: Resumed 与 SessionAssigned (8,0)
+     MGR->>MGR: PrepareCandidate → Enter
+     Note over MGR: D2 00:30:13 出 88 213
+@@ -304,14 +312,14 @@ sequenceDiagram
+ | 8 | ≤ 21:59:24 | 上一步所依据的 L1 已 finalized。Manager 得到 IncompatibilityFact(cid(32 410), 36 000)，a 的 36 000 是普通块 | Manager.`ApplyLifecycle` | — |
+ | 9 | 同上 | a 的 (7,7) program 与 b 的 cid(36 010) 以 INCOMPATIBLE 关闭。两者已在 10:00:11、11:00:11 以 TIME 永久终止；重复 Close 不覆盖其原关闭原因，仅另记不相容事实 | Program.`Close` | W24 |
+ | 10 | 22:00 起 | $D$ 以 deposit-only 推进：origin 先追上 block 时间（依赖原生 epoch 推进，不能从当前抽象推出固定 22 min），之后 $D$ 的末端约为 L1 时间减 12 h | — | W22 |
+-| 11 | D2 00:00:00 | Espresso 恢复，首个新 block 的 $\theta\approx$ D2 00:00:00。GFR 按键重放 | — | — |
++| 11 | D2 00:00:00 | Espresso 恢复，首个新 block 的 $\theta\approx$ D2 00:00:00，完整 finalized 前缀覆盖下列积压事件的键；L1 控制日志覆盖与所需验证输入也已齐备，GFR 按键重放 | — | — |
+ | 12 | 同上（键 10:02:11） | SessionEnd(7,7)：a 的 36 000–36 010 直到恢复才公开，已过截止；regular anchor 为 35 999。`SessionClosed{(7,7), COMPLETE}`、`SessionAssigned{(7,8), ν(cid(35 999))}`；b 的 cid(36 010) 被排除 | Manager | W13 |
+ | 13 | 同上（键 11:02:11–19:02:11） | SessionEnd(7,8)…(7,16) 依次以 COMPLETE 关闭，均无新块；每次分配下一 session，anchor 仍为 35 999。这些 session 的窗口已在真实时间中过去，Enter 被拒绝 | Manager | W13 |
+ | 14 | 同上（键 20:00:00） | Expire(36 000)：`BranchClosed{7, EXPIRED}`，Tail = HALT，$G$ 保持到 35 999 | Manager | W13 |
+ | 15 | D2 00:05:00 | $\mathsf M$ 按 [01 §3.10](01_l1_authority_zh_v0_1.md) 的规程：紧急状态自约 21:59 成立，Espresso 已恢复。Authority.`SubmitResume`($c$, $\mathcal P_{\rm new}$, $h_{\rm res}=88\,212$) | — | W4 |
+ | 16 | D2 00:05:12 | 收录于 L1 block $L=7\,226$。目标核对：$\mathit{ts}_{\rm L1}(L)+T_{\rm prep}=$ D2 00:30:12 $\le\mathit{ts}^*(88\,212)=$ D2 00:30:12 $\le$ D2 00:33:12；$88\,212$ 高于 cursor、$h_G$ 与 $h_D$。同一交易内 Inbox.`Override` 产生 CursorSet(old.height 35 999, next.height 88 212) | Derivation；GFR | W4、W5 |
+-| 17 | ≤ D2 00:24:24 | $L$ finalized。Derivation 处理 CursorSet：$D$ 的末端约为 43 512（12:05:12），若 override 前实际 $h_D^-=43\,512$，则填充 43 513–88 212，共 44 700 个 deposit-only block。该 $h_D^-$ 是示例输入，须由原生重放确认；一般填充量为 $\max\{0,h_{\rm res}-h_D^-\}$。填充 block 的 origin 跟随 L1 推进，最多到 $L$；$D_L[88\,212]$ 的 origin 为 $L$ | — | W5 |
+-| 18 | D2 00:25:12 | RESUME 的激活时刻 $\mathit{ts}_{\rm L1}(L)+M_a$。R-WAIT 满足，resumeReader = Derivation.`DeriveAtResume`($p_{\rm res}$) → ResumeCut | GFR | W23 |
++| 17 | ≤ D2 00:24:24 | $L$ finalized，完整读取到 $L$ 后，激活键所需的 L1 控制日志覆盖就绪。Derivation 处理 CursorSet：$D$ 的末端约为 43 512（12:05:12），若 override 前实际 $h_D^-=43\,512$，则填充 43 513–88 212，共 44 700 个 deposit-only block。该 $h_D^-$ 是示例输入，须由原生重放确认；一般填充量为 $\max\{0,h_{\rm res}-h_D^-\}$。填充 block 的 origin 跟随 L1 推进，最多到 $L$；$D_L[88\,212]$ 的 origin 为 $L$ | — | W5 |
++| 18 | D2 00:25:12 | RESUME 的激活键 $\mathit{ts}_{\rm L1}(L)+M_a$。本例假定此时已取得覆盖该键的完整 Espresso finalized 前缀，步骤 17 的 L1 覆盖与所需验证材料已齐备，且 resumeReader = Derivation.`DeriveAtResume`($p_{\rm res}$) 返回绑定该位置的 ResumeCut；否则可重放的前缀停在该事件之前 | GFR | W23 |
+ | 19 | 同上 | GFR 执行 RESUME（[09 §4.6](09_finality_rules_zh_v0_1.md)）：$G$ 本身是 $D_L$ 的前缀，不撤销任何块；$G\leftarrow D_L[h^0:88\,212]$，接上 36 000–88 212，出处 DER；`Resumed{c, 8, A, D_L}`；Boundary 为 (8,0)、窗口 [88 213, 91 812] | Manager | W13 |
+ | 20 | 同上 | 同一事件中立即以 Boundary 调用 `Plan`，`SessionAssigned{ν}`，Tail = NEXT(ν)；session (8,0) 由新 policy 循环排列的首个区域负责，例如 a | Manager | W1、W13 |
+ | 21 | D2 00:25–00:30 | Manager 在 `ApplyLifecycle`(Resumed) 中调用 `DeriveAtResume`，把 anchor_state 存为状态材料；收到 SessionAssigned 后 `PrepareCandidate` → `EnterCandidate` | Program | W23、W24 |
+@@ -326,7 +334,7 @@ sequenceDiagram
+ | --- | --- | --- |
+ | 提交到收录 | 约 12 s | L1 纳入 |
+ | 收录到 $L$ finalized | ≤ 19.2 min | Ethereum 最终化 |
+-| $L$ finalized 到 RESUME 的激活时刻 | ≥ 48 s（一般执行中为 $M_a-T_{\rm L1}-\delta_{\rm L1}=44$ s） | 派生执行约 44 700 个填充块；不能预先执行时，GFR 在 R-WAIT 等待填充完成 |
++| $L$ finalized 到 RESUME 的激活时刻 | ≥ 48 s（一般执行中为 $M_a-T_{\rm L1}-\delta_{\rm L1}=44$ s） | 派生执行约 44 700 个填充块；填充未完成时 ResumeCut 尚不可用，GFR 可重放的前缀停在该事件之前 |
+ | 键到 $h_{\rm res}+1$ 的 slot | 5 min | 开出 session、准备状态、Enter |
+ 
+ 仅计算数值：若有 44 700 个填充块，想在 finalized 后 48 s 内完成，需要约 931.25 blocks/s，尚未计 DA 读取和状态分发；若允许用完 5 min，平均为 149 blocks/s，但这会使 RESUME 晚于其时间键处理。时间键不是完成时刻。未 finalized 输入上的预执行只可作为可丢弃缓存优化，不能作为 Ready 或公共决定；v9 未声明该优化或其收益。原来的 20 min 同样必须按各阶段实际耗时验证，不能用固定 14 min 阈值判定是否够用。
+@@ -375,6 +383,7 @@ Espresso 一直正常。从 10:00 起 Certifier 离线，批次交付路径失
+ ```mermaid
+ sequenceDiagram
+     participant GFR as GFR
++    participant ESP as Espresso
+     participant BAT as Batcher / Certifier
+     participant DER as Derivation
+     participant MGR as Manager
+@@ -387,7 +396,10 @@ sequenceDiagram
+     MGR->>MGR: Kill 分支 7 的 program（INCOMPATIBLE），G 停在约 78 564
+     M->>AUTH: SubmitResume(c, P_new, h_res = 84 312)，L1 23:00:12
+     AUTH->>DER: CursorSet(35 400 → 84 312)
++    Note over AUTH,GFR: ≤ 23:19:24，L1 finalized 前缀完整覆盖 23:00:12
++    ESP->>GFR: 本例在激活时已取得覆盖键 23:20:12 的完整前缀
+     GFR->>DER: DeriveAtResume，键 23:20:12
++    DER-->>GFR: ResumeCut（绑定本条 RESUME）；未取得时不替换 G
+     GFR->>GFR: G ← D_L[h0:84 312]：保留到 35 400，撤销 35 401–78 564
+     GFR-->>MGR: Resumed；SessionAssigned (8,0)
+     BAT->>AUTH: 从 cursor 84 312 提交 84 313 起的批次
+@@ -404,8 +416,8 @@ sequenceDiagram
+ | 5 | 同上 | $G$ 停在约 78 564（21:49:24）。之后 GFR 仍按 SessionEnd 分配 (7,20)…，但每个候选的前缀都覆盖 35 401，在准备时即被关闭。下一缺失高度的 Expire 键为 D2 07:49:25 | — | W13 |
+ | 6 | 21:30–23:00 | $D$ 以 deposit-only 推进：origin 先追上 block 时间，之后末端约为 L1 时间减 12 h | — | W22 |
+ | 7 | 23:00:00 | 服务恢复。$\mathsf M$ → Authority.`SubmitResume`($c$, $\mathcal P_{\rm new}$, $h_{\rm res}=84\,312$)，收录于 L1 block $L=6\,901$（23:00:12）。目标核对：23:25:12 $\le\mathit{ts}^*(84\,312)=$ 23:25:12 $\le$ 23:33:12；高于 cursor 35 400、$D$ 的末端约 39 612 与 $G$ 的末端约 78 564 | Derivation；GFR | W4、W5 |
+-| 8 | ≤ 23:19:24 | $L$ finalized；派生若 override 前实际 $h_D^-=39\,612$，填充 39 613–84 312，共 44 700 个 deposit-only block；该切面须由原生重放确认 | — | W5 |
+-| 9 | 23:20:12 | RESUME 的激活时刻。GFR 调用 `DeriveAtResume` → ResumeCut | GFR | W23 |
++| 8 | ≤ 23:19:24 | $L$ finalized，完整读取到 $L$ 后，激活键所需的 L1 控制日志覆盖就绪；派生若 override 前实际 $h_D^-=39\,612$，填充 39 613–84 312，共 44 700 个 deposit-only block；该切面须由原生重放确认 | — | W5 |
++| 9 | 23:20:12 | RESUME 的激活键。本例假定此时已有覆盖该键的完整 Espresso finalized 前缀，步骤 8 的 L1 覆盖与所需验证材料已齐备，且 `DeriveAtResume` 返回绑定本条 RESUME 位置的 ResumeCut；缺任一必需输入时，不执行下一步替换 | GFR | W23 |
+ | 10 | 同上 | 共同原生前缀到 35 400；**若停下时 $h_G=78\,564$，撤销 35 401–78 564，共 43 164 个 height，约 11 h 59 min 24 s 的高度跨度**；$G\leftarrow D_L[h^0:84\,312]$；Resumed；同一事件中为 (8,0) 输出 SessionAssigned，窗口 [84 313, 87 912] | Manager | W13 |
+ | 11 | 23:25:13 | 新 program 提议 84 313，origin 6 902（23:00:24） | — | W24 |
+ | 12 | CursorSet 生效后；新签名还等 GFR 处理 RESUME | 以旧 cursor 35 400 为 prev 的证书被 Inbox 拒绝（CERT-3 (a)）。Batcher 从 cursor 84 312 构造；Certifier 在其 GFR 处理完 RESUME 后才认证（CERT-3 (b)） | Inbox | W18–W20、W27 |
+diff --git a/formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md b/formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md
+index dc6d025..c61f884 100644
+--- a/formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md
++++ b/formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md
+@@ -10,30 +10,47 @@
+ 
+ ### 1.2 公共重放一致性
+ 
+-**命题 G-S1（同一重放位置的全局链一致）。** 在下列前提下，任意两个遵守 GFR 的读取者，如果都从共同 genesis 或经验证的 checkpoint 处理到同一公共重放位置，则得到相同的 $G$、当前分支、职责和选定的 descriptor。一个读取者处理完的事件序列，是同一公共执行中推进得更远的读取者已处理事件序列的前缀。
++**命题 G-S1（同一重放位置的全局链一致）。** 固定同一公共执行、genesis、规则版本和配置。在下列前提下，任意两个遵守 GFR 的读取者，其已完成的事件序列前缀可比。若两者处理到同一公共重放位置，则得到相同的 $G$、当前分支、职责和选定的 descriptor。
+ 
+ | 所用前提 | 在 G-S1 中的用途 |
+ | --- | --- |
+-| L1 的 finalized 前缀一致且不回退，控制记录可按 finalized L1 位置核对，L1 时间戳严格递增 | 读取完整的 $x-M_a$ 覆盖位置后，可以排除尚未读到的同键或更早控制记录。这里只使用公开时间戳的顺序，L1 的 fixed-pace、L-TS 和 finalized 延迟界用于第 2 节的时间预算。 |
+-| E-S 的 finalized 前缀一致且不回退、已读前缀的消息列表完整、$\theta_q\le\theta_{q+1}$ | 前缀一致固定日志内容，消息完整性固定每个位置有哪些公开对象，时间戳单调性让 watermark 排除以后出现更小键的 Espresso block。这些检查可以等待数据，并无读取时限。 |
+-| 每一步 GFR 对同一公共输入给出唯一后继状态 | 需要确定的事件顺序、公开接纳与拒绝判定、Plan、证明检查和 Merge。某读取者缺少必需输入时的处理，以及 publication 的完整性，都必须有统一语义，见 §1.5。 |
+-| 若重放经过 RESUME，同一 L1 位置确定唯一的 ResumeCut | 该步额外依赖 finalized L1、按 commitment 核验的同一 DA 内容和确定的原生派生。缺数据的读取者等到切面可算再继续。数据在多久以内能取到属于恢复活性。 |
++| L1 的 finalized 前缀一致且不回退，控制记录可按 finalized L1 位置核对，L1 时间戳严格递增 | 完整覆盖 $x-M_a$ 的输入排除遗漏同键或更早控制记录。这里只使用公开时间戳的顺序，L1 的 fixed-pace、L-TS 和 finalized 延迟界用于第 2 节的时间预算。 |
++| E-S 的 finalized 前缀一致且不回退、已读前缀的消息列表完整、$\theta_q\le\theta_{q+1}$ | 前缀一致固定日志内容，消息完整性固定每个位置有哪些公开对象，覆盖 $x$ 的 watermark 排除以后出现更小键的 Espresso block。 |
++| 每步只在 [09 §3.4](09_finality_rules_zh_v0_1.md) 所需的公共输入齐备后完成，并使用相同的确定性转移规则 | 日志覆盖用于确定下一事件。验证材料和固定规则用于确定接纳、Plan、执行与派生结果。 |
+ 
+-**论证。** 从共同初始状态按已处理事件数归纳。相同前一状态给出相同的定时器。R-WAIT 用 L1 前缀排除漏读的控制记录。处理非 Espresso 事件时，watermark 排除尚未读到的更小键 Espresso blocks。处理 Espresso 事件时，当前 block 和此前完整前缀给出同样的公开对象。后续出现的同键 Espresso block 按高度排在已处理的同键 Espresso blocks 之后，也排在该键的控制事件和定时器之后。故两个读取者在各自输入足够时选出同一个下一事件，再应用同一个转移。
++**证明。** 对读取者 $r\in\{1,2\}$，记 $e_i^{(r)}$ 为其完成的第 $i$ 个事件，$S_k^{(r)}$ 为完成前 $k$ 个事件后的公共状态，包含重放位置及后续转移使用的字段。日志下载进度和不影响转移的本地缓存不属于 $S_k^{(r)}$。按 $k$ 归纳，只要两个读取者都完成了至少 $k$ 个事件，就有
+ 
+-一份区域结果的首次完整公开位置 $q_{\rm avail}$ 按 Espresso 日志中的对象计算。Manager 先收到私下转发的证明，或某个读取者更早取得本地缓存，都不会改变这个位置。读齐公开前缀后发现一份 publication 本身不完整，该结果要等后续公开对象补齐才具备接纳资格。缺少必需日志或 ResumeCut 时，R-WAIT 保留已完成的重放位置，等待所需输入。取得输入后，固定的接纳、交接和派生规则给出相同后继状态。
++$$
++e_i^{(1)}=e_i^{(2)}\quad(1\le i\le k),
++\qquad
++S_k^{(1)}=S_k^{(2)}.
++$$
++
++$k=0$ 时，两者使用同一 genesis 状态。从 checkpoint 继续时，[09 §4.8](09_finality_rules_zh_v0_1.md) 要求核对它与对应公共历史的重放结果一致，因此可视为从 genesis 重放到该位置后继续。
++
++假设结论对 $k$ 成立，且两个读取者均完成了第 $k+1$ 个事件。先证明它们处理的是同一事件。由 $S_k^{(1)}=S_k^{(2)}$，两者生成同样的待处理定时器。设一个读取者完成的第 $k+1$ 个事件为 $e$，其时间键为 $x$。完成 $e$ 所用的 L1 前缀覆盖 $x-M_a$，因此已包含所有键不大于 $x$ 的控制记录。Espresso 前缀覆盖 $x$，因此已包含所有键严格小于 $x$ 的 Espresso blocks。若 $e$ 是 $\mathsf{Espresso}(q)$，还已读齐截至 $J_q$ 的前缀；以后读到的同键 blocks 按 Espresso height 排在 $e$ 之后。若 $e$ 是控制记录或定时器，同键的 Espresso blocks 按类别排在 $e$ 之后。于是，在 [09 §3.3](09_finality_rules_zh_v0_1.md) 的全序下，$e$ 是共同状态之后的最早事件。对另一个读取者作同样的论证，即得 $e_{k+1}^{(1)}=e_{k+1}^{(2)}$。
++
++再证明该事件产生同一后继状态：
+ 
+-E-L、E-TS、区域 GST、跨区域传输上界和 Manager 的本地调度均不进入这个归纳。以 Espresso 时间戳为例，即使时间键严重滞后，只要仍不递减，两个读取者就会使用同一事件顺序。若先见到键 100 的 watermark 并处理了键 100 的 SessionEnd，后来却出现键 99 的新 block，先前处理的位置就可能遗漏本应更早接纳的结果。见 [v9 时钟审查 K11](../formalization_v9/clock_skew_review_zh_v0_2.md)。
++- **Espresso。** 对 $\mathsf{Espresso}(q)$，两者从截至 $J_q$ 的同一公开前缀计算 $q_{\rm avail}$。该前缀中的有效最终证明和 physical 正文决定哪些候选已完整公开。两者用相同的当前职责、接纳键及验证材料检查这些候选，并按固定的候选处理顺序和确定性的 $\mathrm{Virt}$ 追加相同的区间。若触发常规交接，也得到同一 anchor 和后继 Plan。见 [09 §3.2、§4.2–§4.3](09_finality_rules_zh_v0_1.md)。
++- **Force、SessionEnd 或 Expire。** 两者面对相同的控制记录或定时器及相同的当前状态，因此关闭同一职责，或选定同一交接 anchor。需要计算 Plan 时，§1.3 的规则给出同一 L1 查询高度，相同的 L1 历史确定相同的 Plan。见 [09 §4.3–§4.5](09_finality_rules_zh_v0_1.md)。
++- **RESUME。** 两者按同一个 L1 记录位置 $p_{\rm res}$ 调用 $\mathsf{DeriveAtResume}$。该位置固定对应的 CursorSet。相同的 finalized L1 历史、按 commitment 核验的 DA 数据和确定的原生派生给出同一个 ResumeCut。因此，两者把 $G$ 置为相同的 $D_L[h^0:h_{\rm res}]$，并依据相同的激活键、截止键和恢复 anchor 决定新职责。见 [09 §4.6、§5.5](09_finality_rules_zh_v0_1.md)。
++
++因此 $S_{k+1}^{(1)}=S_{k+1}^{(2)}$，归纳成立。缺少输入时，读取者保留最后完成的位置，未完成的事件不计入其序列。取两者已完成事件数的较小值，即得两条序列前缀可比。相同重放位置对应这个共同序列中的同一步，因此 $G$、分支、职责和选定的 descriptor 相同。
++
++这个归纳依赖公共日志覆盖和转移的确定性。E-L、E-TS、$M_a$ 的时序预算、区域 GST、跨区域传输上界和 Manager 的本地调度影响读取者何时能够推进。
+ 
+ 归纳只要求公开证明检查的结果和接纳转移确定。现有 [09 §4.2](09_finality_rules_zh_v0_1.md) 用 BFT-1 经由 BFT-4(2) 得到更具体的输入保证，即同一 cid 中通过公开检查的决定前缀可比较。这个保证用于排除同一 cid 的冲突证明。它与给定公共结果后的重放一致性是两层性质。GFR 若另有对冲突输入的确定处理，重放归纳仍可使用该转移，但不能由此推出区域决定可比较。
+ 
+ ### 1.3 交接起点与全局链连续性
+ 
+-| 交接 | 新 session 的 anchor | 对旧 $G$ 的效果 |
+-| --- | --- | --- |
+-| Regular handoff | 前驱 $h_{\max,s}$ 的 physical block 一经 GFR 接纳，就取它为 anchor。否则在 SessionEnd 取截止前最后接纳的 physical block，无新块时沿用前驱初始 anchor。后继窗口仍从 $h_{\max,s}+1$ 开始。 | 保留旧 $G$，在同一分支开出下一个 session。 |
+-| Force | 取有效 Force 在公共事件顺序中处理前的 $\mathrm{last}(G)$ 及其执行后状态。它包括排在 Force 之前已经接纳的结果，同键 Espresso block 排在 Force 之后。 | 保留旧 $G$，关闭旧分支，以该 anchor 和新 policy 开出新分支。 |
+-| L1 RESUME | 取特定 L1 记录 $p_{\rm res}$ 对应的 ResumeCut 中 $D_L[h_{\rm res}]$ 及其执行后状态。新窗口从 $h_{\rm res}+1$ 开始。 | 关闭旧分支，并令 $G\leftarrow D_L[h^0:h_{\rm res}]$。旧 $G$ 超出共同前缀的部分可被撤销。 |
++| 交接 | 新 session 的生产 anchor | Plan 的 L1 查询高度 | 对旧 $G$ 的效果 |
++| --- | --- | --- | --- |
++| Regular handoff | 前驱 $h_{\max,s}$ 的 physical block 一经 GFR 接纳，就取它为 anchor。否则在公共输入覆盖截止键、前序事件已处理且前驱仍持有 NEXT 时执行 SessionEnd，取严格早于截止键的合格历史中最后已接纳的 physical block，无新块时沿用前驱初始 anchor。同键结果排在 SessionEnd 之后。后继窗口仍从 $h_{\max,s}+1$ 开始。 | 取**前驱 session 的初始 anchor** 的 origin 和当前分支的 L1 floor 中较大者。前驱一经选定就可以计算后继 Plan。 | 保留旧 $G$，在同一分支开出下一个 session。 |
++| Force | 取有效 Force 在公共事件顺序中处理前的 $\mathrm{last}(G)$ 及其执行后状态。它包括排在 Force 之前已经接纳的结果，同键 Espresso block 排在 Force 之后。 | 以新 anchor 为选区参考。查询高度取该 anchor 的 origin、旧分支的 L1 floor 和收录 Force 的 L1 高度三者中的最大值。 | 保留旧 $G$，关闭旧分支，以该 anchor 和新 policy 开出新分支。 |
++| L1 RESUME | 取特定 L1 记录 $p_{\rm res}$ 对应的 ResumeCut 中 $A=D_L[h_{\rm res}]$ 及其执行后状态。新窗口从 $h_{\rm res}+1$ 开始。 | 以恢复 anchor $A$ 为选区参考，新分支的 L1 floor 也取 $A.\mathit{os}$。首个 session 的查询高度就是 $A.\mathit{os}$。 | 关闭旧分支，并令 $G\leftarrow D_L[h^0:h_{\rm res}]$。旧 $G$ 超出共同前缀的部分可被撤销。 |
++
++给定表中的查询高度 $\ell_s$，Plan 用 $\mathsf{SnapshotAt}(\ell_s)$ 确定委员会快照，并查询 $\mathsf{Ban}(\ell_s)$。因此，常规交接可以在后继生产 anchor 确定前选定委员会；RESUME 则由同一个 ResumeCut 同时确定生产 anchor 和首个 session 的授权查询高度。见 [01 §3.12](01_l1_authority_zh_v0_1.md) 和 [09 §4.3、§4.4、§4.6](09_finality_rules_zh_v0_1.md)。
+ 
+ 交接后有合格 Plan 时，NEXT 指向一个选定 descriptor。**连接正确性**由 GFR 对 cid 和 hash-linked ancestry 的检查给出。首个被接纳的 physical block 连接到选定 anchor，后续接纳延续已接纳的 physical 前缀。若有高度缺口，确定性 Merge 从经验证的 anchor 执行后状态补齐中间 heights。**区域证明的归属**另用 CheckFINAL 对 descriptor 和目标 block 的绑定，以及 BFT-4(4) 中决定签名不可跨 cid 转用的条款。见 [09 §4.2](09_finality_rules_zh_v0_1.md) 和 [02 §3.10、§4.5](02_session_program_zh_v0_1.md)。
+ 
+@@ -45,6 +62,18 @@ E-L、E-TS、区域 GST、跨区域传输上界和 Manager 的本地调度均不
+ 
+ **命题 G-S2（无 RESUME 的区间只追加）。** 对同一公共重放中两个位置 $p\le p'$，若 $(p,p']$ 内没有执行 RESUME，则 $G_p\preceq G_{p'}$。这个单次重放结论只使用 GFR 的更新规则。Espresso 接纳只追加连续片段，Regular handoff、Force 和 Expire 都保留旧 $G$。要比较两个读取者各自输出的 $G$，再使用 G-S1 确认它们处理的是同一公共事件序列。若整个执行没有 RESUME，前缀性质覆盖该执行的全部位置。
+ 
++**命题 G-S3（无 RESUME 执行中的整条前缀及时性）。** 对从 genesis 开始且没有 RESUME 的公共重放，设 physical block $B$ 在位置 $p_B$ 首次经 GFR 接纳，包括由同链后代的完整结果覆盖而接纳。对每个非 genesis 前缀高度 $h^0<h\le B.h$，记 $p_h$ 为该高度首次进入 $G$ 的位置，$x_h$ 为该位置的时间键，$s_h$ 为当次追加所属的 session，$\mathit{Res}_h$ 为使该高度进入 $G$ 的完整区域结果。则
++
++$$
++p_h\le p_B,\qquad
++\theta_{q_{\rm avail}(\mathit{Res}_h)}\le x_h<\theta_{s_h}^{\rm end},\qquad
++x_h<\mathit{ts}^*(h)+W_{\rm exp}.
++$$
++
++因此，$B$ 之前的前缀可以更早已在 $G$，也可以与 $B$ 在同一 Espresso 事件中按高度一起追加；不要求每个祖先各自发证明或在更早事件单独接纳。公开截止适用于当次覆盖该高度的完整结果及其所需 physical 前缀。Padding 使用覆盖它的后继结果所属 session 的公开截止，同时仍检查该 virtual height 自己的 Expire，无需另发正文。这里的“按时”按公共时间键判断，不是读取者实际完成重放的真实时间上界。
++
++**论证。** 按公共事件及一个 Espresso 事件内的追加顺序归纳。Genesis 没有需要核对的非 genesis 前缀。每次追加前，旧前缀已满足上述性质；[09 §4.2](09_finality_rules_zh_v0_1.md) 只在完整 physical 结果满足公开截止、整个新增 virtual 区间逐高度未过期后，才连续按高度追加。结果已在当前 Espresso 前缀公开，故其公开键不大于接纳键；接纳时该 cid 仍负责，同键或更早的 SessionEnd 已先处理，故接纳键也严格早于所属 session 的截止。新增高度因而满足各项不等式，旧前缀保持不变。Regular handoff、Force 和 Expire 都保留已接纳前缀，不引入未经上述检查的新高度。归纳即得，且允许 $p_h=p_B$。RESUME 直接采用 $D$ 的指定前缀，该段内容可能没有经 Espresso 及时公开，故不在本命题范围内。
++
+ **跨 RESUME 的一致切换。** 这一步用公共重放顺序固定同一条 RESUME，并用绑定该 L1 位置的确定 ResumeCut 固定替换内容。记 $G^-$ 和 $G^+$ 分别为处理一条 RESUME 之前和之后的链。根据 [09 §4.6](09_finality_rules_zh_v0_1.md)，
+ 
+ $$
+@@ -55,15 +84,7 @@ $$
+ 
+ 例如，$G^-[36\,000]$ 已凭 Espresso 日志成为全局确认块。随后 RESUME 使用的 $D_L[36\,000]$ 是另一块，两条链共同前缀只到 35 999，原块在全局确认约 25 分钟后被替换。固定 cid 的区域 BFT 决定事实仍成立，发生变化的是该块在 $G$ 中的地位。见 [10 §5.5](10_pipelines_zh_v0_1.md)。
+ 
+-因此，对 $G$ 的安全承诺分为同一公共重放位置的一致性，以及无 RESUME 区间内的前缀持久性。跨 RESUME 的不可撤销结算属于 $D$ 的安全性质。当前规则没有给 $G$ 一个等待若干时间后便免于 RESUME 替换的保证。见 [09 §7](09_finality_rules_zh_v0_1.md)。
+-
+-### 1.5 需要固定的重放语义
+-
+-G-S1 是对具备确定语义的 GFR 的组合结论。按现稿逐条实现时，以下边界直接关系到「同一事件有同一后继状态」。
+-
+-- **L1 验证输入。** [09 §3.4](09_finality_rules_zh_v0_1.md) 的 R-WAIT 只要求 L1 覆盖到 $x-M_a$，[09 §4.2](09_finality_rules_zh_v0_1.md) 的接纳还要求区块所需的 L1 输入已 finalized。两者需要接起来。例如 Espresso 键为 10:29:47、$M_a=20$ 分钟时，R-WAIT 所需的下一个 L1 block 可为 10:09:48，但结果的 origin 可以是 10:10:00。若已取得 origin 的读取者接纳，而只取得 10:09:48 前缀的读取者跳过同一结果，两个 GFR 会得到不同的 $G$。规则需要对缺失的必需数据给出统一语义，例如在该事件等待，或在公开定义的同一 L1 切面上判断资格。两种做法的活性后果不同。见 [v9 审查 S23](../formalization_v9/security_review_zh_v0_2.md)。
+-- **Publication 完整性。** $q_{\rm avail}$ 影响截止和交接。需要统一哪些 proof、bodies 和 anchor 来源足以组成完整结果，以及公开引用和替代证明的解析方式。否则一个读取者可以在截止前认定结果完整，另一个可以把同一结果判为迟到。见 [v9 审查 S24](../formalization_v9/security_review_zh_v0_2.md)。
+-- **低目标 RESUME。** 链上守卫只要求 $h_{\rm res}$ 高于 Inbox cursor。链外规程进一步要求目标高于已知 $G$、$D$ 和 cursor 的末端，并满足准备时间界。合约可接纳但违反规程的低目标，可能截去已与 $D$ 相同的 $G$ 后缀，也可能让新下一高度的 Expire 键落在已处理位置之前。[09 §4.6](09_finality_rules_zh_v0_1.md) 已处理 SessionEnd 键过早的情形，过早的 Expire 仍需明确转移。对所有链上允许的 RESUME 输入主张 G-S1 时，需要覆盖该边界。见 [v9 审查 S4](../formalization_v9/security_review_zh_v0_2.md)。
++因此，同一公共重放位置的一致性适用于两类执行；前缀持久性适用于无 RESUME 的区间，而 G-S3 的整条前缀及时性只对从 genesis 开始且没有 RESUME 的执行主张。跨 RESUME 的不可撤销结算属于 $D$ 的安全性质。当前规则没有给 $G$ 一个等待若干时间后便免于 RESUME 替换的保证。见 [09 §7](09_finality_rules_zh_v0_1.md)。
+ 
+ ## 2. 活性：Espresso 持续 live
+ 
+@@ -85,15 +106,15 @@ G-S1 是对具备确定语义的 GFR 的组合结论。按现稿逐条实现时
+ 
+ 2. **从区域结果到 Espresso 最终收录。** 给定完整结果已经交给诚实在线 Publisher，发布预算 $T_{\rm pub}$ 加上 E-L 的收录保证给出 $\tau_P+T_{\rm pub}+T_E$ 的真实时间上界。若承载结果的 Espresso block 满足 E-TS，再用其**超前方向**的界得到 $x=\theta_{q_{\rm avail}}\le\tau_P+T_{\rm pub}+T_E+\Delta_{\rm ts}$。若另有 $\tau_P\le\tau_s^{\rm stop}+\delta_G$，则 $T_{\rm grace}>T_{\rm pub}+T_E+\Delta_{\rm ts}+\delta_G$ 足以使 $x<\theta_s^{\rm end}$。BFT-7 的停止规则只限制新签名，不能推出这项 Publisher 交付前提。新增区间还要满足 Expire 的接纳界。若已知实际公开键满足各项截止，接纳这一步无需用 E-TS 推导该键。见 [04 PUB-4](04_publisher_zh_v0_1.md)。
+ 
+-3. **从可读到进入 $G$。** 读取者处理到完整结果对应的 Espresso 事件后，按 [09 §4.2](09_finality_rules_zh_v0_1.md) 追加合格扩展。承载该结果的 finalized block 本身就提供覆盖键 $x$ 的 watermark。L1 一侧须覆盖 $x-M_a$，并取得此次验证所需输入。若覆盖前缀已经可读，直接使用该事实即可。若要用公告参数推出这部分 L1 历史不拖慢重放，则使用 [09 §3.5](09_finality_rules_zh_v0_1.md) 中的条件，
++3. **从可读到进入 $G$。** 读取者处理到完整结果对应的 Espresso 事件后，按 [09 §4.2](09_finality_rules_zh_v0_1.md) 追加合格扩展。承载该结果的 finalized block 及此前完整前缀本身就提供覆盖键 $x$ 的 watermark。L1 控制日志须覆盖 $x-M_a$，并取得此次验证所需输入。若控制日志覆盖已经就绪，直接使用该事实即可。若要用公告参数推出这项覆盖不拖慢重放，则使用 [09 §3.5](09_finality_rules_zh_v0_1.md) 中的条件，
+ 
+    $$
+    M_a\ge T_{\rm L1}+b_{\rm L1}+\Delta_{\rm ts}+\delta_{\rm L1},
+    $$
+ 
+-   其推导使用 L1 的产出和 finalized 可读界，以及承载 block 的 E-TS 超前界。这个不等式只覆盖 R-WAIT 所要求的 L1 截面。验证若需要更晚的 L1 输入，还须处理 §1.5 的情形。稳态的块无需等待 $M_a$ 或 $T_{\rm grace}$。排在前面的 WAIT、日志积压和本地处理另计。
++   其推导使用 L1 的产出和 finalized 可读界，以及承载 block 的 E-TS 超前界。这个不等式只保证 L1 控制日志覆盖及时就绪；验证若需要更晚的 finalized L1 输入，仍须按 §1.5 的输入契约提供，不能由该预算推出其就绪时间。稳态的块无需等待 $M_a$ 或 $T_{\rm grace}$。排在前面的输入缺口、日志积压和本地处理另计。
+ 
+-为表示 v10 中没有单独量化的两段延迟，记 $T_{\rm pack}$ 为区域决定到完整结果交给 Publisher 的假定上界，$T_{\rm replay}$ 为所需公共输入就绪后处理到本次接纳的假定上界。正常 Final 输出能提供可验证证明，使用 BFT-4(1)。$T_{\rm pack}$ 还须覆盖该输出和组装所需 bodies、来源依据的实际交付。在上述条件成立、且接纳时该 cid 仍被选定的情况下，
++为表示 v10 中没有单独量化的两段延迟，记 $T_{\rm pack}$ 为区域决定到完整结果交给 Publisher 的假定上界，$T_{\rm replay}$ 为所需公共输入就绪后处理到本次接纳的假定上界。正常 Final 输出能提供可验证证明，使用 BFT-4(1)。$T_{\rm pack}$ 还须覆盖该输出和组装所需 bodies、来源依据的实际交付。在上述条件成立、接纳所需验证输入在结果公开可读时已就绪、且接纳时该 cid 仍被选定的情况下，
+ 
+ $$
+ \tau_G(B)-\mathit{ts}^*(h)
+@@ -104,6 +125,9 @@ $$
+ 
+ [10 §2.2](10_pipelines_zh_v0_1.md) 取 $T_{\rm pub}=T_E=30\,\mathrm{s}$、$b_{\rm L2}=1\,\mathrm{s}$、$\delta_G=1\,\mathrm{ms}$，所以式右边为 $61.001\,\mathrm{s}+T_{\rm build}+T_{\rm fin}+T_{\rm pack}+T_{\rm replay}$。这是条件性确认预算，文档尚未给出全部部署值。持续增长还要求后续不断有满足这些条件的结果，而一次成功 view 只保证对应结果的进展。
+ 
++> In the real world, we can take $T_{pub}$ $T_{E}$ as every small number 
++> a tradeoff here: a bigger M_a over the threshold creates the fast finality, but make the regional livesness lockdown last longer. 
++
+ ### 2.2 三种交接如何恢复共同参与
+ 
+ 对新 session $s$，要从交接推出区域进展，需要一个总权重至少为 $Q_s=W_s-F_s$ 的 honest 集合 $U$。这些 replicas 须在线，并由各自的 Manager 准备同一 cid 的 anchor 和执行状态，持续调度该实例。BFT 的有界进展还要求该区间处在新 region 自己的 $\mathrm{GST}_{i_s}$ 之后，所需输入可在预算内取得，并在 $\tau_s^{\rm stop}-\delta_G$ 前留出足够时间。区域 GST 用于这段 BFT 运行，跨区结果到达时间另按 [00 §2.4](00_arch_zh_v0_1.md) 的信道条件计算。

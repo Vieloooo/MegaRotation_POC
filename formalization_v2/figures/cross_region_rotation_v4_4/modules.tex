@@ -1,0 +1,78 @@
+% Cross-region components (Figure: fig:runtime-modules).
+% Protocol numbers come from \cref, so they follow the document.
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+ x=1cm,y=-1cm,font=\small,
+ box/.style={draw=rrBlue!65,rounded corners=3pt,fill=rrBlue!3,
+   align=center,inner sep=6pt,text width=2.9cm,minimum height=2.0cm},
+ shared/.style={box,draw=rrTeal,fill=rrTeal!4,text width=15.85cm,
+   minimum height=1.6cm},
+ prog/.style={box,text width=4.38cm,minimum height=2.5cm},
+ flow/.style={-{Stealth[length=2.2mm]},semithick},
+ lab/.style={fill=white,inner sep=2pt,align=center,font=\footnotesize}
+]
+\path[use as bounding box] (-1.1,0) rectangle (17.2,15.0);
+\node[font=\large\bfseries] at (8.15,.4) {Cross-region data flow on one node};
+
+% Row 1: the two outside services and their logs.
+\node[box] (ctrl) at (1.65,2.0) {\textbf{Multisig Controller}\\
+ Watch progress\\and reports;\\issue control\\updates.};
+\node[box] (l1) at (6.35,2.0) {\textbf{L1}\\
+ Authorities and\\the control log.};
+\node[box] (esp) at (9.95,2.0) {\textbf{Espresso}\\
+ Finalized log with\\timestamps and\\namespace data.};
+\node[box] (pub) at (14.65,2.0) {\textbf{Publish Layer}\\
+ Leader first,\\then backup senders.};
+\draw[flow] (ctrl.east)--node[lab,above=3pt]{control\\updates}(l1.west);
+\draw[flow] (pub.west)--node[lab,above=3pt]{EXPORT\\records}(esp.east);
+
+% Row 2: public replay is ordinary node logic, not a separate module.
+\node[shared] (manager) at (8.15,5.8) {\textbf{Session Manager:
+ \Cref{alg:rotation}}\\
+ Directly replays finalized L1 and Espresso histories using
+ \Cref{alg:global-rule,alg:force}.\\
+ Views: regional R, global G, control L. Baseline: executable state at
+ $\operatorname{last}(G)$.\\
+ Assigns new sessions; starts and stops each session in sync with its peers
+ (ReadyBundle, close bundle);\\
+ retries publication; sends handoff material to the successor region.};
+\draw[flow] (l1.south)--(l1.south |- manager.north);
+\draw[flow] (esp.south)--(esp.south |- manager.north);
+\draw[flow] (manager.west)--(-.25,5.8)--(-.25,2.0)--(ctrl.west);
+\node[lab,rotate=90] at (-.25,3.9) {verified progress};
+
+% Row 3: local programs, one per fixed session.
+\node[prog,draw=black!45,fill=black!3] (archive) at (2.4,9.5)
+ {\textbf{Closing /}\\ \textbf{Terminated} $(\beta,r)$\\
+ No fresh actions; timers drain; duties pass to the Manager; tombstone
+ kept.};
+\node[prog] (new) at (7.9,9.5)
+ {\textbf{Assigned $(\beta',r')$}\\
+ Handoff and anchor fixed. Starts when Ready holds; all members within
+ $\Delta$.};
+\node[prog,draw=rrTeal,fill=rrTeal!5] (old) at (13.4,9.5)
+ {\textbf{Running $(\beta,r)$}\\
+ Regional BFT only. Frozen and recovery stay inside the engine.};
+\draw[semithick] (manager.south)--node[lab,right=2pt]{commands,
+ events}(8.15,7.75);
+\draw[flow] (8.15,7.75)-|(archive.north);
+\draw[flow] (8.15,7.75)-|(new.north);
+\draw[flow] (8.15,7.75)-|(old.north);
+
+% Row 4: the regional engine.
+\node[box,draw=rrTeal,fill=rrTeal!4,text width=15.85cm,minimum height=2.3cm]
+ (gate) at (8.15,13.2)
+ {\textbf{Regional engine: \Cref{alg:bootstrap,alg:steady,alg:recovery}}\\
+ STATUS, $2\Delta$ wait, NEWVIEW,\\ ANCHOR QC, then DATA/DRAIN.\\
+ Messages only with same-session peers in the region. L1 and Espresso
+ references and authorities come from the Manager.};
+\draw[flow] (new.south)--node[lab,right=2pt]{Enter}(new.south |- gate.north);
+\draw[semithick] (old.south)--node[lab,right=2pt]{its engine}(old.south |- gate.north);
+
+% Results: one-way push from the engine; the Manager retries.
+\draw[flow] (gate.east)--(16.8,13.2)--(16.8,2.0)--(pub.east);
+\draw[semithick] (manager.east)--(16.8,5.8);
+\node[lab,rotate=90] at (16.8,9.5) {results: one-way push};
+\node[lab,rotate=90] at (16.8,4.0) {and Manager retries};
+\end{tikzpicture}%
+}

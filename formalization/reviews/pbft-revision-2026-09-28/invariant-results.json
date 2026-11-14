@@ -1,0 +1,8 @@
+{
+  "source_sha256": "42ae5d3fc3b94b84f5a12d71a910909ec045e07363129ce8b4aa43e399f41eeb",
+  "weighted_profiles": 84,
+  "quorum_carryover_cases": 31606,
+  "bounded_entry_skew_timing_cases": 1476,
+  "failures": 0,
+  "scope": "Finite quorum, timing-envelope, checks only; not an implementation test or exhaustive asynchronous execution proof."
+}

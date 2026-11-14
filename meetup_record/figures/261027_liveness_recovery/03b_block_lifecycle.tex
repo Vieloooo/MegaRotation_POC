@@ -1,0 +1,89 @@
+% Part 0 v0.8: N1--N3, section 2.10; Part 1 v0.3: sections 2.9, 3.2, 5.2, 5.4.
+% The clock example is illustrative. L1 windows are counted in L1 blocks.
+\begin{tikzpicture}
+\path[use as bounding box] (-.1,-.6) rectangle (25.1,22.2);
+\node[heading] at (12.5,21.65) {一个普通块的生命周期：10 小时从块时间算，12 小时从 L1 origin 算};
+\node[note,anchor=west] at (.55,20.85) {示例：同一天，L2 出块间隔 1 秒；窗口按约 12 小时换算。下方时间轴不按比例，链时间戳与观察时刻分别标明。};
+
+\node[subheading,anchor=west] at (.55,20.0) {1. 先区分执行 anchor 与 L1 origin：接棒起点不会重置每个块的时限};
+\node[box,fill=regionA,text width=4.25cm,minimum height=1.65cm] (anchor) at (3.0,18.55) {
+  \textbf{Session anchor：块 100}\\时间戳 09:59:51\\提供接棒的执行状态
+};
+\node[box,fill=regionA,text width=4.0cm,minimum height=1.65cm] (parent) at (9.2,18.55) {
+  \textbf{父块：108}\\时间戳 09:59:59\\沿同一生产分支继续
+};
+\node[box,kept,fill=settled,text width=4.0cm,minimum height=1.65cm] (block) at (15.2,18.55) {
+  \textbf{本图的块 B：109}\\$t(B)=\text{10:00:00}$\\由高度与固定间隔确定
+};
+\node[box,fill=native,draw=violet,text width=4.0cm,minimum height=1.65cm] (origin) at (22.1,18.55) {
+  \textbf{B 的 L1 origin}\\L1 块时间戳 09:30\\投票时须已最终化
+};
+\draw[flow] (anchor) -- node[tag,above] {101\ldots 107} (parent);
+\draw[flow] (parent) -- (block);
+\draw[ref,draw=violet] (block) -- node[tag,above] {引用} (origin);
+\node[note,text width=23.5cm,anchor=west] at (.55,17.05) {即使 session 晚启动、B 晚提出，或区域 FINAL / 发布发生得更晚，B 的 10:00 时间戳仍不变；不会从这些动作再获得 10 小时。};
+
+\node[subheading,anchor=west] at (.55,16.05) {2. 一次延迟交付的执行：Espresso 时间戳符合时限，节点实际确认可以更晚};
+\node[box,fill=regionA,text width=3.75cm,minimum height=1.75cm] (regional) at (2.5,14.55) {
+  \textbf{区域生产 B}\\10:00 之后提出\\投票、提交、FINAL
+};
+\node[box,fill=regionA,text width=3.75cm,minimum height=1.75cm] (espresso) at (7.5,14.55) {
+  \textbf{发布到 Espresso}\\承载记录时间戳 19:55\\等待最终化、完整可读
+};
+\node[box,kept,fill=settled,text width=3.75cm,minimum height=1.75cm] (global) at (12.5,14.55) {
+  \textbf{GFR 接纳 B 到 G}\\示例：20:05 才观察到\\全部检查已通过
+};
+\node[box,fill=regularB,draw=orange,text width=3.75cm,minimum height=1.75cm] (inbox) at (17.5,14.55) {
+  \textbf{批次交付到 L1}\\示例：21:05 接纳\\Inbox cursor 前进
+};
+\node[box,kept,fill=settled,text width=3.75cm,minimum height=1.75cm] (derived) at (22.5,14.55) {
+  \textbf{原样派生进 D}\\同一父块、正确前缀\\数据可取回，执行通过
+};
+\draw[flow] (regional) -- (espresso);
+\draw[flow] (espresso) -- (global);
+\draw[flow] (global) -- (inbox);
+\draw[flow] (inbox) -- (derived);
+\node[note,text width=23.5cm,anchor=west] at (.55,13.0) {R-EXP 比较的是上面的 19:55 与 B 的 10:00，不是观察时刻 20:05；实际接纳还要等 Espresso 最终化、公共输入齐备和 GFR 重算。};
+
+\node[subheading,anchor=west] at (.55,11.95) {3. 两个截止：同一个块，两个起算点};
+\coordinate (o) at (2.1,10.45);
+\coordinate (b) at (5.2,10.45);
+\coordinate (g) at (14.0,10.45);
+\coordinate (l) at (20.0,10.45);
+\coordinate (wrong) at (23.25,10.45);
+\draw[flow] (.65,10.45) -- (24.5,10.45);
+\foreach \x in {2.1,5.2,14.0,20.0,23.25}{\draw[line] (\x,10.3) -- (\x,10.6);}
+\node[tag,above=5pt,align=center,text=violet] at (o) {\textbf{09:30}\\L1 origin};
+\node[tag,above=5pt,align=center,text=blue] at (b) {\textbf{10:00}\\B 的固定时间戳};
+\node[tag,above=5pt,align=center,text=rose] at (g) {\textbf{20:00}\\G 的过期事件键};
+\node[tag,above=5pt,align=center,text=orange] at (l) {\textbf{约 21:30}\\L1 派生窗口截止};
+\node[tag,below=6pt,align=center,text=muted] at (wrong) {22:00\\不是本例的截止};
+\draw[ref,-,draw=violet!55] (o) -- (2.1,6.3);
+\draw[ref,-,draw=blue!55] (b) -- (5.2,7.8);
+\draw[ref,-,draw=rose!65] (g) -- (14.0,7.8);
+\draw[ref,-,draw=orange!65] (l) -- (20.0,6.3);
+
+\fill[blue!9,rounded corners=3pt] (5.2,8.8) rectangle (14.0,9.65);
+\draw[flow,draw=blue,<->] (5.2,9.2) -- (14.0,9.2);
+\node[tag,text=blue] at (9.6,9.2) {\textbf{从 B 的时间戳起：10 小时接纳范围}};
+\node[note,text=rose,anchor=west,text width=7.6cm] at (14.45,9.2) {处理过期事件时，若仍缺这个下一块：\\关闭分支，G 停住；此时 D 尚不补位。};
+
+\draw[flow,draw=violet,<->] (2.1,8.1) -- (5.2,8.1);
+\node[tag,text=violet,below] at (3.65,8.1) {origin 已早 30 min};
+\fill[orange!8,rounded corners=3pt] (14.0,7.65) rectangle (20.0,8.5);
+\draw[flow,draw=orange,<->] (14.0,8.1) -- (20.0,8.1);
+\node[tag,text=orange] at (17.0,8.1) {\textbf{只余约 1 h 30 min}};
+
+\draw[flow,draw=violet,<->] (2.1,6.55) -- (20.0,6.55);
+\node[tag,text=violet] at (11.05,6.55) {\textbf{从 L1 origin 起：sequencing window 约 12 小时}};
+\node[note,anchor=west,text width=23.5cm] at (.55,5.65) {到 L1 截止仍未按时接纳：D 按原生规则用 deposit-only 补该高度。精确截止按 L1 高度与派生规则计算，21:30 是时间换算示意。};
+
+\node[card,text width=23.0cm,fill=gray!3] at (12.5,3.95) {
+  \textbf{本例的预算拆分：30 min origin 落后 + 10 h 接纳范围 + 15 min 处理余量 + 1 h 批次交付 + 15 min 额外余量 = 12 h。}\\[3pt]
+  15 min 和 1 h 是示例预算，\textbf{不是必须等待的阶段}；批次交付预算从 B 实际进入 G 时起算。上述 20:05 $\to$ 21:05 是一条满足预算的示例路径。
+};
+\node[note,text width=23.5cm,anchor=north west] at (.55,2.25) {
+  \textbf{边界与前提：}20:00 是 GFR 的事件键，不是各节点的墙钟闹铃。现稿同键时先处理过期，不能等到该键才首次接纳 B。\\
+  处理余量不保证任意停机后都能按时看到 G；无损还要求服务可用、完整依赖及时到达，并赶上实际 L1 截止。
+};
+\end{tikzpicture}

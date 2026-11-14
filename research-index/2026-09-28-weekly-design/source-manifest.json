@@ -1,0 +1,231 @@
+{
+  "captured_at": "2026-09-28T23:13:33.299674+08:00",
+  "git_baseline": "a095f61a0b3e818122453071fe50356e8c7443c4",
+  "scope": "2026-09-22 through 2026-09-28, plus 2026-09-21 background",
+  "note": "Hashes of directly linked local sources at index creation. Untracked concurrent v3 work is separately marked. No manuscript edits or new proof verification performed.",
+  "sources": [
+    {
+      "path": "formalization/README.md",
+      "sha256": "4c83e1ce884ce6bc840236abe9c2e579d7e92b2b89bb4736a0cfcc1bdfb79b08",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/figures/v2-major/README.md",
+      "sha256": "0d049ef2392616dabd87c1944236a849b5ab7c6dd5c8b09055ef062580bb6ab8",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/main.tex",
+      "sha256": "8cbad020688c4f721114d9966cc0c45ac145cb89483c2168d0c3c9e245eae20a",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/main_PBFT.tex",
+      "sha256": "55c4da499645268f72b89259fc6a0e58a8c6a5dd2c5f4bbc0ec60a4211684ff3",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/main_v1.tex",
+      "sha256": "f918927188fe07fd5962e0b2b65abde65565e727f1dbb811b2e49db8386cb13e",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/main_v2.tex",
+      "sha256": "24fcf93848b06cce8df91a321200b4291b3b6b9818938b723254f10d283f1eb6",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/outline.md",
+      "sha256": "f4676a2e6960069147accf19172350fabdae365e04098c2ae9735bcf65dc7961",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/proposals/v3-committee-rotation-2026-09-28/README.md",
+      "sha256": "570adb41d87b0830713efe73ffa22459c45903ceba60834eb9f3f1b06eb204a3",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/proposals/v3-committee-rotation-2026-09-28/design-zh.md",
+      "sha256": "accbeca598cd6263280fce9775ddaec41056c173473d825696931e33c5298765",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/proposals/v3-status-entry-2026-09-28/README.md",
+      "sha256": "911cb5f82035d32e47e63e33b57be469f5952bc4a811d321937dfceec099d44b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/proposals/v3-status-entry-2026-09-28/figures/rotation-pipelines.pdf",
+      "sha256": "f330b66cefb3398481f5b9ec9567c8d022f716fe17864e9edae85fed5c74dc30",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/proposals/v3-status-entry-2026-09-28/outline-and-revision-plan-zh.md",
+      "sha256": "78cab00ceba12b6ef0aaf63555f444b9fffc37821068177887af03aaf1286fc8",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/attack-audit-2026-09-27/README.md",
+      "sha256": "cf72a5447fbb6e7494ae0c156402873ed5ccdafbe8e9a85abc49b09a2de65641",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/attack-audit-2026-09-27/attack-review.md",
+      "sha256": "70b52678809368fbd967c7aba67bf7cb39c0c250ac5a0d8400097ea0d1764020",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/consensus-sources.md",
+      "sha256": "0b9a6ffcc147a74135d8bd04ffa98304d3bbec6fd20768b1e2ddfabc0aed4c0b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/ethereum-chat-context.md",
+      "sha256": "db1a2222af035b74f1a2679342f14d441a6783b115d2331b5e2841597206d347",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/ffg-composition-advisory.md",
+      "sha256": "59c392f916177af8b5181a3fc28f6edad92ab84b07740bf5b4188cf9aff9988b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/hotstuff-family-proposer-finality-2026-09-28.md",
+      "sha256": "00bb943459c49cf55213938cd0ca1d9713fa0b53acbc4948ab32141e57bc66c2",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/l1-scheduled-cft-rotation-2026-09-28.md",
+      "sha256": "acc579297b238a220348edb45058f7b940ccf99b3afb219eeee8978531f1724b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/lightweight-security-patch.md",
+      "sha256": "aa740cab996a9f7f3c6dfd8d3230d3d112d340da32f4e3326698140e61a0a3d7",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/lmd-ffg-redesign/README.md",
+      "sha256": "7152a322a3fcc1777e2e6177f77d30d83a219f1f5ed13d13323efc96cf35d77d",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/main-v1-completion-literature-2026-09-28.md",
+      "sha256": "439207dbc3f62ad19f0b3bf5b8ae8dc22a695805f7b26ad6374aa48e4b571a85",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/main-v1-cross-region-and-virtual-smr-2026-09-28.md",
+      "sha256": "ba2f20d1b2f48ff85be09a317f22a101673cacf46d162564d5d11c8ae3af013b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/main-v3-2026-09-28/control-design.md",
+      "sha256": "b08334e01e0df84dac59d04b2506ebe77e977b67586e343f01d21d999929b83c",
+      "tracked_at_baseline": false,
+      "matches_baseline": null
+    },
+    {
+      "path": "formalization/reviews/pbft-revision-2026-09-28/README.md",
+      "sha256": "d89665c177a773c75d7c422402076dce084c06bb9516b24ba90312acf6c0a22c",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/smr-protocol-wrapping-literature-2026-09-28.md",
+      "sha256": "be8f920b3cd957ea89a5859f25ffeec8403f75cb63de7758f23d90eea2135dee",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/synchronous-broadcast-sources.md",
+      "sha256": "bb0404c5702ee85eb8dcba324caf37a56eb0544cca1c459894e76a70ce818015",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/vrr-walkthrough-for-regional-cft-2026-09-28.md",
+      "sha256": "293305a85a58d2d66ded183e6ae87eb3fc5c1097331a32062a612b7775294034",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/06_op_stack_architecture_and_pipeline.md",
+      "sha256": "95daedf34b7d558065abb4288d1b65c6ef803d860c3bc2ef03570e64d464c950",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/08_op_stack_bridge_and_disputes.md",
+      "sha256": "3fef6be216d9a82730b65e16854afa69994c3b3740d2ea0154a92fc8974d326c",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/10_op_conductor_ha_trust_and_incentives.md",
+      "sha256": "5dd550d86db3e91767db09612bedecaec006b5bb83b2dc4b27665d728556b01b",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/11_op_stack_vs_megaeth_architecture.md",
+      "sha256": "4e1c0bbcd15f51051ce3fa301f2f9458a4e2de74fd11c8c619a4a7bfa8a7b1cb",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/README.md",
+      "sha256": "0e38d4c45c65670bf577b8bd78b052b4572a247dd661fe74ebd994ee4b6c31b2",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "learning/zh-CN/restaking-services/README.md",
+      "sha256": "2f2d5e54ccd955d951ba163973f9e39c98eb7fa2bd3ea23571b271b37ed3cab0",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "meetup_record/meeting_0916_response.md",
+      "sha256": "badf4e72f3930fe49f9f756c2d1f3abf9d92bb951af00f9fd80fe3c2601d5f7f",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "meetup_record/meeting_0922_requirements.md",
+      "sha256": "0f4d9e03c2c5b4ddf07ec86c46d9a1c7f37dc9810c53a01e13bd0627dd70f3ce",
+      "tracked_at_baseline": true,
+      "matches_baseline": true
+    },
+    {
+      "path": "formalization/reviews/main-v3-2026-09-28/complexity-assumptions.md",
+      "sha256": "a9d2fad74cf98ea1ce7f7956079d21636f3da912fdf50f79f474696674c240fc",
+      "tracked_at_baseline": false,
+      "matches_baseline": null
+    }
+  ],
+  "tradeoff_synthesis_added_at": "2026-09-28T23:19:13.278861+08:00"
+}

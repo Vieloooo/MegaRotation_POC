@@ -1,0 +1,50 @@
+% Native TikZ input for main_v1.tex. Arrows denote dependencies, not equal delays.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\small,line cap=round,line join=round,
+  pipebox/.style={draw,rounded corners=1.5pt,fill=white,align=center,
+    inner xsep=4pt,inner ysep=5pt,font=\footnotesize},
+  pipeflow/.style={-{Stealth[length=1.7mm]},semithick},
+  pipepull/.style={-{Stealth[length=1.7mm]},semithick,dashed},
+  pipelabel/.style={font=\footnotesize,fill=white,inner sep=2pt,align=center}
+]
+  \node[anchor=west,font=\small\bfseries] at (0,7.70)
+    {(a) Regional confirmation: a proposal, a decision, and a certified preview};
+  \node[pipebox,text width=2.55cm,minimum height=1.18cm] (proposal) at (1.45,6.58)
+    {Proposal $x$\\mini-blocks\\leader signatures};
+  \node[pipebox,text width=2.70cm,minimum height=1.18cm] (decision) at (5.12,6.58)
+    {Regional protocol\\VOTE; decide\\fast or completion};
+  \node[pipebox,text width=2.55cm,minimum height=1.18cm] (certificate) at (8.90,6.58)
+    {DECIDED quorum\\outcome $R_u$\\certificate $\RC_u$};
+  \node[pipebox,text width=2.72cm,minimum height=1.18cm] (preview) at (13.25,6.58)
+    {Consumer $P$\\verify range\\$\Tag{Preview}$};
+  \draw[pipeflow] (proposal.east) -- (decision.west);
+  \draw[pipeflow] (decision.east) -- (certificate.west);
+  \draw[pipeflow] (certificate.east) -- node[pipelabel,above,text width=1.25cm]
+    {accepted\\range} (preview.west);
+  \draw[pipepull] (preview.south) -- (13.25,5.38) -- (5.12,5.38) -- (decision.south);
+  \node[pipelabel] at (9.15,5.38) {Pull missing bodies and evidence};
+  \node[pipelabel,text width=14.60cm] at (7.45,4.58)
+    {Bodies may arrive before certificates; receipt alone produces no output.\\
+     Every instance completes agreement; the next waits for completion and $\RC_u$.};
+
+  \draw[gray!45] (0,3.96) -- (15.00,3.96);
+  \node[anchor=west,font=\small\bfseries] at (0,3.56)
+    {(b) Global adoption: report agreement, finality, and delivery};
+  \node[pipebox,text width=2.16cm,minimum height=1.12cm] (reports) at (1.22,2.48)
+    {REPORTs\\regional results\\and data};
+  \node[pipebox,text width=2.35cm,minimum height=1.12cm] (agreement) at (4.37,2.48)
+    {Agree reports\\common vector\\derive $C_e$};
+  \node[pipebox,text width=2.18cm,minimum height=1.12cm] (justified) at (7.61,2.48)
+    {FFG link\\$C_{e-1}\Rightarrow C_e$\\$C_e$ justified};
+  \node[pipebox,text width=2.20cm,minimum height=1.12cm] (finalized) at (10.77,2.48)
+    {Adjacent link\\$C_e\Rightarrow C_{e+1}$\\$C_e$ finalized};
+  \node[pipebox,text width=1.85cm,minimum height=1.12cm] (deliver) at (13.91,2.48)
+    {Proposer $P$\\verify range\\$\Tag{Deliver}$};
+  \draw[pipeflow] (reports.east) -- (agreement.west);
+  \draw[pipeflow] (agreement.east) -- (justified.west);
+  \draw[pipeflow] (justified.east) -- (finalized.west);
+  \draw[pipeflow] (finalized.east) -- (deliver.west);
+  \node[pipelabel,text width=14.60cm] at (7.45,1.33)
+    {A certified preview is retained across local leader changes. At a finalized global activation,\\
+     remove only the preview suffix beyond the retained tip. Delivered entries remain permanent.};
+\end{tikzpicture}

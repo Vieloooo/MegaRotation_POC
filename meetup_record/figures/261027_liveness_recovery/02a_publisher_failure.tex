@@ -1,0 +1,37 @@
+% Section 3, failure A: progress and prefix relations before recovery.
+\begin{tikzpicture}
+\path[use as bounding box] (-.1,-.1) rectangle (23.0,16.8);
+\node[heading] at (11.45,16.2) {故障一：G 停住，D 在窗口到期后越过 G};
+\node[note,anchor=west] at (.5,15.4) {共同起点：$R=115$，$G=108$，$G'=D=105$。下图假设已有 $G$ 仍能按时交付、数据可取回。};
+\node[subheading,anchor=west,text=blue] at (.5,14.55) {阶段 1：G 无新普通块；$G'$ 与 D 仍可追平已有 G};
+\node[box,fill=regionA,text width=3.8cm,minimum height=1.5cm] (r) at (2.7,13.15) {\textbf{R：区域结果}\\115（可能继续生产）};
+\node[box,fill=settled,kept,text width=3.8cm,minimum height=1.5cm] (g) at (8.5,13.15) {\textbf{G：全局链}\\停在 108};
+\node[box,fill=regularB,draw=orange,text width=3.8cm,minimum height=1.5cm] (gp) at (14.3,13.15) {\textbf{$G'$：Inbox cursor}\\105 $\to$ 108};
+\node[box,fill=native,draw=violet,text width=3.8cm,minimum height=1.5cm] (d) at (20.1,13.15) {\textbf{D：派生链}\\105 $\to$ 108};
+\draw[ref,draw=rose] (r.east) -- (g.west);
+\draw[rose,line width=1.5pt] (5.43,12.98) -- (5.77,13.32) (5.43,13.32) -- (5.77,12.98);
+\node[tag,text=rose] at (5.6,13.75) {受阻};
+\draw[flow] (g) -- (gp); \draw[flow] (gp) -- (d);
+\node[note,anchor=west] at (.5,11.95) {Publisher / Espresso 停摆会阻断区域结果进入 G；若所有区域停摆，R 也会停止生产。};
+\node[subheading,anchor=west,text=violet] at (.5,11.15) {阶段 2：109 的派生窗口到期；同一高度，旧 R 与 D 采用了不同的块};
+\foreach \yy/\label in {9.8/R,8.05/G,6.3/{G'},4.55/D}{\node[rowlabel] at (2.15,\yy) {$\label$};}
+\node[box,kept,fill=settled,text width=4.7cm] (ar) at (5.2,9.8) {\textbf{相同前缀：至 108}};
+\node[box,kept,fill=settled,text width=4.7cm] (ag) at (5.2,8.05) {\textbf{相同前缀：至 108}};
+\node[box,draw=orange,fill=regularB,text width=4.7cm] (ap) at (5.2,6.3) {\textbf{cursor = 108}\\只记录接纳进度};
+\node[box,kept,fill=settled,text width=4.7cm] (ad) at (5.2,4.55) {\textbf{相同前缀：至 108}};
+\node[box,dead,text width=5.0cm] (old) at (12.2,9.8) {\textbf{旧 109--115：普通块}\\已有区域 FINAL，未进入 G};
+\draw[flow] (ar) -- (old);
+\node[note,anchor=west,text width=5.1cm] at (9.4,8.05) {G 停在 108，保留已有内容。};
+\node[note,anchor=west,text width=5.1cm] at (9.4,6.3) {cursor 不随 D 的自动补位前进。};
+\node[box,draw=violet,fill=native,text width=5.0cm] (dep) at (12.2,4.55) {\textbf{109--115：deposit-only}\\由派生窗口回退确定};
+\node[box,draw=violet,fill=native,text width=4.05cm] (later) at (19.4,4.55) {\textbf{116\ldots}\\D 继续按窗口补位};
+\draw[flow,draw=violet] (ad) -- (dep); \draw[flow,draw=violet] (dep) -- (later);
+\draw[rose,line width=.9pt] (15.1,9.8) -- (15.55,9.8) -- (15.55,4.55) -- (15.1,4.55);
+\node[note,text=rose,text width=5.4cm,anchor=west] at (16.1,7.3) {\textbf{第一个不同的块：109}\\旧 R 是普通块；\\D 已确定为 deposit-only。};
+\node[card,fill=green!4,draw=green,text width=20.5cm] at (11.45,2.55) {
+  \textbf{结果：G 仍是 D 的前缀，D 已越过 G；D 与旧 R 的后缀分叉。}\\
+  原来的全部 G 可以保留；无法原样结算的是 G 之外的旧区域结果。
+};
+\node[note,anchor=west,text width=21.4cm] at (.5,1.15) {绿色粗框是已派生的共同前缀；灰色是接不上的旧后缀；紫色是 D 的确定补位。横向位置表示 L2 高度顺序，不是时间比例。};
+\node[note,anchor=west,text width=21.4cm] at (.5,.45) {此图只展示故障后的关系；恢复时怎样选择新起点，在后面的 Kill / RESUME 部分说明。};
+\end{tikzpicture}

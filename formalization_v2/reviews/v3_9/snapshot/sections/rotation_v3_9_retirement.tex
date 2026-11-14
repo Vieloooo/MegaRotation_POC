@@ -1,0 +1,401 @@
+\paragraph{The retirement contract.}
+\label{sec:retirement}
+Fix a session $(\beta,r)$ and write $\Delta=\Delta_{i_{\beta,r}}$,
+using its immutable voting snapshot. Closure is a Session Manager
+obligation independent of whether a program exists or has entered.
+The manager persistently stores authenticated $\tagg{Closed}_v[\beta]$
+and its complete source evidence, not just a hash or retrieval promise.
+The regional control owner keeps those bytes available for the receive
+handler below; a pending storage copy does not suspend that owner.
+This branch-wide record immediately
+prohibits every old-$\beta$ initial entry and fresh core action.
+It is separate from a program's six phases and from the later
+per-session complete-close event defined below.
+
+For each known fixed session snapshot in which $v$ is a member, the
+manager retains a control record even in Waiting, Ready, Completed or
+Terminated, or when no worker exists. The record includes the historical
+fixed boundary, source region, immutable authority and membership,
+\texttt{close\_requested}, any first complete-close time $c_v$, and
+pending relays. Active/Frozen programs keep their core phase while
+draining; only genuine Quit or terminal Completion changes that phase.
+Force is neither a quit proof nor a terminal receipt.
+
+\paragraph{Complete-receipt dissemination.}
+\label{sec:retirement-receipt-relay}
+The following obligation applies during normal running as well as
+retirement. The first time a correct regional member or its local
+manager/collector holds a complete valid receipt of its own session,
+it multicasts the receipt and all validation dependencies to the
+session's fixed membership. In particular, a terminal receipt is
+multicast no later than its local Completion event. Deduplication by
+session and DATA hash suppresses repeated encodings or signer sets,
+not this first complete relay. The relay and any pending delivery are
+preserved across Completed and Terminated by the persistent owner.
+Recipients process an own-session terminal receipt under Completion
+even while Frozen or closing, independently of its generation and
+before a simultaneous timer. A program that has not entered caches
+it; a Terminated program archives it without restarting. This rule
+forwards existing signatures and introduces neither a new vote nor a
+certificate. The intra-region complete-message bound applies to the
+actual relay; it is not a bound on first forming a receipt.
+
+\paragraph{Manager closure and \texttt{RequestClose}.}
+The following handler runs at the manager or persistent control owner,
+not only at an entered engine.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item \emph{Record public closure.} Verify complete evidence that the
+canonical prelude of an authenticated finalized Espresso block closed
+$\beta$. Retain its triggering header, applicable complete control and
+namespace history from a validated checkpoint, and closure and
+retained-prefix context. Check the existing MSIG/AUTO rules; a pending
+MSIG, OFF, unfinalized header or bare timestamp is insufficient.
+Atomically persist $\tagg{Closed}_v[\beta]$, prohibit fresh actions for
+that version and notify all its local control records, regardless of
+phase. This consumes an established closure; it does not execute Force
+or select an anchor a second time.
+\item \emph{Disseminate for every known snapshot.} For each known fixed
+session $(\beta,r)$ of this region, combine the retained closure proof
+with its immutable authority, membership and historical admission
+context. This is a \defterm{complete close bundle}: another member can
+validate both closure and the exact recipient snapshot without a prior
+program, live-entry permission or an unprovided cache. On first complete
+processing, perform RequestClose atomically: set
+\texttt{close\_requested}, record $c_v$ as the current time, and multicast
+the bundle to the fixed membership. This includes Waiting, Ready,
+Active, Frozen, Completed and Terminated records. A recipient validates
+the bundle, persists Closed and performs the same idempotent operation;
+no worker or engine entry is created. Repeated bundles retain $c_v$.
+\item \emph{Retain unresolved dissemination.} If the fixed snapshot or
+its dependencies are not yet known, retain the authenticated Closed
+record and a pending relay obligation. The entry gate is already shut,
+but $c_v$ is not assigned and no $4\Delta$ clock is invented.
+Whenever any old-pair Ready, proposal, authority, history or other packet
+provides the missing authenticated snapshot context, the manager or
+archive completes and multicasts the close bundle in that receive
+handler, and replies with it to the packet's sender. Do this before
+ordinary BFT processing, rejecting a live-entry request, discarding a
+duplicate, or returning a Terminated/tombstone result. Historical
+context is validated without requiring that the old version remain
+open. Complete proposals from correct voters carry or resolve this
+context within the existing complete-message bound. This handler is
+mandatory even if the old worker was never created, its ReadyBundle
+is refused, or a delayed callback arrives after exit or restart.
+\item \emph{Gate new work.} Closed prohibits every old-version
+DATA/DRAIN proposal, NEWVIEW, DATA/DRAIN/ANCHOR vote, new commit timer,
+progress check producing BLAME, term entry and generation entry.
+The checks cover initial Enter, delayed authority/recovery callbacks,
+terminal-QC rotation and buffered-message processing. Neither a new
+STATUS nor recreation of a local worker bypasses the persistent gate.
+Already dispatched messages are not withdrawn. New-session preparation
+and entry use their own pair and need not wait for retirement.
+\item \emph{Drain existing work.} Preserve existing commit timers and
+their original deadlines; observing Closed alone does not cancel a
+timer or release its evidence-processing owner. Continue complete
+validation, comparison with retained signed material, and evidence-first
+processing. A genuine current-generation quit proof still runs Quit,
+broadcasts its proof, cancels its timers and preserves commitments;
+it cannot reopen the gate. A surviving timer commits its block and
+ancestors. For each DATA thereby committed, its Protocol~1 FINAL goes
+both to the fixed regional membership and to the publication collector,
+preserving \cref{def:receipt}. A partial FINAL does not invoke the
+complete-result guarantee of \cref{ass:publish}.
+\item \emph{Keep evidence duties.} Continue collecting old votes, QCs,
+FINAL messages and receipts. Multicast complete own-session receipts
+as specified above, and offer every complete result to the Publish
+Layer. A valid terminal receipt still runs genuine Completion,
+possibly changing the phase to Completed and canceling timers; an
+existing drain deadline remains in force. Neither receipt arrival nor
+later ON reopens the branch. Keep data, control-relay and publication
+responsibilities until their durable transfer.
+\end{enumerate}
+All closure relays use existing authenticated source evidence and
+signatures, not new BFT votes or certificates. The manager/control owner
+continues transporting them after worker termination. A known snapshot
+is never forgotten merely because its program exits. Recovery from a
+crash restores Closed, session close times, pending relays and owners
+before dispatching callbacks or signatures. Messages, including complete
+closure, quit and terminal-receipt evidence, are processed before a
+simultaneous timer, entry or retirement event. No receipt, lock, vote,
+committed block or provenance is erased by this handler.
+
+\paragraph{\texttt{FinishClose}.}
+For a program Active or Frozen when it first learns closure, first
+require its complete per-session RequestClose event. Set
+\[
+ d_v=c_v+4\Delta.
+\]
+An earlier Closed flag without a complete-close event is not a substitute
+for $c_v$ and never authorizes early release of timer/evidence processing.
+FinishClose may mark it Terminated only at a time $t\ge d_v$ when:
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item every existing commit timer has executed or was canceled by
+genuine Quit or Completion, and no queued action can pass a fresh-action
+gate;
+\item persistent storage owns the exit, Closed and per-session close records,
+committed log, required signed evidence and validation dependencies,
+receipts, required regional REPORT sidecars, anchor data and recoverable
+state, without releasing the last
+required copy;
+\item a persistent owner has accepted pending closure-context discovery,
+complete-close relays and replies, complete-receipt multicasts,
+complete-result offers, publication retries, pending-request relays, public-import journals,
+fixed native read contexts and pending-admission work, and data-service duties, and each locally complete original publication
+result $R_0$ has been offered to the
+Publish Layer; and
+\item the dispatcher routes later messages for $(\beta,r)$ to those
+owners. They must run the manager-level closure handler even for an
+unrecognized old pair, and may collect or relay existing signatures,
+validate late receipts, serve data and continue publication, but cannot restart the
+engine, execute its BFT timers or issue fresh BFT or INPUT\_REPORT
+signatures for it. Pending-request transport is a node-level data duty
+and does not require such a signature.
+\end{enumerate}
+The ownership transfer may be local to the same correct replica; it
+requires no additional agreement or certificate. The receiving control
+owner must already hold the required evidence and receive route before
+the old owner releases them; an unresolved retrieval task is not such
+a handoff. Only after these
+guards hold may the production/recovery worker and its timer machinery
+be released. A late terminal receipt records archival evidence and does
+not change a Terminated program back to Completed or Active.
+
+A definitively invalid Waiting or Ready program has no regional timers
+to drain. It may release its worker without waiting $4\Delta$ only after
+its durable exit record and all manager/control duties above have an
+owner. In particular, learning Force before its first ReadyBundle never
+permits silent cancellation: known snapshots trigger immediate
+RequestClose; unknown snapshots leave pending relays that the refused
+ReadyBundle or a later proposal must resolve. Already-Completed programs
+have performed the original timer cancellation and may release workers
+after the same responsibility transfer. They likewise retain all
+control-relay duties. A temporary candidate-eligibility change alone
+need not terminate preparation. Termination never deletes a commitment,
+removes DATA from $G$, or authorizes stake withdrawal.
+
+\begin{proposition}[No silent closure in a vote window]
+\label{prop:retirement-observable-close}
+Let a correct member vote for and completely forward a valid proposal
+of $(\beta,r)$ at time $s$. If a correct member's matching vote or entry
+is suppressed by its authenticated Closed record during processing of
+that proposal by $s+\Delta$, a correct member processes and multicasts
+a complete close bundle for this session by $s+\Delta$. Thus, writing
+$c=\min_{v\ {\rm correct}}c_v$ over all phase-independent complete-close
+events (with $c=+\infty$ if none occurs), such suppression implies
+$c\le s+\Delta$.
+\end{proposition}
+\begin{proof}
+The forwarded proposal and its historical authority/admission dependencies
+reach the member's manager or archive within $\Delta$, even if it has
+no worker or an exit tombstone. These dependencies identify the fixed
+regional snapshot. If Closed was already recorded, the receive handler
+combines them with its retained closure evidence and sends the complete
+bundle before refusing ordinary processing. If closure is learned after
+that packet but by the time it suppresses a vote, the snapshot is already
+known and closure's own handler performs the multicast immediately.
+Either way some $c_v\le s+\Delta$. No new initial entry, executable-state
+restoration or remote membership discovery is required for this control
+relay. Restart and duplicate paths use the same persistent handler.
+\end{proof}
+
+\begin{proposition}[Closure propagation and honest-message drain]
+\label{prop:retirement-drain}
+Under \cref{ass:network}, let $c=\min_{v\ {\rm correct}}c_v$ be the first
+complete per-session RequestClose time among this snapshot's correct
+members in any phase, including its manager/archive owners. Then every correct member has closed by $c+\Delta$.
+Every surviving honest commit timer expires by $c+3\Delta$, and the
+regional FINAL messages generated by those timer events reach every
+correct member by $c+4\Delta$. Consequently $d_v=c_v+4\Delta$ is a
+conservative local drain threshold, not a deadline for finishing all
+retirement duties.
+\end{proposition}
+\begin{proof}
+The first correct relay includes closure and the fixed snapshot's full
+validation context. Its delivery and processing are covered by the
+existing regional bound even when no receiving worker exists. Thus
+$c\le c_v\le c+\Delta$ and every old-version fresh-action gate is shut
+by $c+\Delta$. A member may have set Closed still earlier; that can only
+stop its votes earlier. A correct DATA/DRAIN vote at time
+$s=\tau_v(P)$ starts its only timer, with expiry $s+2\Delta$.
+The close gate gives $s\le c_v\le c+\Delta$; no callback starts a
+replacement timer. Thus its expiry is at most $c+3\Delta$.
+Quit and Completion can cancel a timer but cannot postpone it.
+The FINAL messages actually generated at surviving expiries are
+delivered regionally within another $\Delta$. Finally $c_v\ge c$
+implies $d_v\ge c+4\Delta$. Message-first processing covers equality.
+\end{proof}
+
+The bound starts at complete per-session closure processing and its
+actual regional relay. It does not start at an earlier Closed observation
+whose session snapshot was unknown, a control signature, the triggering Espresso timestamp, or the
+start of unbounded historical catch-up. It does not add a new source
+visibility assumption. Three local $\Delta$ intervals cover the last
+honest timer event but not its FINAL delivery: a member can vote just
+before $c+\Delta$, commit just before $c+3\Delta$, and deliver FINAL
+only just before $c+4\Delta$.
+
+Four $\Delta$ intervals do not bound subsequent receipt relays,
+Byzantine message release, a storage copy, $T_{\rm pub}$, $T_E$, or
+successful EXPORT acceptance. Their outstanding duties pass to the
+persistent owners; no bounded storage size or transfer latency is
+claimed. Elapsed grace alone therefore never authorizes FinishClose.
+
+\begin{proposition}[Conditional regional safety during retirement]
+\label{prop:retirement-safety}
+Assume the stated regional model, the baseline regional validation
+and DATA/DRAIN soundness premises, and the complete-message Ready/Enter
+installation contract of \cref{sec:ready}. With the phase-independent manager closure handler,
+complete-receipt multicast and retirement rules above, correct regional committed logs
+remain prefix-comparable and irrevocable. The external prefix argument
+of \cref{sec:safety-argument} is preserved. This does not assert a
+protecting QC for every late surviving timer, old-session progress,
+or complete-receipt formation.
+\end{proposition}
+\begin{proof}
+We verify the prerequisites of the timer/lock argument explicitly;
+baseline safety is not used to infer an unproved universal-QC property.
+Fix a correct direct timer for DATA or DRAIN block $B$ in generation
+$g$, voted at $s$, that actually expires at $s+2\Delta$ without
+cancellation. All comparisons below concern this same session.
+Let $e_0$ be its first correct initial-entry time. The specified Ready
+contract enters every nonclosed correct member by $e_0+\Delta$.
+An own-session terminal receipt requires a correct FINAL after a timer,
+whose earliest possible expiry is $e_0+2\Delta$. Hence such a receipt
+cannot evade Completion by arriving only at an unentered cache of a
+correct member that will run the chosen timer.
+
+\emph{Quit and Completion cannot suppress its early vote window.}
+If any correct member first quits $g$ at $a\le s+\Delta$, its complete
+quit proof reaches the committer by $a+\Delta\le s+2\Delta$ and
+cancels the timer. Thus any first correct Quit satisfies
+$a>s+\Delta$. If any correct member Completes at $b\le s+\Delta$,
+its complete terminal receipt is multicast by $b$ and reaches the
+committer by $b+\Delta\le s+2\Delta$. The committer then executes
+Completion: it commits the terminal DATA and ancestors and cancels
+this timer, including a DRAIN timer. Again this contradicts the chosen
+surviving direct timer. No correct Completion can therefore occur at
+or before $s+\Delta$. This is an operational cancellation argument;
+it does not assume that receipt-triggered commitments are already
+known to be prefix-comparable.
+
+\emph{The proposal is processable within its regional window.}
+For $g=0$, the self-contained Ready relay and installation contract
+in \cref{sec:ready} supplies entry by $s+\Delta$; this assertion is
+conditional on that precise contract, not a bound on state restoration
+before any member is Ready. For $g>0$, let $a^-$ be the first correct
+Quit of $g-1$, and let $e$ be the first correct entry into $g$.
+The original recovery rule gives $e\ge a^-+\Delta$ and $s\ge e$.
+The complete quit relay reaches every correct member by $a^-+\Delta$;
+its own mandatory wait has therefore ended by
+$a^-+2\Delta\le e+\Delta\le s+\Delta$. The forwarded complete
+proposal supplies the finalized authority and remaining admission
+history. Hence a receiver with no Quit, Completion or close preventing
+entry can process it in $g$ by $s+\Delta$. Applying the same
+complete-proof argument inductively to earlier generations supplies
+any predecessor entry needed to process the quit proof. This uses
+the existing recovery waits and complete validation bundles, not a
+new simultaneous authority-visibility time.
+
+\emph{Early and late windows.}
+Let $c$ be the first complete per-session RequestClose event among
+correct manager/control owners in any phase. A prior Closed flag or
+unentered/Terminated record is not excluded merely by definition of $c$.
+Instead, \cref{prop:retirement-observable-close} shows that if it
+suppressed a matching vote or entry by $s+\Delta$, then $c\le s+\Delta$.
+Consequently, if $s+\Delta<c$, no closure suppresses that vote or entry.
+The preceding cancellation arguments also exclude Quit and Completion
+through that window. Earlier-term processing and prior indirect
+commitment do not suppress that vote either. An incompatible retained
+history would expose a genuine quit proof in this window and contradict
+timer survival. Every correct member therefore has cast, or now casts,
+the matching DATA/DRAIN vote by $s+\Delta$. Their total weight is at least
+$W-F>F$, so the votes form $B$'s protecting QC by $s+2\Delta$ at
+all members that can still take a later recovery entry. A member that
+Completed after the vote window cannot take such an entry; it need
+not be assigned an unused recovery lock.
+
+Any correct entry into $g+1$ must obey
+\[
+ e_v(\beta,r,g+1,0)\ge a_v+\Delta
+ \ge a+\Delta>s+2\Delta.
+\]
+In the early case, every such entrant therefore knows the protecting
+QC before its lock snapshot. The highest-QC rule gives the baseline
+recovery-lock invariant. Closure preserves collecting those already
+sent votes and QCs, and may only remove a later entry. In the late
+case $s+\Delta\ge c$, the timer expires at or after $c+\Delta$.
+The complete snapshot-bearing relay has closed every correct member's
+entry gate by then, including previously unentered and archived members; the strict displayed
+inequality prohibits every later-generation entry and thus its
+correct signatures. A later-generation QC needs a correct signer,
+so no recovery can exploit a missing protecting QC in this case.
+
+\emph{Direct timers and receipt-based commits.}
+In one generation, complete signed histories either extend one
+another or expose the original admissible equivocation proof.
+A correct voter forwards its complete history. A correct signer of
+an incompatible history either processes $B$ first and cannot vote,
+or forwards its history before processing $B$, no later than
+$s+\Delta$. That history reaches the committer by expiry and exposes
+the proof. Genuine Quit, or Completion before expiry, would cancel
+the timer. Thus no conflicting same-generation correct direct timer
+can survive; the same argument excludes a conflicting QC, including
+one assembled later from old votes.
+
+Across generations, a surviving lower-generation direct timer cannot
+be in the late case if a correct higher-generation vote exists.
+Its early-case QC is known before every later live lock snapshot.
+The baseline ranked-QC descent now has its actual prerequisites:
+correct ANCHOR voters meet those locks; DATA/DRAIN QCs inherit a
+lower-ranked parent justification. It excludes a later QC that does
+not extend the committed block, and the parent of a later direct
+proposal consequently extends it. These are precisely the
+protecting-QC, recovery-lock and unique-extension steps of Part~I,
+with the explicit vote-window checks above and the baseline
+DATA/DRAIN validation rules. Direct commitments are comparable, and
+ancestor commitments inherit that property.
+
+Finally a valid receipt contains a correct FINAL signer. That signer
+sent FINAL only after a timer committed its named DATA, directly or
+as an ancestor; committing from another receipt emits no FINAL.
+Consequently every receipt-based commit, including Completion, traces
+to a causally earlier direct timer commitment of that DATA or a
+descendant. It adds an already protected prefix. This provenance
+argument does not take the safety of receipt-based commits as its own
+premise. A timer canceled by Completion contributes no additional
+direct commitment, particularly no commitment of its unexpired DRAIN.
+No retirement step removes a prior commitment.
+
+The public interpreter still preserves all of $G$ at its canonical
+Force boundary and rejects further old-version DATA. Retirement and
+receipt relay neither select a retained anchor nor authorize an
+append, so those external transitions are unchanged.
+\end{proof}
+
+The universal protecting-QC lemma from Part~I cannot simply be copied:
+its proof requires matching votes from all correct members, whereas a
+closed member now retains a proposal without voting. For example, with
+three unit-weight members and $F=1$, let correct $H_0$ close at $c=0$
+and correct $H_1$ receive closure at $\Delta$. A Byzantine leader gives
+a valid proposal to $H_1$ at $0<s<\Delta$. $H_1$ votes, forwards and
+later commits; $H_0$ retains it without voting. If the Byzantine member
+withholds its vote and FINAL, only $H_1$'s FINAL exists. Its weight is
+not greater than $F$: neither a proposal QC nor a complete receipt need
+ever form. Retirement preserves this local commitment and evidence
+without calling it Completion. The Publish Layer's complete-result
+premise does not repair the missing signature.
+
+\paragraph{Force before the first ReadyBundle.}
+Suppose $H_0$ enters at $e_0$ and relays its complete ReadyBundle, while
+$H_1$ learns Force before that bundle arrives. $H_1$ immediately stores
+Closed. If its snapshot is already known it multicasts closure at once;
+otherwise the ReadyBundle supplies the historical snapshot by
+$e_0+\Delta$ and triggers the same multicast before its entry refusal.
+The complete close evidence therefore reaches $H_0$ by $e_0+2\Delta$,
+regardless of $H_0$'s later direct Espresso retrieval. Control processing
+wins equality with its initial leader wait. If a proposal is the first
+packet to reveal the snapshot instead, \cref{prop:retirement-observable-close}
+gives the required $c\le s+\Delta$ and the late-window argument blocks
+later recovery. Worker termination, a stale callback and restart cannot
+remove this relay path. This rules out a silently absent member being
+used to classify an unprotected timer as an early-window commitment.

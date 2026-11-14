@@ -1,0 +1,8 @@
+root: ./specs/
+
+structure:
+  readme: overview.md
+  summary: SUMMARY.md
+
+redirects:
+  protocol/salt/commitments: protocol/salt/trie.md

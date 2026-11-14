@@ -1,0 +1,29 @@
+{
+  "version": "3.9",
+  "status": "Three fresh scoped reviews passed; first-public-carrier import is proved conditionally; full request liveness remains OPEN",
+  "pdf_pages": 79,
+  "compile": "latexmk/pdflatex passed; final existing build log and PDF identity revalidated",
+  "compile_warnings": [],
+  "protocol_boxes": 6,
+  "render": "79 pages rendered; all five contact sheets and pages 58-60 at 120 dpi inspected in preceding authoring pass; PDF hash unchanged",
+  "frozen_model": "English Model and Chinese section 2 unchanged from v3.1",
+  "snapshot_files": 24,
+  "live_snapshot_hash_check": "24/24 matched",
+  "markdown_links_checked": 80,
+  "missing_markdown_links": [],
+  "main_sha256": "63dd6770de6aaed0f442c53c6fcd3685fb5a37b478140d67970ee2c4719058cb",
+  "chinese_sha256": "d899054ecdf8d3a0c8a654033c4ebd19503033c142e68ff3286b1cd1fcb628b3",
+  "pdf_sha256": "6800582053f394be4c277e13b50785664f8f1f278d91a252e56c740f847c4e81",
+  "review_reports": [
+    "fresh_safety.md",
+    "fresh_progress.md",
+    "fresh_model_import.md"
+  ],
+  "review_sha256": {
+    "fresh_safety.md": "5389e104db865f9e5774aa77a2b257a8fc940ae57e4026605b9c336d0a635189",
+    "fresh_progress.md": "2e32f6bfcfa54ebd69a39258d4727ca2ebe91b6e7615ac2a147e357624519abf",
+    "fresh_model_import.md": "58bda126222d1df3e64b61faa6fc5f08fc5c284b53455c254b507a9e1c9ab284"
+  },
+  "goal_completion": "Not achieved: first request-bearing complete result formation / future accepted-report awareness unresolved",
+  "protocol_box_check": "Compiled Protocol labels 1 through 6, including imported Force protocol"
+}

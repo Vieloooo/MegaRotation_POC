@@ -1,0 +1,99 @@
+% Atomic update, immediate old-program abort and direct initial proposal.
+% beta is the numeric branch version, and (beta,r) identifies a session.
+% Vertical spacing illustrates event order, not elapsed time.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{8.3}{9.8}\selectfont,
+  party/.style={draw,rounded corners=2pt,fill=white,align=center,
+    inner sep=3pt,text width=1.22cm,minimum height=.66cm},
+  lane/.style={draw=black!28,densely dashed},
+  msg/.style={-{Stealth[length=1.6mm]},semithick,draw=rrBlue},
+  read/.style={msg,densely dashed},
+  force/.style={msg,draw=rrRed},
+  tag/.style={fill=white,inner sep=1.5pt,font=\fontsize{7.7}{9}\selectfont},
+  note/.style={anchor=north west,align=flush left,text width=5.55cm,
+    inner sep=0pt,font=\fontsize{8.3}{9.8}\selectfont},
+  phase/.style={anchor=west,fill=white,inner sep=2pt,
+    font=\fontsize{9}{10.5}\selectfont\bfseries},
+  dot/.style={circle,fill=black,inner sep=1.1pt},
+  wait/.style={line width=2.5pt,draw=rrTeal!75,
+    dash pattern=on 2.5pt off 1.5pt},
+  rulebox/.style={draw=rrRed!55,rounded corners=2pt,fill=rrRed!3,
+    align=center,text width=7.9cm,inner sep=5pt}
+]
+  \def\xC{.75}\def\xI{2.3}\def\xE{3.85}
+  \def\xN{5.4}\def\xL{6.95}\def\xB{8.5}\def\xn{9.45}
+  \path[use as bounding box] (-.05,-.55) rectangle (15.05,16.05);
+  \node[party] at (\xC,0) {Multisig};
+  \node[party] at (\xI,0) {L1};
+  \node[party] at (\xE,0) {Espresso};
+  \node[party] at (\xN,0) {Node /\\certifier};
+  \node[party] at (\xL,0) {B: initial\\leader};
+  \node[party] at (\xB,0) {B: other\\replicas};
+  \foreach \x in {\xC,\xI,\xE,\xN,\xL,\xB}
+    \draw[lane] (\x,.52)--(\x,15.65);
+
+  \node[phase] at (0,.88) {1.\ Announce an atomic branch update on L1};
+  \draw[force] (\xC,1.55)--(\xI,1.85);
+  \node[tag,anchor=south] at (1.52,1.48) {submit $U$ at $s$};
+  \node[note] at (\xn,1.30) {$U$ names target version $\beta$, future
+    time $\theta_a$, and a complete map and order. If $\beta$ is
+    stale, the entire update is a no-op.};
+  \node[dot] at (\xI,2.65) {};
+  \draw[read,draw=rrRed] (\xI,2.65)--node[tag,above,sloped]
+    {finalized update + complete history}(\xN,3.30);
+  \node[dot] at (\xN,3.30) {};
+  \node[note] at (\xn,2.85) {By $s+T_{\rm L1}$, all correct participants
+    can verify the finalized update. $T_{\rm L1}$ includes dissemination
+    and verification. This precedes the Espresso crossing.};
+  \node[tag,align=center] at (5.35,4.15)
+    {Before activation: version $\beta$ and $\mathcal P_\beta$ stay fixed;\\
+     normal regional handoffs may continue.};
+  \node[phase] at (0,5.25) {2.\ Finalize the Espresso boundary; apply one update};
+  \draw[force] (\xE,5.95)--(\xN,6.25);
+  \node[tag,anchor=south] at (4.62,5.90) {$J_{q^*}$ finalized};
+  \node[note] at (\xn,5.75) {$q^*=\min\{q:\theta_q\ge\theta_a\}$ for
+    this update. Interpret the complete history through $J_{q^*-1}$
+    first.};
+  \node[rulebox] at (4.65,7.30) {At the start of $J_{q^*}$:\\[2pt]
+    $\Lambda_{q^*}$ is empty or contains one update;\\
+    matching target: close $\beta$ and install the new policy;\\
+    stale target: the whole update is a no-op;\\
+    only then process EXPORT records.};
+  \node[note] at (\xn,7.05) {Health detection belongs to multisig policy.
+    A report or missing DATA cannot execute Force. No Ready or output
+    condition gates a valid matching update.};
+  \node[dot,fill=rrRed] at (\xN,8.55) {};
+  \node[tag,anchor=east,text=rrRed] at (\xN-.12,8.55)
+    {anchor $:=\operatorname{last}(G^\star)$};
+  \node[note] at (\xn,8.70) {Close version $\beta$ for appends; keep $G$.
+    Advance to $\beta+1$. The plan under $\mathcal P_{\beta+1}$ selects B,
+    or keep a PENDING tail.};
+  \draw[read] (\xN,9.60)--node[tag,pos=.55,above,sloped]
+    {complete boundary}(\xL,10.00);
+  \draw[read] (\xN,9.60)--(\xB,10.15);
+  \node[note] at (\xn,10.15) {If the old export session has accepted
+    count $a$: keep $r$ when $a=0$, otherwise use $r+1$.
+    New-version DATA can append only in a later Espresso block.};
+
+  \node[phase] at (0,11.10) {3.\ B enters the new session and proposes directly};
+  \node[dot] at (\xL,11.65) {};
+  \draw[msg] (\xL,11.65)--node[tag,above,sloped]
+    {ReadyBundle}(\xB,12.00);
+  \node[dot] at (\xB,12.00) {};
+  \draw[msg] (\xB,12.35)--node[tag,above,sloped]
+    {bundle relay}(\xL,12.60);
+  \node[note] at (\xn,11.65) {B verifies the handoff, exact anchor state
+    and the plan $\Pi_{\beta+1,r'}$, then enters $(\beta+1,r',0,0)$ and relays the
+    complete bundle.};
+  \draw[msg] (\xL,13.20)--node[tag,above,sloped]
+    {first DATA}(\xB,13.55);
+  \draw[msg] (\xB,14.10)--node[tag,above,sloped]
+    {DATA votes}(\xL,14.35);
+  \node[note] at (\xn,13.20) {The first DATA extends
+    $A=\operatorname{last}(G^\star)$ using $Q^0_{\beta+1,r'}$.
+    No initial ANCHOR QC is needed. Normal DATA votes and commit timers
+    follow.};
+  \node[note] at (\xn,15.00) {Each Manager aborts its old-version
+    programs and timers when it verifies the Force. The new session
+    does not wait for an old timer drain.};
+\end{tikzpicture}

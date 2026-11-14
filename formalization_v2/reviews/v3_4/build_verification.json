@@ -1,0 +1,9 @@
+{
+  "version": "v3_4",
+  "kind": "candidate; full liveness unresolved",
+  "pdf_pages": 51,
+  "pdf_sha256": "4dc248318fccdfba2680940773b1930ddc06fe13ffb7ce79a7dfdcfe50642ecf",
+  "latex_warnings": [],
+  "rendering": "All pages rendered. v3.4 changed runtime/proof contact sheets inspected; v3.4.1 all contact sheets and detailed pages 19,32,33,47 inspected.",
+  "validation_limit": "Manual source/proof/visual review, not mechanized verification or full liveness certification."
+}

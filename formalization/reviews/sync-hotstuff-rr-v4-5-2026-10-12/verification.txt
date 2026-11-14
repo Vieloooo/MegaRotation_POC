@@ -1,0 +1,57 @@
+Sync HotStuff RR v4.5: clarity revision of v4.4
+Date: 12 October 2026
+Source: formalization/sync_hotstuff_rr_v4_5.tex
+Marked PDF: output/pdf/sync_hotstuff_rr_v4_5.pdf (24 pages; copy in formalization/)
+Diff PDF: output/pdf/sync_hotstuff_rr_v4_5_diff_v4_4.pdf (26 pages, latexdiff)
+Input v4.4 SHA-256:  b785eb38eb55389a1879bb8fa2ecd753203240604611b47ff2de1cb6a8261df7
+v4.5 source SHA-256: 7488f745ed404ced5b70707c545e540259b7b98fd4dc77421796e2c07d81c1e7
+Marked PDF SHA-256:  9c86ad5de07ad141c66c7bdb85b4459cf1487d55b9f804b3cbb8fcb84f164592
+Diff PDF SHA-256:    686d531e539fd2880b668e303c454d3c9e427b2682426524223d8dddd9b9a0ce
+
+SCOPE
+Presentation revision of v4.4, plus fixes for ambiguous rules and unhandled
+cases. The problems found and the plan are in revision-plan.md. No protocol
+step was added, removed, or reordered. Section and protocol numbers are those
+of v4.4. No independent reviewer or mechanized verification was used. The
+security and complexity analyses remain deferred.
+
+MARKS
+- Blue text is new or changed relative to v4.4. 64 blue tags in the text (plus
+  one example in the reading note) link each change to its entry in Appendix A
+  of the PDF. Each of the 34 IDs (A1-A10, B1-B8, C1-C16) is used at least once.
+- Red keeps its v4.4 meaning: a difference from v3.3 in Protocols 1-2.
+- \revmarksfalse in the preamble gives a clean copy without colours or tags.
+
+MARK AUDIT
+- tools/revmarks.py black drops all blue text. A token-level diff of the
+  remaining black text against v4.4 shows no unmarked prose insertion. The
+  only black insertions are LaTeX scaffolding around blue content (table and
+  list environments, a paragraph heading, display math) and the
+  bibliography, which moved before the appendix.
+- Protocol 2 and the quit-proof text are word-for-word identical to v4.4. They
+  moved only in the source, so that Protocol 2 floats onto the page that v4.4
+  left half empty. The same applies to Protocol 5, whose black text differs
+  from v4.4 only where blue text replaces it.
+- Every remaining use of "opening" means the generation's opening block
+  A_{r,g,0}.
+- Deleted text is listed under "Removed text" in Appendix A and is shown
+  struck out in the diff PDF.
+
+ARTIFACT CHECKS
+- latexmk -pdf builds without errors, undefined references, or overfull
+  boxes. One underfull line remains in Protocol 2 step 5(d), whose wording is
+  v3.3's (v4.4 has the same line).
+- Every page of the marked PDF was rendered and inspected. Table cells with
+  blue text align, and no protocol box leaves a half-empty page.
+- The diff PDF compiles with LuaLaTeX. Its pages around Sections 1-3, 6-7,
+  and 9 were inspected.
+
+REGENERATING THE DIFF (from formalization/)
+  python3 reviews/sync-hotstuff-rr-v4-5-2026-10-12/tools/revmarks.py strip sync_hotstuff_rr_v4_5.tex /tmp/v45_plain.tex
+  python3 reviews/sync-hotstuff-rr-v4-5-2026-10-12/tools/restore_positions.py /tmp/v45_plain.tex /tmp/v45_plain_pos.tex
+  latexdiff --type=LUAUNDERLINE --math-markup=whole --disable-citation-markup sync_hotstuff_rr_v4_4.tex /tmp/v45_plain_pos.tex > /tmp/diff.tex
+  latexmk -lualatex -interaction=nonstopmode /tmp/diff.tex
+The default latexdiff style (ulem) fails on \Cref inside added text, so the
+LuaLaTeX underline style is used. restore_positions.py puts Protocols 2 and 5
+back at their v4.4 source positions. Without it, latexdiff shows the box move
+as a deletion and re-insertion of Section 7.2.

@@ -1,0 +1,100 @@
+% Four-member steady-state message sequence.  Time runs from top to bottom;
+% vertical distances show causal order rather than measured network delay.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\scriptsize,line cap=round,line join=round,
+  party/.style={draw,rounded corners=2pt,align=center,fill=white,
+    minimum width=2.05cm,minimum height=.68cm,inner sep=2pt},
+  lifeline/.style={densely dashed,thin,black!45},
+  proposal/.style={-{Stealth[length=1.7mm]},semithick},
+  exchange/.style={{Stealth[length=1.35mm]}-{Stealth[length=1.35mm]},thin},
+  confirm/.style={-{Stealth[length=1.45mm]},thin},
+  milestone/.style={circle,fill=black,inner sep=1.15pt},
+  lab/.style={fill=white,inner sep=1.2pt,align=center}
+]
+  \def\xa{1.55}
+  \def\xb{4.25}
+  \def\xc{6.95}
+  \def\xd{9.65}
+  \def\xp{13.15}
+
+  % Participants and lifelines.
+  \node[party] at (\xa,10.30) {$S_{i,1}$\\leader $\ell_i(v)$\\weight $\omega_{i,1}$};
+  \node[party] at (\xb,10.30) {$S_{i,2}$\\regional sequencer\\weight $\omega_{i,2}$};
+  \node[party] at (\xc,10.30) {$S_{i,3}$\\regional sequencer\\weight $\omega_{i,3}$};
+  \node[party] at (\xd,10.30) {$S_{i,4}$\\regional sequencer\\weight $\omega_{i,4}$};
+  \node[party,minimum width=1.65cm] at (\xp,10.30)
+    {Proposer $P$\\stream consumer};
+  \foreach \x in {\xa,\xb,\xc,\xd,\xp}
+    \draw[lifeline] (\x,9.94) -- (\x,.52);
+  \draw[densely dotted] (11.25,10.68) -- (11.25,.45);
+  \draw[proposal] (14.58,9.58) -- node[lab,right,rotate=-90] {time} (14.58,.78);
+
+  % The current-view anchor is already common before the next proposal.
+  \node[lab] at (5.60,9.66)
+    {current-view anchor $Q_v(B_{k-1})$ verified by all four sequencers};
+
+  % B_k proposal fan-out.
+  \node[lab] at (5.60,9.18)
+    {$\Tag{PROPOSE}(B_k,Q_v(B_{k-1}))$};
+  \draw[proposal] (\xa,9.02) -- (\xb,8.83);
+  \draw[proposal] (\xa,9.02) -- (\xc,8.73);
+  \draw[proposal] (\xa,9.02) -- (\xd,8.63);
+  \foreach \x in {\xa,\xb,\xc,\xd}
+    \node[milestone] at (\x,8.42) {};
+  \node[lab,anchor=east] at (10.75,8.42)
+    {validate $B_k$; start local timer};
+
+  % Explicit all-to-all exchange for B_k.  A bidirectional edge represents
+  % the proposal relays and vote multicasts between that pair of members.
+  \path[fill=black!4,rounded corners=2pt] (.72,6.18) rectangle (10.48,8.08);
+  \node[lab] at (5.60,7.94)
+    {all-to-all: relay the signed proposal and multicast $\Tag{VOTE}(v,k,\Hash(B_k))$};
+  \draw[exchange] (\xa,7.61) -- (\xb,7.61);
+  \draw[exchange] (\xa,7.35) -- (\xc,7.35);
+  \draw[exchange] (\xa,7.09) -- (\xd,7.09);
+  \draw[exchange] (\xb,6.83) -- (\xc,6.83);
+  \draw[exchange] (\xb,6.57) -- (\xd,6.57);
+  \draw[exchange] (\xc,6.31) -- (\xd,6.31);
+
+  % Every member sees the multicast votes; certification immediately opens
+  % the next pipeline position even though B_k's timers are still running.
+  \foreach \x in {\xa,\xb,\xc,\xd}
+    \node[milestone] at (\x,5.88) {};
+  \node[lab] at (5.60,5.88)
+    {matching vote weight $>2W_i/3$: each member can assemble $Q_v(B_k)$};
+
+  \node[lab] at (5.60,5.43)
+    {$\Tag{PROPOSE}(B_{k+1},Q_v(B_k))$ starts before $B_k$ commits};
+  \draw[proposal] (\xa,5.27) -- (\xb,5.08);
+  \draw[proposal] (\xa,5.27) -- (\xc,4.98);
+  \draw[proposal] (\xa,5.27) -- (\xd,4.88);
+
+  \path[fill=black!4,rounded corners=2pt] (.72,4.02) rectangle (10.48,4.66);
+  \node[lab] at (5.60,4.34)
+    {the same relay-and-vote exchange begins for $B_{k+1}$};
+
+  % The B_k commit window overlaps communication for B_{k+1}.
+  \draw[semithick] (.37,8.42) -- (.37,3.55);
+  \draw[semithick] (.24,8.42) -- (.50,8.42);
+  \draw[semithick] (.24,3.55) -- (.50,3.55);
+  \node[lab,rotate=90] at (.08,5.98) {$2\Delta_R$ local commit window for $B_k$};
+  \foreach \x in {\xa,\xb,\xc,\xd} {
+    \draw[semithick] ($(\x,3.55)+(-.12,0)$) -- ($(\x,3.55)+(.12,0)$);
+    \node[lab,anchor=north] at (\x,3.48) {commit $B_k$};
+  }
+  \node[lab] at (5.60,2.98)
+    {commit if view $v$ has no quit or equivocation proof};
+
+  % Post-commit endorsements expose the committed prefix to P.  The leader
+  % need not wait for this consumer-facing receipt before extending the chain.
+  \node[lab] at (7.30,2.51)
+    {post-commit endorsements of $(k,\Hash(B_k))$};
+  \draw[confirm] (\xa,2.31) -- (\xp,2.14);
+  \draw[confirm] (\xb,2.14) -- (\xp,1.99);
+  \draw[confirm] (\xc,1.97) -- (\xp,1.84);
+  \draw[confirm] (\xd,1.80) -- (\xp,1.69);
+  \node[party,minimum width=1.65cm,minimum height=.52cm] at (\xp,1.28)
+    {$>W_i/3$\\form $\pi_h$};
+  \node[lab] at (5.60,.70)
+    {$Q_v(B_k)$ advances the internal pipeline; $\pi_h$ authenticates the confirmed stream to $P$};
+\end{tikzpicture}

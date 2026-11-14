@@ -1,0 +1,10 @@
+{
+  "version": "3.2",
+  "kind": "candidate awaiting independent adversarial review",
+  "english_main_sha256": "956b733d9c30bb6aaed3a2b5a7e67f3628e620392b958ed7471455243108dc1d",
+  "pdf_sha256": "e7f7fb835e0a5083ec6128883a3a1b165f49dc759bdf0f994cf04f10f9c147e8",
+  "pdf_pages": 44,
+  "latex_warnings": [],
+  "visual_review": "All 44 pages in contact sheets; detailed inspection of pages 22,25,29,41 and both standalone diagrams.",
+  "limitations": "Compilation and rendering do not verify protocol safety or liveness."
+}

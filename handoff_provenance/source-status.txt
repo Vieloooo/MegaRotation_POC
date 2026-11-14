@@ -1,0 +1,11 @@
+ M formalization_v10/01_l1_authority_zh_v0_1.md
+ M formalization_v10/04_publisher_zh_v0_1.md
+ M formalization_v10/08_da_zh_v0_1.md
+ M formalization_v10/09_finality_rules_zh_v0_1.md
+ M formalization_v10/10_pipelines_zh_v0_1.md
+ M formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md
+?? formalization_v10/poc_design_zh.md
+?? formalization_v10/poc_design_zh_v2.md
+?? formalization_v10/poc_v2_xuelab_handoff_zh.md
+?? formalization_v10/poc_v2_xuelab_setup_zh.md
+?? meetup_record/261110_chain_g_safety_liveness_zh.md

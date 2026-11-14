@@ -1,0 +1,92 @@
+% Protocol 6 and the committee's protection rule. Two distinct executions.
+% Numerical example: s_u=100, mu=102, decision deadline=107, test=110.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9}{10.5}\selectfont,
+  party/.style={draw,rounded corners=2pt,fill=white,align=center,
+    inner sep=3pt,minimum width=2.15cm},
+  lane/.style={draw=black!30,densely dashed},
+  msg/.style={-{Stealth[length=1.7mm]},semithick,draw=rrBlue},
+  read/.style={msg,densely dashed,draw=rrRed},
+  tag/.style={fill=white,inner sep=1.5pt,font=\fontsize{8}{9}\selectfont},
+  note/.style={anchor=north west,align=flush left,text width=5.55cm,
+    inner sep=0pt,font=\fontsize{8.5}{10}\selectfont},
+  phase/.style={anchor=west,fill=white,inner sep=2pt,
+    font=\fontsize{9}{10.5}\selectfont\bfseries},
+  dot/.style={circle,fill=black,inner sep=1.1pt},
+  wait/.style={line width=2.6pt,draw=rrTeal!75},
+  decision/.style={line width=2.6pt,draw=rrBlue!65},
+  outcome/.style={draw=rrTeal,rounded corners=2pt,fill=rrTeal!5,
+    align=center,text width=4.1cm,minimum height=1.9cm,inner sep=4pt,
+    font=\fontsize{8.5}{10}\selectfont}
+]
+  \def\xA{1.2}\def\xU{3.8}\def\xC{6.4}\def\xI{9.0}\def\xn{10.0}
+  \path[use as bounding box] (-.1,-.65) rectangle (15.6,16.45);
+  \node[party] at (\xA,0) {Regional evidence\\source};
+  \node[party] at (\xU,0) {External\\observer $u$};
+  \node[party] at (\xC,0) {Multisig\\committee};
+  \node[party] at (\xI,0) {L1};
+  \foreach \x in {\xA,\xU,\xC,\xI}
+    \draw[lane] (\x,.55)--(\x,12.35);
+
+  \node[phase] at (0,.85) {(a)\ A Force cuts DATA 107 before it can become global};
+  \draw[msg] (\xA,1.30)--node[tag,above,sloped]
+    {107 + evidence}(\xU,1.75);
+  \node[dot] at (\xU,1.75) {};
+  \draw[wait] (\xU+.20,1.75)--(\xU+.20,9.80);
+  \draw[msg] (\xU,1.75)--node[tag,pos=.60,above,sloped]
+    {backbone relayed}(\xC,3.05);
+  \node[tag,anchor=east] at (\xU-.15,2.25) {$s_u(107)=100$};
+  \node[note] at (\xn,1.40) {Validate 107 on the current branch and relay
+    its complete evidence. Start the $\Twait=10$ wait. Old L1 timestamps
+    do not start it.};
+  \node[dot] at (\xC,3.05) {};
+  \draw[decision] (\xC+.20,3.05)--(\xC+.20,6.60);
+  \node[tag,anchor=east] at (\xC-.15,3.55) {$\mu(107)=102$};
+  \node[note] at (\xn,3.00) {Monitoring takes at most $T_{\rm mon}=2$.
+    Here validation is at 102, so the committee's decision window
+    $T_{\rm msig}=5$ ends at 107.};
+  \node[tag,align=center] at (\xU,5.05)
+    {Regional production /\\regular handoff may continue};
+  \node[note] at (\xn,4.80) {The observer wait and the committee's
+    decision window overlap production. No committee acknowledgement
+    is required.};
+  \draw[msg,draw=rrRed] (\xC,6.60)--node[tag,above,sloped]
+    {Force: retain 106}(\xI,6.90);
+  \node[dot] at (\xC,6.60) {};
+  \node[tag,anchor=east] at (\xC-.15,7.10) {$d=107$};
+  \node[note] at (\xn,6.55) {At the actual deadline, submission precedes
+    protection. The outstanding Force excludes 107 and its descendants
+    from the protected prefix.};
+  \node[note] at (\xn,8.05) {$T_{\rm L1}=3$: the submitted Force is
+    finalized and available by 110. This bound does not include
+    activation.};
+  \draw[read] (\xI,9.20)--node[tag,pos=.48,above,sloped]
+    {finalized Force proof}(\xU,9.80);
+  \node[dot,fill=rrRed] at (\xU,9.80) {};
+  \node[tag,anchor=east,text=rrRed] at (\xU-.15,10.30)
+    {$z=110$: no promotion};
+  \node[note] at (\xn,9.45) {P6 step 1 reads L1 before step 3. Although
+    the wait has ended, $107\in\Del(F)$, so global promotion stops.
+    The regional branch has not yet switched.};
+  \draw[read] (\xI,11.35)--node[tag,pos=.48,above,sloped]
+    {activation block finalized}(\xU,11.85);
+  \node[tag,anchor=east] at (\xU-.15,12.15) {activation at 115};
+  \node[note] at (\xn,11.55) {P6 step 4 removes the old regional suffix
+    and archives its evidence. $G_u$ is preserved. A new 107 on the
+    forced branch has a new validation-and-relay wait.};
+
+  \node[phase] at (0,13.05) {(b)\ Separate execution: no Force covering 107 by its deadline};
+  \node[outcome] (relay) at (2.45,14.55)
+    {$100$: observer validates and relays 107.\\
+     Its waiting period starts.};
+  \node[outcome] (protect) at (7.75,14.55)
+    {$107$: committee protects the continuous prefix through 107.\\
+     Later Forces must preserve it.};
+  \node[outcome] (global) at (13.05,14.55)
+    {$110$: observer may promote 107.\\
+     Predecessors must be global; current L1 and branch checks must pass.};
+  \draw[msg,draw=rrTeal] (relay.east)--(protect.west);
+  \draw[msg,draw=rrTeal] (protect.east)--(global.west);
+  \node[tag,align=center] at (7.75,16.00)
+    {$\Twait=T_{\rm mon}+T_{\rm msig}+T_{\rm L1}=2+5+3=10$};
+\end{tikzpicture}

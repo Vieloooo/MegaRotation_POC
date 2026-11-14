@@ -1,0 +1,51 @@
+% Application-level layout retained from figures/v2/architecture.tex.
+% Solid arrows carry data or configuration; dashed arrows are pull requests.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\footnotesize,line cap=round,line join=round,
+  box/.style={draw,rounded corners=2pt,align=center,fill=white},
+  seq/.style={draw,circle,minimum size=9mm,inner sep=1pt,fill=white},
+  flow/.style={-{Stealth[length=1.8mm]},semithick},
+  pull/.style={flow,dashed},
+  control/.style={{Stealth[length=1.4mm]}-{Stealth[length=1.4mm]},thin},
+  lab/.style={fill=white,inner sep=1pt,align=center}
+]
+  \draw[rounded corners=3pt,semithick] (1.85,0) rectangle (10.55,4.35);
+  \node[anchor=west,font=\footnotesize\bfseries] at (2.02,4.12)
+    {Live sequencer service};
+  \draw[rounded corners=2pt] (2.10,2.05) rectangle (7.85,3.85);
+  \node[anchor=north west,font=\footnotesize\bfseries] at (2.24,3.78)
+    {Producing region $V_i$: PoS SMR};
+  \node[box,minimum width=1.0cm,minimum height=.58cm] (users) at (.52,2.93) {Users};
+  \node[seq] (leader) at (3.30,2.93) {$S_{i,1}$};
+  \node[lab,anchor=north] at (3.30,2.45) {leader $\ell$};
+  \node[seq] (peerone) at (5.08,2.72) {$S_{i,2}$};
+  \node[seq] (peertwo) at (6.91,2.72) {$S_{i,3}$};
+  \draw[control] (leader.south east) -- (peerone.north west);
+  \draw[control] (leader.east) -- (peertwo.north west);
+  \draw[control] (peerone.east) -- (peertwo.west);
+  \draw[flow] (users.east) -- node[lab,above] {transactions} (leader.west);
+
+  \node[box,minimum width=1.8cm,minimum height=1.08cm] (proposer) at (12.45,3.05)
+    {Proposer $P$\\verify stream;\\execute and publish};
+  \draw[flow] (leader.north east) -- (4.10,3.32) -- ($(proposer.west)+(0,.27)$);
+  \node[lab] at (9.38,3.57) {Leader stream $M_h$};
+  \draw[flow] (peertwo.east) -- ($(proposer.west)+(0,-.33)$);
+  \node[lab] at (9.55,2.97) {Confirmed data + $\pi$};
+  \draw[pull] (proposer.south) -- (12.45,1.77) -- (6.91,1.77) -- (peertwo.south);
+  \draw[pull] (6.91,1.77) -- (5.08,1.77) -- (peerone.south);
+  \node[lab] at (9.40,1.77) {Poll / fetch};
+
+  \node[box,dashed,minimum width=7.82cm,minimum height=.51cm] (outer) at (6.23,1.07)
+    {Cross-region CFT, rotation and recovery \emph{(unfinished)}};
+  \draw[control,dashed] (3.05,2.05) -- (3.05,1.33);
+  \node[box,minimum width=2.95cm,minimum height=.43cm] (rj) at (4.14,.32)
+    {Region $V_j$: PoS SMR};
+  \node[box,minimum width=2.95cm,minimum height=.43cm] (rk) at (8.28,.32)
+    {Region $V_k$: PoS SMR};
+  \draw[control,dashed] (4.14,.81) -- (rj.north);
+  \draw[control,dashed] (8.28,.81) -- (rk.north);
+
+  \node[box,minimum width=1.0cm,minimum height=.48cm] (lone) at (8.55,4.99) {L1};
+  \draw[flow] (lone.south) -- (8.55,4.35);
+  \node[lab,anchor=west] at (9.02,4.67) {Stake, keys, rotation lists};
+\end{tikzpicture}

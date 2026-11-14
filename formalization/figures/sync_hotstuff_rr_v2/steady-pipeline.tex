@@ -1,0 +1,44 @@
+% Native TikZ fragment. Illustrative equal-delay execution, not a timing premise.
+% Width 15.8 cm; all visible text uses at least 9 pt.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!60,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt,font=\fontsize{9.5}{11}\selectfont},
+  timed/.style={draw=rrTeal,dashed,rounded corners=2pt,
+    fill=rrTeal!4,align=center,inner sep=4pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,10.1);
+  \node[align=center] at (2.0,0) {Correct leader\\$L(g,t)$};
+  \node[align=center] at (7.5,0) {Correct replica\\$P$};
+  \node[align=center] at (13.4,0) {Correct replica\\$Q$};
+  \foreach \x in {2,7.5,13.4} \draw[lane] (\x,.5)--(\x,9.4);
+
+  \node[phase] at (.1,.85) {Fresh blocks pipeline on QCs};
+  \node[lab,anchor=east] at (1.7,1.45) {$0$};
+  \draw[msg] (2,1.45)--node[lab] {$\mathrm{PROPOSE}(X)$} (7.5,2.05);
+  \draw[msg] (2,1.45)--(13.4,2.05);
+  \node[lab,anchor=west] at (13.7,2.05) {$\delta$};
+  \node[state,minimum width=8.3cm] at (10.1,2.7)
+    {Validate and forward $X$; broadcast DATA votes.\\
+     Start each local $2\Delta$ commit timer.};
+  \draw[msg] (7.5,3.3)--node[lab] {DATA votes for $X$} (2,3.9);
+  \draw[msg] (13.4,3.3)--(2,3.9);
+  \node[state] at (2.0,4.5)
+    {$2\delta$: form $\QC_{g,t}(X)$;\\propose child $Y$};
+  \draw[msg] (2,5.1)--node[lab] {$\mathrm{PROPOSE}(Y,\QC_{g,t}(X))$} (7.5,5.7);
+  \draw[msg] (2,5.1)--(13.4,5.7);
+  \node[state,minimum width=8.3cm] at (10.1,6.35)
+    {$3\delta$: validate and vote for $Y$;\\start another $2\Delta$ timer.};
+  \node[timed,minimum width=12.7cm] at (7.9,7.35)
+    {The timer for $X$ keeps running while $Y$ and later blocks are certified.};
+  \node[state,draw=rrTeal,minimum width=12.7cm] at (7.9,8.4)
+    {$9\delta=\delta+2\Delta$: $P$ and $Q$ commit $X$ if generation $g$ is not frozen.\\
+     $11\delta=3\delta+2\Delta$: they similarly commit $Y$ and its ancestors.};
+  \node[anchor=west,align=left,font=\fontsize{9}{10.5}\selectfont] at (.1,9.6)
+    {Illustration: $\delta=\Delta/4$, with equal actual delays. Time runs downward, not to scale.\\
+     Arrows represent all-to-all voting; a QC has $f+1$ distinct signers.};
+\end{tikzpicture}

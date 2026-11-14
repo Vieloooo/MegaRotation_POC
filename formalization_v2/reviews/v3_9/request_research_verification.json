@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-19",
+  "prior_goal_turn": "Progress: revised the requested architecture outline and four rendered diagrams.",
+  "this_turn": "Progress: finalized v3.9 review/build/Chinese status records; independently audited original endpoint domain; constructed and freshly reviewed a historical-service candidate; specified a restricted authority catalogue and its coverage limit.",
+  "formal_snapshot": "24/24 live dependencies unchanged",
+  "files": {
+    "historical_service_design.md": "bbfdcc3f29b395196e0871b115f98e9859d86bb291881c3da49ca37c882a972d",
+    "historical_service_fresh_check.md": "99fc1e945b682e5151dca7ffe24166a61e97ebd2f7c139d81fc0e9ca8b6624bf",
+    "historical_inventory_adapter.md": "563d8adc2fea2be65eef11f718a7835deca7814aa880e9051ef2fdec7033908b",
+    "frozen_region_domain_audit.md": "dc7bad3b1577df4bdd247428e8d195c6f4f7879053ff77f1274d449540fc26bd"
+  },
+  "reviewed_design": "historical_service_design.md",
+  "reviewed_design_verdict": "No scoped Critical Error; acknowledged Justification Gaps in canonical discovery and prepared scheduler/controller integration; historical service domain remains conditional.",
+  "inventory_adapter_review": "Author/source analysis and root inspection only; not covered by historical_service_fresh_check.",
+  "remaining_goal": "Unconditional original-model request inclusion and broad alive/service interpretation unresolved. No full v3.10 adopted.",
+  "clarification": "Original within-region cross-AUTH and participation domain; async question pending, elapsed time is not a model choice.",
+  "goal_status": "active; no completion or blocked claim made in this progress turn"
+}

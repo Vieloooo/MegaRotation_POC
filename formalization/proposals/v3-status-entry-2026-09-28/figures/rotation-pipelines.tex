@@ -1,0 +1,16 @@
+\documentclass[tikz,border=8pt,multi]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amssymb}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\definecolor{ink}{HTML}{233446}
+\definecolor{safe}{HTML}{1D756C}
+\definecolor{control}{HTML}{395F9C}
+\tikzset{lane/.style={draw=ink!25,densely dashed},
+ msg/.style={-{Stealth[length=2mm]},thick,draw=safe},
+ ctl/.style={-{Stealth[length=2mm]},thick,draw=control},
+ box/.style={draw=ink!40,fill=white,rounded corners=2pt,align=center,inner sep=7pt},
+ lab/.style={fill=white,inner sep=3pt,align=center,font=\sffamily\footnotesize}}
+\begin{document}
+\input{regular-rotation.tex}
+\input{status-change-rotation.tex}
+\end{document}

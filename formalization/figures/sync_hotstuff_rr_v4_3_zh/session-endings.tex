@@ -1,0 +1,70 @@
+% Two ways a session ends (Section 7), with h(A_r)=100, TB_r=10, K=4.
+% (a) 经过一个 DRAIN 后正常结束.  (b) Forced ending at h_*=106.
+% Teal: 外部链. Gray: 仅在区域日志中. Blue: session r+1.
+% Arrows point from parent to child.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\fontsize{9}{10.5}\selectfont,
+  blk/.style={draw,rounded corners=1.5pt,minimum height=.62cm,
+    minimum width=.95cm,inner sep=2pt},
+  ext/.style={blk,draw=rrTeal,fill=rrTeal!12},
+  reg/.style={blk,draw=black!45,fill=black!6,text=black!65},
+  nxt/.style={blk,draw=rrBlue,fill=rrBlue!10},
+  link/.style={-{Stealth[length=1.4mm]},semithick,draw=black!70},
+  lane/.style={anchor=east,font=\fontsize{8}{9}\selectfont,text=black!70},
+  tag/.style={font=\fontsize{8}{9}\selectfont,inner sep=1pt},
+  ttl/.style={anchor=west,font=\bfseries\fontsize{9}{10.5}\selectfont},
+  note/.style={anchor=north west,align=flush left,text width=5.7cm,
+    inner sep=0pt,font=\fontsize{8.5}{10}\selectfont},
+  brace/.style={decorate,decoration={brace,amplitude=3pt},draw=black!55}]
+  % ---------------- (a) regular ending ----------------
+  \node[ttl] at (-1.55,1.3) {(a) 经过一个 DRAIN 后正常结束};
+  \node[lane] at (.35,0) {会话 $r$};
+  \node[lane] at (.35,-1.2) {会话 $r{+}1$};
+  \node[ext] (a100) at (.95,0) {100};
+  \node[ext,minimum width=1.5cm] (a101) at (2.55,0) {101--104};
+  \node[ext,minimum width=1.5cm] (a105) at (4.35,0) {105--108};
+  \node[ext] (a109) at (5.8,0) {109};
+  \node[ext] (a110) at (7.0,0) {110};
+  \node[reg,dashed] (aD) at (8.35,0) {DRAIN};
+  \node[nxt] (a111) at (8.35,-1.2) {111};
+  \draw[link] (a100)--(a101); \draw[link] (a101)--(a105);
+  \draw[link] (a105)--(a109); \draw[link] (a109)--(a110);
+  \draw[link] (a110)--(aD);
+  \draw[link] (a110.south)--(a111.west);
+  \node[tag,below=2pt of a100] {$A_r$};
+  \node[tag,anchor=north east] at ([xshift=-1pt,yshift=-2pt]a110.south west) {$T_r$};
+  \node[tag,above=3pt of a101] {任期 0};
+  \node[tag,above=3pt of a105] {任期 1};
+  \draw[brace] ([yshift=3pt]a109.north west)--([yshift=3pt]a110.north east)
+    node[tag,midway,above=4pt] {任期 2};
+  \node[tag,above=3pt of aD] {代次 1};
+  \node[note] at (9.4,.5) {退出在 110 提交之前取消其计时器。代次 1 从 110 开始，因此是收尾代次。其唯一 DRAIN 的计时器提交 110，且仅为 110 发送 FINAL。会话 $r{+}1$ 从 111 开始，父区块为 110。};
+  % ---------------- (b) forced ending ----------------
+  \def\yb{-3.65}\def\yn{-4.85}
+  \node[ttl] at (-1.55,\yb+1.3) {(b) 在 $h_*=106$ 处强制结束};
+  \node[lane] at (.35,\yb) {会话 $r$};
+  \node[lane] at (.35,\yn) {会话 $r{+}1$};
+  \node[ext] (b100) at (.95,\yb) {100};
+  \node[ext,minimum width=1.5cm] (b101) at (2.55,\yb) {101--104};
+  \node[ext] (b105) at (4.0,\yb) {105};
+  \node[ext] (b106) at (5.2,\yb) {106};
+  \node[reg] (b107) at (6.65,\yb) {107};
+  \node[reg] (b108) at (7.85,\yb) {108};
+  \node[nxt] (n107) at (6.65,\yn) {107};
+  \draw[link] (b100)--(b101); \draw[link] (b101)--(b105);
+  \draw[link] (b105)--(b106); \draw[link] (b106)--(b107);
+  \draw[link] (b107)--(b108);
+  \draw[link] (b106.south)--(n107.west);
+  \draw[rrRed,thick,densely dashed] (5.92,\yb+.55)--(5.92,\yb-.5);
+  \node[tag,text=rrRed,above] at (5.92,\yb+.55) {截断点};
+  \node[tag,below=2pt of b100] {$A_r$};
+  \node[tag,anchor=north east] at ([xshift=-1pt,yshift=-2pt]b106.south west) {$h_*$};
+  \node[note] at (9.4,\yb+.5) {强制指令在 L1 高度 1200 激活。外部链仅将会话 $r$ 保留至 106。旧区域仍可能提交 107、108；外部链丢弃它们。会话 $r{+}1$ 提出自己的 DATA 107，父区块为 106。};
+  % ---------------- legend ----------------
+  \def\yl{-5.95}
+  \node[ext,minimum width=.5cm,minimum height=.34cm] at (-.9,\yl) {};
+  \node[anchor=west,tag] at (-.55,\yl) {外部链};
+  \node[reg,minimum width=.5cm,minimum height=.34cm] at (2.3,\yl) {};
+  \node[anchor=west,tag] at (2.65,\yl) {仅在区域日志中};
+  \node[nxt,minimum width=.5cm,minimum height=.34cm] at (5.7,\yl) {};
+  \node[anchor=west,tag] at (6.05,\yl) {会话 $r{+}1$};
+\end{tikzpicture}

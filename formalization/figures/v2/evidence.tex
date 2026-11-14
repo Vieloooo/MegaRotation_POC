@@ -1,0 +1,24 @@
+% Native TikZ: public evidence verification; no mid-view stake mutation.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\small,line cap=round,line join=round,
+  box/.style={draw,rounded corners=2pt,align=center,fill=white,inner sep=5pt},
+  flow/.style={-{Stealth[length=2mm]},semithick},
+  lab/.style={font=\footnotesize,align=center,fill=white,inner sep=2pt}
+]
+  \node[box,text width=3.05cm,minimum height=.90cm] (one) at (1.83,4.75)
+    {Signed\\statement $m$};
+  \node[box,text width=3.05cm,minimum height=.90cm] (two) at (1.83,2.95)
+    {Signed\\statement $m'$};
+  \node[box,text width=3.95cm,minimum height=1.8cm] (checks) at (7.13,3.85)
+    {Evidence checks\\\footnotesize valid signatures\\identity and scope\\configuration match\\specified semantic conflict};
+  \draw[flow] (one.east) -- (checks.north west);
+  \draw[flow] (two.east) -- (checks.south west);
+  \node[box,text width=2.45cm,minimum height=1.0cm] (proof) at (12.40,3.85)
+    {Evidence $E$};
+  \draw[flow] (checks.east) -- (proof.west);
+  \node[box,text width=2.45cm,minimum height=1.0cm] (lone) at (12.40,1.40)
+    {L1 interface\\\footnotesize external adjudication};
+  \draw[flow] (proof.south) -- (lone.north);
+  \node[lab,text width=8.8cm] at (5.0,1.10)
+    {Only the specified conflicting signed statements are slashable.\\The running instance retains its frozen stake snapshot.};
+\end{tikzpicture}

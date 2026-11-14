@@ -1,0 +1,44 @@
+% Native TikZ fragment. Proposer exclusion does not change the voting committee.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  arrow/.style={-{Stealth[length=1.8mm]},semithick},
+  state/.style={draw=rrBlue!65,fill=rrBlue!3,rounded corners=3pt,
+    align=center,inner sep=5pt,text width=4.2cm,minimum height=1.35cm},
+  lab/.style={fill=white,inner sep=3pt,align=center},
+  wide/.style={draw=black!40,fill=black!2,rounded corners=3pt,
+    align=center,inner sep=5pt,minimum width=14.0cm}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,11.3);
+  \node[wide] at (7.9,.25)
+    {Fixed voting committee: $n=2f+1$, at most $f$ static Byzantine identities.\\
+     L1 updates proposer eligibility and future schedules; quorum membership stays fixed.};
+
+  \node[state,draw=rrRed,fill=rrRed!4] (proof) at (2.55,2.4)
+    {Expose sequencer $F$\\A correct replica receives and relays a valid equivocation proof.};
+  \node[state,draw=rrAmber,fill=rrAmber!4] (lone) at (7.9,2.4)
+    {L1 inclusion and finality\\Evidence eventually produces a finalized exclusion decision.};
+  \node[state,draw=rrTeal,fill=rrTeal!4] (future) at (13.25,2.4)
+    {Future authority records\\There is a finite cutoff $G_F$:\\$F$ is ineligible for $g\ge G_F$.};
+  \draw[arrow,draw=rrRed] (proof.east)--(lone.west);
+  \draw[arrow,draw=rrTeal] (lone.east)--(future.west);
+
+  \node[wide] (fixedauth) at (7.9,4.4)
+    {Previously installed $\mathrm{AUTH}_g$ records remain immutable; exclusion is prospective.\\
+     No immediate re-entry or new Byzantine identity replaces the excluded proposer.};
+  \draw[arrow,draw=rrTeal] (future.south)--(13.25,3.6)--(13.25,3.8);
+
+  \node[state,text width=5.7cm] (finite) at (3.75,6.7)
+    {Finite disruption argument\\After its first exposure, each identity has a finite exclusion cutoff.\\
+     Only finitely many generation indices precede that cutoff.};
+  \node[state,text width=5.7cm,draw=rrTeal,fill=rrTeal!4] (quiet) at (12.05,6.7)
+    {Eventual absence of equivocation freezes\\After finitely many such recoveries, no further current-generation equivocation proof can cancel timers.};
+  \draw[arrow,draw=rrBlue] (finite.east)--node[lab] {finite faulty\\identity set} (quiet.west);
+  \draw[arrow,draw=rrBlue] (3.75,4.9)--(finite.north);
+  \node[wide,draw=rrTeal,fill=rrTeal!3] at (7.9,9.05)
+    {Combine with schedule fairness and the honest-initializer progress lemma.\\
+     Withholding can still cause timeout recovery; it does not invalidate the protected commit window.};
+  \draw[arrow,draw=rrTeal] (quiet.south)--(12.05,8.45);
+  \node[anchor=west,align=left,text width=15.4cm,font=\fontsize{9}{10.5}\selectfont] at (.1,10.65)
+    {Logical dependency diagram. L1 exclusion and activation must progress independently of L2 commitment.\\
+     This is an explicit accountability assumption, not a claim that stake alone prevents Byzantine behavior.};
+\end{tikzpicture}

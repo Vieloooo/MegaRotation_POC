@@ -1,0 +1,58 @@
+% Part 1 v0.3, section 1.3; grouped by responsibility for the meetup.
+\begin{tikzpicture}[font=\fontsize{9.5}{13}\selectfont]
+\path[use as bounding box] (-.8,-2.2) rectangle (21.1,13.6);
+\node[heading] at (10.1,13.1) {区域出块、全局确认、L1 派生：三段职责，两个故障位置};
+\begin{scope}[on background layer]
+  \fill[blue!3,rounded corners=5pt] (.3,9.7) rectangle (20.7,12.35);
+  \fill[orange!3,rounded corners=5pt] (4.4,4.05) rectangle (20.7,6.25);
+\end{scope}
+\node[note,anchor=west] at (.65,12.02) {区域生产：每个成员节点运行 Builder、Program 与 Manager；Publisher 可由持有完整结果者承担};
+\node[box,fill=regionA] (bld) at (2.7,10.75) {\textbf{Block Builder}\\交易、deposit 与候选块};
+\node[box,fill=regionA] (prog) at (7.65,10.75) {\mbox{\textbf{Session Program}}\\区域 BFT / FINAL};
+\node[box,fill=regionA] (mgr) at (12.6,10.75) {\mbox{\textbf{Session Manager}}\\交接、启动与关闭};
+\node[box,fill=regionA] (pub) at (18.5,10.75) {\textbf{Publisher}\\发布完整结果与证明};
+\draw[flow] (bld) -- (prog);
+\draw[flow,<->] (prog) -- (mgr);
+\node[tag] at (10.12,11.55) {结果 / 生命周期};
+\draw[flow] (mgr) -- (pub);
+\node[tag] at (15.55,11.55) {完整区域结果};
+
+\node[box,fill=gray!3] (auth) at (2.7,7.7) {\textbf{L1 Authority}\\质押、授权、Force / RESUME};
+\node[box,fill=regionA] (gfr) at (12.6,7.7) {\textbf{Global Finality}\\\textbf{Rule（GFR）}\\公开重算全局链 $G$};
+\node[box,fill=regionA] (esp) at (18.5,7.7) {\textbf{Espresso}\\排序、最终确认与可读数据};
+\draw[flow] (pub) -- node[tag,left,text=blue] {\textbf{1. 发布 / 排序路径}} (esp);
+\draw[flow] (esp) -- node[tag,above] {已最终化记录} (gfr);
+\draw[flow] (gfr) -- node[tag,left] {$G$、生命周期} (mgr);
+\draw[flow] (auth) -- node[tag,above] {L1 控制日志} (gfr);
+\draw[ref] (auth.north) -- (2.7,9.1) -- (11.55,9.1) -- (mgr.south west);
+\node[tag] at (7.3,9.1) {授权 / 排班};
+\node[note,align=center] (gov) at (2.7,5.65) {治理方 M：Force / RESUME\\质押者与证据提交者};
+\draw[flow] (gov) -- (auth);
+
+\node[box,fill=regularB] (bat) at (12.6,5.05) {\textbf{Batcher}\\打包 $G$ 的连续普通块};
+\node[box,fill=regularB] (cert) at (18.5,5.05) {\textbf{Certifier}\\按同一 $G$ 核对并签名};
+\node[box,fill=regularB] (da) at (6.5,5.05) {\textbf{DA}\\保存批次数据};
+\draw[flow] (gfr) -- node[tag,right] {$G$} (bat);
+\draw[flow,<->] (bat) -- (cert);
+\node[tag] at (15.55,5.95) {认证请求 / 签名};
+\draw[flow] (bat) -- (da);
+\node[tag] at (8.6,5.65) {发布数据};
+
+\node[box,fill=settled,text width=2.65cm] (dp) at (1.6,1.95) {\mbox{\textbf{Deposit Portal}}\\\textbf{（L1）}\\用户的强制包含入口};
+\node[box,fill=settled] (der) at (6.5,1.95) {\textbf{Derivation Rule}\\读 L1 + DA，得到 $D$};
+\node[box,fill=regularB] (bin) at (12.6,1.95) {\textbf{Batch Inbox（L1）}\\按 cursor 接纳认证批次};
+\node[note,text width=3.7cm] at (18.5,2.0) {\textbf{2. 批次交付路径}\\Batcher、Certifier 或 DA 故障，都会阻止批次及时进入 Inbox。};
+\draw[flow] (bat) -- node[tag,right] {批次声明 + 签名} (bin);
+\draw[flow] (da) -- node[tag,left] {批次字节} (der);
+\draw[flow] (bin) -- (der);
+\node[tag] at (9.55,1.0) {接纳 / override 事件};
+\draw[flow] (dp) -- node[tag,above] {deposit} (der);
+\node[box,fill=settled,minimum height=.65cm] (settle) at (6.5,-.1) {\textbf{状态结算（Kailua）}};
+\draw[flow] (der) -- node[tag,left] {$D$} (settle);
+
+\draw[recover,densely dashed] (der.north east) -- (10.2,3.1) -- (10.2,6.6) -- (gfr.south west);
+\node[tag,text=rose,align=left] at (10.2,3.6) {$D$ 的反馈};
+\draw[recover] (auth.west) -- (-.6,7.7) -- (-.6,-1.25) -- (12.6,-1.25) -- (bin.south);
+\node[tag,text=rose] at (4.9,-1.25) {Authority 仅在 RESUME 时 override cursor};
+\node[note,anchor=west] at (.1,-2.0) {虚线反馈：GFR 仅在 RESUME 时采纳 $D$；Manager 读取 $D$ 做 Kill 和锚点状态准备。};
+\end{tikzpicture}

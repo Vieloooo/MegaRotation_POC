@@ -1,0 +1,377 @@
+\section{Discussion: Regular Local Rotation and Further Optimization}
+\label{sec:rotation-discussion}
+
+This section considers a regular change of leader \emph{inside the same
+region}, while retaining BLAME-based recovery for stalled or equivocating
+leaders. It does not install a new regional protocol. We distinguish a
+conservative extension that completes a fixed application boundary before
+handoff, an optional certificate-based opening optimization, and a replacement
+of the regional engine by a protocol whose normal pipeline spans leaders.
+The last option is how the HotStuff-family implementations examined below
+organize ordinary leader progression. Their rules are evidence for design
+choices, not proofs for the synchronous engine in this manuscript.
+
+\subsection{Scope of the inherited quota-trigger experiment}
+\label{sec:quota-experiment}
+The copied Version 3 text of step V1 in \cref{alg:change} includes a tentative
+condition that broadcasts BLAME after a predefined proposal count. We retain
+that condition as an experiment, but the progress proof in
+\cref{thm:progress} applies only to the original missing-progress and
+equivocation triggers. In particular, its inference that an honest leader
+is never blamed no longer holds under periodic quota-triggered BLAME.
+The inherited safety argument relies on proof propagation, stopping old-view
+votes, and safe inheritance; it does not require every exit to accuse a
+faulty leader. Preserving those steps is therefore a plausible basis for
+safety, but does not establish progress under repeated voluntary exits.
+
+Proposal count alone also says nothing about completed timers. For example,
+with $\delta_R=0.1$ ms and $\Delta_R=100$ ms, a healthy pipeline can propose
+100 batches in approximately 20 ms, before its first $2\Delta_R$ commit
+timer expires. An immediate quota-triggered quit can cancel every pending
+timer in that view. This is a finite trace showing the missing progress
+argument, not a claim of permanent deadlock for every quota interpretation.
+If the condition is instead evaluated only at the existing
+$(2p+4)\Delta_R$ deadlines, the proposal count may already exceed the
+intended quota. A precise extension must specify both what is counted and
+when the test is executed.
+
+\subsection{How production HotStuff-family systems advance leaders}
+\label{sec:production-rotation}
+The sources below were inspected on 29 September 2026. Flow and Aptos code
+citations identify repository commits; these are implementation snapshots,
+not attestations of the binaries or feature flags used by every mainnet
+validator. Official release descriptions are dated separately. In this
+subsection $r$ denotes a comparison protocol's round, rather than this
+manuscript's long-lived regional view $v$.
+
+\paragraph{Flow: normal QC progression and TC-based recovery.}
+Flow's HotStuff implementation describes itself as a Jolteon variant.
+Votes for a block in view $r$ are sent to the leader of view $r+1$.
+Its pacemaker has separate \texttt{ProcessQC} and \texttt{ProcessTC} paths.
+The safety rules accept entry to $r$ directly when the parent QC has view
+$r-1$; otherwise they require the preceding view's TC and check the QC
+against the TC's newest QC. A local timeout alone does not advance the
+view. Normal rotation consequently needs no timeout accusation, while
+failed views have an explicit recovery certificate~\cite{flowcode}.
+The finalization layer uses a certified child in the immediately following
+view to finalize its parent. Progression and finalization are distinct
+tests; a single parent QC is not interchangeable with the receipt of
+\cref{sec:receipt}. Flow's engineering account explains that its active
+pacemaker and shorter finalization rule were introduced together~\cite{flowjolteon}.
+
+\paragraph{Aptos: the distinction is explicit in the round state.}
+At commit \texttt{a19dae54b565}, \texttt{RoundState::process\_certificates}
+sets the next round from the highest certificate and records its reason as
+\texttt{QCReady} or \texttt{Timeout}. The inspected ordinary voting path
+sends votes to the next round's elected proposer unless vote broadcasting
+is configured. The same source also contains optimistic proposal handling:
+when materializing an optimistic proposal, it checks both the parent QC's
+round and the parent's identity. We therefore describe this as evidence
+for certificate-driven progression, not as an exhaustive account of all
+configured execution paths~\cite{aptosround,aptosmanager}.
+The official 20 June 2025 Baby Raptr announcement describes an upgrade to
+the Jolteon* and Quorum Store pipeline, including retrieval and verification
+of batch contents before voting~\cite{aptosbaby}. An older DiemBFT account
+alone is insufficient to characterize the current implementation. The
+relevant lesson is that proposer selection, certified round advancement,
+data readiness, and final commitment remain separate responsibilities.
+
+\paragraph{Monad: next-leader collection also needs a recovery design.}
+MonadBFT's documented normal path sends votes to the next scheduled leader,
+which assembles the parent QC and proposes its child. Later certified
+extensions finalize earlier blocks; speculative and full finality are
+distinguished~\cite{monaddocs}. Its 21 November 2025 recovery update describes
+backup votes sent to the current leader as well as the next leader, backup
+QC dissemination, and votes carried in timeout messages that may reconstruct
+a missing QC. More difficult cases retain reproposal and no-endorsement
+certificates~\cite{monadrecovery}. These mechanisms address a specific risk:
+a successor can withhold the votes it collects and attempt to discard its
+predecessor's unfinalized tail. The current MonadBFT paper treats this
+tail-forking resistance as a property beyond ordinary finalized-prefix
+safety~\cite{monadpaper}. A transplant of next-leader vote routing without
+the corresponding recovery rules would omit the main issue at the boundary.
+
+\begin{table}[htbp]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.17\linewidth}Y Y@{}}\toprule
+System & Ordinary advancement & Failure path and lesson\\\midrule
+Flow & Parent QC enables the following view and its leader. & TC proves a skipped
+view; voting rules constrain which certified parent may be extended.\\
+Aptos snapshot & Explicit QC-ready versus timeout-driven round events. & Recovery
+and optimistic proposal handling retain certificate checks and data prerequisites.\\
+MonadBFT & Next leader collects votes and carries the resulting QC forward. &
+Backup collection, timeout evidence and reproposal rules protect supported tails.\\
+Current regional engine & QC enables another proposal by the \emph{same}
+leader; timers establish commitment. & BLAME/equivocation exits the view;
+STATUS and NEWVIEW recover a safe anchor.\\\bottomrule
+\end{tabularx}
+\caption{The transferable distinction is successful advancement versus failure
+recovery. The commit rules, certificate meanings and fault assumptions are
+specific to each engine.}
+\label{tab:real-world-rotation}
+\end{table}
+
+An ordinary proposal-chain sketch is
+\[
+ L_r:B_k\ \longrightarrow\ \text{votes collected by }L_{r+1}
+ \ \longrightarrow\ L_{r+1}:(B_{k+1},Q_r(B_k)).
+\]
+Neither the arrow nor the QC asserts that $B_k$ is already final. Replacing
+the current engine with a chained protocol requires adopting its compatible
+locking, commit and timeout rules together. Jolteon's two-chain construction
+and its recovery predicates are developed as one protocol~\cite{jolteon}.
+
+\subsection{Candidate A: complete a fixed boundary before normal handoff}
+\label{sec:local-boundary-design}
+Introduce a local segment index $e$ and a per-segment application quota
+$K_{\rm loc}\geq1$, distinct from the cross-region quota $K$. A segment may
+contain several recovery views $v$. If its first application height is
+$b_e$ and the current term's last allowed height is $b_{\rm term}$, define
+\[
+ \bar b_e=\min\{b_e+K_{\rm loc}-1,b_{\rm term}\},\qquad
+ q_e=\bar b_e-b_e+1.
+\]
+These quantities are derived from the authenticated opening state. Every
+recovery view of segment $e$ retains the same endpoint $\bar b_e$.
+Normal completion moves to $(e+1,0)$; a failure moves to $(e,v+1)$.
+For example, the scheduled leader could be
+\[
+ \ell_i(e,v)=\mathcal L_i[(e+v)\bmod n_i].
+\]
+This is a candidate scheduling rule. After recovery, the next segment's
+scheduled leader can coincide with the last recovery leader; a requirement
+to exclude that identity would need a different authenticated schedule.
+
+\begin{mdframed}[linewidth=.6pt,skipabove=9pt,skipbelow=9pt]
+\small\noindent\textbf{Design sketch A: final-boundary local rotation.}
+\begin{enumerate}[label=\textbf{A\arabic*.}]
+\item \textbf{Bound admission.} Validate the complete proposed ancestry and
+reject an APP beyond $\bar b_e$ in this segment, including attempts in a later
+recovery view. The local counter does not reset on failure.
+\item \textbf{Finish.} After the terminal APP is proposed, preserve its
+commit timer. Fresh descendants may be DRAIN blocks, following the existing
+completion adapter. Reaching the quota emits no BLAME and cancels no timer.
+\item \textbf{Recover if necessary.} A genuine progress failure or
+equivocation invokes the existing recovery path within segment $e$.
+If NEWVIEW inherits the terminal APP without a running timer, a fresh DRAIN
+descendant can complete it. The remaining application quota stays zero.
+\item \textbf{Export a final boundary.} Any holder may disseminate the
+terminal receipt $F_{\bar b_e}$, anchor $A_{\bar b_e}$ and missing data.
+Completion does not require a release signature from the old leader.
+\item \textbf{Open the successor segment.} Provided the region is still
+authorized and the cross-region term has not ended, use the verified anchor
+as the next segment's initial checkpoint. Conservatively retain the existing
+NEWVIEW initialization. The first fresh APP has height $\bar b_e+1$.
+\end{enumerate}
+\end{mdframed}
+
+The conservative realization treats each segment as a separately named
+internal SMR instance, for example with instance identifier
+$s_e=\Hash(\Tag{SEGMENT},s,e,A_{b_e-1})$. Its signing and timer contexts
+include this identifier. A normal opening initializes the next instance
+from a final checkpoint; it is not a timer-free direct commit inside the
+old instance. Global application and mini-block heights, regional authority,
+the outer term counter and its remaining quota continue unchanged.
+
+This separation matters for DRAIN. The old physical log may extend beyond
+the terminal application block through control-only descendants. Those
+records are retained in the old instance; the new instance's root represents
+the finalized application checkpoint. The proposed composition promises
+continuity of the application projection. It does not silently discard
+committed physical entries from a single continuing SMR log. A design that
+instead retains one physical log must specify and certify its physical
+terminal anchor as well.
+
+The hard endpoint and the final receipt do different work. The endpoint
+excludes every old-segment APP beyond $\bar b_e$; the receipt fixes the
+contents through that endpoint. A receipt for a merely local ``latest
+block'', without a common endpoint, supplies no closure guarantee.
+Normal closure, delayed old-view recovery, and acceptance of the new
+instance still require the composition argument listed below.
+
+\subsection{Candidate A+: replace initialization with an explicit opening certificate}
+\label{sec:ready-open-design}
+Once the terminal anchor is final, the original leader need not release the
+segment and a new leader need not discover an unknown highest old-view
+anchor. An optional optimization is to make installation of the common
+checkpoint explicit. Define the candidate boundary statement and evidence
+\[
+ \begin{aligned}
+ R_e&=(\mathit{cfg},s,e,e+1,\bar b_e,A_{\bar b_e},\ell_i(e+1,0)),\\
+ \mathcal H_e&=(R_e,F_{\bar b_e},\text{required ancestry and authority evidence}).
+ \end{aligned}
+\]
+The hashed statement uses canonical block identities, not the encoding of
+a particular signature list. Thus two encodings of the same final receipt
+cannot create competing checkpoint identities.
+
+After validating $\mathcal H_e$ and acquiring the data, a member may persist
+the next instance's root and sign
+\[
+ \Sig_S(\Tag{READY},s,e+1,\Hash(R_e)).
+\]
+READY messages are disseminated so a failed collector cannot permanently
+withhold the opening evidence. A candidate opening certificate $O_{e+1}$
+contains matching READY signatures of weight $>2W_i/3$. Signers endorse at
+most one root for this next-instance identifier, with that state durable
+before sending. The next leader's first proposal carries $O_{e+1}$ and
+extends exactly the installed anchor.
+
+This is a \emph{new initialization rule}, not an ordinary old-view vote QC.
+The first-proposal predicate must explicitly accept the opening certificate;
+subsequent proposals return to the chosen engine's normal parent-QC rule.
+The existing $>W_i/3$ final receipt establishes past commitment, whereas
+the proposed $>2W_i/3$ READY set attests to checkpoint installation. Neither
+threshold can be substituted for the other merely because both objects are
+called certificates. READY also cannot prove closure of an unrestricted old
+stream; the fixed boundary and its finality are prerequisites.
+
+Before any opening certificate exists, missing terminal evidence keeps the
+old segment in completion/recovery. After a valid opening is disseminated,
+failure of its scheduled leader must enter recovery in the new instance at
+the same installed root. Entry skew, timeout start points, certificate
+availability, and the race between these cases remain explicit design
+obligations. Merely collecting READY signatures is not a complete pacemaker.
+
+\begin{figure}[htbp]\centering
+\input{figures/v4/local-rotation-options.tex}
+\caption{Two optimization levels. Candidate A/A+ waits for the fixed terminal
+application receipt; A+ changes only the subsequent opening procedure.
+Candidate B permits normal leader advancement before finality by adopting
+a compatible consensus engine. Arrows show causal dependencies, not timing
+to scale. These are discussion sketches, not additional established protocols.}
+\label{fig:local-rotation-options}
+\end{figure}
+
+\subsection{Candidate B: a pipeline whose normal progression crosses leaders}
+\label{sec:qc-rotation-design}
+If waiting for terminal finality at every local boundary is too expensive,
+the more substantial optimization is a regional engine with QC-driven
+normal leader progression, as in the implementations above. A certified
+parent can then enable the next scheduled leader while an earlier block is
+still progressing toward the engine's finality condition. The engine's
+final output, rather than a bare vote QC, must feed the existing stream
+receipt and proposer interfaces.
+
+This cannot be implemented in the present synchronous engine by merely
+changing the leader after each QC. Step S4 requires a timer to expire while
+the member is still in its view, and S1 requires a current-view parent QC.
+The preservation proof also uses quit propagation and the wait before the
+next entry lock. A direct cross-leader QC transition changes all three
+dependencies. Carrying an old timer across such a transition without a new
+proof is equally unsupported.
+
+There are two possible research routes. One is to adopt a particular
+partially synchronous chained HotStuff-family engine and prove that its
+finality/export interface implements the regional service. The other is
+to keep synchronous finality while adopting a purpose-built rotating-leader
+construction. Abraham, Nayak and Shrestha give a synchronous construction
+with responsive proposal progression across leaders and $2\Delta+O(\delta)$
+good-case commitment latency~\cite{rotatingsync}. Its epoch synchronization,
+certificate handling and commit timers are part of that construction.
+Its count-based assumptions and its lower bound for
+$n/3\leq f<n/2$ do not directly establish a lower bound or an upper bound
+for this manuscript's stake-weighted, below-one-third model.
+
+Next-leader vote collection can reduce ordinary message fanout, but makes
+QC availability at a faulty successor a design concern. Backup collection
+and reconstruction from retained votes are relevant optimizations to study.
+The present all-to-all regional votes already disseminate this information;
+removing that dissemination changes both communication and recovery.
+Similarly, aggregate signatures can reduce repeated certificate payloads,
+but signer identification, voting-weight checks, setup and retrieval costs
+must remain in the analysis. None of these changes is included in the
+baseline costs of \cref{sec:complexity}.
+
+\subsection{Timing and communication to measure for the candidates}
+Let $T_{i,e}^{\rm boundary}$ run from the terminal APP proposal until its
+final receipt is assembled. It equals the baseline $T_i^{\rm receipt}$ on
+the healthy direct-commit path, with additional completion/recovery costs
+otherwise. Let $T_{i,e}^{\rm local\text{-}xfer}$ include remaining receipt/data
+dissemination and readiness at the same regional membership. It must not
+be set to zero just because the membership is unchanged. For Candidate A,
+the terminal-to-next-proposal interval is
+\[
+ H_{i,e}^{A}=T_{i,e}^{\rm boundary}
+            +T_{i,e}^{\rm local\text{-}xfer}+T_{i,e+1}^{\rm init},
+ \qquad T_{i,e+1}^{\rm init}\leq2\Delta_R+2\delta_R
+\]
+under the baseline honest-leader initialization and readiness premises.
+For Candidate A+, define $T_{i,e}^{\rm open}$ from the same assembled-receipt
+endpoint through dissemination, READY collection, opening and the first
+new proposal. Then
+\[
+ H_{i,e}^{A+}=T_{i,e}^{\rm boundary}+T_{i,e}^{\rm open}.
+\]
+With cached data, an honest successor and a fully specified opening
+pacemaker, $T_{i,e}^{\rm open}=O(\delta_R)$ is a design target. It is not a
+proved bound in this version, and it does not remove the preceding
+$2\Delta_R$ terminal commitment wait.
+
+For homogeneous fault-free segments of $q$ APP batches, with no outer-term
+boundary in the measurement window, the same proposal-gap accounting gives
+\[
+ \bar I_{\rm loc}=\frac{(q-1)I_i+H_{\rm loc}}{q},\qquad
+ \lambda_{\rm loc}=\frac{q}{(q-1)I_i+H_{\rm loc}}.
+\]
+For a finite outer term, sum its actual internal, local-boundary and
+cross-region gaps. A coincident local and cross-region endpoint has one
+successor opening, not two sequential handoffs. Failed attempts and all
+DRAIN blocks retain their actual costs.
+
+Candidate A pays the already analyzed initialization exchanges for every
+local segment. In A+, all-to-all READY dissemination takes $O(n_i^2)$
+messages. With cached boundary evidence, its short signatures alone cost
+$O(n_i^2\kappa)$ bits; repeatedly attaching or forwarding explicit
+$O(n_i\kappa)$-bit certificates can restore an $O(n_i^3\kappa)$ control
+term. Missing data is additional. Therefore a shorter opening delay does
+not automatically imply linear communication. Candidate B requires fresh
+accounting from the selected engine, including its failure path and the
+post-finality receipt exports used here.
+
+\subsection{Proof obligations and evaluation priorities}
+\label{sec:rotation-obligations}
+Before any candidate becomes normative, it must discharge the following
+obligations rather than inherit them from its name or from an implementation
+with different assumptions.
+\begin{enumerate}[label=\textbf{P\arabic*.}]
+\item \textbf{Unique boundary and successor.} Every accepted terminal
+receipt for segment $e$ determines the same application anchor; normal
+opening and delayed recovery cannot authorize competing successors or
+application positions. The claim includes the physical-log/application
+projection distinction.
+\item \textbf{Preservation under overlap.} A node learning a terminal
+receipt while peers are recovering cannot cause loss of completed honest
+work. READY persistence, late votes, timer retirement and data retention
+must be reconciled explicitly. Old release signatures are unnecessary.
+\item \textbf{Completion before normal advancement.} For A/A+, quota
+completion keeps pending timers alive and recovery does not repeatedly
+reset the segment. Establish eventual terminal finality and opening even
+if the scheduled successor or a collector fails. For B, establish the
+corresponding chain-based progress property instead.
+\item \textbf{Leader schedule compatible with weights.} Faulty stake below
+$W_i/3$ does not imply that fewer than one third of identities are faulty.
+For example, one honest identity may hold $0.8W_i$ and three faulty identities
+the remaining $0.2W_i$. A once-per-identity cycle then has no consecutive
+honest leaders. A chained engine whose progress argument needs such a run
+cannot infer it from the current assumptions. Its schedule, leader tenure
+or probabilistic progress premise must supply what its proof requires.
+\item \textbf{Outer authority and consumer compatibility.} A local opening
+does not reset $K$, bypass an effective L1 retirement or alter delivered
+prefixes. The rollup verifier must authenticate local-segment succession if
+it becomes part of signing authority. Execution, DA and L1 settlement keep
+their separate meanings.
+\item \textbf{Measured endpoints.} Measure proposal spacing, terminal
+finality, first successor receipt, recovery delay and bytes separately.
+Include $K_{\rm loc}=1$, small $\delta_R/\Delta_R$, missing ancestry, a
+withholding QC collector, overlapping receipt and timeout delivery, and
+coincident local/outer/L1 boundaries. A bounded simulation can expose bad
+traces but does not replace the weighted safety and progress proofs.
+\end{enumerate}
+
+The immediate extension to formalize is Candidate A: fixed application
+segments, final-boundary completion and ordinary initialization, with
+BLAME reserved for recovery. A+ isolates a subsequent startup optimization.
+Candidate B addresses the stronger goal of sustaining a pipeline across
+leaders without draining it at every normal boundary; it is an engine
+change and should receive its own specification and proof before replacing
+the regional baseline.

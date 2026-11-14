@@ -1,0 +1,31 @@
+{
+  "version": "3.9",
+  "scope": "English formal source and dependencies; Chinese companion separate",
+  "main_sha256": "63dd6770de6aaed0f442c53c6fcd3685fb5a37b478140d67970ee2c4719058cb",
+  "files": {
+    "baseline/manifest.json": "d95999e9e95a9b958cf710de39b0171ae333b99c35de90c83bfc6fc4e433ca2b",
+    "baseline/model_and_assumptions.tex": "1309fa5f8db29f082c4757bb07a1c7c4aa6723a277a75cdbf976566e2f68a387",
+    "baseline/sync_hotstuff_rr_part1_core.tex": "00533f01567a90cd034e6c3869dfa561b7c5cf476312fc0ce8313b7060f654d3",
+    "baseline/sync_hotstuff_rr_part2_rotation_v3_1.tex": "483bdfbf3668a0f892af38df264655e54e0dbd73a1c26fbd45111d1730cec034",
+    "baseline/sync_hotstuff_rr_part2_rotation_v3_1_zh.md": "7dbd6035096fabf06f200f25183312c7708bbeab1cfade97fe560eda5184ac40",
+    "figures/cross_region_rotation_v3_2/modules.pdf": "cc16b85e71089d597c6b970b27a1a8c9ee8e80c03d34a39e0f7392ce85dba62d",
+    "figures/cross_region_rotation_v3_2/modules.tex": "5aea9ecc96c9d63b23e2df49c38cdb73bead660f7fd69de1f82c99428fb4a6a5",
+    "figures/cross_region_rotation_v3_5/candidate_ready.pdf": "9bed3112ec9c77d9c6924241ec89773d6966c4662d251badf50f027b72165b7e",
+    "figures/cross_region_rotation_v3_5/candidate_ready.tex": "c59a0ebda4c8e2f0190186174f7399d3eae53072eebb6cf11d83f49ee0225b16",
+    "figures/sync_hotstuff_rr_rotation_v3_1/regular-handoff.tex": "2d81433fcb0e5509d4ac3e4912ed85f5af78088c4983bc4b880f7fc7dbf63094",
+    "figures/sync_hotstuff_rr_rotation_v3_5/forced-handoff.tex": "53b6370496f548aabd1286b7c371b686143050ebd72e062b76269928cb64277b",
+    "figures/sync_hotstuff_rr_rotation_v3_6/observer-finality.tex": "2707d6823e7a865d47caf10bb949122a17ff122bd1dff2a00e3c78ea8f30a000",
+    "sections/rotation_v3_5_health.tex": "21ce547d20c30e42a61bd7c58a5d45e51b5fa2aeeb71bc84a1a995f93155e12b",
+    "sections/rotation_v3_5_ready_bundle.tex": "4048a979add0bfe1662af309d5b30f7e72b105e8d5b6fda80de415ba43330152",
+    "sections/rotation_v3_6_control.tex": "37e7c065b33cead1f334878f9fe92e761472464e5a67292947cd9a4f251d2285",
+    "sections/rotation_v3_8_carrier.tex": "cb2de3e19a5c69d3a42ef1341eadd533336a3eeb75192813aff015483ed10c72",
+    "sections/rotation_v3_8_exports.tex": "06e835d96d595484a4cab19bf79b640a9412cd6c0e29afaea55518cfadaac5b2",
+    "sections/rotation_v3_8_receipt_kernel.tex": "2ff7f8e190ec5f67a3684cd29848a1bddefd7c22f2cbe41dac322924d98b841a",
+    "sections/rotation_v3_9_liveness.tex": "5b3376a83cee0f6e6133819b383ae4b97236bf5fb612a02bd8ae99cf73eeb4bd",
+    "sections/rotation_v3_9_public_requests.tex": "1c25bbbedcd64fecd660c74943e4c0d583caa8df95eb7cc47e5ca9d0e60e7ee9",
+    "sections/rotation_v3_9_requests.tex": "593814bfdf9988439de249533da32c79543426870ac25d7087aebf5987226021",
+    "sections/rotation_v3_9_retirement.tex": "d4b8d30635c9b5123409250aaefcd82d37bcebf3fc942017e4bc41ec0a2a2e0b",
+    "sections/rotation_v3_9_source_step.tex": "9c25926926439a0010d38a1373d21aba512fef01a6073fae92598dc95c58d310",
+    "sync_hotstuff_rr_part2_rotation_v3_9.tex": "63dd6770de6aaed0f442c53c6fcd3685fb5a37b478140d67970ee2c4719058cb"
+  }
+}

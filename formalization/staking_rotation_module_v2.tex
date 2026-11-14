@@ -1,0 +1,430 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,booktabs,tabularx,array,enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\Tag}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\Proc}[1]{\mathsf{#1}}
+\newcommand{\Hash}{\mathsf H}
+\newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
+\hypersetup{pdftitle={Staking and Rotation Module v2}}
+\begin{document}
+\begin{center}
+{\Large\bfseries Staking and Rotation Module}\\[4pt]
+{\large Version 2: reviewed and revised modular design}\\[3pt]
+10 October 2026
+\end{center}
+
+\textbf{Purpose.} This module manages stake-backed membership, derives
+regional and local leader orders, and applies multisignature regional
+eligibility updates. A regional BFT engine accepts a fixed weighted member
+set and a function $v\mapsto\ell(v)$, and implements its own view changes.
+We do not change its voting, commitment, or timeout rules. The initial
+profile uses one collateral token, fixed region identifiers, whole-position
+joins and exits, and one occurrence of each identity per local cycle.
+Partial exits, delegation, region migration, and stake-proportional leader
+frequency are extensions, not implicit features.
+
+\textbf{Revision scope.} Version 2 follows independent security review of
+v1: it completes idle and installation transitions, distinguishes voluntary
+churn from penalties, and qualifies production progress. The construction
+follows the fixed-snapshot and status/closure
+separation in \texttt{main\_v3.tex}. It deliberately serializes every
+cross-region handoff on L1, including ordinary quota expiry. No L1
+transaction is required for an ordinary batch or an in-region view change.
+
+\section{State and external contracts}
+\label{sec:interfaces}
+
+L1 is an authenticated, finalized, totally ordered control log. Clients
+accept control actions only after finality. Its block timestamp is the
+control clock $t$; a local wall-clock observation changes no authority.
+Actions in the same block follow transaction order. Due scheduled events
+are processed before every action at their effective timestamp, including
+when several overdue events are processed together. Registry updates are
+atomic in this order. Protocol parameters and algorithm identifiers are
+fixed for this profile; there is no discretionary upgrade operation.
+
+Let $\mathcal R$ be a fixed, canonically ordered set of regions. A stake
+position $o$ has a unique identifier, an immutable region $r(o)$, public
+key, withdrawal address, and initially deposited amount $b_o$. Keys cannot
+be shared by two concurrent positions. Position IDs remain available for
+historical verification. A configuration epoch $e$ contains a frozen table
+$S_e=\{(o,r(o),pk_o,s_o^e)\}$ with positive weights and
+\[
+ V_r^e=\{o\in S_e:r(o)=r\},\qquad
+ W_r^e=\sum_{o\in V_r^e}s_o^e.
+\]
+Thus the requested notation $s_{r,j}^{(e)}$ denotes $s_o^e$ for the
+$j$th position in region $r$. Weight is the recorded stake at the snapshot,
+not a continuously recomputed quorum denominator.
+
+The registry stores $(e,S_e,t_e,\rho_e,n,\alpha,A,\chi,P,z)$: configuration,
+its actual activation timestamp, seed, a monotone authority counter,
+the current session or $\bot$, the last closed checkpoint, the effective
+status map, at most one frozen next-epoch plan, and a persistent off-trigger
+latch $z$ bound to the current authority counter, or $\bot$. A session is
+$\alpha=(e,n,r,A_{\rm start})$. The application height is global;
+the local view starts at zero for every fresh session. All signatures bind
+the chain, registry, configuration, and session, in addition to their
+message-specific fields.
+
+\textbf{Public module interface.} State-changing calls are
+$\Proc{Join}(r,pk,w,b)$, $\Proc{Cancel}(o)$, $\Proc{Exit}(o)$,
+$\Proc{Claim}(o)$, $\Proc{Status}(U,\Sigma)$,
+$\Proc{Prepare}(e)$, and $\Proc{Advance}$ from Section~\ref{sec:transition}.
+Here $w$ is the withdrawal address, and owner-only calls require its
+authorization. Any relayer may prepare a plan or advance a justified
+handoff. Read interfaces return the immutable $S_e$, region order
+$\mathcal L_R^e$, leader function $\ell_{e,r}(v)$, and finalized current
+authority. A receipt verifier takes its original session, contents and
+native finality witness, and applies the acceptance rule below.
+
+\begin{assumption}[Required service contracts]
+\label{ass:services}
+The regional BFT provides prefix safety and its stated conditional progress
+for each fixed configuration and supplied cyclic leader map. Its fault bound
+must hold separately in every serving region, measured using $S_e$.
+The L1 control log is safe. Signature and hash checks are sound.
+The interfaces below have their stated semantics.
+\end{assumption}
+
+\begin{tabularx}{\linewidth}{@{}p{.26\linewidth}Y@{}}
+\toprule
+Interface & Required behavior\\\midrule
+$\Proc{Open}(\alpha,S_e,\ell,A)$ &
+Start only from the finalized L1 authority for $\alpha$, after fetching
+and verifying $A$ and its required data. Repeated calls restore the same
+persisted session, never reset its signing state.\\
+$\Proc{Final}(\alpha)$ &
+Export a finalized application prefix with a publicly verifiable native
+BFT finality witness under the historical configuration.\\
+$\Proc{Close}(\alpha,\gamma)$ &
+Order a terminal control command for the justified trigger $\gamma$;
+return $(A^*,C)$, a checkpoint and terminal finality certificate.\\
+$\Proc{VerifyClose}(\alpha,\gamma,A^*,C)$ &
+Verify that $A^*$ contains every finalized or already-finalizable application
+prefix of $\alpha$ and that no valid application continuation beyond
+$A^*$ can subsequently arise in that session.\\
+$\Proc{Seed}(e,d)$ &
+Publish one verifiable seed for epoch $e$ and frozen-plan digest $d$.
+It is unpredictable before the plan is fixed. Publication progress is
+an additional liveness assumption.\\
+\bottomrule
+\end{tabularx}
+
+\textbf{Closure is an additional BFT integration requirement.}
+A terminal command must be ordered in the same log as application batches,
+with application validity forbidding further application entries after it.
+An ordinary checkpoint QC, signatures on the latest observed tip, or a
+local stop timer does not implement this contract. If a failed region
+cannot produce $C$, this minimal module waits. A more available recovery
+mechanism must separately prove the same closure contract.
+
+\section{Escrow, requests, and bounded membership changes}
+\label{sec:stake}
+
+For each region fix positive inbound/outbound stake budgets $Q_r^+$ and
+$Q_r^-$, request-count budgets $N_r^+$ and $N_r^-$, and a minimum bond
+$s_{\min}>0$. Each admitted position has
+\[
+s_{\min}\le b_o\le s_{\max,r}\le\min\{Q_r^+,Q_r^-\}.
+\]
+The budgets bound voluntary queued additions and exits by
+$\sum_r Q_r^\pm$. Count these directions separately even if net stake is
+zero. Penalty-induced balance losses and mandatory removals are additional
+changes, not falsely charged to this voluntary bound.
+The upper bound on an indivisible position prevents a permanent oversized
+queue head. There is no permanent administrator-assigned membership seat.
+
+\begin{enumerate}[label=\textbf{S\arabic*.},itemsep=4pt]
+\item \textbf{Join.} Anyone deposits an admissible bond and registers the
+position and proof of key possession. Its L1 sequence number determines
+its order in region $r$'s inbound FIFO. It is \Tag{Pending}; it has no vote
+or leader eligibility. After a fixed delay $T_J$ it can enter a snapshot.
+The operator must synchronize before its first service session.
+\item \textbf{Cancel pending.} The withdrawal owner may refund a pending
+position only before it is selected into a frozen plan. Selected positions
+are \Tag{Reserved}, cannot be refunded, and remain locked through activation.
+Cancellation deletes its live inbound request (an implementation may keep
+a skipped historical tombstone); it cannot remain an ineligible FIFO head.
+\item \textbf{Request exit.} The owner of an active position may append one
+irrevocable request to its region's outbound FIFO. A request does not stop
+participation or release funds. The position remains active until actually
+omitted by an installed successor configuration.
+\item \textbf{Select changes.} Use remaining balances $B_o(F^-)$ from
+the canonical state strictly before cutoff $F$. First omit every incumbent
+with $B_o(F^-)<s_{\min}$; these mandatory departures are not budget-limited,
+and any associated exit request is consumed. Remove canceled or completed
+request records. In each remaining FIFO select the longest prefix fitting
+the amount and count budgets; a join must also have reached age $T_J$ at
+$F$. Charge a voluntary exit its old weight $s_o^e$, and a join its locked
+balance. Leave the unselected suffix queued. Different regions and
+directions have independent queues. Remove selected voluntary exits,
+add selected joins, and assign every included position the positive weight
+$B_o(F^-)$. Record the union of mandatory and voluntary departures.
+No regional stake floor may veto an exit; an empty region is unselectable.
+Selected requests are consumed when the plan is frozen, and their selected
+effects are stored in that unique plan until installation.
+\item \textbf{Retire and release.} On actual installation of the successor
+configuration, removed positions enter \Tag{Cooling} at time $t_o^{\rm ret}$.
+They no longer vote in new sessions, but retain required old data for
+$T_D$ and remain liable through $u_o=t_o^{\rm ret}+T_D+T_E^{\rm evid}$.
+A claim is timely if the external adjudicator accepts it into L1 at timestamp
+$t\le u_o$ for an obligation of this position; merely submitting malformed
+evidence does not create a claim. At $t>u_o$, release only residual funds
+not encumbered by timely unresolved claims. Adjudication and payment are
+bound to the accused position and historical signing domain, not a reused
+public key's later bond. Successful payment is recorded exactly once.
+Only the withdrawal address receives released funds.
+\end{enumerate}
+
+\textbf{Historical liability.} Slashing adjudication is external to this
+module. A debit reduces the remaining escrow, never a historical quorum
+denominator. Each snapshot records the balance available at its cutoff;
+subsequent debits do not redraw that snapshot or its schedule. The same
+bond is not independently recoverable once per historical epoch: cumulative
+payments cannot exceed its remaining funds. We claim preservation of
+liability against voluntary withdrawal, not an invariant lower bound on
+collateral after penalties. Timely disputes may delay release until resolved.
+An intervening debit can therefore leave a frozen weight larger than the
+remaining collateral, including zero remaining collateral until the next
+cutoff removes the position. The BFT fault premise remains measured using
+the frozen weights; no economic-security lower bound is claimed from them.
+
+If L1 or safe retirement stalls indefinitely, active and reserved funds may
+remain locked indefinitely. Unconditional bounded withdrawal would require
+an additional, proved expiration/fencing mechanism. Churn limits do not
+prove that the next region still meets the BFT fault bound.
+
+\section{One next-epoch plan}
+\label{sec:epoch}
+
+Fix a target epoch duration $T_{\rm ep}$ (for example 30 minutes), cutoff
+offset $0<T_F<T_{\rm ep}$, join delay $T_J$, and a randomness source whose
+round is fixed in advance by the protocol. Actual configuration $e$ begins
+at its finalized L1 installation timestamp $t_e$. Define
+\[
+ F_e=t_e+T_F,\qquad D_e=t_e+T_{\rm ep}.
+\]
+The cutoff uses the complete canonical L1 state/action prefix with timestamps
+strictly smaller than $F_e$. The first finalized block crossing $F_e$
+makes that prefix determinate; any caller can materialize its result.
+Before processing any action at or after
+$F_e$, the registry first materializes the plan. Late callers cannot move
+the cutoff, reorder requests, or change the selected set.
+
+Using S4, form
+\[
+P_{e+1}=(e+1,\Hash(S_e),F_e,S_{e+1},J_{e+1},X_{e+1}),\quad
+d_{e+1}=\Hash(P_{e+1}).
+\]
+Reserve selected joins and mark selected departures; neither change is
+yet effective. Obtain $\rho_{e+1}=\Proc{Seed}(e+1,d_{e+1})$ only after
+the cutoff. One seed reference is accepted; no retry, cancellation, or
+alternative seed is allowed because a participant dislikes the result.
+The plan is ready when its table and seed are publicly verifiable.
+
+At $D_e$, request closure of the then-authorized session. Installing $e+1$
+requires a ready plan and either safe closure or an already idle registry.
+Until installation, $S_e$ remains the verification configuration.
+Nominal expiry initiates retirement; it is not an automatic switch of
+weights or permission for an alternative region to produce. Only one
+next plan exists, so a delay does not create competing future configurations.
+The next deadline is measured from the actual installation of $e+1$.
+The 30-minute target is an L1 timestamp interval, not a promise of
+30 minutes of usable production after finality and synchronization delays.
+
+\section{Derived rotation maps and multisignature control}
+\label{sec:maps}
+
+Let $\Proc{Perm}$ be a fully specified deterministic shuffle using canonical
+IDs, domain-separated randomness and unbiased integer sampling. Define
+\[
+\begin{aligned}
+\mathcal L_R^e&=\Proc{Perm}(\mathcal R,
+ \Hash(\texttt{REGION},e,\rho_e)),\\
+\mathcal L_r^e&=\Proc{Perm}(V_r^e,
+ \Hash(\texttt{LEADER},e,r,\rho_e)),\\
+\ell_{e,r}(v)&=\mathcal L_r^e[v\bmod |V_r^e|],\qquad V_r^e\ne\varnothing.
+\end{aligned}
+\]
+The BFT owns $v$ and decides when to advance it. The module never restarts
+a view because an operator requests exit. This profile randomizes order;
+it does not make identity frequency proportional to stake. An adversary
+may split stake across identities subject to the bond limits; this does
+not change its total vote weight, but can increase its leader frequency.
+
+A region is eligible at control time $t$ iff
+\[
+\Proc{Eligible}(e,r,t)\iff W_r^e>0\ \land\ \chi_t(r)=\Tag{live}.
+\]
+At epoch installation or from idle, select the first eligible region in
+$\mathcal L_R^e$. At a within-epoch handoff from $r$, scan the next positions
+of that cyclic list once, excluding $r$. If no other region is eligible,
+renew $r$ in a fresh session if $r$ is itself eligible; otherwise remain
+idle at the closed checkpoint. This explicit same-region renewal is a
+small extension of the waiting rule in v3.
+
+The status committee has fixed keys and threshold $q_C$. It submits
+\[
+U_j=(\text{chain},\text{registry},j,\Hash(U_{j-1}),a_j,\chi_j)
+\]
+with $q_C$ distinct signatures. The registry checks consecutive versions,
+the predecessor, strictly increasing effective timestamps, and
+$a_j\ge t_{\rm include}+T_N$ for notice $T_N>0$.
+Only the finalized installed update is authoritative. It sets future
+eligibility, not stake weights, random seeds, application checkpoints, or
+an arbitrary successor. Committee key changes are outside this profile.
+
+When an effective update makes the current region off, store its authenticated
+update identifier in $z$ for that exact session. A later live update does
+not cancel it, even if both updates are replayed before the next handoff.
+Updates to inactive regions only affect subsequent selection. A recovering
+region must fetch the current checkpoint before producing. The label
+\Tag{live} authorizes selection; it is not a proof of actual responsiveness
+or of the regional BFT fault assumption. A corrupt committee can filter
+the published random order or halt service, even though it cannot forge
+a closure certificate.
+
+\section{The single authority transition}
+\label{sec:transition}
+
+Each regional session admits at most $K$ fresh application batches above
+its start anchor. An empty batch may be used if the application permits
+idle progress. Local view changes, re-certifications and terminal commands
+do not consume this quota. The BFT adapter enforces the application count.
+
+\begin{enumerate}[label=\textbf{R\arabic*.},itemsep=4pt]
+\item \textbf{Trigger.} Request $\Proc{Close}(\alpha,\gamma)$ when its
+quota is exhausted, its region has a latched off event, or the configuration
+deadline has arrived. $\gamma$ authenticates the applicable trigger.
+Closure uses the existing BFT; it does not discard in-flight commitments.
+\item \textbf{Seal.} Any relayer submits
+$\Proc{Advance}(n,\alpha,\gamma,A^*,C)$ to L1. Require the expected counter
+and session to equal registry state. Apply due control events first.
+For a non-idle predecessor, verify both the R1 trigger and the native
+closure bound to that predecessor; an ordinary finalized checkpoint is
+insufficient. For an idle predecessor require $A^*=A$ and no new closure.
+\item \textbf{Choose configuration.} If $t\ge D_e$ and the next plan is
+ready, install it, promote selected joins from \Tag{Reserved} to
+\Tag{Active}, retain continuing active positions, and execute S5 for
+all recorded departures. Clear the consumed plan and set the new $t_e$.
+If the deadline has arrived but the plan is not ready, set the successor
+to $\bot$ and skip R4. Otherwise keep $e$.
+\item \textbf{Choose region.} If a new epoch was installed \emph{or the
+predecessor was idle}, select the first eligible entry of the active list.
+Otherwise use the within-epoch rule with the predecessor region.
+An empty eligible set yields $\bot$.
+The rule reads the status map effective at the L1 transition timestamp;
+the relayer cannot supply a different target or observation time.
+\item \textbf{Commit authority.} Atomically store $A^*$, consume the old
+session, clear its latch and increment $n$. An idle advance that neither
+installs an epoch nor opens a region is a rejected no-op. Record either a fresh
+$\alpha'=(e,n,r',A^*)$ or $\bot$. Only after this transaction is finalized
+may $\Proc{Open}$ start the successor. A later status update is evaluated
+against that successor, never against an already consumed predecessor.
+\end{enumerate}
+
+Initialization supplies one checkpoint and the first authenticated stake
+table and seed, with no predecessor session. Every later session consumes
+exactly one closed predecessor or resumes from the sole stored idle anchor.
+\textbf{Receipt acceptance.} Verify original-session authorization in the
+finalized L1 history, native finality under that session's immutable table,
+and extension of its opening anchor. For a closed session also verify that
+the receipt is a prefix of its recorded closing anchor. A delayed receipt
+therefore confirms retained history; it neither reopens authority nor
+changes a historical denominator. A local successor proposal without
+finalized L1 authorization is rejected. A status update alone never
+invalidates an old finalized receipt.
+
+\section{Timeouts and unavailable dependencies}
+\label{sec:timeouts}
+
+\begin{tabularx}{\linewidth}{@{}p{.25\linewidth}Y Y@{}}
+\toprule
+Clock or event & Action & What it does not authorize\\\midrule
+Native BFT timeout & Advance local view under its own protocol and
+$\ell_{e,r}$. & Change region, members, or stake denominator.\\
+Observed service silence $T_{\rm obs}$ & Submit an observation to the
+committee; the committee may schedule off. & An automatic slash or takeover.\\
+Status notice $T_N$ & Make the installed map effective in L1 order;
+latch closure if needed. & Claim that wall-clock preparation or data recovery
+has completed.\\
+Epoch deadline $D_e$ & Request closure and attempt the next configuration.
+& Activate without closure and a verified plan.\\
+Closure retry timeout & Retry or alert; invoke native BFT recovery.
+& Substitute a locally latest checkpoint for $C$.\\
+Randomness or L1 delay & Wait; retain historical state and escrow.
+& Redraw the seed or refund an active/reserved position.\\
+Cooling deadline & Release residual unencumbered funds under S5.
+& Erase timely pending claims or old verification records.\\\bottomrule
+\end{tabularx}
+
+Progress bounds require bounds on L1 inclusion/finality and dissemination,
+seed publication, native BFT closure, checkpoint recovery and adjudication.
+Without these bounds, the table specifies safe waiting, not a finite
+failover or withdrawal deadline. A timestamp notice interval alone does
+not imply that all nodes had that much usable preparation time.
+
+\section{Security claims and their limits}
+
+\begin{proposition}[Unique authority and prefix preservation]
+Under Assumption~\ref{ass:services}, accepted sessions have a unique L1
+order and their finalized application outputs form compatible prefixes,
+including across epoch and regional changes.
+\end{proposition}
+\begin{proof}
+The expected-counter check permits only one transition to consume the
+current authority in the finalized L1 history. Selection is a function
+of that transition's state. Inside a session, regional BFT safety gives
+compatible prefixes. A valid close preserves every finalizable old prefix
+and forbids a further old-session continuation. A successor starts only
+from that anchor and finalized authority. Induction over transitions,
+with idle steps preserving the anchor, proves the assertion.
+\end{proof}
+
+\begin{proposition}[Withdrawal does not erase timely liability]
+Selected joins and active positions cannot voluntarily withdraw. A removed
+position remains locked through its actual retirement, data-retention and
+evidence intervals, and until timely pending claims are resolved.
+\end{proposition}
+\begin{proof}
+S2 excludes reserved positions from cancellation. S3 leaves an exit request
+active. S5 changes the state only upon actual configuration installation
+and is the only release rule. Its time and pending-claim checks give the
+stated property. This does not increase the remaining balance after slashes.
+\end{proof}
+
+\textbf{Conditional progress.} If relevant calls are eventually finalized,
+the clock reaches $D_e$, the seed is published and the predecessor closes
+(or is idle), the module can install the next configuration, including into
+an idle state with no eligible region. Production additionally requires an
+eligible selected region, recoverable checkpoint data, and that region's
+BFT progress assumptions. To promise eventual production, these conditions
+must persist long enough to open and serve; a forever-off status map is
+an explicit counterexample without that premise.
+
+FIFO admission/exit progress requires continuing epoch installations,
+fixed positive budgets and count limits, eventual join maturity, and
+finitely many preceding live requests. A head fits a fresh epoch's amount
+budget by the position cap; removed/canceled entries do not block it.
+Release further requires the cooling clock to advance and timely disputes
+to resolve. No fixed wall-clock bound follows without bounded external
+delays. Neither lists nor churn imply regional honesty; actual allocation
+also depends on committee eligibility decisions and operator behavior.
+
+\textbf{Deliberate availability limit.} A multisignature off decision alone
+cannot recover an unavailable old region. Obtaining a safely closed cut
+without that region's cooperation remains an external recovery requirement.
+This module formalizes that boundary rather than treating elapsed time
+as a proof of closure.
+\end{document}

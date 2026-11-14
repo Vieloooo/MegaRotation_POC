@@ -1,0 +1,318 @@
+\documentclass[tikz,border=9pt]{standalone}
+\usepackage[UTF8,fontset=fandol]{ctex}
+\usepackage{amsmath,amssymb}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds}
+\definecolor{ink}{HTML}{243447}
+\definecolor{softblue}{HTML}{2563EB}
+\definecolor{hardorange}{HTML}{B96511}
+\definecolor{handlerteal}{HTML}{087F8C}
+\definecolor{gatepurple}{HTML}{7950B5}
+\definecolor{alertred}{HTML}{B42332}
+\tikzset{
+  every picture/.style={x=1cm,y=-1cm,font=\small,text=ink},
+  box/.style={draw=ink!30,fill=black!2,rounded corners=3pt,align=left,inner sep=8pt},
+  soft/.style={box,draw=softblue,fill=softblue!4},
+  hard/.style={box,draw=hardorange,fill=hardorange!4},
+  manager/.style={box,draw=handlerteal,fill=handlerteal!4},
+  ready/.style={box,draw=gatepurple,fill=gatepurple!4},
+  arrow/.style={-{Stealth[length=2.4mm]},semithick,draw=ink!80},
+  async/.style={arrow,dashed,draw=handlerteal},
+  label/.style={fill=white,inner sep=3pt,align=center,font=\footnotesize},
+  title/.style={font=\Large\bfseries,align=center},
+  subtitle/.style={font=\small,align=center,text width=18.5cm}
+}
+\begin{document}
+
+\begin{tikzpicture}
+\path[use as bounding box] (-.7,-.5) rectangle (20.7,29.5);
+\node[title] at (10,0) {Cross-region rotation：四个模块，各管一件事};
+\node[subtitle] at (10,.9) {判断是否干预 $\to$ 管理并发程序 $\to$ 检查起点并启动。\\
+Session 用 $(\beta,r)$ 标识，内部 BFT view 为 $(\beta,r,g,t)$。};
+
+\node[soft,text width=8.1cm,minimum height=2.65cm] (soft) at (5,3.1)
+ {\textbf{1. Soft Force Detector}\par\smallskip
+ 公共重放调用；所有验证节点可独立重算。\par
+ 输入：已验证公共状态（含 L1 控制）\par
+ 和本次完整 Espresso 输入、窗口、$G$。\par
+ 判断：当前负责交付的 session 是否持续缺块。\par
+ 输出：无 Force／AUTO 依据／缺少证据。};
+\node[hard,text width=8.1cm,minimum height=2.65cm] (hard) at (15,3.1)
+ {\textbf{2. Multisig HealthController}\par\smallskip
+ 现有委员会执行健康管理政策。\par
+ 输入：健康报告、公开状态、持久签名记录。\par
+ 按政策检查：Force／临时 OFF、ON／CLEAR。\par
+ 输出：提交到 L1、未来生效的控制。};
+
+\node[box,text width=8.1cm,minimum height=1.1cm] (espresso) at (5,6.15)
+ {\textbf{持续输入：Espresso finalized 历史}\par
+ 完整 namespace、DATA 与公开验证证据。};
+\node[box,text width=8.1cm,minimum height=1.1cm] (lone) at (15,6.15)
+ {\textbf{持续输入：L1 finalized 历史}\par
+ 完整控制前缀、authority；未来控制先排队。};
+\draw[arrow] (espresso.north)--node[label,left]{完整输入}(soft.south);
+\draw[arrow] (hard.south)--node[label,right]{签名并提交}(lone.north);
+
+\node[box,text width=17.7cm,minimum height=1.9cm] (replay) at (10,8.65)
+ {\textbf{共用的公共重放接口：Protocol 6 调用 Protocol 5}\par\smallskip
+ 验证 L1 finalized 控制和 Espresso finalized 历史；保持唯一的控制处理顺序。\par
+ STATUS/CLEAR $\to$ 匹配旧 $\beta$ 的 MSIG，否则 AUTO $\to$ EXPORT。\par
+ 输出已验证的 $\beta$、$G$、地区资格、交付责任和正式 Force 边界。};
+\draw[arrow] (espresso.south)--([xshift=-5cm]replay.north);
+\draw[arrow] (lone.south)--([xshift=5cm]replay.north);
+\draw[arrow] (soft.east)--(10,3.1)--node[label,rotate=90,pos=.55]{可重算的 AUTO 依据}(10,7.25)--(replay.north);
+
+\node[manager,text width=17.7cm,minimum height=2.4cm] (manager) at (10,12.05)
+ {\textbf{3. Cross-region Handler：每个副本长期运行，管理并发程序}\par\smallskip
+ 持续观察 L1、Espresso 和完整 regional results；没有 Active session 时也继续运行。\par
+ 接收已验证公共更新、直接 receipt、获取回调和 BFT 事件。\par
+ 管理旧程序与多个候选；按规则固定交接；创建、预热、关闭及移交责任。\par
+ 候选可变；目标 pair 改变用另一条记录，不改写已固定的 anchor。};
+\draw[arrow] (replay.south)--node[label,right]{已验证的状态与事件}(manager.north);
+
+\node[box,text width=8.1cm,minimum height=3.0cm] (fetch) at (5,15.8)
+ {\textbf{并行数据准备：仍处于 Waiting}\par\smallskip
+ 从直接传输或 Espresso 获取数据与证明。\par
+ 恢复并验证精确 anchor 对应的执行状态。\par
+ 回调携带目标 session 和 anchor 身份。\par
+ 任务完成只提供材料，不授予启动权限。};
+\node[ready,text width=8.1cm,minimum height=3.0cm] (gate) at (15,15.8)
+ {\textbf{4. Ready／Activation Gate：每个目标各一份}\par\smallskip
+ Gate[$(\beta,r)$]、Gate[$(\beta',r')$]、\ldots\par
+ 核对已固定的地区、目标与精确 anchor；\par
+ 不在这里重新选择起点。\par
+ 缺材料：Waiting；已失效：不允许进入。\par
+ 交接、authority、状态齐全且仍有效：Enter。};
+\draw[async] ([xshift=-5cm]manager.south)--node[label,left]{候选预热／正式目标补材料}(fetch.north);
+\draw[arrow] ([xshift=5cm]manager.south)--node[label,right]{固定交接＋材料}(gate.north);
+\draw[async] (fetch.west)--(.25,15.8)--(.25,12.05)--(manager.west);
+
+\node[box,text width=8.1cm,minimum height=2.0cm] (old) at (5,19.6)
+ {\textbf{旧程序：Active 或收尾中}\par\smallskip
+ Force 前继续原 BFT；Force 后按规则收尾。\par
+ 已关闭版本不能再向 $G$ 追加。\par
+ 证据与发布责任独立保留。};
+\node[ready,text width=8.1cm,minimum height=2.0cm] (core) at (15,19.6)
+ {\textbf{新程序：既有 Regional BFT}\par\smallskip
+ Protocol 4 Enter：Ready $\to$ Active。\par
+ 初始 $g=t=0$，安装状态并启动 timers。\par
+ 随后 STATUS、NEWVIEW、ANCHOR QC、DATA。};
+\draw[arrow] (gate.south)--node[label,right]{启动一次}(core.north);
+
+\node[manager,text width=17.7cm,minimum height=1.85cm] (result) at (10,23.05)
+ {\textbf{持续输入：完整 regional results}\par\smallskip
+ DATA＋完整 FINAL receipt＋所需依赖；单个 FINAL 签名还不是完整区域结果。\par
+ terminal receipt 直接送回 Handler，用于 Completion 和 regular handoff。\par
+ 这条直接路径不等待该结果经 Publish Layer 进入 Espresso。};
+\draw[arrow] (old.south)--([xshift=-5cm]result.north);
+\draw[arrow] (core.south)--([xshift=5cm]result.north);
+\draw[arrow,draw=handlerteal] (result.east)--(20.1,23.05)--(20.1,12.05)--(manager.east);
+\node[label,rotate=90,text=handlerteal] at (20.1,19.1) {直接完整 receipt，不等 Espresso};
+
+\node[box,text width=17.7cm,minimum height=1.55cm] (publish) at (10,26.05)
+ {\textbf{另一条输出路径：Publish Layer $\to$ Espresso}\par\smallskip
+ 提交完整 regional result；Espresso finalized 后成为上方的持续公共输入。\par
+ 原始收录还须经过公共验证；不会替代直接 receipt 的交接路径。};
+\draw[arrow] (result.south)--(publish.north);
+\draw[async] (publish.west)--(-.1,26.05)--(-.1,6.15)--(espresso.west);
+\node[label,rotate=90,text=handlerteal] at (-.1,20.2) {发布后从 Espresso 历史读回};
+
+\node[subtitle] at (10,28.6) {ON 是治理资格；被选中是本次安排；Ready 是准备完成；Enter 后才是 Active。\\
+ Handler 管理并发；Ready 核对固定起点；Publish Layer 负责交付完整结果。};
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\path[use as bounding box] (-.4,-.5) rectangle (20.4,19.9);
+\node[title] at (10,0) {并发例子：B 继续生产，同时准备 Force 后继};
+\node[subtitle] at (10,1.1) {A 的 $(7,20)$ 已有 DATA 进入 $G$，但仍欠 terminal DATA 110。\\
+ B 已经直接收到 110 的完整 receipt，常规进入 $(7,21)$；$G$ 暂时只到 108。\\
+ 假设此前无其他 Force；B 在激活位置合格且按规则被选中。};
+\node[font=\bfseries] at (3.4,2.45) {已验证公共输入};
+\node[font=\bfseries] at (10,2.45) {B 的旧程序 $(7,21)$};
+\node[font=\bfseries] at (16.6,2.45) {B 的候选／新程序 $(8,21)$};
+
+\node[box,text width=5.45cm,minimum height=1.45cm] at (3.4,3.8)
+ {未来 MSIG 已在 L1 finalized。\par 目标 $\beta=7$，Espresso 激活阈值 120。};
+\node[manager,text width=5.45cm,minimum height=1.45cm] (old1) at (10,3.8)
+ {\textbf{Active：继续生产}\par 旧 anchor 是 110。\par 尚未执行 Force。};
+\node[ready,text width=5.45cm,minimum height=1.45cm] (new1) at (16.6,3.8)
+ {\textbf{Waiting：预热}\par 候选 anchor 为 108。\par 暂不投票、不启动 BFT timers。};
+
+\node[box,text width=5.45cm,minimum height=1.45cm] at (3.4,6.0)
+ {$G$ 从 108 前进到 109。\par Espresso 尚未达到激活阈值。};
+\node[manager,text width=5.45cm,minimum height=1.45cm] (old2) at (10,6.0)
+ {\textbf{仍为 Active}\par 不修改旧 anchor。\par 仍按 $(7,21,g,t)$ 运行。};
+\node[ready,text width=5.45cm,minimum height=1.45cm] (new2) at (16.6,6.0)
+ {\textbf{更新准备任务}\par 候选 anchor 改为 109。\par 108 的回调不能宣布 Ready。};
+
+\draw[alertred,semithick] (.4,7.45)--(19.6,7.45);
+\node[label,text=alertred,font=\bfseries] at (10,7.45)
+ {首个 Espresso timestamp $\ge120$ 的 finalized 区块：先处理 Force，再处理 payload};
+
+\node[box,draw=alertred,text width=5.45cm,minimum height=1.6cm] at (3.4,8.9)
+ {旧 $\beta$ 仍匹配 7，MSIG 执行。\par 保留 payload 前的 $G=109$。\par 新目标确定为 B 的 $(8,21)$。};
+\node[box,draw=alertred,text width=5.45cm,minimum height=1.6cm] (old3) at (10,8.9)
+ {\textbf{RequestClose}\par 旧版本失去全局追加权限。\par 继续规定的证据／timer 收尾；\par 不把 Force 当作 Quit。};
+\node[ready,text width=5.45cm,minimum height=1.6cm] (new3) at (16.6,8.9)
+ {\textbf{固定正式交接}\par 目标 $(8,21)$，anchor 109。\par anchor 的原生产身份仍为\par A 的 $(7,20)$。};
+
+\node[box,text width=5.45cm,minimum height=1.6cm] at (3.4,11.6)
+ {已取得并验证 109 的完整数据、\par 提交证明、authority 与执行状态。};
+\node[box,text width=5.45cm,minimum height=1.6cm] (old4) at (10,11.6)
+ {\textbf{可以仍在收尾}\par 新程序启动无需等待\par 旧程序完全退出。};
+\node[ready,text width=5.45cm,minimum height=1.6cm] (new4) at (16.6,11.6)
+ {\textbf{Ready $\to$ Active}\par 最后复核有效，执行 Enter。\par 初始 view 为 $(8,21,0,0)$。\par ANCHOR QC 后提出 DATA 110。};
+
+\node[box,text width=5.45cm,minimum height=1.5cm] at (3.4,14.3)
+ {全局追加按新版本的验证规则。\par 旧证据可以保存或继续发布，\par 不能恢复旧版本的追加权限。};
+\node[box,text width=5.45cm,minimum height=1.5cm] (old5) at (10,14.3)
+ {\textbf{Terminated}\par 达到收尾条件，移交持久责任。\par Handler 仍保留关闭记录。};
+\node[ready,text width=5.45cm,minimum height=1.5cm] (new5) at (16.6,14.3)
+ {\textbf{继续 Active}\par 使用自己的锁、votes 和 timers。\par 不继承旧程序的共识状态。};
+\begin{scope}[on background layer]
+\foreach \prefix in {old,new} {
+ \foreach \i/\j in {1/2,2/3,3/4,4/5} {
+  \draw[arrow] (\prefix\i.south)--(\prefix\j.north);
+ }
+}
+\end{scope}
+\node[box,text width=18.5cm,minimum height=1.9cm] at (10,17.4)
+ {\textbf{这里并行的是三件事：}旧程序运行／收尾，新程序准备／启动，公共历史持续更新。\par\smallskip
+ 表格表示一个副本按顺序处理的事件，不要求所有副本同一真实时刻切换。\par
+ Force 的 cutoff 由公共历史确定；Ready 时间和本地关闭进度都不能修改它。};
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\path[use as bounding box] (-.4,-.5) rectangle (20.4,18.6);
+\node[title] at (10,0) {一份程序的生命周期：何时准备、启动、收尾};
+\node[subtitle] at (10,.95) {每份 $(\beta,r)$ 独立记录 phase。Ready 是启动检查通过的位置，不是新的共识证书。};
+
+\node[box,text width=4.7cm,minimum height=2.05cm] (waiting) at (3.4,3.1)
+ {\textbf{Waiting}\par\smallskip
+ 等正式交接或缺少材料。\par
+ 可并行预取、恢复状态。\par
+ 未固定候选可变化。};
+\node[ready,text width=4.7cm,minimum height=2.05cm] (ready) at (10,3.1)
+ {\textbf{Ready}\par\smallskip
+ 固定交接、精确 anchor、\par
+ authority 和状态均有效。\par
+ 同一事件中最后复核。};
+\node[manager,text width=4.7cm,minimum height=2.05cm] (active) at (16.6,3.1)
+ {\textbf{Active}\par\smallskip
+ Protocol 4 已 Enter。\par
+ 包含 bootstrap 与 DATA。\par
+ 内部运行 $(g,t)$。};
+\draw[arrow] (waiting.east)--node[label,above]{检查通过}(ready.west);
+\draw[arrow] (ready.east)--node[label,above]{Enter 一次}(active.west);
+
+\node[box,text width=4.7cm,minimum height=1.85cm] (frozen) at (16.6,7.0)
+ {\textbf{Frozen}\par\smallskip
+ 本 generation 有合法 Quit。\par
+ 执行既有恢复规则。\par
+ Force 本身不是 Quit。};
+\node[box,text width=4.7cm,minimum height=1.85cm] (completed) at (10,7.0)
+ {\textbf{Completed}\par\smallskip
+ terminal receipt 已满足\par
+ 原有 Completion 检查。\par
+ 交付／保留责任仍需处理。};
+\draw[arrow] ([xshift=-.7cm]active.south)--node[label,left]{合法 Quit}([xshift=-.7cm]frozen.north);
+\draw[arrow] ([xshift=.7cm]frozen.north)--node[label,right]{恢复}([xshift=.7cm]active.south);
+\draw[arrow] (frozen.west)--node[label,above,font=\scriptsize,text width=1cm]{terminal\\receipt}(completed.east);
+\draw[arrow] (active.south west)--(13.6,4.6)--(13.6,5.3)--node[label,above]{terminal receipt}(10,5.3)--(completed.north);
+
+\node[box,draw=alertred,dashed,text width=4.7cm,minimum height=1.85cm] (close) at (3.4,7.0)
+ {\textbf{Force 收尾请求}\par
+ 适用于 Active / Frozen。\par\smallskip
+ 记录 close\_requested。\par
+ 停止新的旧 session 工作。\par
+ 继续规定的证据与 timer 处理。};
+\node[label,text=alertred] (forceinput) at (3.4,5.05)
+ {Active / Frozen 收到已验证 Force};
+\draw[async,draw=alertred] (forceinput.south)--(close.north);
+\node[box,text width=17.8cm,minimum height=2.1cm] (terminated) at (10,11.35)
+ {\textbf{Terminated：退出该 BFT 程序}\par\smallskip
+ 未进入的无效目标可取消；Completed 需移交责任；Active/Frozen 须满足 FinishClose。\par
+ 已开始收尾者仍须遵守规定的 drain 条件。\par
+ 保留退出记录，避免迟到消息再次启动；数据、证明和发布任务仍可由其他服务处理。\par
+ Handler 的 Closed[$\beta$] 与必要的关闭证据转发，不随 worker 删除而消失。};
+\draw[arrow] (completed.south)--node[label,right]{责任移交}(terminated.north);
+\draw[arrow] (close.south)--node[label,left]{FinishClose 条件}([xshift=-6.6cm]terminated.north);
+\draw[async] (waiting.west)--(.25,3.1)--(.25,11.35)--node[label,rotate=90,pos=.45]{目标确定失效}(terminated.west);
+\draw[async] (ready.south)--(10,4.75)--(6.6,4.75)--node[label,rotate=90,pos=.55]{Ready 复核时目标已失效}(6.6,9.75)--([xshift=-3.4cm]terminated.north);
+
+\node[box,text width=17.8cm,minimum height=2.2cm] at (10,15.4)
+ {\textbf{三条不能混淆的判断}\par\smallskip
+ 1. 旧交接在历史上有效 $\neq$ 现在仍允许该 session 进入：分别检查 History 与 CanEnter。\par
+ 2. 程序仍在收尾 $\neq$ 它还可以向 $G$ 追加：追加权限由公共 Force cutoff 决定。\par
+ 3. 数据已经下载 $\neq$ Ready：还要检查精确 anchor、可执行状态和当前授权。};
+\node[subtitle] at (10,18.0) {虚线收尾框是动作与标志，不是第七个 phase；收尾可以与新程序启动并行。};
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\path[use as bounding box] (-.4,-.5) rectangle (20.4,25.1);
+\node[title] at (10,0) {候选演化：先更新准备计划，Force 后固定交接};
+\node[subtitle] at (10,1.25) {地区顺序 A $\to$ B $\to$ C $\to$ D；初始 owed 集合为 $\{B,C,D\}$。\\
+ 假设没有更早的 Force，各行均满足相应 authority 与选区条件。\\
+ B 的 terminal height $>112$，所以接受 111、112 后仍由 B 承担 export duty。};
+\node[font=\bfseries] at (3.4,2.85) {新观测};
+\node[font=\bfseries] at (10,2.85) {未来 Force 候选／正式目标};
+\node[font=\bfseries] at (16.6,2.85) {Handler 与 Ready 的动作};
+
+\node[box,text width=5.45cm,minimum height=1.65cm] at (3.4,4.3)
+ {A 的 $(7,20)$ 仍欠 DATA 110。\par $G=109$。};
+\node[ready,text width=5.45cm,minimum height=1.65cm] (cand1) at (10,4.3)
+ {\textbf{候选：B 的 $(8,21)$}\par 候选 anchor：A 的\par $(7,20)$／DATA 109。};
+\node[manager,text width=5.45cm,minimum height=1.65cm] at (16.6,4.3)
+ {B 预取 109 的材料和状态。\par 候选只允许 Waiting／准备，\par 尚未获得新程序启动权。};
+
+\node[box,text width=5.45cm,minimum height=1.65cm] at (3.4,6.9)
+ {A 的 terminal DATA 110 进入 $G$。\par B duty 打开，接受计数为 0。};
+\node[ready,text width=5.45cm,minimum height=1.65cm] (cand2) at (10,6.9)
+ {\textbf{候选：C 的 $(8,21)$}\par 候选 anchor：A 的\par $(7,20)$／DATA 110。};
+\node[manager,text width=5.45cm,minimum height=1.65cm] at (16.6,6.9)
+ {换候选地区；零输出保留 slot 21。\par B 可暂停旧候选准备，\par C 开始预热；有用缓存保留。};
+
+\node[box,text width=5.45cm,minimum height=1.65cm] at (3.4,9.5)
+ {OFF(C) 生效。\par $G$ 仍为 110，B 接受计数仍为 0。};
+\node[ready,text width=5.45cm,minimum height=1.65cm] (cand3) at (10,9.5)
+ {\textbf{候选：D 的 $(8,21)$}\par 候选 anchor 仍为\par A 的 $(7,20)$／DATA 110。};
+\node[manager,text width=5.45cm,minimum height=1.65cm] at (16.6,9.5)
+ {D 预热；C 可暂停准备。\par 仅因候选预测变化，\par 不把旧候选标为 Terminated。};
+
+\node[box,text width=5.45cm,minimum height=1.65cm] at (3.4,12.1)
+ {B 的 DATA 111、112 进入 $G$。\par B duty 已有正接受计数，\par 但尚未达到 terminal。};
+\node[ready,text width=5.45cm,minimum height=1.65cm] (cand4) at (10,12.1)
+ {\textbf{候选：D 的 $(8,22)$}\par 候选 anchor：B 的\par $(7,21)$／DATA 112。};
+\node[manager,text width=5.45cm,minimum height=1.65cm] at (16.6,12.1)
+ {目标 pair 改变：使用另一条记录。\par 不把 $(8,21)$ 原地改名。\par 保留可复用的验证缓存。};
+
+\draw[alertred,semithick] (.4,13.75)--(19.6,13.75);
+\node[label,text=alertred,font=\bfseries] at (10,13.75)
+ {Force 生效：公共重放固定边界，之后只补齐这个精确起点};
+
+\node[box,draw=alertred,text width=5.45cm,minimum height=2.0cm] at (3.4,15.5)
+ {在触发区块 payload 之前执行 Force。\par 保留 $G=112$。\par 按规则选定 D，目标 $(8,22)$。};
+\node[ready,text width=5.45cm,minimum height=2.0cm] (cand5) at (10,15.5)
+ {\textbf{正式交接：D 的 $(8,22)$}\par anchor 的原身份固定为\par B 的 $(7,21)$／DATA 112／\par 精确 hash $\mathsf H(B_{112})$。};
+\node[manager,text width=5.45cm,minimum height=2.0cm] at (16.6,15.5)
+ {安装不可替换的 fixed handoff。\par anchor 不随后续候选预测改动。\par 旧程序按规定收尾；\par 新程序继续补齐材料。};
+
+\node[box,text width=5.45cm,minimum height=1.8cm] at (3.4,18.55)
+ {112 的 DATA、原提交证明、\par 精确执行状态与 authority 齐全。\par 目标仍满足 CanEnter。};
+\node[ready,text width=5.45cm,minimum height=1.8cm] (cand6) at (10,18.55)
+ {\textbf{该 session 的 Ready Gate}\par 核验已固定的 112 及其原身份。\par 原子复核并执行一次 Enter。\par Ready $\to$ Active。};
+\node[manager,text width=5.45cm,minimum height=1.8cm] at (16.6,18.55)
+ {进入 $(8,22,0,0)$，启动原 timers。\par 随后执行已有 bootstrap。\par 不继承旧程序的\par locks、votes 或 timers。};
+
+\begin{scope}[on background layer]
+\foreach \i/\j in {1/2,2/3,3/4,4/5,5/6} {
+ \draw[arrow] (cand\i.south)--(cand\j.north);
+}
+\end{scope}
+\node[box,text width=18.5cm,minimum height=2.2cm] at (10,22.1)
+ {\textbf{这里变化的是候选计划，不是已运行程序的起点}\par\smallskip
+ 预测不再成立：暂停或调整准备；不能仅凭预测失去候选地位就不可逆地 Terminated。\par
+ 目标 pair 改变：使用不同记录；已验证缓存和仍有用的未完成准备可保留。\par
+ 固定交接后：只核验该 anchor 的材料与启动权限，不能用同高度的另一块替代。};
+\node[subtitle] at (10,24.4) {示例中的地区与 slot 是满足选区条件时的结果；每个副本仍独立验证公共历史。};
+\end{tikzpicture}
+\end{document}

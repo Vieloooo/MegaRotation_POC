@@ -1,0 +1,80 @@
+% Native TikZ fragment for main_v2.tex, Protocol V1--V4.
+% All lanes belong to region V_i; arrows are representative transmissions.
+% Bounding box: 15.8 cm by 20.3 cm before optional linewidth scaling.
+% Explicit line breaks and fixed diagram fonts keep the layout independent
+% of the surrounding document's base font size.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  msg/.style={-{Stealth[length=1.7mm]},semithick},
+  lane/.style={draw=black!25,densely dashed},
+  label/.style={fill=white,inner sep=2pt,align=center,
+    font=\fontsize{8.5}{10}\selectfont},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries,
+    fill=white,inner sep=2pt},
+  state/.style={draw,rounded corners=2pt,fill=white,align=center,
+    inner sep=4pt,font=\fontsize{9}{10.5}\selectfont},
+  wait/.style={draw=blue!65!black,dashed,rounded corners=2pt,
+    fill=blue!3,align=center,inner sep=4pt,
+    font=\fontsize{9}{10.5}\selectfont}
+]
+  \path[use as bounding box] (-.4,-.65) rectangle (15.4,19.65);
+  \node[align=center] at (1.0,0) {Old leader\\$L=\ell_i(v)$};
+  \node[align=center] at (5.0,0) {Correct member\\$S_{i,a}$};
+  \node[align=center] at (9.0,0) {Correct member\\$S_{i,b}$};
+  \node[align=center] at (13.3,0) {New leader\\$L'=\ell_i(v+1)$};
+  \foreach \x in {1,5,9,13.3} \draw[lane] (\x,.55)--(\x,18.65);
+
+  \node[phase] at (-.3,.90) {V1. Detect and disseminate a quit proof};
+  \node[state] at (9.1,1.65)
+    {At $D_S(v)+2(p-1)\Delta_R$, $1\leq p\leq K_{\rm loc}$:\\
+     test whether fewer than $p$ fresh proposals triggered votes.};
+  \draw[msg] (5,2.45)--node[label] {$\mathrm{BLAME}(v)$} (9,2.80);
+  \draw[msg] (9,3.05)--node[label] {$\mathrm{BLAME}(v)$} (5,3.40);
+  \node[state] at (2.0,4.10)
+    {Alternative trigger:\\two signed messages\\show leader equivocation};
+  \node[state,minimum width=7.8cm] at (9.1,4.10)
+    {BLAME certificate: distinct signers with weight $>W_i/3$\\
+     OR leader equivocation evidence.\\Relay either quit proof to all.};
+  \draw[msg] (4.0,4.10)--(5.0,4.10);
+  \draw[msg] (5,4.95)--node[label] {quit proof} (13.3,5.30);
+  \draw[msg] (13.3,5.55)--node[label] {relay quit proof} (5,5.90);
+  \node[state,minimum width=12.2cm] at (7.8,6.50)
+    {On quit: stop voting in $v$ and cancel pending view-$v$ commit timers.\\
+     Retain completed commitments.};
+
+  \node[phase] at (-.3,7.30) {V2. Collect old-view evidence and fix entry locks};
+  \node[wait] at (5,8.10)
+    {Wait $\Delta_R$ from own quit;\\collect old votes and QCs.};
+  \node[wait] at (9,8.10)
+    {Wait $\Delta_R$ from own quit;\\collect old votes and QCs.};
+  \node[wait] at (13.3,8.10)
+    {The same quit-and-wait rule\\also applies to $L'$.};
+  \draw[msg] (5,8.95)--node[label,pos=.53] {$\mathrm{STATUS}(v+1,Q_a)$} (13.3,9.30);
+  \draw[msg] (9,9.55)--node[label] {$\mathrm{STATUS}(v+1,Q_b)$} (13.3,9.90);
+  \node[state] at (5.3,10.30)
+    {Fix the highest-QC entry lock;\\enter $v+1$ when sending STATUS.};
+  \node[wait] at (11.9,11.10)
+    {Wait $2\Delta_R$ from $L'$'s own entry.\\
+     Covers entry skew $\leq\Delta_R$\\and STATUS delivery.};
+
+  \node[phase] at (-.3,11.90) {V3--V4. Announce the anchor, re-certify it, and resume};
+  \draw[msg] (13.3,12.55)--node[label,pos=.50]
+    {$\mathrm{NEWVIEW}(v+1,Q^*)$\\highest-ranked old QC} (5,12.90);
+  \node[state,minimum width=8.1cm] at (6.9,13.70)
+    {$\operatorname{rank}(Q^*)\geq\operatorname{rank}(\mathrm{entry\ lock})$,
+     $v^*<v+1$;\\validate ancestry and eligibility in $v+1$.\\
+     Relay NEWVIEW and vote for the unchanged anchor.};
+  \draw[msg] (5,14.65)--node[label] {NEWVIEW relay + anchor VOTE} (13.3,14.95);
+  \draw[msg] (13.3,15.20)--node[label] {all-to-all anchor votes} (5,15.50);
+  \node[state,minimum width=11.6cm] at (7.7,16.10)
+    {Form $Q_{v+1}(B_{k^*})$ for the unchanged anchor.\\
+     Anchor re-certification starts \textbf{no commit timer}.};
+  \draw[msg] (13.3,17.00)--node[label,pos=.50]
+    {$\mathrm{PROPOSE}(B_{k^*+1},Q_{v+1}(B_{k^*}))$} (5,17.35);
+  \node[state,minimum width=11.6cm] at (7.7,18.05)
+    {First fresh child: forward and vote; start $2\Delta_R$ commit timers.\\
+     Its QC enables the next child while these timers run.};
+  \node[align=left,font=\fontsize{8.5}{10}\selectfont,anchor=west] at (-.25,19.08)
+    {All lanes belong to region $V_i$; the illustrative members need not have equal weights.\\
+     Time runs downward. Arrows show representative communication, not all messages or delays to scale.};
+\end{tikzpicture}

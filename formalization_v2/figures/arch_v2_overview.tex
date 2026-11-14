@@ -1,0 +1,101 @@
+% Native, manuscript-width TikZ; colors describe design status only.
+% Requires tikz and the arrows.meta library. No external image assets.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\footnotesize,line cap=round,line join=round,
+  box/.style={draw=black!65,rounded corners=2pt,fill=gray!10,
+    align=center,inner sep=4pt,minimum height=.86cm},
+  ready/.style={box,fill=green!12,draw=green!40!black},
+  next/.style={box,fill=blue!12,draw=blue!55!black},
+  focus/.style={box,fill=orange!18,draw=orange!60!black},
+  flow/.style={-{Stealth[length=1.8mm]},semithick,draw=black!75},
+  ctl/.style={flow,dashed},
+  lab/.style={fill=white,inner sep=2pt,align=center,font=\scriptsize},
+  swatch/.style={draw=black!55,rounded corners=1pt,
+    minimum width=.3cm,minimum height=.22cm,inner sep=0pt}
+]
+  % L1 and the service that is authorized to request exceptional control.
+  \node[box,text width=3.35cm] (msig) at (6.85,11.05)
+    {\textbf{Multisignature monitor}\\liveness observations; prefix protection};
+  \draw[rounded corners=3pt,semithick,draw=black!65]
+    (.18,6.55) rectangle (16.45,10.05);
+  \node[anchor=west,font=\footnotesize\bfseries] at (.42,9.76)
+    {L1 services};
+
+  \node[focus,text width=2.8cm,minimum height=1.5cm] (stake) at (2.05,8.6)
+    {\textbf{Staking}\\membership snapshots\\join / exit / accountability};
+  \node[box,text width=3.55cm] (status) at (6.85,9.1)
+    {\textbf{Liveness / Force}\\status and exceptional rotation};
+  \node[box,text width=3.55cm] (authority) at (6.85,7.65)
+    {\textbf{Production authority}\\$L(r,g,t)$; voters and quota};
+  \node[next,text width=3.6cm] (tracker) at (12.05,9.1)
+    {\textbf{Global Tracker}\\authorized, globally final prefix};
+  \node[box,text width=3.6cm] (verify) at (12.05,7.65)
+    {\textbf{Publication + DA verification}\\same range, available data, execution};
+
+  \draw[ctl] (msig.south) -- (status.north);
+  \draw[ctl] (stake.south) -- (2.05,7.05) -- (4.35,7.05)
+    -- (4.35,7.65) -- (authority.west);
+  \node[lab] at (3.2,7.05) {snapshot};
+  \draw[ctl] (status.east) -- (tracker.west);
+  \node[lab,above] at (9.45,9.12) {control};
+  \draw[flow] (tracker.south) -- (verify.north);
+  \node[lab,anchor=west] at (12.18,8.37) {checked prefix};
+
+  % Native production feeds the regional service; the backbone joins regions.
+  \node[box,text width=2.8cm,minimum height=1.6cm] (builder) at (2.05,4.2)
+    {\textbf{EL / batch builder}\\native execution context\\mini-block batches};
+  \draw[rounded corners=3pt,semithick,draw=black!65]
+    (4.72,2.93) rectangle (14.25,5.92);
+  \node[anchor=east,font=\footnotesize\bfseries] at (13.97,5.62)
+    {Cross-region sequencing and rotation};
+  \node[ready,text width=3.2cm,minimum height=1.5cm] (active) at (6.85,4.2)
+    {\textbf{Regional BFT}\\active region\\SMR + local leader rotation};
+  \node[ready,text width=3.2cm,minimum height=1.5cm] (other) at (12.05,4.2)
+    {\textbf{Other regions}\\same regional BFT interface\\successors in the rotation};
+  \node[font=\scriptsize,text=black!75] at (9.5,3.2)
+    {Regular handoff / forced recovery};
+  \draw[flow] (builder.east) -- (active.west);
+  \node[lab] at (4.22,4.54) {batches};
+  \draw[flow,{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}]
+    (active.east) -- (other.west);
+  \node[lab] at (9.45,4.52) {backbone};
+  \node[lab] at (9.45,3.9) {data + evidence};
+
+  \draw[ctl] (authority.south) -- (active.north);
+  \node[lab,anchor=east] at (6.68,6.18) {authority};
+  \draw[ctl] (status.east) -- (9.38,9.1) -- (9.38,5.92);
+  \node[lab,anchor=west] at (9.48,6.2) {status / Force};
+
+  % The two publication inputs are kept separate at their L1 destinations.
+  \node[box,text width=3.6cm,minimum height=.96cm] (proposer) at (6.85,1.55)
+    {\textbf{Proposer $P$}\\derive, assemble and publish the next range};
+  \draw[flow] (active.south) -- (proposer.north);
+  \node[lab,anchor=west] at (7.03,2.57) {batches + receipts};
+  \draw[semithick,draw=black!75] (proposer.east) -- (15.08,1.55);
+  \fill[black!75] (15.08,1.55) circle (1.05pt);
+  \draw[flow] (15.08,1.55) -- (15.08,7.65) -- (verify.east);
+  \draw[flow] (15.08,1.55) -- (16.05,1.55) -- (16.05,9.1)
+    -- (tracker.east);
+  \node[lab,rotate=90] at (14.84,4.26) {DA reference + execution claim};
+  \node[lab,rotate=90] at (15.8,4.8) {range + source evidence};
+
+  % Compact legend: color is a work-plan marker, never a security claim.
+  \node[swatch,fill=green!12,draw=green!40!black] at (.5,.13) {};
+  \node[anchor=west,font=\scriptsize] at (.77,.13)
+    {Regional BFT: design nearly complete};
+  \node[swatch,fill=blue!12,draw=blue!55!black] at (8.35,.13) {};
+  \node[anchor=west,font=\scriptsize] at (8.62,.13)
+    {Global Tracker: next design step};
+  \node[swatch,fill=orange!18,draw=orange!60!black] at (.5,-.3) {};
+  \node[anchor=west,font=\scriptsize] at (.77,-.3)
+    {Staking: primary design focus};
+  \node[swatch,fill=gray!10] at (8.35,-.3) {};
+  \node[anchor=west,font=\scriptsize] at (8.62,-.3)
+    {Remaining modules: interfaces defined};
+  \draw[flow] (.35,-.78) -- (1.22,-.78);
+  \node[anchor=west,font=\scriptsize] at (1.38,-.78) {Data / evidence};
+  \draw[ctl] (8.2,-.78) -- (9.07,-.78);
+  \node[anchor=west,font=\scriptsize] at (9.23,-.78) {Control};
+  \node[anchor=west,font=\scriptsize,text=black!65] at (.35,-1.18)
+    {Colors describe design progress, not proof completion or deployment.};
+\end{tikzpicture}

@@ -1,0 +1,238 @@
+% Version 3.7: public receipt kernels, logical carriers and per-DATA acceptance.
+\subsection{Published results and the global interpreter}
+\label{sec:exports}
+The Publish Layer carries complete regional results to Espresso.
+The sender transports evidence; it does not choose the authoritative
+global base or the grouping of atomic acceptance transactions.
+An \tagg{EXPORT} retains its outer chain, version, expected-base and
+interval fields for routing and diagnostics. For acceptance these are
+\defterm{hints}. Signed result contents and authenticated source context
+determine the chain, producing pair, ancestry and append permission.
+A false hint neither authorizes invalid DATA nor vetoes a complete
+valid result carried in the same record.
+
+\input{sections/rotation_v3_8_carrier.tex}
+
+\paragraph{Public result kernels and DATA identity.}
+A \defterm{public result kernel} contains a direct FINAL root for DATA
+$D$, its exact DATA bytes, and the actual hash-linked DATA ancestry
+needed to cover the proposed next DATA and connect it to the current
+accepted anchor. It uses the fixed incoming boundary and voting snapshot.
+\tagg{CheckFINAL} establishes intrinsic regional validity under
+\cref{sec:receipt-kernel}; every independent global acceptance check below
+still applies. A later session's receipt does not cover an earlier
+session's DATA. The already accepted anchor keeps its original provenance.
+
+The logical carrier may contain a larger complete regional result,
+including full admission, recovery and native evidence. Those objects
+remain available to regional validators and other interfaces, but are
+not additional public-kernel dependencies. In particular, a publisher's
+alternative PROPOSE or $\tagg{AUTH}_{r,g}$ path cannot replace the honest
+signer's actual validation history or make the public interpreter fetch
+that alternative. No kernel certifies an unbound execution-output,
+state-snapshot or DA sidecar.
+
+Kernels may share actual objects and use the common exact references of
+\cref{sec:record-completeness}. The normalized DATA identity is
+\[
+ \operatorname{id}(B)=(\text{chain},\beta(B),r(B),\Hash(B)).
+\]
+Changing sender, receipt encoding or signer set does not change this
+identity. A declared output interval cannot hide a complete next DATA
+supplied as ancestry. An absent DATA object does not become present
+because its hash appears in a signature or dependency list.
+
+Completeness is checked for the required public kernel, not for all
+optional evidence in its carrier. Malformed or irrelevant independently
+represented logical objects cannot veto another kernel. A bad required DATA link,
+wrong FINAL signature or missing required payload invalidates that
+kernel. Try another complete kernel of the same DATA when one fails;
+an invalid first wrapper never creates a permanent duplicate marker.
+The original complete-result publication input remains unchanged, as
+stated in \cref{sec:transport-scope}.
+
+\paragraph{Canonical extraction: $\tagg{DeriveNextDATA}$.}
+Let $p=(q,n,j)$ identify an Espresso block, namespace transaction and
+record. Process these records in that order after the block's prelude.
+At the current state, inspect its normalized public kernels for DATA at
+$h(G)+1$. Order candidate proof choices by the tuple
+\[
+ (\beta(B),r(B),\Hash(B),\Hash(D),\operatorname{pos}(\pi)),
+\]
+where $D$ is the direct-receipt root providing coverage and
+$\operatorname{pos}(\pi)$ is the canonical path of the actual object in the logical carrier.
+Hashes use their fixed byte order. Equal normalized proof objects are
+deduplicated. Ignore lower DATA heights except as evidence; never jump
+to a higher height. Recompute the next-height candidates after a commit.
+This is a finite deterministic scan of the admitted logical input.
+Required ancestry and exact-reference objects obey the same declared
+input and complete-message limits; optional evidence never creates a
+mandatory external fetch.
+
+The incoming boundary fixes the only session and region permitted to
+supply that next DATA. Within that session, regional safety makes two
+valid committed next DATA compatible and hence identical. The proof
+ordering chooses evidence, not a fork. Neither a later session's
+receipt nor a lower hash can override the fixed incoming boundary.
+
+\paragraph{Acceptance checks.}
+For a candidate $B$, derive its actual base from $G$ and require:
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item its signed domain is this chain's and its producing branch
+version is current and open;
+\item its incoming boundary, historical selection and authority assign
+it to the current export duty; its authenticated DATA ancestry extends
+the exact current $G$, including hashes, heights and original provenance;
+\item its height is $h(G)+1$, its direct or same-session covering root
+passes \tagg{CheckFINAL}, its actual supplied DATA hash path reaches
+$G$, and its positions and quota agree with that fixed duty;
+\item all required Espresso selection references strictly precede
+the containing block $J_q$, with their historical snapshots verified;
+\item if Force created its version in $J_{q_f}$, then $q>q_f$.
+\end{enumerate}
+\tagg{CheckFINAL} establishes the intrinsic admission, parent/reference
+and native input-validity predicates through
+\cref{prop:final-kernel-soundness}. The public algorithm does not rerun an
+arbitrary publisher-supplied admission witness or native sidecar. This
+is an explicit public-checker refinement; regional Vote, Ready and
+recovery retain complete validation. Exact executable state and the
+$C_{\rm pub}$ execution/DA interface remain separately verified and do
+not precede the logical first-DATA commit here.
+
+No check compares a sender's expected-base hint with $G$. Compatibility
+is checked against the actual signed path instead. A record overlapping
+$G$ may therefore supply its next compatible suffix. DRAIN can occur in
+supporting ancestry, but is never appended as application DATA.
+
+\paragraph{Commit one DATA: $\tagg{CommitNextDATA}$.}
+On successful checks, atomically append $B$, increment its producing
+session's accepted count and its region's accepted service count, and
+remove that region from $\mathcal O$ if present. Count this DATA once.
+A continuing duty keeps its window and receives the new window count;
+an empty owed set is not refilled merely because another DATA arrived.
+If $B=T_{\beta,r}$, cancel that duty's window and install the pending
+REGULAR boundary described below in the same transaction. Durably expose
+the updated $G$ and accounting before attempting a later DATA or
+successor operation. The already saved pre-payload $\chi_E(q)$ and
+$\mathcal O_E(q)$ are unchanged.
+
+Acceptance is atomic per DATA and its associated accounting. There is
+no all-or-nothing outer EXPORT transaction. An invalid later candidate
+cannot roll back an accepted prefix. Batching is an implementation
+optimization only if it preserves these committed prefixes and does
+not postpone their exposure behind an unresolved successor operation.
+
+\paragraph{Commit terminal DATA before resolving its successor.}
+\label{sec:terminal-commit}
+The terminal transaction stores the retained terminal anchor and its
+commitment evidence, source context $(i_b,\beta,r)$, unchanged beta,
+target slot $r+1$, signed selection reference and the regular selection
+lower bound. It marks the boundary \defterm{pending resolution}; no
+successor or DATA window is fabricated. Its owed ledger is the prior
+ledger after the producing region's discharge, without a new round.
+This transaction requires the completed session's incoming boundary
+and authority, not $\tagg{AUTH}_{r+1,0}$.
+
+Only the subsequent $\tagg{ResolveBoundary}$ operation obtains that
+target authority, runs $\tagg{PrepareOwed}(r+1)$ and verifies the
+prescribed historical REGULAR selection. A missing authority pauses
+this operation after the terminal transaction has committed. A proven
+absence of a candidate also leaves the boundary unassigned, but is
+different from missing evidence. Neither case reverses accepted DATA,
+restores the completed window, or opens a new window.
+With evidence complete and no candidate yet, mark this resolution
+attempt complete and continue source replay; a later prelude resumes
+the prescribed historical search for the still-pending boundary.
+
+Resolution resumes at its original canonical transition exactly once.
+It preserves the historical selector and the public opening timestamp
+in \cref{sec:ready}; local retrieval time never starts a new grace
+period. An already fixed speculative handoff is checked against this
+same history. Once resolution succeeds, the same record may supply a
+successor DATA if its own references precede $J_q$. Thus normal
+multi-session records remain possible. If the terminal publication
+block is the first possible selection position, successor DATA still
+cannot be accepted in that block.
+
+Input authentication is incremental at this dependency boundary. It
+authenticates the complete namespace and controls, then the authorities
+needed for the prelude and current DATA transaction. It does not eagerly
+demand every authority used by later operations in the record. In
+particular, a preliminary whole-record check cannot wait for
+$\tagg{AUTH}_{r+1,0}$ before committing an otherwise valid terminal DATA.
+
+\paragraph{Durable subpositions and replay.}
+\label{sec:subpositions}
+The public cursor is
+\[
+ \zeta=(q,n,j,\nu,\mathit{stage}),\qquad
+ \mathit{stage}\in\{\tagg{prelude},\tagg{scan},\tagg{resolve},\tagg{done}\}.
+\]
+Here $(q,n,j)$ is the block and record position, and $\nu$ counts DATA
+transactions committed from that record. The prelude uses the sentinel
+$n=j=\nu=0$. The stages mean prelude, next-DATA scan, pending boundary
+resolution, and record complete, respectively. The boundary record
+retains its original canonical resolution position across later scans.
+At a DATA commit it also binds the normalized record commitment and
+the resulting pending-boundary state. The next-height rule and this
+cursor fix the continuation without dependence on private caches.
+An implementation may retain a larger validation index as auxiliary
+state. Duplicate source delivery resumes the cursor; it never reruns
+a committed count or prelude.
+
+An unresolved canonical boundary pauses subsequent replay at that
+subposition. Earlier DATA commits remain exposed and final even though
+the entire record or block is not yet complete. Once evidence is
+available, resume the same transition with its original timestamp.
+No out-of-order application of later controls is needed. Two observers
+at different subpositions hold prefix-comparable DATA, just as they do
+at different complete block heights.
+
+If no candidate passes and no genuine canonical boundary wait remains,
+finish the record and continue. An independently incomplete public kernel
+does not suspend other complete kernels. A record skipped for a genuine
+gap gains no future append permission: the interpreter never revisits
+a completed past record to accept new DATA retroactively. Its objects
+may remain historical evidence and may be referenced by a later record.
+Closed-version DATA never becomes appendable through either path.
+An incomplete namespace download, unlike an incomplete candidate,
+prevents processing the block at all.
+
+\paragraph{Scope of the transport interpretation.}
+\label{sec:transport-scope}
+The frozen publication input is still a \emph{complete regional result}:
+DATA with its direct or covering FINAL receipt and the ancestry,
+boundaries and source evidence needed to validate it. Correct senders
+continue to offer that complete original value $R_0$, as distinguished
+from the augmented regional bundle in \cref{sec:input-report-carriage}.
+They offer it as soon as its original dependencies are available;
+publication does not wait for an unrelated missing REPORT sidecar.
+This revision does not promise
+$T_{\rm pub}$ for a weaker kernel-only input, a hash, a request, a READY
+message or a receipt with missing payload. The public checker uses a
+sufficient subset of an already complete result's evidence; it does not
+weaken the service's input obligation.
+
+\Cref{prop:carrier-preservation} concerns the logical structured EXPORT
+value and its actual evidence graph. It preserves a complete result
+already carried by such a value, including one with incorrect outer
+base, version or interval hints. No corrected wrapper or new publication
+is needed. An encoding must faithfully expose that logical value and
+its actual objects; no binary compatibility theorem for an unspecified
+legacy codec is asserted. Opaque ciphertext, an undiscoverable namespace
+or omitted required payload is not supplied by this normalization.
+
+A stale signed path, closed version or missing predecessor still cannot
+append. Sound FINAL signatures establish intrinsic regional validity,
+not current external permission or a new completeness claim for absent
+bytes. The frozen delivery guarantee remains transport only. A complete
+terminal result does not require its successor authority, and a genuine
+$\tagg{ResolveBoundary}$ wait follows its durable terminal commit.
+
+The byte-retention rules of \cref{sec:source-retention} address later
+access to exact old public objects. They do not add an archive-service
+bound or infer a fresh deadline for every L1 object. The public kernel
+avoids optional recovery-authority and native-sidecar fetches; required
+controls, fixed boundaries and exact DATA/source bytes remain explicit
+inputs. Broader transport interpretations that do not provide the
+original logical complete result remain outside the progress proof.

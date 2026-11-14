@@ -1,0 +1,1071 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,aliascnt}
+\usepackage{booktabs,tabularx,array,enumitem,needspace,float}
+\usepackage[section]{placeins}
+\usepackage{xcolor,tikz,mdframed}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{fancyhdr}
+\hypersetup{pdftitle={Sync HotStuff RR v2},pdfsubject={L1-scheduled leaders and generation-wide recovery}}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small Sync HotStuff RR v2}\rhead{\small L1-scheduled leaders}
+\cfoot{\thepage}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\definecolor{rrRed}{HTML}{A51C30}
+\definecolor{rrBlue}{HTML}{2563EB}
+\definecolor{rrTeal}{HTML}{0F766E}
+\definecolor{rrAmber}{HTML}{B45309}
+\newcommand{\RR}[1]{{\color{rrRed}#1}}
+\newcommand{\QC}{\mathcal C}
+\newcommand{\DC}{\mathcal F}
+\newcommand{\CB}{\mathsf{CB}}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\tagg}[1]{\mathsf{#1}}
+\newtheorem{definition}{Definition}[section]
+\newaliascnt{assumption}{definition}
+\newtheorem{assumption}[assumption]{Assumption}
+\aliascntresetthe{assumption}
+\newaliascnt{lemma}{definition}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newaliascnt{theorem}{definition}
+\newtheorem{theorem}[theorem]{Theorem}
+\aliascntresetthe{theorem}
+\newaliascnt{proposition}{definition}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\crefname{assumption}{assumption}{assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\crefname{lemma}{lemma}{lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{theorem}{theorem}{theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\newcounter{protocol}
+\newenvironment{protocol}[2]{\refstepcounter{protocol}\label{#1}
+\begin{mdframed}[nobreak=true,linewidth=.6pt,skipabove=8pt,skipbelow=8pt,
+innertopmargin=7pt,innerbottommargin=7pt]\small
+\textbf{Protocol \theprotocol. #2}\par\smallskip}{\end{mdframed}}
+\crefname{protocol}{Protocol}{Protocols}
+\Crefname{protocol}{Protocol}{Protocols}
+\title{Sync HotStuff RR v2\\\large L1-Scheduled Leaders and Generation-Wide Recovery}
+\author{}\date{11 October 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+We extend standard-synchronous Sync HotStuff with a finalized L1 leader
+schedule, ordinary leader terms, and a generation-wide failure boundary.
+One valid quit proof freezes all unfinished timers in its generation;
+every correct replica recovers to the same view $(g+1,0)$ without Byzantine
+agreement on the triggering proof. Recovery retains Sync HotStuff's entry
+locks, two waiting stages, leader-selected NEWVIEW, and anchor re-vote.
+Regular successor votes require a terminal commit certificate. A successor
+may distribute its proposal earlier, but cannot obtain admitted votes before
+the predecessor's terminal commitment. This gate prevents repeated faulty
+successors from starving finality. We give execution diagrams, safety and
+liveness proofs, and communication and latency bounds. Red protocol text
+marks extensions to the original standard-synchronous protocol.
+\end{abstract}
+The schedule is available before execution; L1 provides common leader
+identities, not a per-recovery consensus service. The construction uses
+ordinary signatures and $f+1$-vote certificates, as in Section II of
+Sync HotStuff~\cite{sync}. It is a commit-gated reference version.
+Immediate terminal-QC rotation is discussed separately in
+\cref{sec:optimization}.
+
+\section{State machine replication}
+\label{sec:smr}
+A deterministic state machine executes a sequence of client commands.
+Replicas order commands in hash-linked blocks; committing a block commits
+its uncommitted ancestors in order. We use the following SMR contract.
+\begin{definition}[SMR]
+An execution satisfies \emph{safety} if the committed logs of any two correct
+replicas are prefix-comparable and no completed commitment is withdrawn.
+It satisfies \emph{validity} if committed blocks contain only admissible
+commands and valid state transitions. It satisfies \emph{request liveness}
+if every well-formed correct-client request that remains admissible for log
+inclusion until ordered is eventually committed by every correct replica.
+\end{definition}
+Committed-height progress is a separate intermediate property: every
+correct replica eventually commits blocks of arbitrarily large height.
+Request liveness additionally requires the fair input-service assumption
+below. A vote certificate alone is not a finality certificate.
+
+\section{Model and security assumptions}
+\label{sec:model}
+\begin{assumption}[Authenticated synchronous committee]
+\label{ass:network}
+The fixed committee has $n=2f+1$ replicas. At most $f$ are Byzantine;
+the remaining replicas retain their state and remain correct throughout
+the execution. Complete messages between correct replicas, including all
+data and evidence needed for validation, are delivered and processed within
+a known $\Delta>0$. Clocks run at the same rate; offsets need not agree.
+Signatures are unforgeable and $\Hash$ is collision resistant.
+There are finitely many events in every bounded time interval.
+At an exact timer boundary, process received evidence before callbacks.
+\end{assumption}
+The complete-message premise includes dependencies that are not already
+cached. It is an execution assumption, not a claim that arbitrarily large
+histories can be carried by a capacity-limited network at constant cost.
+The communication analysis charges the evidence actually transmitted.
+
+\begin{assumption}[Finalized L1 schedule]
+\label{ass:l1}
+L1 authenticates one immutable committee configuration and a deterministic
+leader function $L(g,t)$ for $g,t\in\mathbb N$. The applicable schedule and
+its verification material are available to every correct replica before
+the corresponding view can be entered. Every scheduled leader belongs to
+the fixed committee. There is no L1 transaction on the block or recovery
+critical path. L1 does not choose a recovery anchor or certify an SMR commit.
+\end{assumption}
+For height liveness, the sequence of initial leaders must revisit correct replicas:
+for every $g_0$ there is a finite $g\ge g_0$ with correct $L(g,0)$.
+A cyclic enumeration of the committee across generations is one concrete
+schedule satisfying this condition. For request liveness, also require that
+for every fixed $g$ and every $t_0$ there is a finite $t\ge t_0$ with correct
+$L(g,t)$. Cyclic term orders satisfy this second condition. Safety requires
+neither fairness property and does not require a scheduled leader to be correct.
+
+\begin{assumption}[Initialization and fair input service]
+\label{ass:input}
+Correct replicas share a committed genesis block $B_0$ and enter the initial
+view $(0,0)$ within $\Delta$ of one another. Correct leaders can produce
+valid empty blocks. A correct client's request is eventually disseminated
+to all correct replicas. Requests have a common admission order in which
+each request has finitely many predecessors. Every correct leader fills its
+fresh blocks with the oldest pending admissible requests that fit, and a
+request is removed from the pending queue only after commitment. Requests
+already present in the proposed ancestry need not be duplicated: committing
+the child also commits those ancestors. Each admitted request fits in one
+batch. Correct replicas retain and serve committed data and evidence.
+\end{assumption}
+
+\section{Views, certificates, and retained evidence}
+\label{sec:notation}
+A view is $v=(g,t)$, ordered lexicographically. Generation $g$ changes only
+on failure recovery; term $t$ changes on regular rotation. Its unique leader
+is $L(v)=L(g,t)$. Every signed message binds the protocol/configuration
+domain, message type, generation, term, height, block hash, opening identity,
+and parent where applicable. Signatures from one generation cannot be
+reused in another. A correct replica signs at most one DATA block at each
+$(g,t,k)$; redelivery cannot generate another vote or restart its timer.
+
+A fresh block has the form $B_k=(x_k,\Hash(B_{k-1}))$ and must satisfy the
+application validity predicate. A DATA vote certificate
+$\QC_v(B_k)$ contains $f+1$ matching votes by distinct members. An ANCHOR
+vote is explicitly tagged and may certify the unchanged recovery anchor;
+its certificate is usable as the first fresh child's parent justification.
+Both types are ranked by $\rank(\QC_v(B_k))=(g,t,k)$.
+Different blocks with the same rank have a fixed hash tie-break when a
+highest certificate must be selected. Correct replicas never decrease the
+rank of a retained entry lock across recoveries. The lock for the current
+generation's ANCHOR first vote is fixed when STATUS is sent; later arrivals
+can update the retained highest QC but do not retroactively raise that
+generation's entry lock.
+
+After recovery, the scheduled initial leader announces an opening block
+$A_g$ in a signed NEWVIEW. Its identity is $(g,h(A_g),\Hash(A_g))$;
+different encodings or different vote subsets for the same block do not
+create different openings. Term $t$ owns the $K\ge1$ fresh heights
+\[
+ h(A_g)+tK+1,\ldots,h(A_g)+(t+1)K.
+\]
+The opening is initially certified, not assumed committed. Its ANCHOR
+vote does not consume one of the $K$ fresh positions and starts no commit
+timer. Genesis is the common initial opening for generation zero.
+
+\subsection{Terminal commitment and normal admission}
+\label{sec:done}
+Let $T_{g,t}$ be the block at height $h(A_g)+(t+1)K$ and
+$N_{g,t}=\QC_{g,t}(T_{g,t})$ its terminal DATA QC. A correct replica
+multicasts
+\[
+ \langle\tagg{DONE},g,t,h(T_{g,t}),\Hash(T_{g,t}),
+             \Hash(A_g)\rangle_r
+\]
+only after the original $2\Delta$ timer for $T_{g,t}$ successfully commits
+it. A terminal commit certificate $\DC_{g,t}(T_{g,t})$ comprises $f+1$
+distinct matching DONE signatures, the terminal QC, and the complete
+admission history. Receiving an imported commit certificate does not
+authorize a new DONE signature. A correct recipient may commit the
+certificate's block and ancestors because at least one signer is correct
+and actually completed that terminal timer.
+
+Normal entry to $(g,t+1)$ requires $\DC_{g,t}(T_{g,t})$, not just $N_{g,t}$.
+Entry to a later normal term requires every intervening terminal commit
+certificate. Each DATA proposal binds its opening identity; its bundle
+contains the signed opening, its ANCHOR QC (except at genesis), the normal
+entry certificates, and the parent justification. Cached identical
+dependencies may be referenced, provided they are available within the
+complete-message bound.
+
+The successor may pre-send its first signed proposal once $N_{g,t}$ is
+available. Before $\DC_{g,t}$ arrives, this is speculative data: it gives no
+permission to enter the term, vote, start a timer, or quit because of that
+successor's proposed fork. Its already-admitted ancestor history is still
+checked immediately. On obtaining $\DC_{g,t}$, recipients can validate the
+cached proposal and any prospective fork at the now-admissible slot.
+Thus the gate constrains voting, not the earliest transmission of bytes.
+
+\subsection{Opening evidence and quit proofs}
+\label{sec:evidence}
+For $g>0$, an entry witness $E_g$ is any valid quit proof for generation
+$g-1$, with its admission history. All such witnesses name the same target
+$(g,0)$ regardless of their old term. The signed opening has the form
+\[
+ R_g=\langle\tagg{NEWVIEW},(g,0),A_g,Q_g,E_g\rangle_{L(g,0)},
+\]
+where $Q_g$ certifies $A_g$ in a strictly older generation. A common
+synthetic genesis certificate has rank $(-1,0,0)$ and can be used when no
+non-genesis QC exists. Opening generation zero requires only the common
+initial configuration; its base and genesis parent justification are fixed.
+Different witnesses or QC encodings for the same opening block do not
+define different openings.
+
+Admissibility is checked against the authenticated schedule and complete
+entry history, independently of a recipient's branch preference. Term zero
+is admissible on its entry witness even if its leader is silent. A DATA
+history additionally needs an opening ANCHOR QC. Terms $t>0$ need the
+intervening terminal commit certificates. A complete quit proof
+$\CB(g,t)$ is one of:
+\begin{enumerate}[label=(\alph*)]
+\item $f+1$ distinct signatures on $\langle\tagg{BLAME},g,t\rangle$
+for an admissible term;
+\item two different admissible DATA proposals at the same $(g,t,k)$,
+signed by $L(g,t)$, with their complete ancestry;
+\item for $g>0$, two valid leader-signed NEWVIEW messages selecting
+different opening blocks for $(g,0)$.
+\end{enumerate}
+Case (c) also covers comparable but different opening blocks: they give
+different quota origins. With one opening, an incompatible DATA history has
+a first divergent height owned by one scheduled leader, yielding case (b).
+Signing the same block twice or changing its certificate encoding is not
+equivocation. A single BLAME signature is not a complete quit proof.
+
+A replica freezes a generation at most once. It retains all evidence and
+completed commitments. Old-generation proofs are archival and cannot
+advance the current generation. A proof for a not-yet-entered generation
+is buffered, then processed immediately on authenticated entry. A complete
+admissible higher-term proof can freeze its generation even before the
+recipient has locally reached that term; its admission certificates already
+prove every required preceding terminal commitment.
+
+\section{Protocols}
+\label{sec:protocol}
+We keep the two-figure organization of the original paper. Black text
+retains its propose/vote/timer and lock-based recovery operations. Red text
+specifies the composite view, ordinary rotation, public commit gate,
+generation-wide evidence handling, and fixed recovery target.
+
+\begin{protocol}{alg:steady}{Steady state and ordinary leader rotation}
+Let $v=(g,t)$ be the local active view and $L=L(g,t)$.
+\RR{Run DATA operations only while generation $g$ is unfrozen.}
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=5pt]
+\item \textbf{Propose.} If $r=L$, upon obtaining
+$\QC_v(B_{k-1})$, broadcast
+$\langle\tagg{PROPOSE},B_k,v,\QC_v(B_{k-1})\rangle_L$,
+where $B_k$ extends $B_{k-1}$.
+\RR{Bind the opening identity and its admission bundle. Use the previous
+term's terminal QC for an ordinary term's first fresh child; generation
+zero starts from genesis and a recovered term zero starts from its ANCHOR
+QC. Propose only the $K$ assigned fresh positions. A scheduled successor
+may pre-send its first child on the terminal QC, but it remains speculative
+until the predecessor's terminal commit certificate is available.}
+\item \textbf{Vote.} On a valid proposal, if no leader equivocation is known,
+forward the proposal and multicast
+$\langle\tagg{DATA\text{-}VOTE},B_k,v\rangle_r$; start
+$\tagg{commit\text{-}timer}_{v,k}=2\Delta$ on that first vote.
+\RR{First validate the complete admission and compare retained signed
+openings and histories, including older terms of $g$. Relay a complete
+fork proof and freeze before another vote. Catch up through all intervening
+terminal commit certificates before voting. Do not DATA-vote before the
+predecessor DONE certificate admits the term. If already beyond $B_k$
+on the same certified history, relay its QC without re-voting. A certified
+child with a valid opening ANCHOR QC is processable even if the recipient
+declined that opening's original ANCHOR vote; the personal entry-lock
+comparison applies to ANCHOR voting, not to this child.}
+\item \textbf{(Non-blocking) Commit.} When the timer reaches zero, commit
+$B_k$ and its uncommitted ancestors.
+\RR{Process evidence at that instant first. Commit only if the timer's
+generation has not frozen; normal term changes leave old timers running.
+On successful expiration of the terminal block's own timer, multicast
+DONE once. Assemble and relay $\DC_{g,t}$, whose committed prefix may be
+installed on receipt. If unfrozen, enter $(g,t+1)$ on this certificate,
+clear the pending local complaint, and allow the buffered successor
+proposal to trigger a DATA vote. Disable the completed term's progress
+test; retain its equivocation listener. Imported commits never generate
+DONE signatures, and completed commits are never withdrawn.}
+\end{enumerate}
+\end{protocol}
+
+\begin{protocol}{alg:recovery}{Generation exit and SH-style recovery}
+Let $v=(g,t)$ be a current-generation view.
+\begin{enumerate}[label=\textbf{\roman*)},itemsep=5pt]
+\item \textbf{Blame and quit.} If fewer than $p$ fresh proposals trigger
+DATA votes after $(2p+4)\Delta$ from local entry, broadcast
+$\langle\tagg{BLAME},v\rangle_r$.
+On gathering $f+1$ matching signatures, broadcast the certificate.
+On leader equivocation, broadcast the original signed witnesses.
+\RR{Schedule a separate check for every $p\in\{1,\ldots,K\}$ at the
+local deadline $\operatorname{entry}(v)+(2p+4)\Delta$. Keep at most one
+pending local complaint. Count distinct admitted fresh positions for which
+the replica has either issued a DATA vote or obtained a valid DATA QC
+through authenticated catch-up. Unvoted speculative proposals and ANCHOR
+votes do not count. A complete admissible current-generation
+quit proof, even for an older or locally unreached term, freezes all of $g$.
+Stop new DATA and ANCHOR votes and normal entries; cancel every unfinished
+generation-$g$ commit timer. Keep receiving/relaying old votes and forming
+QCs. Record certified committed prefixes without reopening the generation.
+Do not restart recovery on additional same-generation proofs.}
+\item \textbf{Status and entry.} Wait $\Delta$ from local exit. Pick a
+highest valid known QC, set the entry lock to it, and send STATUS to the
+new leader.
+\RR{Every current-generation quit targets $(g+1,0)$, whose unique leader
+is the pre-finalized $L(g+1,0)$, regardless of the blamed term. At
+$e_r=a_r+\Delta$, set the lock to the higher-ranked of the retained lock
+and all known QCs from entered generations through $g$; send the QC and
+full verifying history, with a valid quit proof for $g$ serving as
+$E_{g+1}$, to that leader.
+Enter $(g+1,0)$, clear the local complaint, and reset its proposal clock.
+Future-generation messages remain buffered until their authenticated entry.}
+\item \textbf{New-view.} The new leader waits $2\Delta$ from its own entry
+and broadcasts a signed NEWVIEW containing a highest valid known QC.
+\RR{Choose only a QC from a strictly older generation, or genesis.
+Pin its block as the one opening $A_{g+1}$ and attach the entry witness.
+Two different opening blocks signed for $(g+1,0)$ are equivocation,
+including comparable blocks. No BA or per-recovery L1 transaction is run.}
+\item \textbf{First vote.} Upon a valid NEWVIEW whose QC rank is at least
+the entry-lock rank, forward it and vote for its unchanged anchor.
+\RR{Tag this as ANCHOR-VOTE in $(g+1,0)$, at most once, and start no commit
+timer. After its ANCHOR QC forms, the leader proposes the first fresh child
+and resumes \cref{alg:steady}. Before any vote, inspect retained openings
+and history for equivocation. Late old-generation evidence cannot freeze
+$g+1$. During entry, first process a buffered complete current-generation
+quit proof, if present; this may immediately freeze the new generation.}
+\end{enumerate}
+\end{protocol}
+
+\subsection{Processing rules that matter to the proofs}
+\label{sec:processing}
+A valid QC and a locally acceptable ANCHOR first vote are different notions.
+The entry lock may prevent a replica from voting for an opening. If a
+valid ANCHOR QC nonetheless forms, a later certified child has a new-view
+parent QC and must be processed, unless signed equivocation is known.
+Requiring every DATA voter to have personally accepted the original
+NEWVIEW would break the timer proof. Conversely, a correct initial leader
+chooses a QC at least as high as every correct entry lock, so all correct
+replicas vote for its opening.
+
+Before using a history for catch-up, preserve and compare its signed
+opening and admitted prefixes. Two roots are compared before ordinary
+slot allocation; with the same root, compare the first divergent DATA
+position. Invalid or incomplete future-term admission is buffered or
+rejected, not upgraded to a quit proof. The already-admitted portion of
+such a message may still expose genuine old-term equivocation.
+Correct replicas relay a newly accepted proposal on their first DATA vote,
+and relay an available QC when their certified progress has passed that
+proposal. Commit certificates embedded in any admissible history are
+recorded even if an accompanying quit proof immediately freezes the node.
+
+For communication bounds, deduplicate by semantic identity, not by byte
+encoding. Forward each valid NEWVIEW opening $(g,h(A),\Hash(A))$ once,
+regardless of its witness or QC representation. DATA proposals and QCs
+are keyed by their message/certificate type, view, height, and block hash;
+different ranked QCs for the same block remain distinct. DONE is keyed
+by its view, terminal block, and opening. Retain at most two different
+signed proposals per admitted slot and two different openings per
+generation as fork witnesses. Relay the first complete quit proof, the
+first usable QC for each such key, and the first certificate of each
+terminal commit; later equivalent representations are stored without
+causing unbounded relay traffic. This rule never suppresses the
+timer-specific QC required for catch-up or commitment protection.
+The bounds count admitted protocol traffic, not arbitrary Byzantine
+flooding; fixed-size valid batches and finite evidence-processing capacity
+are required by \cref{ass:network}.
+
+\section{Execution diagrams}
+\label{sec:figures}
+The diagrams separate DATA certification, timed commitment, and ANCHOR
+re-certification. Arrows are representative transmissions. Only the
+explicitly labeled timing example uses equal actual one-hop delay $\delta$;
+the proofs use the worst-case bound $\Delta$.
+\begin{figure}[htbp]\centering
+% Native TikZ fragment. Illustrative equal-delay execution, not a timing premise.
+% Width 15.8 cm; all visible text uses at least 9 pt.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!60,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt,font=\fontsize{9.5}{11}\selectfont},
+  timed/.style={draw=rrTeal,dashed,rounded corners=2pt,
+    fill=rrTeal!4,align=center,inner sep=4pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,10.1);
+  \node[align=center] at (2.0,0) {Correct leader\\$L(g,t)$};
+  \node[align=center] at (7.5,0) {Correct replica\\$P$};
+  \node[align=center] at (13.4,0) {Correct replica\\$Q$};
+  \foreach \x in {2,7.5,13.4} \draw[lane] (\x,.5)--(\x,9.4);
+
+  \node[phase] at (.1,.85) {Fresh blocks pipeline on QCs};
+  \node[lab,anchor=east] at (1.7,1.45) {$0$};
+  \draw[msg] (2,1.45)--node[lab] {$\mathrm{PROPOSE}(X)$} (7.5,2.05);
+  \draw[msg] (2,1.45)--(13.4,2.05);
+  \node[lab,anchor=west] at (13.7,2.05) {$\delta$};
+  \node[state,minimum width=8.3cm] at (10.1,2.7)
+    {Validate and forward $X$; broadcast DATA votes.\\
+     Start each local $2\Delta$ commit timer.};
+  \draw[msg] (7.5,3.3)--node[lab] {DATA votes for $X$} (2,3.9);
+  \draw[msg] (13.4,3.3)--(2,3.9);
+  \node[state] at (2.0,4.5)
+    {$2\delta$: form $\QC_{g,t}(X)$;\\propose child $Y$};
+  \draw[msg] (2,5.1)--node[lab] {$\mathrm{PROPOSE}(Y,\QC_{g,t}(X))$} (7.5,5.7);
+  \draw[msg] (2,5.1)--(13.4,5.7);
+  \node[state,minimum width=8.3cm] at (10.1,6.35)
+    {$3\delta$: validate and vote for $Y$;\\start another $2\Delta$ timer.};
+  \node[timed,minimum width=12.7cm] at (7.9,7.35)
+    {The timer for $X$ keeps running while $Y$ and later blocks are certified.};
+  \node[state,draw=rrTeal,minimum width=12.7cm] at (7.9,8.4)
+    {$9\delta=\delta+2\Delta$: $P$ and $Q$ commit $X$ if generation $g$ is not frozen.\\
+     $11\delta=3\delta+2\Delta$: they similarly commit $Y$ and its ancestors.};
+  \node[anchor=west,align=left,font=\fontsize{9}{10.5}\selectfont] at (.1,9.6)
+    {Illustration: $\delta=\Delta/4$, with equal actual delays. Time runs downward, not to scale.\\
+     Arrows represent all-to-all voting; a QC has $f+1$ distinct signers.};
+\end{tikzpicture}
+
+\caption{Certification and commitment within one admitted term. A parent QC enables a new child while older DATA timers continue. The example uses actual delay $\delta=\Delta/4$.}
+\label{fig:steady}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+% Native TikZ fragment. The public DONE certificate gates votes, not proposals.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!65,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt},
+  gate/.style={draw=rrTeal,fill=rrTeal!5,rounded corners=2pt,
+    align=center,inner sep=5pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,11.4);
+  \node[align=center] at (2.1,0) {Current leader\\$L(g,t)$};
+  \node[align=center] at (7.8,0) {Correct replica\\$P$};
+  \node[align=center] at (13.5,0) {Successor leader\\$L(g,t+1)$};
+  \foreach \x in {2.1,7.8,13.5} \draw[lane] (\x,.5)--(\x,10.6);
+
+  \node[phase] at (.1,.85) {Terminal certification may trigger an early proposal};
+  \draw[msg] (2.1,1.5)--node[lab] {terminal proposal $T$} (7.8,2.0);
+  \draw[msg] (2.1,1.5)--(13.5,2.0);
+  \node[state,minimum width=8.9cm] at (10.2,2.65)
+    {Vote for $T$ in $(g,t)$ and start its $2\Delta$ timer.\\
+     Terminal QC $N_{g,t}=\QC_{g,t}(T)$ forms.};
+  \draw[msg] (7.8,3.25)--node[lab] {$N_{g,t}$} (13.5,3.65);
+  \draw[msg] (13.5,4.1)--node[lab] {optional early $\mathrm{PROPOSE}(Y,N_{g,t})$} (7.8,4.55);
+  \node[state,draw=rrAmber,minimum width=11.8cm] at (7.9,5.25)
+    {Buffer $Y$. A terminal QC alone does \textbf{not} permit a DATA vote in term $t+1$.\\
+     The old terminal commit timer continues; generation $g$ is unchanged.};
+
+  \node[phase] at (.1,6.1) {Terminal commitment supplies the voting gate};
+  \node[gate,minimum width=11.8cm] at (7.9,6.8)
+    {After the original terminal timer completes, broadcast $\mathrm{DONE}(g,t,T)$.\\
+     Collect $f+1$ matching DONE signatures into $\DC_{g,t}(T)$.};
+  \draw[msg,draw=rrTeal] (7.8,7.55)--node[lab] {$\DC_{g,t}(T)$ + complete history} (13.5,8.0);
+  \node[gate,minimum width=11.8cm] at (7.9,8.7)
+    {Verify $\DC_{g,t}(T)$ and import its committed prefix. Enter $(g,t+1)$.\\
+     Now validate and vote for buffered $Y$; start $Y$'s $2\Delta$ timer.};
+  \draw[msg] (7.8,9.45)--node[lab] {DATA votes for $Y$; normal pipeline resumes} (13.5,9.9);
+  \node[anchor=west,align=left,font=\fontsize{9}{10.5}\selectfont] at (.1,10.85)
+    {No L1 transaction and no recovery on this path. Each replica applies the same gate locally.\\
+     DONE reports an original timed terminal commit; QC receipt or imported commit does not issue DONE.};
+\end{tikzpicture}
+
+\caption{Commit-gated regular rotation. A successor may pre-send its first proposal, but DATA votes wait for the predecessor terminal DONE certificate. This path does not change generation.}
+\label{fig:regular}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+% Native TikZ fragment. Representative messages; time is not drawn to scale.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,font=\fontsize{9.5}{11}\selectfont,
+  lane/.style={draw=black!25,densely dashed},
+  msg/.style={-{Stealth[length=1.8mm]},semithick,draw=rrBlue},
+  lab/.style={fill=white,inner sep=2pt,align=center},
+  state/.style={draw=rrBlue!65,fill=white,rounded corners=2pt,
+    align=center,inner sep=4pt,font=\fontsize{9.5}{11}\selectfont},
+  wait/.style={draw=rrAmber,dashed,fill=rrAmber!4,rounded corners=2pt,
+    align=center,inner sep=4pt},
+  phase/.style={anchor=west,font=\fontsize{9.5}{11}\selectfont\bfseries}
+]
+  \path[use as bounding box] (0,-.5) rectangle (15.8,17.4);
+  \node[align=center] at (1.5,0) {Old leader\\$L(g,t)$};
+  \node[align=center] at (5.7,0) {Correct replica $P$\\active at $(g,t_P)$};
+  \node[align=center] at (9.9,0) {Correct replica $Q$\\active at $(g,t_Q)$};
+  \node[align=center] at (14.1,0) {New leader\\$L'=L(g+1,0)$};
+  \foreach \x in {1.5,5.7,9.9,14.1} \draw[lane] (\x,.6)--(\x,16.55);
+
+  \node[phase] at (.1,.95) {(i) Quit the generation, regardless of the active term};
+  \node[state,draw=rrRed,minimum width=8.0cm] at (5.0,1.7)
+    {At $a_P$, $P$ receives complete $\CB(g,t^*)$.\\
+     Relay proof; freeze $g$ and cancel its pending timers.};
+  \draw[msg,draw=rrRed] (5.7,2.4)--node[lab] {$\CB(g,t^*)$} (9.9,2.85);
+  \draw[msg,draw=rrRed] (5.7,2.4)--(14.1,2.85);
+  \node[state,draw=rrRed,minimum width=8.0cm] at (10.0,3.55)
+    {$Q$ and $L'$ also freeze generation $g$.\\
+     Correct freeze times differ by at most $\Delta$.};
+  \node[lab] at (7.8,4.35)
+    {All preserve completed commits and process old votes/QCs; no new DATA votes.};
+
+  \node[phase] at (.1,5.0) {(ii) Fix local locks and send STATUS to the predetermined leader};
+  \node[wait] at (5.7,5.8) {Wait $\Delta$\\from $a_P$};
+  \node[wait] at (9.9,5.8) {Wait $\Delta$\\from $a_Q$};
+  \node[wait] at (14.1,5.8) {Wait $\Delta$\\from $a_{L'}$};
+  \node[state,minimum width=12.6cm] at (7.9,6.75)
+    {At own $a_r+\Delta$: fix highest-QC entry lock $Q_r$; enter $(g+1,0)$.\\
+     Each STATUS binds the new view and carries $Q_r$ with complete verifying history.};
+  \draw[msg] (5.7,7.6)--node[lab,pos=.5] {$\mathrm{STATUS}(g+1,0,Q_P)$} (14.1,8.0);
+  \draw[msg] (9.9,8.2)--node[lab,pos=.5] {$\mathrm{STATUS}(g+1,0,Q_Q)$} (14.1,8.65);
+  \node[wait,minimum width=8.7cm] at (10.0,9.35)
+    {$L'$ waits $2\Delta$ from its own entry.\\
+     This covers entry skew and delivery of correct STATUS reports.};
+
+  \node[phase] at (.1,10.2) {(iii)--(iv) NEWVIEW, anchor re-certification, and the first fresh child};
+  \draw[msg] (14.1,10.8)--node[lab,pos=.53]
+    {$\mathrm{NEWVIEW}(g+1,0,Q^*)$\\highest valid received QC} (5.7,11.25);
+  \node[state,minimum width=12.6cm] at (7.9,12.0)
+    {Validate $Q^*$ and history; check $\operatorname{rank}(Q^*)\ge\operatorname{rank}(Q_r)$.\\
+     Check NEWVIEW equivocation; relay NEWVIEW and vote for its unchanged anchor $A$.};
+  \draw[msg] (5.7,12.8)--node[lab] {ANCHOR votes to all} (14.1,13.25);
+  \node[state,draw=rrAmber,minimum width=12.6cm] at (7.9,13.9)
+    {Form $\QC_{g+1,0}(A)$ from $f+1$ ANCHOR votes.\\
+     Re-certification starts \textbf{no commit timer}.};
+  \draw[msg] (14.1,14.7)--node[lab,pos=.53]
+    {$\mathrm{PROPOSE}(Y,\QC_{g+1,0}(A))$} (5.7,15.15);
+  \node[state,draw=rrTeal,minimum width=12.6cm] at (7.9,15.9)
+    {First fresh child $Y$: DATA vote and start $2\Delta$ timer.\\
+     Timed commitment of $Y$ also commits any uncommitted ancestors, including $A$.};
+  \node[anchor=west,align=left,font=\fontsize{9}{10.5}\selectfont] at (.1,16.95)
+    {Time runs downward; arrows are representative. L1's finalized $L(g+1,0)$ is already known.\\
+     Late old-generation proofs do not trigger another recovery; future proposals wait for local entry.};
+\end{tikzpicture}
+
+\caption{Generation-wide exit followed by SH-style recovery. Different active terms share one frozen generation and one L1-scheduled target $(g+1,0)$. ANCHOR re-certification starts no timer.}
+\label{fig:recovery}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+% Native TikZ state diagram. L1 assigns identity, not an anchor or SMR commit.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\fontsize{9.5}{11}\selectfont,
+  flow/.style={-{Stealth[length=1.8mm]},semithick},
+  state/.style={draw=rrBlue!65,fill=rrBlue!3,rounded corners=3pt,
+    align=center,inner sep=5pt,text width=4.5cm,minimum height=1.15cm},
+  lab/.style={fill=white,inner sep=3pt,align=center},
+  note/.style={align=center,text width=14.8cm,inner sep=3pt}
+]
+  \path[use as bounding box] (0,-10.8) rectangle (15.8,.75);
+  \node[state,draw=black!45,fill=black!3,text width=13.2cm] (lone) at (7.9,0)
+    {Finalized L1 configuration supplies the immutable schedule $L(g,t)$.\\
+     Schedule verification precedes entry; there is no recovery transaction to L1.};
+
+  \node[state] (active) at (3.0,-2.25)
+    {Active $(g,t)$\\Fresh proposals and DATA votes;\\$2\Delta$ commit timers};
+  \node[state,draw=rrTeal,fill=rrTeal!4] (next) at (12.7,-2.25)
+    {Active $(g,t+1)$\\Same generation and schedule;\\fresh height range advances};
+  \draw[flow,draw=rrTeal] (active)--node[lab]
+    {Terminal DONE certificate\\$\DC_{g,t}$ gates entry and votes} (next);
+  \draw[flow,dashed,draw=black!45] (lone.south west)--(active.north);
+  \draw[flow,dashed,draw=black!45] (lone.south east)--(next.north);
+
+  \node[state,draw=rrRed,fill=rrRed!4] (frozen) at (3.0,-5.2)
+    {Frozen generation $g$\\Cancel all its pending timers;\\retain completed commits};
+  \draw[flow,draw=rrRed] (active)--node[lab,align=left,pos=.51]
+    {Any complete valid\\current-generation $\CB(g,t^*)$} (frozen);
+  \draw[flow,draw=rrRed] (next.south)--(12.7,-5.2)--node[lab,pos=.53]
+    {A proof from an earlier\\term still freezes $g$} (frozen.east);
+
+  \node[state,draw=rrAmber,fill=rrAmber!4] (recovery) at (3.0,-8.2)
+    {Recover into $(g+1,0)$\\Wait $\Delta$; set lock;\\send STATUS to $L(g+1,0)$};
+  \draw[flow,draw=rrAmber] (frozen)--node[lab,align=left,pos=.51]
+    {One recovery per $g$;\\target independent of $t^*$} (recovery);
+  \node[state] (newactive) at (12.7,-8.2)
+    {Active $(g+1,0)$\\NEWVIEW anchor\\re-certified;\\fresh children start timers};
+  \draw[flow] (recovery)--node[lab]
+    {$L(g+1,0)$ waits $2\Delta$;\\NEWVIEW;\\ANCHOR re-certification} (newactive);
+  \node[note] at (7.9,-10.1)
+    {L1 selects the leader identity; the leader proposes an anchor subject to each replica's lock.\\
+     Previous-generation CBs cannot advance the new generation.};
+\end{tikzpicture}
+
+\caption{The state transitions and L1 boundary. L1 supplies leader identities in advance; local evidence triggers recovery and SH entry locks constrain the proposed anchor.}
+\label{fig:states}
+\end{figure}
+
+\FloatBarrier
+
+
+\section{Safety}
+\label{sec:safety}
+We first establish the timing and history invariants, then prove preservation
+across generations. All statements refer to admissible certificates; a
+certificate's signatures alone are insufficient if its entry history is absent.
+
+\begin{lemma}[Entry skew and recovery target]
+\label{lem:entry}
+For each entered generation, correct initial-view entry times differ by at
+most $\Delta$. If its first correct freeze is at $a$, every correct replica
+freezes that same generation by $a+\Delta$ and enters the fixed successor
+generation at a time in $[a+\Delta,a+2\Delta]$. Different triggering terms
+or witnesses cannot change the target.
+\end{lemma}
+\begin{proof}
+The initial claim is \cref{ass:input}. For the induction step, immediately
+relaying the complete generation-$g$ proof delivers it within $\Delta$.
+No correct replica can have completed generation-$g$ recovery before the
+first correct freeze $a$. A replica still finishing generation $g-1$
+buffers the proof: by the inductive entry-skew bound it enters $g$ no
+later than $\Delta$ after the first correct generation-$g$ entry, hence no
+later than $a+\Delta$. It processes the buffered proof on entry. Thus
+$a_r\in[a,a+\Delta]$. The local wait gives
+$e_r=a_r+\Delta\in[a+\Delta,a+2\Delta]$. All proofs name generation $g$,
+and the transition function always returns $(g+1,0)$ with the same
+pre-finalized leader. A buffered next-generation proof may immediately
+freeze that generation after entry; it does not change the entry time or
+the completed predecessor transition.
+\end{proof}
+
+\begin{lemma}[Canonical history or signed evidence]
+\label{lem:fork}
+Two admissible histories in one generation have the same opening and are
+prefix-comparable, or their retained signed material supplies a valid quit
+proof for that generation.
+\end{lemma}
+\begin{proof}
+Different opening blocks supply the two valid NEWVIEW signatures of
+\cref{sec:evidence}(c). Generation zero has its fixed genesis opening.
+For the same opening, fresh height determines the term and scheduled
+leader. At the first divergent height, both histories therefore contain
+different DATA proposals signed by the same leader at the same
+$(g,t,k)$. Both entry paths are complete, so these proposals give case (b).
+Terminal commit certificates are required in both paths at each normal
+boundary. No unverifiable future-term proposal is used in this argument.
+\end{proof}
+
+\begin{lemma}[Protection of a completed DATA timer]
+\label{lem:timer}
+Suppose a correct replica DATA-votes for $B$ at time $s$ in generation $g$
+and its own timer commits $B$ at $s+2\Delta$. Every correct replica knows
+its DATA QC by that time. No admissible generation-$g$ QC conflicting with
+$B$ can exist, including a QC assembled later from old votes. No ANCHOR QC
+under a different generation-$g$ opening can exist.
+\end{lemma}
+\begin{proof}
+No correct replica freezes generation $g$ by $s+\Delta$: its immediately
+relayed proof would reach the committer by $s+2\Delta$ and cancel the timer.
+The complete proposal forwarded at $s$ reaches every correct replica by
+$s+\Delta$. A replica still finishing prior recovery has entered $g$ by
+then, by \cref{lem:entry}; a replica in a later generation would require
+an earlier freeze, already excluded.
+
+An incompatible retained admitted history would expose evidence by
+\cref{lem:fork}, cause a freeze by $s+\Delta$, and contradict successful
+commitment. Otherwise the recipient catches up through the supplied
+opening and terminal commit certificates. If it has passed $B$ on this
+certified history, its ancestry contains $QC(B)$ and it relays that QC.
+One such correct relay supplies the QC everywhere by $s+2\Delta$.
+If none has passed $B$, all correct replicas have voted or now vote for
+$B$ by $s+\Delta$. There are at least $f+1$ correct votes; their multicast
+supplies the QC everywhere by expiry. Votes remain processable even after
+a subsequent freeze.
+
+For a conflicting QC, choose a correct signer. If it processes the
+committer's proposal before attempting the conflicting vote, the retained
+fork makes it freeze instead of vote. Otherwise that vote was sent by
+$s+\Delta$, together with its conflicting signed proposal or NEWVIEW.
+The relay reaches the committer by $s+2\Delta$, cancelling the timer.
+This is a contradiction in either case. The same argument applies to an
+ANCHOR vote for any different opening, even when the opening blocks are
+comparable: the two signed openings alone suffice to freeze. It concerns
+the time of a correct vote, not the later time at which Byzantine nodes
+assemble or disclose a QC.
+\end{proof}
+
+\begin{lemma}[Locks inherit completed timers]
+\label{lem:locks}
+If a correct timer commits $B$ in generation $g$, every correct replica's
+entry lock for every later generation ranks at least as high as its
+protecting DATA QC.
+\end{lemma}
+\begin{proof}
+Let the timer start at $s$ and let $a$ be the first correct freeze of $g$,
+if there is one. \Cref{lem:timer}'s cancellation argument gives
+$a>s+\Delta$. Every entry-lock snapshot occurs at
+$a_r+\Delta\ge a+\Delta>s+2\Delta$, after every correct replica knows the
+protecting QC. Its highest-QC lock therefore ranks at least that high.
+Subsequent recovery preserves nondecreasing lock ranks. If $g$ never
+freezes, no later generation is entered and the assertion is vacuous.
+\end{proof}
+
+\begin{lemma}[Unique extensibility]
+\label{lem:extend}
+If a correct timer commits $B$, every admissible QC of rank at least
+$\rank(QC(B))$ certifies a block extending $B$.
+\end{lemma}
+\begin{proof}
+Within $B$'s generation, \cref{lem:timer} excludes alternative certified
+openings and incompatible QCs. Under the one certified opening, canonical
+term ranges increase with both term and fresh height. A QC of at least
+$B$'s rank therefore has height at least $h(B)$; it cannot be a strict
+ancestor, and hence must extend $B$.
+
+Suppose a later-generation QC of sufficient rank fails to extend $B$.
+Choose one with the least rank among such QCs. If it is an ANCHOR QC for
+$A$, a correct ANCHOR voter accepted an older-generation justification
+$Q_A$ whose rank is at least its entry lock, hence at least $QC(B)$ by
+\cref{lem:locks}. Since $A$ does not extend $B$, $Q_A$ belongs to the
+same set and has strictly smaller rank, a contradiction.
+If the chosen QC is a DATA QC, its parent QC is in the same later
+generation, including the ANCHOR parent of its first fresh child and the
+preceding-term terminal parent at ordinary handoff. Its rank is strictly
+smaller but still greater than $QC(B)$. A parent extending $B$ would make
+its child extend $B$, so this parent also belongs to the set, again a
+contradiction. The lexicographic ranks are well-ordered, and equal-rank
+distinct blocks do not affect either strict-decrease argument.
+\end{proof}
+
+\begin{lemma}[Terminal commit certificates]
+\label{lem:done}
+Every valid $\DC_{g,t}(T)$ witnesses a correct completed DATA timer for
+$T$. Importing its committed prefix and using it for normal admission
+preserves safety. In particular, an admissible quit proof for term $t>0$
+already witnesses a fresh commitment in that generation.
+\end{lemma}
+\begin{proof}
+Among $f+1$ distinct DONE signers at least one is correct. That signer
+issued DONE only after its own terminal DATA timer succeeded; imported
+certificates cannot cause it to sign DONE. The certificate therefore
+inherits a genuine timer commitment. A later term's admission contains
+its predecessor terminal commit certificate, whose block is fresh above
+the generation opening. This applies even if the proof arrives before
+the recipient has locally entered that term.
+\end{proof}
+
+\begin{theorem}[SMR safety and validity]
+\label{thm:safety}
+All correct committed logs are prefix-comparable, completed commitments
+are never withdrawn, and every committed block satisfies application
+validity. All correct exits from generation $g$ target $(g+1,0)$ and its
+unique L1-scheduled leader.
+\end{theorem}
+\begin{proof}
+For two direct timer commitments, order their protecting QCs by rank.
+\Cref{lem:extend} says the higher-ranked certified block extends the
+lower-ranked committed block. Indirect ancestor commitments inherit this
+comparability. Every imported terminal commitment inherits a direct timer
+commitment by \cref{lem:done}, so imports introduce no additional
+incompatible log. All accepted proposals and certificate histories satisfy
+application validity; their committed ancestors do as well.
+The protocol cancels unfinished timers on a freeze and never revokes
+completed commits. \Cref{lem:entry} and the unique finalized schedule
+give the recovery-target and leader assertions.
+\end{proof}
+
+\section{Liveness}
+\label{sec:liveness}
+\begin{lemma}[A correct leader's progress]
+\label{lem:honest}
+An unfrozen correctly entered term with a correct leader, and no newly
+delivered earlier-term quit proof, gives every correct replica at least
+$p$ distinct admitted fresh positions, evidenced by its own DATA vote or
+a valid DATA QC, by $(2p+4)\Delta$ after that replica's entry,
+for $1\le p\le K$. A correct initial leader cannot be quit before its
+generation has made a fresh commitment.
+\end{lemma}
+\begin{proof}
+For a recovered initial term let $e$ be the earliest correct entry.
+The leader enters by $e+\Delta$ and finishes its own $2\Delta$ wait by
+$e+3\Delta$. All correct STATUS reports have arrived by then. Its chosen
+QC rank is at least every fixed entry lock, so its one valid NEWVIEW
+reaches all correct replicas by $e+4\Delta$ and triggers their ANCHOR
+votes. The leader has an ANCHOR QC by $e+5\Delta$, and its first fresh
+proposal is processed by $e+6\Delta$.
+Each subsequent proposal/QC iteration costs at most $2\Delta$; the
+$p$th proposal is processed by $e+(2p+4)\Delta$. A recipient either
+votes or already has QC-backed catch-up evidence for that position.
+Thus its progress count is at least $p$. Every local entry is at least
+$e$, giving the stated local deadline. Generation zero omits the anchor
+exchange and is faster.
+
+Normal entry times differ by at most $\Delta$: the first correct receipt
+of a valid terminal commit certificate relays it immediately, unless the
+generation freezes. Its new correct leader proposes the first child
+immediately on entry (or has pre-sent it). First votes arrive within
+$2\Delta$ of the earliest normal entry, and later votes retain the
+$2\Delta$ iteration bound, which is within the stated deadlines.
+At exact deadlines messages are processed before BLAME callbacks.
+
+A correct leader issues one opening and one proposal per slot, so it
+does not supply equivocation evidence. The timely correct votes prevent
+correct BLAME signatures; Byzantine signatures alone cannot reach $f+1$.
+Before a first generation commitment there is also no admissible
+higher-term quit proof, because it requires a terminal commit certificate
+by \cref{lem:done}. Thus a correct initializer cannot be frozen before
+fresh progress. Its terminal timer succeeds, or a higher-term proof
+already witnesses that success.
+\end{proof}
+
+\begin{lemma}[No-progress generations terminate or commit]
+\label{lem:no-progress}
+If a generation makes no fresh correct timer commitment, it cannot have
+an admissible normal entry or higher-term quit proof. If its initial
+leader is correct it makes fresh progress; otherwise a permanent stall
+eventually produces a complete initial-term BLAME certificate.
+\end{lemma}
+\begin{proof}
+Normal entry and higher-term proof admission require DONE, which is
+impossible without a fresh timer commitment. Only term zero can be active
+without progress. The correct-initializer conclusion is
+\cref{lem:honest}. If fresh DATA votes stop before quota completion, each
+correct replica eventually reaches a deficient progress test for this
+same term, issues its one complaint, and receives the complaints of at
+least $f+1$ correct replicas. They assemble and relay a complete quit
+proof. If instead all fresh DATA votes occur, their QCs arrive, and their
+timers commit unless a quit proof freezes the generation; that proof
+already starts finite recovery. Equivocation likewise immediately starts
+recovery once exposed. Infinite silence cannot leave a no-progress
+generation active forever.
+\end{proof}
+
+\begin{theorem}[Committed-height progress]
+\label{thm:height}
+Under \cref{ass:network,ass:l1,ass:input} and initializer fairness,
+every correct replica eventually commits arbitrarily large heights.
+\end{theorem}
+\begin{proof}
+Suppose first that infinitely many generations are entered. A valid
+recovery transition finishes after its local wait; no additional agreement
+or L1 transaction can stall entry. By initializer fairness, infinitely
+many of these generations have correct initial leaders. Each such
+generation completes its initial terminal commitment by
+\cref{lem:honest}. Its opening extends every older correct commitment:
+any correct ANCHOR vote accepts an older QC at least as high as its
+entry lock, and \cref{lem:extend,lem:locks} preserve all earlier timer
+commits. Its fresh terminal height is therefore strictly above the
+previous committed maximum. The terminal's protecting QC reaches every
+correct replica, and subsequent recovery locks preserve it. Thus direct
+commit heights grow without bound.
+
+Now suppose there are finitely many entered generations. Their last
+generation cannot freeze, since a freeze would cause another finite
+transition. If normal terms advance infinitely, their admission
+certificates witness terminal commitments at increasing canonical heights.
+If only finitely many terms advance, all correct replicas eventually
+catch up through the disclosed entry certificates. In their last common
+term, either insufficient DATA progress produces $f+1$ correct BLAME
+signatures and recovery, or all $K$ blocks are voted and certified.
+With no freeze their timers commit, all correct DONE signatures are
+multicast, and the terminal commit certificate advances the term. Both
+possibilities contradict a permanently last term.
+
+Finally take a direct commitment at any height. Its protecting QC is
+known everywhere and all later accepted openings extend it. Every
+correct replica either imports a terminal commitment or commits a later
+DATA descendant on its own timer. In an infinite-generation execution,
+each correct-initializer term reaches its terminal position. Every correct
+replica either casts that terminal DATA vote or has already imported its
+terminal DONE. The resulting timers finish unless a later-term quit proof
+carries that terminal DONE, which is relayed and imported by all. Hence
+arbitrarily high committed prefixes are eventually
+installed at every correct replica, not merely at one witness.
+\end{proof}
+
+\begin{theorem}[Request liveness]
+\label{thm:requests}
+With both schedule fairness properties and the input service of
+\cref{ass:input}, every persistently admissible correct-client request is
+eventually committed by all correct replicas.
+\end{theorem}
+\begin{proof}
+Infinitely many recoveries give infinitely many committed initial terms
+with correct leaders, as in \cref{thm:height}. Finitely many recoveries give
+an infinite unfrozen generation with infinitely many completed correct
+terms by normal-term fairness. Thus there are infinitely many completed
+correct terms in either case.
+
+Fix a request after its dissemination to all correct replicas. It has
+finitely many predecessors in the common admission order. At every
+completed correct term, its leader's first fresh block contains the
+oldest remaining requests that fit, or those requests already occur in
+the ancestry committed by that term. Speculative inclusion never removes
+a request from the pending queue. Induction over the finite predecessors
+therefore places the fixed request in a completed correct term's prefix.
+Safety and committed-prefix dissemination then deliver it to every
+correct replica.
+\end{proof}
+
+\section{Complexity and performance}
+\label{sec:complexity}
+The counts below use ordinary signatures, explicit certificates, and
+deduplication as in \cref{sec:processing}. Let $\sigma$ be signature size,
+$b$ the fresh block size, and $A$ the other ancestry/admission bytes
+actually carried with a representative proposal or recovery report.
+These are transmitted sizes; a cached dependency has zero retransmission
+cost only where the receiver can validate its reference.
+
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}p{.20\linewidth}p{.19\linewidth}Y@{}}
+\toprule
+Operation & Correct messages & Conservative bytes with full forwarding\\
+\midrule
+Fresh DATA block & $O(n^2)$ &
+$O(n^2(b+A+n\sigma))$: proposals and their parent QC are forwarded;
+votes themselves cost $O(n^2\sigma)$.\\
+Terminal DONE & $O(n^2)$ per term &
+$O(n^2\sigma)$ for shares; forwarding explicit DONE certificates can
+add $O(n^3\sigma)$, with entry-history bytes charged separately.\\
+Failure recovery control & $O(n^2)$ per generation &
+$O(n^2(A+n\sigma))$: STATUS to one leader, NEWVIEW forwarding and
+all-to-all ANCHOR votes; quit and commitment evidence are charged.\\
+L1 schedule & Outside local execution &
+One finalized configuration/schedule witness, amortized separately.
+No per-block or per-recovery transaction.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The $O(n^2)$ message order agrees with raw standard-synchronous SH.
+Late DATA votes, DATA QCs, and DONE traffic processed while frozen are
+charged to their originating blocks and terms, not counted again as
+bounded new recovery control traffic.
+The new DONE traffic contributes $O(n^2/K)$ messages per fresh block
+amortized over a $K$-block term. Without certificate compression, message
+complexity and bit complexity are different. Unbounded distinct Byzantine
+traffic is outside this accounting.
+
+\paragraph{Block and recovery latency.}
+An admitted DATA vote starts the same $2\Delta$ timer as SH.
+An ordinary unbuffered proposal under homogeneous actual one-hop delay
+$\delta\le\Delta$ commits after $\delta+2\Delta$ at a follower if its
+timer survives. For a speculative proposal, physical send-to-commit also
+includes the admission-buffering interval; the $2\Delta$ bound starts at
+the DATA vote, not at its early transmission.
+From earliest freeze $a$, all enter the successor generation by
+$a+2\Delta$. A correct new leader sends NEWVIEW by $a+4\Delta$, obtains
+the ANCHOR QC by $a+6\Delta$, and reaches all correct replicas with its
+first fresh child by $a+7\Delta$. All that child's timers expire by
+$a+9\Delta$ if not frozen. With commit-gated admission, any admissible
+higher-term interruption already witnesses a terminal commitment.
+The two waiting stages are $\Delta$ and $2\Delta$, as in SH; they are
+not the whole end-to-end recovery time.
+
+\paragraph{Term boundary and throughput.}
+Within one term, QCs pipeline proposals at network speed, approximately
+one block per $2\delta$ in the homogeneous good case. The terminal commit
+gate puts a conservative wait on the ordinary handoff path. Let $c_t$
+be the maximum, over correct replicas, of their first local processing
+times for term $t$'s first admitted fresh position, by a DATA vote or
+QC-backed catch-up.
+If consecutive terms have correct leaders and no freeze, then
+\[
+ c_{t+1}-c_t\ \le\ 2\Delta+(2K-1)\delta
+\]
+with a buffered speculative successor, and the conservative bound without
+speculation is $2\Delta+2K\delta$. If a correct replica already knows
+terminal DONE, its prompt relay supplies it everywhere within $\delta$.
+Otherwise the first-position QC reaches the leader by $c_t+\delta$:
+either all correct first votes have been sent, or a QC-backed recipient
+relays the QC. For $K\ge2$, later proposal/QC iterations reach the terminal
+position by $c_t+(2K-2)\delta$. Each correct recipient then votes for that
+terminal block, or has already passed it using DONE and relays the
+certificate. In the former case terminal timers finish within another
+$2\Delta$ and DONE shares arrive within one more $\delta$; the latter
+case is faster. For $K=1$, all first-position votes have occurred by
+$c_t$, or completed-term catch-up already supplies DONE.
+The speculative first proposal is already available by this DONE bound.
+Ignoring bandwidth and input queues, an uninterrupted sequence of correct
+terms consequently supports at least
+\[
+ \frac{K}{2\Delta+(2K-1)\delta}
+\]
+fresh blocks per time unit under this timing envelope.
+This is a conservative good-case service bound, not an exact rate for
+arbitrary Byzantine participation or link delays. The handoff cost
+amortizes as $K$ increases; it is not identical to SH's stable-leader
+throughput.
+
+\section{Immediate-QC rotation as a further optimization}
+\label{sec:optimization}
+The preferred faster variant would admit $(g,t+1)$ on $N_{g,t}$ alone.
+Its proposal and DATA-vote pipeline can cross a leader boundary before
+the predecessor's timers expire. This manuscript proves the DONE-gated
+variant; it does not silently assign that faster rule the same liveness theorem.
+
+To see the missing obligation, take $n=3$, $f=1$, $K=1$, with a faulty
+leader after short correct terms and actual delay $\delta\ll\Delta$.
+Correct terms can form QCs and hand off before any $2\Delta$ timer expires.
+The faulty successor equivocates, freezes the generation, and cancels
+all those timers. SH's recovery re-certifies an inherited anchor without
+a timer. A fair L1 schedule can repeat this pattern in subsequent
+generations: certified height grows while committed height stops.
+Agreement on the next leader does not resolve this execution.
+
+Immediate-QC rotation therefore needs another mechanism that converts
+certified progress into irreversible commitment despite repeated recovery,
+with a separate preservation and progress proof. A recovery anchor cannot
+be committed merely because it has $f+1$ votes. The current commit gate
+is the explicit conservative choice, and the faster variant remains a
+separate design objective.
+
+\section{Changes relative to original SH}
+\label{sec:diff}
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}p{.22\linewidth}Y Y@{}}
+\toprule
+Step & Original standard-synchronous SH & RR v2\\
+\midrule
+View and leader & Scalar view and cyclic leader. &
+$v=(g,t)$; pre-finalized $L(g,t)$.\\
+Normal production & Stable leader until failure. &
+$K$ fresh positions per term; terminal DONE gates successor DATA votes.\\
+Proposal pipeline & Parent QC enables a child. &
+Same within a term; early successor proposals are buffered until admission.\\
+Quit & Cancel current-view timers. &
+One complete current-generation proof cancels all generation timers.\\
+STATUS & After $\Delta$, lock and report highest QC to next leader. &
+Same operation; every trigger targets $(g+1,0)$ independently of old $t$.\\
+NEWVIEW & Leader waits $2\Delta$ and chooses highest QC. &
+Same waits and rank rule; one immutable opening fixes quota origins.\\
+First vote & Re-certify inherited anchor without timer. &
+Same ANCHOR re-vote; no BA-selected anchor or recovery commit.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The recovery communication pattern and original DATA timer are retained.
+The additional public normal-entry certificate is essential to this
+version's liveness proof and is visibly marked in the protocol.
+
+\begin{thebibliography}{2}\small
+\bibitem{sync}
+I. Abraham, D. Malkhi, K. Nayak, L. Ren, and M. Yin.
+\emph{Sync HotStuff: Simple and Practical Synchronous State Machine
+Replication}. IEEE Symposium on Security and Privacy, 2020, Section II,
+Figures 1--2.
+\href{https://conferences.computer.org/sp/pdfs/sp/2020/349700a106.pdf}{Published paper}.
+\bibitem{schneider}
+F. B. Schneider. Implementing fault-tolerant services using the state
+machine approach: A tutorial. \emph{ACM Computing Surveys} 22(4),
+299--319, 1990. \href{https://doi.org/10.1145/98163.98167}{DOI}.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,325 @@
+\section{The Force handler}
+\label{sec:force}
+Protocol~5 closes the external branch. Protocol~3 consumes the verified
+closure and separately retires old programs under \cref{sec:retirement}.
+The interpreter derives AUTO from accepted delivery, or applies a
+previously announced MSIG Force. Both retain the entire global prefix
+immediately before the triggering Espresso block's payload. Their
+effective cutoff and the priority of MSIG over AUTO are unchanged.
+
+\subsection{Export duties and block-missing windows}
+\label{sec:windows}
+An export duty belongs to the session responsible for the next DATA
+height after $G$. Its initial authority fixes $W_{\rm start}$,
+$W_{\rm run}$, $m_{\rm start}$, $q_{\min}$ and $C_{\rm auto}$.
+These base-window parameters and the session quota are never rewritten.
+When a duty opens in branch version $\beta$, fix its miss tolerance to
+\[
+ M=1+\beta
+\]
+and initialize $\mathit{misses}=0$. This value of $M$ remains fixed for
+that duty. There is no separate retry counter. A normal handoff keeps
+$\beta$; an effective Force increments it before a successor duty opens.
+
+Let $R$ be the remaining DATA quota at a window's opening. Completion
+removes the duty before $R=0$ can open another window, so every target
+below is positive. At public opening timestamp $\theta_0$, create
+\[
+ [\theta_0,\theta_0+W_{\rm start}),\qquad
+ m=\min\{m_{\rm start},R\}.
+\]
+This is the startup phase. After its first successful window, use
+running windows of length $W_{\rm run}$ and target
+$m=\min\{q_{\min},R\}$. Each window stores its phase, start, deadline,
+fixed target and accepted count. The duty also stores $M$,
+$\mathit{misses}$, and its total accepted DATA count $a$ for
+\cref{sec:retry-slot}.
+
+Only newly accepted DATA increments these counts. Each DATA is counted
+once in its producing session. Empty DATA counts under the same quota
+rule; DRAIN, heartbeats, proposal QCs, duplicate records and
+future-session data behind a gap do not count. A newly opened window
+starts with count zero and clips its target to the remaining quota at
+that opening. Extra output is not carried as credit into a later window.
+
+\paragraph{Settle a due window.}
+At the first Espresso block whose timestamp reaches the deadline,
+compare the window's count with its stored target, before reading that
+block's payload.
+\begin{itemize}
+\item On success, set $\mathit{misses}=0$. A successful startup window
+opens a running window; a successful running window opens the next
+running window.
+\item On failure, increment $\mathit{misses}$. If it is less than $M$,
+open another base window in the \emph{same} phase. A failed startup
+window therefore remains in startup. If it reaches $M$, produce one
+AUTO and stop settling this duty.
+\end{itemize}
+Every successor base window starts at the preceding deadline, not at
+the timestamp of the block that revealed the crossing. Its length is
+the authority's base length for that phase. Thus successful windows
+reset the consecutive-miss count, whereas a Force requires $M$
+consecutive failed base windows of this duty.
+
+If one timestamp crosses several deadlines, apply these transitions in
+order until the next deadline is greater than that timestamp or an
+AUTO is produced. No payload is processed between them. A terminal
+DATA accepted while the version is still open cancels all remaining
+checks for that session, including its miss count, even if its current
+window has not expired. The half-open intervals remain significant:
+DATA in a block timestamped exactly at a deadline does not repair the
+window that the prelude has just settled. It may count in the next
+window only if the version remains open after the prelude.
+
+\paragraph{Batch empty-window settlement.}
+Replay need not perform $M$ background callbacks. Suppose the current
+window has count zero, deadline $d\le\theta$, phase length $W$, and
+miss count $b<M$. With no intervening payload, all subsequently crossed
+windows in this phase also have count zero and the remaining quota is
+unchanged. Put
+\[
+ N=1+\left\lfloor\frac{\theta-d}{W}\right\rfloor,
+ \qquad j=\min\{N,M-b\}.
+\]
+If $j=M-b$, the last required failure has deadline
+$d+(j-1)W$ and causes AUTO at the current block. Otherwise set
+$\mathit{misses}=b+j$ and open the window with start $d+(j-1)W$ and
+deadline $d+jW$. Its count is zero. A window with a nonzero count is
+settled normally first; any following zero-count run can use this
+calculation. This is exactly the same transition as ordered settlement,
+not a second clock or a change to a base-window length.
+
+\paragraph{What a miss establishes.}
+A failed base window establishes insufficient accepted DATA at the
+specified rate. A single miss no longer necessarily closes the branch.
+Receipt formation, state recovery, publication and Espresso service can
+all affect the count. A missed service bound violates that liveness
+premise, but the public miss does not identify the responsible party.
+Neither a miss nor the resulting AUTO is automatically slashable
+equivocation or proof of censorship.
+
+\subsection{Owed service and Force selection}
+\label{sec:owed}
+The interpreter maintains a finite owed set $\mathcal O$ for the
+current service round. Debt is discharged by accepted DATA, not by
+selection, Ready, regional commitment or raw publication. When a DATA
+block enters $G$, payload processing removes its producing region
+from $\mathcal O$ if present. Its already assigned duty may continue
+through its fixed remaining quota. An empty owed set is not refilled
+while that duty continues.
+
+During resolution of a new \emph{public} duty boundary or a
+pending-boundary selection, run $\tagg{PrepareOwed}(r_*)$ for the
+designated target slot $r_*$. For REGULAR, terminal DATA, its credit and
+the pending boundary have already committed under \cref{sec:terminal-commit};
+this procedure is never a prerequisite for that DATA commit:
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item Obtain the required immutable $\tagg{AUTH}_{r_*,0}$ and its
+complete validation evidence. Missing evidence causes a wait at this
+canonical resolution transition; it is not evidence of zero weight or
+an empty set. Already committed terminal DATA remains exposed.
+\item Remove members whose governance flag is OFF or whose designated
+target authority has nonpositive total weight. An effective governance
+OFF also removes its region when that control is applied, including an
+OFF attached to a matching legacy MSIG. Stale attached configuration
+has no effect.
+\item If $\mathcal O$ is now empty, open a new round containing all
+governance-ON regions with positive total weight under the designated
+target authority. Ignore temporary AUTO cooldowns when forming this
+set. If no such region exists, it remains empty and selection waits.
+\end{enumerate}
+Apart from this new-round initialization, an ON does not insert a
+region into an unfinished round. Such a region can join the next
+round. Cooldown never removes a debt, and neither CLEAR nor a new
+branch version resets the owed set.
+
+Only the canonical public interpreter calls this procedure. A
+speculative REGULAR handoff may prepare a successor without changing
+$\mathcal O$. Public resolution of a regular successor does call
+$\tagg{PrepareOwed}$ after terminal DATA has committed, but its selected
+region remains the historical
+$\tagg{NextLive}$ result: REGULAR selection is not filtered by debt.
+
+For Force, define $\tagg{NextOwed}(i,X,O)$ by searching the other
+regions after source $i$ in the fixed cyclic list, restricted to
+members of $O$ that are eligible in snapshot $X$ under the designated
+target authority. If none exists, return $i$ itself when it is eligible
+and belongs to $O$; otherwise return $\bot$. For the synthetic source
+$\bot$, search the list from its first region. Governance ON,
+expired cooldown and positive designated-authority weight are all
+still required.
+
+For each Espresso block, save the pre-payload snapshots
+$\chi_E(q)$ and $\mathcal O_E(q)$ after its prelude. A pending forced
+boundary searches from its triggering selection lower bound for the
+first authenticated position at which
+\[
+ \tagg{NextOwed}(i_b,\chi_E(q),\mathcal O_E(q))\ne\bot,
+\]
+using its captured source context and designated target authority.
+The first such position fixes its successor. Later payload credits or
+round openings do not rewrite the saved pre-payload snapshots. A
+regular witness continues to use its prescribed historical
+$\tagg{NextLive}$ search, even when that region is outside the current
+owed set. An ordinary OFF does not revoke an already fixed handoff.
+
+\paragraph{Conditional AUTO cooldown.}
+Before applying a new AUTO cooldown, derive its target slot by
+\cref{sec:retry-slot}, run $\tagg{PrepareOwed}$, and inspect eligibility
+under that target authority \emph{before} this new cooldown. Set the
+source's automatic cooldown to $\theta+C_{\rm auto}$ only if another
+currently eligible member of $\mathcal O$ exists. Otherwise leave its
+cooldown record unchanged. This does not clear an older cooldown,
+override OFF, or imply a CLEAR. It prevents this AUTO from quarantining
+the last eligible source in the owed set. If existing restrictions
+leave no eligible owed candidate, the boundary still waits.
+
+\subsection{Scheduled control and two kinds of Force}
+\label{sec:force-stages}
+An MSIG Force binds the chain, target branch version $\beta$,
+activation timestamp $\theta_a$, control sequence and authorized
+attached configuration. Its L1 sequence identifies the instruction;
+it supplies no retained DATA height. The committee submits it under
+\cref{ass:committee,ass:monitor} and serves its finalized evidence.
+Signing alone does not start the submission bound.
+
+L1 finalization makes the instruction known. Its effect begins only at
+$J_{q(\theta_a)}$. Until then, normal production, handoffs and valid
+EXPORTs can continue. At activation, a target matching the entry
+branch version executes; a stale target is consumed without closing
+the current version or applying its attached configuration. A normal
+handoff does not change $\beta$ and therefore does not cancel the
+instruction. Independent STATUS records retain their own effects.
+
+The new health policy emits MSIGs with empty attached configuration.
+The interpreter nevertheless applies the authorized configuration of
+a matching valid legacy record. It does not apply that configuration
+early, apply a stale record's changes, or reinterpret the inherited
+order of independent status changes and MSIG.
+
+An AUTO binds the chain, old branch version, export-session pair,
+fixed $M$, the sequence of consecutive misses established by replay,
+the $M$th failed-window identity, and the triggering finalized header.
+Its cause deadline is that last failed window's deadline; its realized
+time is the triggering block's timestamp. No transaction is needed to
+create the event. An optional audit record cannot execute it again.
+
+\begin{protocol}{alg:force}{Process the prelude and close a branch}
+Before the payload of authenticated finalized block $J_q$, let
+$\theta=\theta_q$ and capture the entry branch version.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Apply independent controls.} From the complete control
+prefix, apply all due independent STATUS and CLEAR records not yet
+applied, in $(\theta_a,c)$ order. Mark them applied. Prune debts for
+governance OFF that actually takes effect. Do not add a newly ON
+region to an unfinished round or refill an empty set during a
+continuing duty. Later blocks with the same timestamp do not repeat
+these controls.
+
+\item \textbf{Apply a matching MSIG.} Examine due MSIGs in the same
+order. Apply only the first whose target matches the entry version.
+Capture the assigned duty's source context, accepted count $a$ and
+index, or the stored context and target index if no duty is assigned.
+Apply this record's authorized attached configuration, including any
+resulting debt pruning, and close the entry branch version. Consume
+every other due MSIG as stale without applying its attached changes.
+If a matching MSIG closes the version, cancel its window and skip
+step~3.
+
+\item \textbf{Settle delivery windows.} If a duty exists, settle its
+deadlines at or below $\theta$ under \cref{sec:windows}. Below $M$
+consecutive misses, keep the branch open and retain the resulting
+window state. On the $M$th miss, capture that duty's source context,
+index and total accepted count $a$, and close the branch at this
+position. Derive the target slot, prepare the owed set and apply the
+conditional cooldown before successor selection. Missing namespace or
+control evidence cannot establish a failed window. Missing target
+authority evidence pauses debt, cooldown and selection computation;
+it does not establish an empty candidate set or change the cutoff.
+
+\item \textbf{Preserve the prefix and fix the retry target.} For
+either closure, retain all of $G$ and its original provenance. Archive
+the closed version's unconfirmed suffix and normal successors. Record
+the cause, triggering header, retained anchor, captured context and
+selection lower bound $q$. Under \cref{sec:retry-slot}, an assigned
+duty with $a=0$ retains its current $r$ as the target slot; one with
+$a>0$ targets $r+1$. Without an assigned duty, retain the stored
+target slot. Increment $\beta$ exactly once. The new engine, when
+entered, has fresh core state and $g=t=0$. No new-version DATA is
+accepted in $J_q$ itself.
+
+\item \textbf{Prepare, snapshot and select.} For a new boundary or
+an older pending public boundary, run $\tagg{PrepareOwed}$ under its
+designated target authority. Save $\chi_E(q)$ and
+$\mathcal O_E(q)$ after all prelude effects. Resolve a forced boundary
+by its first historical $\tagg{NextOwed}$ position; resolve a regular
+boundary by its prescribed $\tagg{NextLive}$ rule, and genesis by its
+synthetic selector. When a duty opens,
+start its startup window at the canonical public opening timestamp,
+fix $M=1+\beta$, and set $\mathit{misses}=0$ and $a=0$. If no candidate
+exists, keep the anchor without a DATA window. If a duty simply
+continues, still save its pre-payload snapshots but do not reset its
+window, tolerance, counts or round. Then return to payload processing.
+\end{enumerate}
+\end{protocol}
+
+Required selection evidence may be obtained later, but its absence
+never moves a control cutoff or supplies a new opening timestamp.
+Replay resumes at the same canonical transition; effects already
+recorded there are not applied a second time. A Force can have a fixed
+cause, new version and retained anchor while its target selection is
+still unresolved.
+
+If Espresso time jumps across several thresholds, independent
+controls are applied before the matching MSIG, and MSIG takes priority
+over all AUTO checks of the entry duty. Window settlement can account
+for many consecutive misses, but one prelude causes at most one
+effective Force. A newly assigned duty opens at the realized selection
+timestamp, not at an old missed deadline, and is not settled again in
+that prelude. Its positive first window prevents same-block cascading
+Forces. Payload processing may then commit DATA credits, install a terminal
+pending boundary, and subsequently resolve regular duties under
+\cref{sec:terminal-commit}. Missing successor evidence cannot withhold
+the terminal DATA transaction. A proved absence of candidates leaves
+that boundary unassigned while source replay continues.
+
+\paragraph{Deterministic transition.}
+Given the same complete source histories and previous replay state,
+the due-record order, target match, window counts, fixed $M$, miss
+transitions, target slot and debt updates are fixed. Eligibility is
+tested against the same designated authority, and historical
+$\tagg{NextOwed}$ uses saved snapshots rather than local arrival time.
+The arithmetic shortcut implements the same empty-window transitions.
+Thus this prelude defines one next replay state; missing evidence
+pauses its computation rather than selecting another result. This
+transition statement does not supply a separate global-progress proof.
+
+\subsection{Processing rules and control completeness}
+\label{sec:control-completeness}
+Control ingestion verifies a full L1 prefix and retains a pending
+activation queue. A sequence number alone does not mean all ingested
+records have activated. The interpreter processes each control once
+in its recorded target context. A closed branch version is never
+reopened by ON, repeated Force or a late regional receipt.
+
+Every correct observer refreshes its complete finalized control view
+before confirming an Espresso interval. The advance-announcement
+premises ensure that all applicable controls are already available.
+Missing evidence pauses replay. A new observer reconstructs the same
+history; it does not reject an old instruction merely because it
+learned it late.
+
+A certifier's pure core binds its supplied L1 checkpoint, control
+sequence and history commitment. Its L1 acceptance interface rejects
+an attestation that omits applicable controls. A conservative
+implementation requires the advertised complete control version to
+match the version required by the accepting contract; a stale version
+is refreshed before retry. More selective checks require an equivalent
+completeness proof. One event's inclusion does not prove that no
+intervening control exists.
+
+Discovery of an omitted control that should have affected already
+confirmed history violates the completeness or announcement premise.
+It does not authorize rollback of $G$, a new Force at an arbitrary
+later position, or a local-arrival ordering. The conditional protocol
+guarantees do not specify recovery from that premise violation.

@@ -1,0 +1,112 @@
+Sync HotStuff RR v3.1: verification and delivery record
+Date: 11 October 2026
+Source: formalization/sync_hotstuff_rr_v3_1.tex
+Final PDF: output/pdf/sync_hotstuff_rr_v3_1.pdf
+PDF pages: 12
+Source SHA-256: fccf69f9ad7ff6585265f0d7f1315541af5823cda3eef548d5753b574e3f7dba
+PDF SHA-256: dfb5947c9a69798eacb8ca11cb563b11be049b1ec1d7945109e4b6c40ccbfc6d
+
+AUTHORIZED PROTOCOL
+This manuscript follows the user's revised Protocols 1 and 2 and the agreed
+terminal-QC backup forwarding rule. It is a new standalone file; v3 remains
+unchanged. The article is in English, matching the existing manuscripts.
+
+CORE EXECUTION
+- Explicit parent selection by j and t, with separate anchor and genesis cases.
+- Verifiable quit evidence is processed before outer-message validity/dedup.
+- Every eligible previously unvoted current-generation DATA proposal uses one
+  ordinary Vote handler, including older terms and proposals in attached history.
+- One proposal-bound 2Delta timer starts on the local first DATA vote.
+  No QC-start timer and no old-term vote skipping.
+- Each correct replica sends a verified terminal QC plus dependencies once to
+  the next leader. There is no extra vote phase or all-node QC broadcast.
+- Local first terminal-QC admission defines the normal term start e_r(g,t).
+  Duplicates do not reset entry times; normal rotation retains proposal timers.
+- All p=1,...,K progress checks retain the (2p+4)Delta deadline.
+- Complete quit proof freezes the entire generation and cancels unfinished
+  timers; recovery always targets (g+1,0).
+- Recovery entry waits for both quit+Delta and finalized next authority.
+  STATUS fixes an entry lock, leader waits 2Delta, NEWVIEW selects an older QC,
+  and ANCHOR re-voting starts no timer before the first fresh child.
+
+REVIEW 1: SAFETY AND PROTOCOL INTERFACES
+The safety reviewer examined the complete supplied source and targeted fixes.
+Final verdict for the source hash above:
+"Qualified pass ... No remaining Critical Error or Justification Gap found in
+the protocol, timing bounds, safety proofs, or their liveness interfaces."
+The review checked generation entry, historical proposal processing, successful
+timer protection, late QC assembly, alternate openings, retained entry locks,
+and the least-ranked counterexample argument for unique extensibility.
+
+REVIEW 2: LIVENESS AND ATTACKS
+Final verdict for the same source hash:
+"Qualified pass ... no remaining Critical Error or Justification Gap was found
+in the timing, liveness, and attack arguments reviewed."
+The reviewer checked first-proposal existence, all-replica proposal timers,
+the honest initializer window, finite excluded-generation indices, both height
+progress cases, request fairness, and counterexample schedules.
+
+REVIEW 3: COMMUNICATION AND TIMING
+The complexity reviewer found no substantive cost/timing contradiction.
+Its requested precision fixes are in the final source:
+- S counts distinct (g,t,j) positions, T counts admitted (g,t) pairs, and
+  R counts initiated recovery generations, including those waiting for L1.
+- A bounds dependency bytes across the bundles charged to an operation.
+- Complete admitted traffic is distinguished from unbounded malformed-traffic
+  retrieval. Partial complaints, explicit QC signatures, full histories and
+  L1 control costs are counted or explicitly scoped separately.
+
+REVIEW 4: INDEPENDENT SOURCE-ONLY VERIFIER
+A fresh verifier received the manuscript without the author's reasoning history
+and used the proof-verifier workflow. It reviewed the unchanged final hash.
+Final verdict:
+"The supplied proofs are valid under the stated assumptions. I found no
+Critical Error or Justification Gap."
+Its log verified entry/progress, safety, liveness, all five counterexamples,
+and communication/latency against the actual execution rules.
+
+RESOLVED FINDINGS
+1. P1 originally used an ambiguous 'Otherwise' after processing any quit proof.
+   It now returns only when evidence freezes the current generation, so an
+   archival entry proof does not block new-generation DATA processing.
+2. The initializer proof now establishes existence of its first fresh proposal:
+   it is produced by e+5Delta, before any correct term-zero BLAME at e+6Delta;
+   no later term is admitted before that first proposal exists.
+3. The private-QC counterexample states 0<epsilon<Delta and schedules both
+   the alternate honest vote and backup QC paths, closing a timing omission.
+4. Complexity parameters and retrieval exclusions were made explicit.
+
+SECURITY CONCLUSIONS AND COUNTEREXAMPLE SCOPE
+No attack against the specified protocol under its full stated assumptions was
+found in these reviews. The manuscript proves conditional safety and eventual
+height/request liveness; its attack section labels the changed premise:
+A. Skip old proposal processing while removing QC timers: some replicas never
+   start a timer and may never commit.
+B. Shorten normal first BLAME to 2Delta: a silent Byzantine successor can
+   repeatedly cancel slower replicas' timers, without equivocation.
+C. Remove permanent exclusion: for any finite K, sufficiently fast repeated
+   equivocation can prevent every non-genesis commit.
+D. Measure q+Delta from private Byzantine QC assembly: withheld QC information
+   refutes that timing bound; first correct verified receipt is required.
+E. Accept unauthenticated conflicts as proofs: fabricated messages force freezes.
+
+VALIDATION
+- Final TeX Live/latexmk build succeeds with 12 A4 pages and no compilation
+  warnings, overfull/underfull boxes, or unresolved references.
+- Codex standalone compiler reports success on the final source.
+- All 12 final pages were rendered and visually inspected; both protocol boxes
+  and the handoff figure were additionally inspected at full resolution.
+- Two native TikZ execution diagrams and red protocol changes are embedded in
+  the standalone .tex file; no external figure files are required.
+- Final rendering completed without errors; extracted text has no '??' markers.
+- git diff --check succeeds. Existing staged files and v3 source were preserved.
+
+LIMITS
+These are mathematical reviews, not mechanized proofs or deployment testing.
+The bounds require complete-message synchrony covering data dependencies and
+validation, retained state, fixed voting membership and Byzantine identities,
+immutable independently live L1 authority, permanent prospective proposer
+exclusion, and the stated schedule/input fairness. No uniform L1 latency,
+bounded number of failed generations, dynamic membership safety, or fixed
+physical-time term schedule is established. The manuscript expressly permits
+quadratic aggregate history-byte costs without a specified caching scheme.

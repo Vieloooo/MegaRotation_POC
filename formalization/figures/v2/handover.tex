@@ -1,0 +1,33 @@
+% Native TikZ: scheduled freeze/drain/status handover of local views.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\small,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=2mm]},semithick},
+  lab/.style={font=\footnotesize,align=center,fill=white,inner sep=2pt},
+  box/.style={draw,rounded corners=2pt,align=center,fill=white,inner sep=4pt}
+]
+  \draw[flow] (.20,4.35) -- (14.10,4.35);
+  \foreach \x in {1.0,6.65,9.70,12.75}{
+    \draw[semithick] (\x,4.20) -- (\x,4.50);
+  }
+  \node[lab,above] at (1.0,4.50) {$A_v$};
+  \node[lab,above] at (6.65,4.50) {$F_v$};
+  \node[lab,above] at (9.70,4.50) {$S_v=F_v+\Delta_R$};
+  \node[lab,above] at (12.75,4.50) {$A_{v+1}=F_v+2\Delta_R$};
+  \node[lab] at (3.80,4.35) {active: $D_R$};
+  \node[lab] at (8.17,4.35) {drain: $\Delta_R$};
+  \node[lab] at (11.22,4.35) {status: $\Delta_R$};
+  \node[box,text width=3.95cm,minimum height=1.70cm] (active) at (2.70,2.65)
+    {Propose, echo, and vote\\\footnotesize pipeline batches; run commit timers};
+  \node[box,text width=2.2cm,minimum height=1.70cm] (freeze) at (6.65,2.65)
+    {Freeze\\\footnotesize stop voting; cancel unexpired timers};
+  \node[box,text width=2.2cm,minimum height=1.70cm] (status) at (9.70,2.65)
+    {Freeze highest QC\\\footnotesize send \textsf{STATUS} to next leader};
+  \node[box,text width=2.2cm,minimum height=1.70cm] (next) at (12.75,2.65)
+    {Next view\\\footnotesize select first parent; restart pipeline};
+  \draw[flow] (1.0,4.20) -- (1.0,3.53);
+  \draw[flow] (6.65,4.20) -- (freeze.north);
+  \draw[flow] (9.70,4.20) -- (status.north);
+  \draw[flow] (12.75,4.20) -- (next.north);
+  \node[lab,text width=12.8cm] at (7.15,.85)
+    {$D_R=(2N_R+4)\Delta_R$, \quad $T_R=D_R+2\Delta_R$.\\Every proposal's parent rank must meet the receiver's frozen highest-QC rank.};
+\end{tikzpicture}

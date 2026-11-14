@@ -1,0 +1,321 @@
+\section{Model and assumptions}
+\label{sec:model}
+\subsection{L1 control state}
+\label{sec:l1}
+Nodes authenticate finalized L1 headers, authorities and a complete
+ordered control prefix. L1 timestamps label L1 blocks; they are not
+regional commit times or Espresso activation times.
+
+\begin{table}[htbp]\centering\small
+\caption{L1 authority and control records.}\label{tab:l1}
+\begin{tabularx}{\linewidth}{@{}p{.27\linewidth}Y@{}}\toprule
+Field & Meaning\\\midrule
+$\tagg{AUTH}_{r,0}$ & The fixed regional snapshots, leader schedule,
+DATA quota $\TB_r$, and export-window parameters for index $r$.\\
+$\tagg{AUTH}_{r,g}$, $g>0$ & The leader schedule for recovery
+generation $g$; it does not change the original snapshot or quota.\\
+Control sequence $c$ & A unique increasing index in the L1 control
+log. It binds the chain, record kind and payload.\\
+Activation time $\theta_a$ & An Espresso timestamp threshold,
+announced before it can be crossed.\\
+STATUS & A future live/off update for the named regions. It changes
+selection eligibility, not existing voting weights.\\
+MSIG FORCE & A target branch version, activation time and any authorized
+status changes to apply with the Force. No retained height is supplied.\\
+CLEAR & An explicit future removal of the named automatic cooldown;
+ordinary ON does not perform this operation.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Authority records.}
+For each $(r,g)$, L1 supplies at most one immutable authority.
+$\tagg{AUTH}_{r,0}$ fixes $\mathit{cfg}_r$, including the members,
+weights, $F_i$, $\Delta_i$ and $K$ of each region, and fixes $\TB_r$.
+It also fixes positive window lengths $W_{\rm start},W_{\rm run}$,
+positive count targets $m_{\rm start},q_{\min}$, and cooldown
+$C_{\rm auto}>0$. Counts are capped by the remaining DATA quota.
+For $g>0$, only the leader schedule changes.
+Nodes wait for required authority evidence. Later controls and slashing
+never reweight an old certificate or reset a session quota.
+
+Authority is indexed by $r$, not by a particular speculative branch.
+A new branch version that reuses $r$ uses the same authority at that index.
+Its pair $(\beta,r)$ identifies a different engine. Rebinding an already
+assigned authority is not permitted.
+
+\paragraph{Control ingestion and activation.}
+The complete L1 control prefix has a sequence number and a binding
+history commitment. A verifier retains pending records as well as
+already applied records. Ingestion does not imply activation.
+Activation times need not follow sequence order: records becoming due
+together are ordered by $(\theta_a,c)$. Malformed, unauthorized or
+duplicate records do not grant a second action.
+
+STATUS and CLEAR are independent controls. Configuration attached to
+a Force applies only if that Force's target branch version is still current.
+A stale Force is consumed without changing the new branch version. An independent
+STATUS beside it still takes effect on its own terms.
+Records are immutable after finalization. A revision is a new,
+prospectively scheduled record, not an edit to past history.
+
+\paragraph{Espresso positions and effective status.}
+Let $J_q$ be Espresso block $q$, with authenticated timestamp
+$\theta_q$. Positions also include namespace-transaction and record
+indices. Heights and those indices give a total order even when
+timestamps are equal. For a threshold $d$, define
+\[
+ q(d)=\min\{q:\theta_q\ge d\}.
+\]
+Its event is applied at the opening of $J_{q(d)}$, before that block's
+EXPORTs. The prelude applies due independent status changes, then a
+matching multisignature Force, then any automatic Force.
+
+Write $\chi_E(q)$ for the eligibility snapshot after this prelude and
+before the EXPORTs. It combines the L1 live/off map with automatic
+cooldowns through that position. A region is eligible only if its
+governance flag is on, its cooldown has expired, and its designated
+authority has positive total weight. The historical snapshot is
+authenticated by replay, not by an endpoint's statement.
+
+OFF changes subsequent selections made from the affected snapshots.
+It does not revoke an existing historical REGULAR witness. ON does not
+clear cooldown or reopen an old branch version. A committee that needs to stop
+the current branch uses a Force. No control changes an accepted DATA
+prefix or retroactively changes a regional voting snapshot.
+
+\paragraph{Genesis.}
+The initial checkpoint fixes the chain identifier, cyclic order
+$\mathcal L_R$, genesis DATA anchor, first replay position, Espresso
+quorum trust anchor, control prefix and initial branch version $\beta=0$.
+A synthetic boundary selects the first eligible region in
+$\mathcal L_R$ at the first eligible authenticated position. It waits
+if none exists. The initial authority and state are trusted or verified
+from their specified sources; Espresso does not authenticate earlier
+application history merely by starting this interpreter.
+The genesis anchor includes synthetic commitment evidence and fixed,
+authenticated L1 and Espresso references. Its pending boundary has
+source context $(i_b,\beta_b,r_b)=(\bot,\bot,-1)$. It opens
+session $(\beta,0)$ under the version current at selection: normally
+$(0,0)$, or a later version if a Force acted while genesis was Waiting.
+At selection height $q_s$, set $q^{\rm open}_{\beta,0}=q_s$ and
+$\lambda^{\rm open}_{\beta,0}=\max\{\lambda(\text{genesis}),
+\lambda(\tagg{AUTH}_{0,0})\}$, where the second term is the authority's
+L1 publication height. A supplied later checkpoint must instead include
+its current boundary, reference bounds and complete interpreter state.
+
+\subsection{Data delivery and the Publish Layer}
+\label{sec:delivery}
+The \defterm{Publish Layer} is a delivery service implemented by existing
+participants. It does not run another consensus protocol or choose which
+DATA is valid. A regional leader, another replica, or an external verifier
+can perform a submission. The rotation rules use the service guarantee
+below; \cref{sec:publish-implementation} describes one implementation.
+
+A \defterm{complete regional result} is DATA with its direct or covering
+FINAL receipt and the ancestry, boundaries and source evidence needed to
+validate it. Correct replicas offer complete results to the Publish Layer
+as soon as they obtain them. The service may batch results and construct
+EXPORT records as specified in \cref{sec:exports}. A proposal QC, a block
+hash, or a receipt whose payload is missing is not a complete input.
+
+Regions may send the same results directly to other regions. This lets a
+regular successor reach Ready before the terminal result is finalized in
+Espresso. If direct delivery is unavailable, it can obtain the result from
+Espresso after the record is finalized. The latter path waits for Espresso; the
+protocol does not impose that wait when direct delivery succeeds.
+There is no separate cross-region transport service in this model.
+
+Espresso carries the finalized records, including DATA and commitment
+evidence, to online readers. Readers still check the application and
+rotation rules. L1 supplies its own authority and control proofs.
+An execution-state snapshot may be transferred directly or reconstructed
+from authenticated input history. State reconstruction is part of Ready,
+not something that Espresso inclusion performs automatically.
+
+\subsection{Stake and faults}
+\label{sec:stake}
+Member $v$ of region $i$ has voting weight $\omega_{i,v}>0$. Let
+$W_i=\sum_{v\in V_i}\omega_{i,v}$. The stake configuration
+fixes a bound $F_i<W_i/2$, and Byzantine members of region $i$ hold
+total weight at most $F_i$. Every regional certificate needs
+matching signatures from distinct members with total weight greater than
+$F_i$. So every certificate has a correct signer, and the correct members
+alone can form one. This replaces the $f+1$ of $n=2f+1$ in Part~I.
+
+Membership and weights stay fixed for a whole session, including its
+recoveries. Slashing and status updates do not change them. A later
+session checks old certificates against the old snapshot. The bound
+$F_i$ counts every key of the snapshot that is compromised while its
+certificates are still accepted. Compromise of old keys after that is
+outside this model.
+
+Correct replicas keep their protocol state and committed blocks.
+Signatures cannot be forged, and hashes are binding.
+
+
+
+\subsection{Assumptions}
+\label{sec:assumptions}
+\begin{assumption}[Finalized L1 records]
+\label{ass:authority}
+At every finalized L1 height, the authority records and ordered control
+history through that height are common and authenticated. Finalized
+records never change. A verifier obtains a complete control prefix,
+not an arbitrary subset of valid events.
+\end{assumption}
+
+\begin{assumption}[Authenticated synchronous communication and global clock]
+\label{ass:network}
+\leavevmode\par
+\begin{itemize}
+\item Messages use authenticated communication channels.
+\item Within region $i$, the actual delay of a correct-to-correct
+message is $\delta\le\Delta_i$; $\delta$ may differ across messages.
+\item All nodes share a global clock.
+\end{itemize}
+\end{assumption}
+The delay bound includes delivery and processing of complete validation
+dependencies. Each replica records its own entry and voting events on
+the global clock.
+
+\begin{assumption}[Bounded publication service]
+\label{ass:publish}
+If a correct participant has a complete regional result available to the
+Publish Layer at real time $s$, the service submits an Espresso-admissible
+record carrying that result by $s+T_{\rm pub}$. The service preserves its
+DATA and commitment evidence and does not depend on the original leader
+alone. At least one working submission path and the required fee resources
+are available. Here $T_{\rm pub}>0$ is fixed for the stated input-size and load
+limits. A result already recorded in Espresso satisfies this delivery
+guarantee; retries needed for acceptance into $G$ are a separate task.
+\end{assumption}
+The clock starts when the complete result is available, not when a leader
+first proposes a block or one replica first commits it. Forming the FINAL
+receipt remains a regional-protocol task. ``Submits'' means delivery of the
+complete record to the Espresso submission interface under its admission
+rules, not merely a local send attempt.
+
+
+\begin{assumption}[Honest multisignature committee]
+\label{ass:committee}
+The committee is one honest, coordinated control service. It submits
+only authorized, immutable, future-dated STATUS, CLEAR and MSIG FORCE
+records. It chooses activation times satisfying the advance-announcement
+condition below. It keeps no private protected prefix and has no power
+to select an older retained anchor.
+\end{assumption}
+
+\begin{assumption}[Bounded L1 finalization and visibility]
+\label{ass:monitor}
+A valid control operation actually submitted at real time $s$ is
+finalized, available and verifiable by every correct online participant
+by $s+T_{\rm L1}$. Participants include regional replicas, external
+observers and certifiers. The bound includes inclusion, finalization,
+delivery, retrieval and validation.
+\end{assumption}
+
+\Needspace{8\baselineskip}
+\begin{assumption}[Espresso history and time]
+\label{ass:espresso}
+Correct verifiers obtain compatible finalized Espresso prefixes and
+can authenticate each required header and complete namespace payload,
+or its genuine absence. The history and evidence needed for replay remain
+retrievable. In particular, globally accepted DATA remains recoverable
+without the original producing region staying online. Timestamps are
+non-decreasing. If block $J_q$ first becomes final at real time $t_E(q)$,
+then $\theta_q\le t_E(q)+\epsilon_E$, where $\epsilon_E\ge0$ is the
+configured maximum clock lead.
+\end{assumption}
+Long-term retrieval is an explicit service assumption. It may be supplied
+by archival readers that preserve authenticated Espresso history; it does
+not follow from a finality certificate alone. A returning node fetches
+missing history or starts from an authorized checkpoint before confirming
+new output. Catching up with arbitrarily long history is not assigned a
+constant-time bound.
+
+\begin{assumption}[Bounded Espresso finalization and visibility]
+\label{ass:espresso-visibility}
+An admissible complete record submitted to Espresso at real time $s_E$
+is included in a finalized block by $s_E+T_E$, for a fixed $T_E>0$.
+By the same deadline, every
+correct participant that stays online and keeps up with the history can
+retrieve the complete record and verify its inclusion and finality.
+The bound covers inclusion, finalization, dissemination, retrieval and
+verification of the Espresso evidence, under the declared admission and
+load conditions.
+
+Each newly finalized Espresso block and its complete relevant namespace
+also become available and verifiable to those participants within $T_E$
+of finalization, including blocks with no records for this chain.
+\end{assumption}
+The service provides full payloads and evidence, not only header hashes.
+It does not promise that an EXPORT passes this chain's acceptance rules:
+a stale base, closed branch or missing predecessor can still prevent it
+from advancing $G$. Regional and application validation remain separate.
+
+\paragraph{The two delivery bounds.}
+For a newly available complete result, the two assumptions give
+\[
+ s_{\rm submit}\le s+T_{\rm pub},\qquad
+ s_{\rm visible}\le s+T_{\rm pub}+T_E.
+\]
+Here $s_{\rm visible}$ means that the submitted result and its Espresso
+evidence are available to the online readers above. It is not a bound on
+when the regional result first forms, when a new region restores its
+execution state, or when a rejected EXPORT is accepted after retries.
+These are real-time bounds. Delivery windows use Espresso timestamps, so
+window parameters also need the clock profile and regional progress and
+startup allowances. The bound $T_E$ does not replace the clock-lead
+assumption or the advance-announcement rule below.
+
+
+\paragraph{Advance announcement.}
+For a control submitted at $s$, the committee chooses
+\[
+ \theta_a>s+T_{\rm L1}+\epsilon_E+\eta,
+ \qquad \eta>0.
+\]
+Thus the control is available to correct participants before its
+first crossing can become final. This is a model condition, not a
+conclusion from an average L1 or Espresso block time. The L1 service
+bound already includes dissemination; no second announcement delay is
+added. Offline or unsynchronized participants catch up before confirming
+new output. Missing control history pauses verification.
+
+\paragraph{Verification interfaces.}
+Regional receipt validity and the application-validity checks below
+are assumed sound under the stated regional model. A deployed
+certifier must authenticate both source histories and bind the control
+version used. A signature or TEE alone does not establish that an old
+control snapshot is complete. The publication interface additionally
+requires sound execution and DA correspondence checks.
+
+\subsection{Conditions for progress}
+\label{sec:progress}
+The following conditions are separate from prefix safety.
+\begin{itemize}
+\item Correct leaders receive repeated turns that are actually entered,
+including recovery initializers and DATA-producing turns across
+sessions. Exposed equivocators are eventually excluded permanently
+from later leader schedules.
+\item Espresso continues to finalize retrievable history with growing
+timestamps and includes this chain's valid exports.
+\item Complete results become available to the Publish Layer. Its
+submission paths and Espresso meet their stated bounds. Retried EXPORTs
+for the next required DATA are accepted in time during some sustained
+service interval.
+\item Required authorities and recoverable native state become
+available. A waiting boundary eventually has another eligible region.
+The committee leaves working regions enough uninterrupted service time.
+\item Correct clients' admissible requests reach the regions that
+continue serving. Requests fit in DATA batches and have only finitely
+many older requests ahead of them in each local queue.
+\end{itemize}
+The bounds begin with a complete result and do not bound regional
+recovery, state restoration, or repeated rejected EXPORTs. Window success
+therefore still needs the stated serving interval and a compatible
+Espresso clock profile. Otherwise repeated automatic Forces can prevent
+progress without revoking any global DATA. Espresso failure also stops external time and
+global progress. Switching the global finality service is outside this
+protocol.
+

@@ -1,0 +1,2926 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,aliascnt}
+\usepackage{booktabs,tabularx,array,enumitem,needspace,float}
+\usepackage[section]{placeins}
+\usepackage{xcolor,tikz,mdframed,graphicx}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{fancyhdr}
+\hypersetup{pdftitle={Sync HotStuff RR, Part II v3.4.1: Sequencer Rotation},pdfsubject={Espresso-confirmed rotation with automatic and multisignature Force}}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small Sync HotStuff RR, Part II}\rhead{\small Version 3.4.1 / Public replay result}
+\cfoot{\thepage}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\topfraction}{.92}
+\renewcommand{\textfraction}{.06}
+\renewcommand{\floatpagefraction}{.85}
+\makeatletter
+\setlength{\@fptop}{0pt}\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\definecolor{rrRed}{HTML}{A51C30}
+\definecolor{rrBlue}{HTML}{2563EB}
+\definecolor{rrTeal}{HTML}{0F766E}
+\newcommand{\RR}[1]{{\color{rrRed}#1}}
+\newcommand{\QC}{\mathcal C}
+\newcommand{\FC}{\mathcal F}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\TB}{\mathit{TB}}
+\newcommand{\tagg}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\defterm}[1]{\textcolor{rrBlue}{\textit{#1}}}
+\newtheorem{definition}{Definition}[section]
+\newaliascnt{assumption}{definition}
+\newtheorem{assumption}[assumption]{Assumption}
+\aliascntresetthe{assumption}
+\crefname{assumption}{assumption}{assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\newaliascnt{proposition}{definition}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\crefname{proposition}{proposition}{propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\newcounter{protocol}
+% Protocol boxes float to the top of a page, so long boxes leave no gaps.
+\newenvironment{protocol}[3][htbp]{\begin{figure}[#1]\refstepcounter{protocol}\label{#2}
+\begin{mdframed}[linewidth=.6pt,skipabove=0pt,skipbelow=0pt,
+innertopmargin=7pt,innerbottommargin=7pt]\small
+\textbf{Protocol \theprotocol. #3}\par\smallskip}{\end{mdframed}\end{figure}}
+\crefname{protocol}{Protocol}{Protocols}
+\Crefname{protocol}{Protocol}{Protocols}
+\title{Sync HotStuff RR, Part II: Sequencer Rotation\\\large Version 3.4.1: Closure Propagation and Public Replay Result}
+\author{}\date{18 October 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+Sync HotStuff RR lets several regions take turns producing one chain.
+Each region runs the Part~I engine with a fixed voting snapshot and a
+fixed quota of DATA blocks. A terminal regional receipt opens the next
+normal session without waiting for global confirmation. A Publish Layer
+guarantees submission of complete regional results to Espresso. Espresso
+provides bounded finalization and visibility to online readers. An observer confirms a result
+globally when it accepts that result as a continuous extension in
+Espresso's finalized history. External control uses Espresso timestamps.
+A block-missing Force follows from insufficient accepted DATA in a fixed
+window. A multisignature Force is announced on L1 before its scheduled
+Espresso time. Both preserve the entire global prefix and close the old
+production branch to further global output. Each node manages concurrent session programs with explicit preparation,
+entry, completion and retirement. Normal operation retains the regional
+DATA/DRAIN engine. Authenticated retirement adds a signing and entry gate
+while existing timers and evidence processing drain. We specify the
+interfaces, event order and conditional safety arguments.
+The progress conditions are stated separately. The publication service is
+abstract in the protocols; a leader-first implementation with backup
+senders and fee sponsorship is described at the end.
+\end{abstract}
+
+\section{Overview}
+\label{sec:overview}
+Part~I~\cite{part1} gives one region a synchronous BFT engine.
+This document connects regional engines into one chain. The full view is
+\[
+ (\beta,r,g,t).
+\]
+Here $\beta$ is the \defterm{branch version}, $r$ is the regional turn
+number, $g$ is the recovery number within that turn, and $t$ is the
+leader term within that recovery. A \defterm{session} is the pair
+$(\beta,r)$: one region's production turn. Its voting snapshot and DATA
+quota stay fixed through all of its recoveries.
+
+A normal regional handoff increases $r$ and keeps $\beta$.
+An effective Force increases $\beta$ by one. This number is not an
+Espresso validator epoch or a time interval. It distinguishes the old
+production branch from the new one. No separate session-ID notation is
+needed. Each node and certifier uses these same numbers when replaying
+the authenticated history.
+
+\paragraph{What version 3.4.1 changes.}
+This is a proof-scope correction, with no protocol transition change.
+At the same Espresso position, correct observers agree on the applied
+public replay result. Their cached future L1 controls and source-reading
+checkpoints need not be identical. The definition below separates these
+objects, and the prefix-safety proof establishes exactly the former.
+The v3.4 closure repair and all stated liveness limitations remain.
+
+\paragraph{The v3.4 closure repair.}
+A fresh review of v3.3 identified a missing closure path. A member that
+had not entered could learn Force and terminate silently, while an
+already-entered peer continued without that member's votes. The retirement
+proof's earliest close time then failed to cover the stopped member.
+
+This revision makes closed-version storage, closure dissemination and
+responses to late old-session messages Session Manager duties in every
+phase, including before initial Enter and after worker termination.
+A member with an authenticated closure but not yet a complete membership
+context retains a pending relay; a later complete old-session packet
+supplies that context and triggers the relay before ordinary work.
+These changes preserve the immediate public cutoff and existing timers.
+The model section remains identical to v3.1. The liveness target remains
+open; this version is a safety repair candidate, not a final completion.
+
+\paragraph{Protocol outline.}
+\begin{itemize}
+\item \textbf{Normal rotation remains fast.} A valid receipt for the
+terminal DATA block $T_{\beta,r}$ opens the normal successor. The successor
+needs the boundary, state and authority, but does not wait for $T_{\beta,r}$
+to become globally final.
+\item \textbf{Espresso supplies global order.} The Publish Layer submits
+complete ranges of regional results. Existing participants implement this
+service; it does not run another consensus protocol. Every verifier uses the same
+Espresso history and control rules to accept a continuous DATA prefix.
+There is no per-block committee acknowledgement or global waiting timer.
+\item \textbf{There are two Forces.} An automatic Force follows from
+a failed DATA-delivery window. A multisignature Force follows from an
+authorized L1 record with a future Espresso activation time.
+\item \textbf{A Force preserves all global output.} It closes the old
+branch version $\beta$ and starts a new one from the current
+global prefix. Normal successors on the old branch version cannot publish its
+unconfirmed suffix after closure.
+\item \textbf{Control is interpreted by verifiers.} Espresso stores
+ordered bytes. Nodes and certifiers verify L1 and Espresso evidence and
+run the same external interpreter. Espresso need not execute a contract
+for this chain.
+\end{itemize}
+
+The regional engine retains DATA, recovery-only DRAIN, FINAL receipts,
+and Completion. A DRAIN has no application payload and never enters the
+global DATA prefix. Force closure does not cancel a regional timer,
+change an existing lock or fabricate a quit proof. Its separate retirement
+request stops new work and drains existing work under \cref{sec:retirement}.
+
+\begin{table}[htbp]\centering\small
+\caption{Participants and responsibilities.}\label{tab:roles}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.19\linewidth}Y@{}}\toprule
+Role & Responsibility\\\midrule
+L1 & Publishes immutable authorities and the ordered control log.\\
+Regional replica & Runs the DATA/DRAIN engine of its sessions and
+serves complete commitment evidence.\\
+Multisignature service & Announces future status changes and Forces
+on L1. It cannot choose a retained prefix or declare data global.\\
+Publish Layer & Delivers complete regional results to Espresso. The
+leader, replicas and external verifiers may act as senders.\\
+Espresso & Supplies a finalized ordered log, authenticated timestamps,
+complete namespace contents, and bounded finalization and visibility.\\
+Observer / certifier & Verifies both sources, replays control and
+exports, and derives global output and forced boundaries.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Production, confirmation, and publication.}
+The \defterm{production branch} $R_u$ of observer $u$ may contain
+several normal sessions beyond its \defterm{global prefix} $G_u$.
+The \defterm{export session} is the session responsible for the next
+DATA height after $G_u$. It need not be the session currently producing
+new blocks. The accepted DA publication prefix $C_{\rm pub}$ may lag
+behind $G_u$ as well. Neither lag permits a Force to remove $G_u$.
+The Publish Layer delivers results to Espresso; $C_{\rm pub}$ instead
+tracks the later rollup DA publication stage.
+
+A block's regional receipt remains evidence of its regional commitment
+even if its unconfirmed branch is later closed. Global finality is
+stronger: accepted DATA is never removed by either Force.
+The claim concerns input content, order and provenance. Execution
+correctness and native state continuity remain obligations of the
+application and publication interfaces.
+
+\begin{table}[htbp]\centering\small
+\caption{Changes of production view.}\label{tab:views}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.19\linewidth}>{\raggedright\arraybackslash}p{.25\linewidth}Y@{}}\toprule
+Change & New view & Trigger and timer effect\\\midrule
+Normal leader rotation & $(\beta,r,g,t+1)$ & A terminal QC below $H_{\beta,r}$;
+existing commit timers continue.\\
+Regional recovery & $(\beta,r,g+1,0)$ & A quit proof, the $\Delta_i$ wait
+and finalized authority; the quit cancels generation-$g$ timers.\\
+Normal regional handoff & $(\beta,r+1,0,0)$ & Ready on a REGULAR witness
+with the terminal receipt; the old engine stops through Completion.\\
+Forced handoff & $(\beta+1,r_c+1,0,0)$ & Ready on a derived Force boundary;
+$r_c$ is the boundary's predecessor index. Old programs close separately.\\
+\bottomrule\end{tabularx}
+\end{table}
+
+A Force can reuse an index from a discarded normal successor.
+The new pair $(\beta+1,r_c+1)$ keeps votes, locks and evidence separate.
+For example, $(7,20,0,0)\to(7,21,0,0)$ is a normal regional
+handoff. A Force that closes export session $(7,20)$ instead opens
+$(8,21,0,0)$, even if an unconfirmed normal successor already used
+$(7,21)$. The retained DATA anchor determines where the new session starts.
+A finalized but not yet effective L1 control does not stop production
+or global acceptance.
+
+\section{Model and assumptions}
+\label{sec:model}
+\subsection{L1 control state}
+\label{sec:l1}
+Nodes authenticate finalized L1 headers, authorities and a complete
+ordered control prefix. L1 timestamps label L1 blocks; they are not
+regional commit times or Espresso activation times.
+
+\begin{table}[htbp]\centering\small
+\caption{L1 authority and control records.}\label{tab:l1}
+\begin{tabularx}{\linewidth}{@{}p{.27\linewidth}Y@{}}\toprule
+Field & Meaning\\\midrule
+$\tagg{AUTH}_{r,0}$ & The fixed regional snapshots, leader schedule,
+DATA quota $\TB_r$, and export-window parameters for index $r$.\\
+$\tagg{AUTH}_{r,g}$, $g>0$ & The leader schedule for recovery
+generation $g$; it does not change the original snapshot or quota.\\
+Control sequence $c$ & A unique increasing index in the L1 control
+log. It binds the chain, record kind and payload.\\
+Activation time $\theta_a$ & An Espresso timestamp threshold,
+announced before it can be crossed.\\
+STATUS & A future live/off update for the named regions. It changes
+selection eligibility, not existing voting weights.\\
+MSIG FORCE & A target branch version, activation time and any authorized
+status changes to apply with the Force. No retained height is supplied.\\
+CLEAR & An explicit future removal of the named automatic cooldown;
+ordinary ON does not perform this operation.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Authority records.}
+For each $(r,g)$, L1 supplies at most one immutable authority.
+$\tagg{AUTH}_{r,0}$ fixes $\mathit{cfg}_r$, including the members,
+weights, $F_i$, $\Delta_i$ and $K$ of each region, and fixes $\TB_r$.
+It also fixes positive window lengths $W_{\rm start},W_{\rm run}$,
+positive count targets $m_{\rm start},q_{\min}$, and cooldown
+$C_{\rm auto}>0$. Counts are capped by the remaining DATA quota.
+For $g>0$, only the leader schedule changes.
+Nodes wait for required authority evidence. Later controls and slashing
+never reweight an old certificate or reset a session quota.
+
+Authority is indexed by $r$, not by a particular speculative branch.
+A new branch version that reuses $r$ uses the same authority at that index.
+Its pair $(\beta,r)$ identifies a different engine. Rebinding an already
+assigned authority is not permitted.
+
+\paragraph{Control ingestion and activation.}
+The complete L1 control prefix has a sequence number and a binding
+history commitment. A verifier retains pending records as well as
+already applied records. Ingestion does not imply activation.
+Activation times need not follow sequence order: records becoming due
+together are ordered by $(\theta_a,c)$. Malformed, unauthorized or
+duplicate records do not grant a second action.
+
+STATUS and CLEAR are independent controls. Configuration attached to
+a Force applies only if that Force's target branch version is still current.
+A stale Force is consumed without changing the new branch version. An independent
+STATUS beside it still takes effect on its own terms.
+Records are immutable after finalization. A revision is a new,
+prospectively scheduled record, not an edit to past history.
+
+\paragraph{Espresso positions and effective status.}
+Let $J_q$ be Espresso block $q$, with authenticated timestamp
+$\theta_q$. Positions also include namespace-transaction and record
+indices. Heights and those indices give a total order even when
+timestamps are equal. For a threshold $d$, define
+\[
+ q(d)=\min\{q:\theta_q\ge d\}.
+\]
+Its event is applied at the opening of $J_{q(d)}$, before that block's
+EXPORTs. The prelude applies due independent status changes, then a
+matching multisignature Force, then any automatic Force.
+
+Write $\chi_E(q)$ for the eligibility snapshot after this prelude and
+before the EXPORTs. It combines the L1 live/off map with automatic
+cooldowns through that position. A region is eligible only if its
+governance flag is on, its cooldown has expired, and its designated
+authority has positive total weight. The historical snapshot is
+authenticated by replay, not by an endpoint's statement.
+
+OFF changes subsequent selections made from the affected snapshots.
+It does not revoke an existing historical REGULAR witness. ON does not
+clear cooldown or reopen an old branch version. A committee that needs to stop
+the current branch uses a Force. No control changes an accepted DATA
+prefix or retroactively changes a regional voting snapshot.
+
+\paragraph{Genesis.}
+The initial checkpoint fixes the chain identifier, cyclic order
+$\mathcal L_R$, genesis DATA anchor, first replay position, Espresso
+quorum trust anchor, control prefix and initial branch version $\beta=0$.
+A synthetic boundary selects the first eligible region in
+$\mathcal L_R$ at the first eligible authenticated position. It waits
+if none exists. The initial authority and state are trusted or verified
+from their specified sources; Espresso does not authenticate earlier
+application history merely by starting this interpreter.
+The genesis anchor includes synthetic commitment evidence and fixed,
+authenticated L1 and Espresso references. Its pending boundary has
+source context $(i_b,\beta_b,r_b)=(\bot,\bot,-1)$. It opens
+session $(\beta,0)$ under the version current at selection: normally
+$(0,0)$, or a later version if a Force acted while genesis was Waiting.
+At selection height $q_s$, set $q^{\rm open}_{\beta,0}=q_s$ and
+$\lambda^{\rm open}_{\beta,0}=\max\{\lambda(\text{genesis}),
+\lambda(\tagg{AUTH}_{0,0})\}$, where the second term is the authority's
+L1 publication height. A supplied later checkpoint must instead include
+its current boundary, reference bounds and complete interpreter state.
+
+\subsection{Data delivery and the Publish Layer}
+\label{sec:delivery}
+The \defterm{Publish Layer} is a delivery service implemented by existing
+participants. It does not run another consensus protocol or choose which
+DATA is valid. A regional leader, another replica, or an external verifier
+can perform a submission. The rotation rules use the service guarantee
+below; \cref{sec:publish-implementation} describes one implementation.
+
+A \defterm{complete regional result} is DATA with its direct or covering
+FINAL receipt and the ancestry, boundaries and source evidence needed to
+validate it. Correct replicas offer complete results to the Publish Layer
+as soon as they obtain them. The service may batch results and construct
+EXPORT records as specified in \cref{sec:exports}. A proposal QC, a block
+hash, or a receipt whose payload is missing is not a complete input.
+
+Regions may send the same results directly to other regions. This lets a
+regular successor reach Ready before the terminal result is finalized in
+Espresso. If direct delivery is unavailable, it can obtain the result from
+Espresso after the record is finalized. The latter path waits for Espresso; the
+protocol does not impose that wait when direct delivery succeeds.
+There is no separate cross-region transport service in this model.
+
+Espresso carries the finalized records, including DATA and commitment
+evidence, to online readers. Readers still check the application and
+rotation rules. L1 supplies its own authority and control proofs.
+An execution-state snapshot may be transferred directly or reconstructed
+from authenticated input history. State reconstruction is part of Ready,
+not something that Espresso inclusion performs automatically.
+
+\subsection{Stake and faults}
+\label{sec:stake}
+Member $v$ of region $i$ has voting weight $\omega_{i,v}>0$. Let
+$W_i=\sum_{v\in V_i}\omega_{i,v}$. The stake configuration
+fixes a bound $F_i<W_i/2$, and Byzantine members of region $i$ hold
+total weight at most $F_i$. Every regional certificate needs
+matching signatures from distinct members with total weight greater than
+$F_i$. So every certificate has a correct signer, and the correct members
+alone can form one. This replaces the $f+1$ of $n=2f+1$ in Part~I.
+
+Membership and weights stay fixed for a whole session, including its
+recoveries. Slashing and status updates do not change them. A later
+session checks old certificates against the old snapshot. The bound
+$F_i$ counts every key of the snapshot that is compromised while its
+certificates are still accepted. Compromise of old keys after that is
+outside this model.
+
+Correct replicas keep their protocol state and committed blocks.
+Signatures cannot be forged, and hashes are binding.
+
+
+
+\subsection{Assumptions}
+\label{sec:assumptions}
+\begin{assumption}[Finalized L1 records]
+\label{ass:authority}
+At every finalized L1 height, the authority records and ordered control
+history through that height are common and authenticated. Finalized
+records never change. A verifier obtains a complete control prefix,
+not an arbitrary subset of valid events.
+\end{assumption}
+
+\begin{assumption}[Authenticated synchronous communication and global clock]
+\label{ass:network}
+\leavevmode\par
+\begin{itemize}
+\item Messages use authenticated communication channels.
+\item Within region $i$, the actual delay of a correct-to-correct
+message is $\delta\le\Delta_i$; $\delta$ may differ across messages.
+\item All nodes share a global clock.
+\end{itemize}
+\end{assumption}
+The delay bound includes delivery and processing of complete validation
+dependencies. Each replica records its own entry and voting events on
+the global clock.
+
+\begin{assumption}[Bounded publication service]
+\label{ass:publish}
+If a correct participant has a complete regional result available to the
+Publish Layer at real time $s$, the service submits an Espresso-admissible
+record carrying that result by $s+T_{\rm pub}$. The service preserves its
+DATA and commitment evidence and does not depend on the original leader
+alone. At least one working submission path and the required fee resources
+are available. Here $T_{\rm pub}>0$ is fixed for the stated input-size and load
+limits. A result already recorded in Espresso satisfies this delivery
+guarantee; retries needed for acceptance into $G$ are a separate task.
+\end{assumption}
+The clock starts when the complete result is available, not when a leader
+first proposes a block or one replica first commits it. Forming the FINAL
+receipt remains a regional-protocol task. ``Submits'' means delivery of the
+complete record to the Espresso submission interface under its admission
+rules, not merely a local send attempt.
+
+
+\begin{assumption}[Honest multisignature committee]
+\label{ass:committee}
+The committee is one honest, coordinated control service. It submits
+only authorized, immutable, future-dated STATUS, CLEAR and MSIG FORCE
+records. It chooses activation times satisfying the advance-announcement
+condition below. It keeps no private protected prefix and has no power
+to select an older retained anchor.
+\end{assumption}
+
+\begin{assumption}[Bounded L1 finalization and visibility]
+\label{ass:monitor}
+A valid control operation actually submitted at real time $s$ is
+finalized, available and verifiable by every correct online participant
+by $s+T_{\rm L1}$. Participants include regional replicas, external
+observers and certifiers. The bound includes inclusion, finalization,
+delivery, retrieval and validation.
+\end{assumption}
+
+\Needspace{8\baselineskip}
+\begin{assumption}[Espresso history and time]
+\label{ass:espresso}
+Correct verifiers obtain compatible finalized Espresso prefixes and
+can authenticate each required header and complete namespace payload,
+or its genuine absence. The history and evidence needed for replay remain
+retrievable. In particular, globally accepted DATA remains recoverable
+without the original producing region staying online. Timestamps are
+non-decreasing. If block $J_q$ first becomes final at real time $t_E(q)$,
+then $\theta_q\le t_E(q)+\epsilon_E$, where $\epsilon_E\ge0$ is the
+configured maximum clock lead.
+\end{assumption}
+Long-term retrieval is an explicit service assumption. It may be supplied
+by archival readers that preserve authenticated Espresso history; it does
+not follow from a finality certificate alone. A returning node fetches
+missing history or starts from an authorized checkpoint before confirming
+new output. Catching up with arbitrarily long history is not assigned a
+constant-time bound.
+
+\begin{assumption}[Bounded Espresso finalization and visibility]
+\label{ass:espresso-visibility}
+An admissible complete record submitted to Espresso at real time $s_E$
+is included in a finalized block by $s_E+T_E$, for a fixed $T_E>0$.
+By the same deadline, every
+correct participant that stays online and keeps up with the history can
+retrieve the complete record and verify its inclusion and finality.
+The bound covers inclusion, finalization, dissemination, retrieval and
+verification of the Espresso evidence, under the declared admission and
+load conditions.
+
+Each newly finalized Espresso block and its complete relevant namespace
+also become available and verifiable to those participants within $T_E$
+of finalization, including blocks with no records for this chain.
+\end{assumption}
+The service provides full payloads and evidence, not only header hashes.
+It does not promise that an EXPORT passes this chain's acceptance rules:
+a stale base, closed branch or missing predecessor can still prevent it
+from advancing $G$. Regional and application validation remain separate.
+
+\paragraph{The two delivery bounds.}
+For a newly available complete result, the two assumptions give
+\[
+ s_{\rm submit}\le s+T_{\rm pub},\qquad
+ s_{\rm visible}\le s+T_{\rm pub}+T_E.
+\]
+Here $s_{\rm visible}$ means that the submitted result and its Espresso
+evidence are available to the online readers above. It is not a bound on
+when the regional result first forms, when a new region restores its
+execution state, or when a rejected EXPORT is accepted after retries.
+These are real-time bounds. Delivery windows use Espresso timestamps, so
+window parameters also need the clock profile and regional progress and
+startup allowances. The bound $T_E$ does not replace the clock-lead
+assumption or the advance-announcement rule below.
+
+
+\paragraph{Advance announcement.}
+For a control submitted at $s$, the committee chooses
+\[
+ \theta_a>s+T_{\rm L1}+\epsilon_E+\eta,
+ \qquad \eta>0.
+\]
+Thus the control is available to correct participants before its
+first crossing can become final. This is a model condition, not a
+conclusion from an average L1 or Espresso block time. The L1 service
+bound already includes dissemination; no second announcement delay is
+added. Offline or unsynchronized participants catch up before confirming
+new output. Missing control history pauses verification.
+
+\paragraph{Verification interfaces.}
+Regional receipt validity and the application-validity checks below
+are assumed sound under the stated regional model. A deployed
+certifier must authenticate both source histories and bind the control
+version used. A signature or TEE alone does not establish that an old
+control snapshot is complete. The publication interface additionally
+requires sound execution and DA correspondence checks.
+
+\subsection{Conditions for progress}
+\label{sec:progress}
+The following conditions are separate from prefix safety.
+\begin{itemize}
+\item Correct leaders receive repeated turns that are actually entered,
+including recovery initializers and DATA-producing turns across
+sessions. Exposed equivocators are eventually excluded permanently
+from later leader schedules.
+\item Espresso continues to finalize retrievable history with growing
+timestamps and includes this chain's valid exports.
+\item Complete results become available to the Publish Layer. Its
+submission paths and Espresso meet their stated bounds. Retried EXPORTs
+for the next required DATA are accepted in time during some sustained
+service interval.
+\item Required authorities and recoverable native state become
+available. A waiting boundary eventually has another eligible region.
+The committee leaves working regions enough uninterrupted service time.
+\item Correct clients' admissible requests reach the regions that
+continue serving. Requests fit in DATA batches and have only finitely
+many older requests ahead of them in each local queue.
+\end{itemize}
+The bounds begin with a complete result and do not bound regional
+recovery, state restoration, or repeated rejected EXPORTs. Window success
+therefore still needs the stated serving interval and a compatible
+Espresso clock profile. Otherwise repeated automatic Forces can prevent
+progress without revoking any global DATA. Espresso failure also stops external time and
+global progress. Switching the global finality service is outside this
+protocol.
+
+\section{Regional engine: definitions}
+\label{sec:regional}
+\Cref{tab:notation} lists the principal objects. Regional anchors and
+view times use the same four indices as the view.
+\begin{table}[htbp]\centering\small
+\caption{Notation.}\label{tab:notation}
+\begin{tabularx}{\linewidth}{@{}p{.32\linewidth}Y@{}}\toprule
+Symbol & Meaning\\\midrule
+$(\beta,r,g,t)$; $j$ & Branch version, regional turn, recovery, leader term; fresh position.\\
+$(\beta,r)$ & Session: one region\textquotesingle s turn in one branch version.\\
+$i_{\beta,r}$; $V_i$ & Session region; its regional members.\\
+$\omega_{i,v},W_i,F_i$ & Member weight, total weight, and Byzantine bound $F_i<W_i/2$.\\
+$\Delta_i$; $K$ & Regional synchronous delay bound; maximum DATA per term.\\
+$\tagg{AUTH}_{r,g}$; $\mathit{cfg}_r$ & Immutable authority; fixed session snapshot.\\
+$A_{\beta,r,g,t}$ & Anchor before the first fresh position of that view.\\
+$h(B)$; $k_{\beta,r}(B)$ & DATA height; session physical position, including DRAIN.\\
+$\TB_r,H_{\beta,r},T_{\beta,r}$ & Session DATA quota, endpoint height, and terminal DATA.\\
+$m_{\beta,r,g,t}$; $L(\beta,r,g,t)$ & Fresh term positions; designated leader.\\
+$\QC_{\beta,r,g,t}(B)$; ANCHOR QC & Proposal certificate; opening re-certification.\\
+$\FC_{\beta,r}(B)$ & Regional FINAL receipt, or its stated same-session coverage.\\
+$Q_{\beta,r}^0,Q_v,Q^*$ & Inherited commitment evidence; entry lock; selected justification.\\
+$e_v(\beta,r,g,t),\tau_v(P),a_v$ & Real-time entry, validated vote and quit events.\\
+$\rho,\lambda(B)$ & Regional finalized L1 reference and its L1 height.\\
+$\xi(B),\vartheta(B)$ & Signed Espresso selection reference and its timestamp.\\
+$J_q,\theta_q$ & Espresso block and authenticated timestamp.\\
+$\chi_E(q),\mathcal L_R$ & Historical pre-payload eligibility snapshot; region cycle.\\
+$q_s,q_{\beta,r}^{\rm open}$ & Selection Espresso height; session reference lower bound.\\
+$\lambda_{\beta,r}^{\rm open}$ & Separate L1 reference lower bound for a new session.\\
+$G_u,R_u,C_{\rm pub}$ & Global DATA prefix; provisional branch; accepted publication prefix.\\
+$T_{\rm L1},\epsilon_E$ & Full L1 announcement-service bound; maximum Espresso clock lead.\\
+$T_{\rm pub},T_E$ & Complete-result submission bound; Espresso finalization and visibility bound.\\
+$W_{\rm start},m_{\rm start}$ & Startup-window length and DATA target.\\
+$W_{\rm run},q_{\min},C_{\rm auto}$ & Running-window length, target and cooldown.\\
+$E$; Ready & Regional entry proof; full boundary/state/authority validation.\\
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Blocks, positions, and L1 references}
+\label{sec:blocks}
+The \defterm{anchor} $A_{\beta,r,g,t}$ is the block immediately before the first fresh
+position of view $(\beta,r,g,t)$. We always write all four indices.
+\begin{itemize}
+\item $A_{\beta,r,0,0}$ is the DATA block inherited from the preceding
+session; the first session inherits genesis. It keeps the regional commitment evidence from the session that
+produced it: a direct or covering receipt as defined in
+\cref{sec:coverage}. Genesis has synthetic evidence.
+\item For $g>0$, NEWVIEW chooses the \defterm{recovery anchor} $A_{\beta,r,g,0}$
+(\cref{alg:recovery}). It is certified but may be uncommitted.
+\item For $t>0$, $A_{\beta,r,g,t}$ is the terminal DATA block of term
+$(\beta,r,g,t-1)$, certified by that term's terminal QC.
+\end{itemize}
+The anchor of a view never changes. The generation starts at
+$A_{\beta,r,g,0}$; later terms use their own anchors $A_{\beta,r,g,t}$. ANCHOR voting
+re-certifies only $A_{\beta,r,g,0}$, once per generation.
+
+Each block has two positions.
+\begin{itemize}
+\item The \defterm{DATA height} $h(B)$ counts the DATA blocks on the chain
+from genesis to $B$.
+\item The \defterm{physical position} $k_{\beta,r}(B)$ counts DATA and DRAIN blocks
+within session $(\beta,r)$, with $k_{\beta,r}(A_{\beta,r,0,0})=0$. This local count does not change
+the signed fields of $A_{\beta,r,0,0}$.
+\end{itemize}
+A new block of session $(\beta,r)$ has the form
+\[
+ B=(\beta,r,k,h,\mathit{type},x,\Hash(B_{\rm parent}),\rho,\xi),
+ \qquad \mathit{type}\in\{\tagg{DATA},\tagg{DRAIN}\},
+\]
+with $k=k_{\beta,r}(B_{\rm parent})+1$. A \defterm{DATA block} carries a batch $x$ of
+requests and has $h=h(B_{\rm parent})+1$. A \defterm{DRAIN block} carries no batch
+and has $h=h(B_{\rm parent})$.
+
+\paragraph{L1 references.}
+The \defterm{reference} $\rho$ names a finalized L1 block. It holds that L1
+block's height $\lambda(B)$ and hash, and a registry proof for the L1
+control records up to that height. These rules hold:
+\begin{itemize}
+\item along DATA ancestry, $\lambda$ never decreases;
+\item the first DATA block of session $(\beta,r)$ has $\lambda\ge
+\lambda^{\rm open}_{\beta,r}$, the L1 lower bound fixed by its boundary
+(\cref{sec:witness}; genesis uses \cref{sec:l1});
+\item a DRAIN block copies the reference of $T_{\beta,r}$.
+\end{itemize}
+The authenticated timestamp of the L1 block named by $\rho$ can be
+read from its header. It is not a commit timestamp for $B$. Recovery
+may commit $B$ much later (\cref{sec:late-receipt}). The
+regional Vote step applies no receive-time freshness filter to $\rho$.
+
+The L1 reference retains its regional validation role. It does not
+choose the external Force time or the new Espresso selection snapshot.
+Regional validity uses the fixed session authority. A later status update
+does not change an old receipt's voting weights.
+
+\paragraph{Espresso selection references.}
+The additional outer field $\xi(B)$ names a finalized Espresso header
+$J_q$ by height and hash, with its authenticated pre-payload eligibility
+snapshot. Write $\vartheta(B)=\theta_q$. Its height does not decrease
+along DATA ancestry, and the first DATA of session $(\beta,r)$ has
+$q\ge q_{\beta,r}^{\rm open}$. The terminal DATA additionally requires
+$\operatorname{height}(\xi(T_{\beta,r}))>q_{\beta,r}^{\rm open}$.
+DRAIN copies the selection reference of $T_{\beta,r}$,
+just as it copies its L1 reference. These references and the session
+context are bound by the proposal hash and signatures. They do not
+change the native mini-block encoding.
+
+A verifier authenticates the referenced history, directly or from its
+validated cache. Global acceptance additionally requires the reference
+to precede the containing EXPORT's Espresso block. No reference can
+justify itself through that same EXPORT. Historical references carry no
+receive-time freshness claim. The reference of $T_{\beta,r}$ starts the normal
+successor search in \cref{sec:witness}.
+
+\paragraph{Why the selection reference is needed.}
+The terminal reference fixes a common starting point for choosing the next
+region. It lets nodes make that choice before the terminal DATA itself is
+published to Espresso. It is not proof that this DATA is globally final.
+
+For example, let the region order be A, B, C. At Espresso block $J_{500}$,
+B and C are eligible, and A's opening reference is below 500. An announced
+L1 status update makes B ineligible at
+$J_{505}$. A's terminal DATA 110 binds $\xi(110)=(500,\Hash(J_{500}))$.
+One node receives its regional receipt when its Espresso view ends at 503;
+another receives it when that view ends at 506. Choosing from each node's
+latest local status would give B and C respectively. With the signed
+reference, both start at 500 and select B, provided the branch has not
+been closed by Force. The historical status is derived from L1 controls
+at that Espresso position; Espresso does not execute the status rule.
+
+The later OFF does not revise this regular boundary. The reference gives
+a common choice, not a guarantee that the status is fresh. Force remains
+the way to close an already authorized branch. Bounded visibility does
+not remove the need for a common reference: honest nodes can receive a
+receipt at different times. This revision changes only the terminal
+lower-bound check: its reference must strictly advance the session's
+opening position. A selected program fetches a qualifying finalized
+header before Ready, so normal DATA production need not wait for it.
+The terminal DATA itself still need not be globally confirmed for normal
+handoff. DRAIN retains the terminal DATA's reference.
+
+\subsection{Session quota, term positions, and DRAIN}
+\label{sec:quota}
+\paragraph{1. Fix the session endpoint.}
+Session $(\beta,r)$ may add $\TB_r\ge1$ DATA blocks after $A_{\beta,r,0,0}$. Its \defterm{last
+DATA height} is
+\[
+ H_{\beta,r}=h(A_{\beta,r,0,0})+\TB_r.
+\]
+The DATA block at this height is $T_{\beta,r}$. Recovery never changes $H_{\beta,r}$.
+The quota counts the DATA blocks after $A_{\beta,r,0,0}$ in a proposal's
+ancestry, whether committed or not. DRAIN, resends, and ANCHOR votes
+use no quota.
+
+\paragraph{2. Produce DATA while space remains.}
+If $h(A_{\beta,r,g,0})<H_{\beta,r}$, generation $(\beta,r,g)$ is a \defterm{DATA generation}.
+Each term begins at its anchor $A_{\beta,r,g,t}$ and has
+\[
+ m_{\beta,r,g,t}=\min\{K,\;H_{\beta,r}-h(A_{\beta,r,g,t})\}
+\]
+new positions, numbered $j=0,\ldots,m_{\beta,r,g,t}-1$. At position $j$, the
+DATA block has
+\[
+ h=h(A_{\beta,r,g,t})+j+1,\qquad
+ k=k_{\beta,r}(A_{\beta,r,g,t})+j+1.
+\]
+A new position is called a \defterm{fresh position}; its block is a
+\defterm{fresh block}. The anchor itself is not fresh. The last position
+$j=m_{\beta,r,g,t}-1$ is the \defterm{terminal position}, and its QC is the
+\defterm{terminal QC}.
+
+If the terminal DATA height is below $H_{\beta,r}$, its QC admits term
+$(\beta,r,g,t+1)$, with that terminal block as $A_{\beta,r,g,t+1}$. If it is $H_{\beta,r}$,
+there is no next term. Only the last DATA term can have fewer than $K$
+positions. The initial generation is always a DATA generation, since
+$\TB_r\ge1$.
+
+\paragraph{3. Use DRAIN when recovery starts at the endpoint.}
+If $g>0$ and $h(A_{\beta,r,g,0})=H_{\beta,r}$, generation $(\beta,r,g)$ is a
+\defterm{drain generation}. It has only term $t=0$ and position $j=0$,
+with $m_{\beta,r,g,0}=1$. Its one fresh block is DRAIN, whose parent is
+$A_{\beta,r,g,0}$ and whose justification is the generation's ANCHOR QC.
+It carries no requests, keeps DATA height $H_{\beta,r}$, and has no next term.
+
+DRAIN supplies a commit timer. ANCHOR voting starts no timer, so
+re-certifying $A_{\beta,r,g,0}$ alone does not commit it. At height $H_{\beta,r}$, a
+DATA child would exceed the quota. The DRAIN child's timer instead
+commits its ancestors, including $T_{\beta,r}$.
+\begin{itemize}
+\item A DATA generation that reaches $H_{\beta,r}$ does not append DRAIN.
+It waits for $T_{\beta,r}$'s timer or recovers after a quit.
+\item A later drain generation may start from an earlier DRAIN.
+Each interrupted recovery may add one DRAIN, so their total number
+is not bounded.
+\item The choice depends on the recovery anchor's DATA height, not on
+whether a replica has already committed $T_{\beta,r}$.
+\end{itemize}
+DRAIN stays in the regional log. The external chain contains only DATA,
+and the next session inherits $T_{\beta,r}$.
+
+\paragraph{Example.}
+Let $h(A_{\beta,r,0,0})=100$, $\TB_r=10$, and $K=4$, so $H_{\beta,r}=110$.
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}\toprule
+View & Anchor height & Fresh DATA heights\\\midrule
+$(\beta,r,0,0)$ & 100 & 101--104\\
+$(\beta,r,0,1)$ & 104 & 105--108\\
+$(\beta,r,0,2)$ & 108 & 109--110\\\bottomrule
+\end{tabular}
+\end{center}
+Recovery from DATA 107 starts a new generation whose first term produces
+108--110. Recovery from certified DATA 110 starts a drain generation.
+In both cases, the endpoint remains 110.
+
+\subsection{Certificates and signed messages}
+\label{sec:certificates}
+\Cref{tab:certificates} lists the certificates of a session. Each needs
+matching signatures from distinct members of $V_{i_{\beta,r}}$ with total weight
+$>F_{i_{\beta,r}}$.
+
+\begin{table}[htbp]\centering\small
+\caption{Certificates of a session.}
+\label{tab:certificates}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.25\linewidth}>{\raggedright\arraybackslash}p{.24\linewidth}Y@{}}
+\toprule
+Certificate & Signed message & Purpose\\
+\midrule
+\defterm{Proposal QC} $\QC_{\beta,r,g,t}(B)$ & DATA-VOTE or DRAIN-VOTE & Justifies a
+child. A terminal QC below $H_{\beta,r}$ also admits the next term.\\
+\defterm{ANCHOR QC} & ANCHOR-VOTE & Re-certifies the opening $A_{\beta,r,g,0}$ in
+generation $g$, before any fresh proposal.\\
+\defterm{BLAME proof} & BLAME & Freezes a generation (\cref{sec:quit}).\\
+\defterm{Regional receipt} $\FC_{\beta,r}(B)$ & FINAL & Proves that a correct replica
+committed DATA block $B$.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A correct replica casts at most one fresh vote per $(\beta,r,g,t,j)$ and one
+ANCHOR vote per $(\beta,r,g)$. DATA and DRAIN votes follow the same rule but
+are different signed types. No QC and no ANCHOR vote starts a commit
+timer.
+
+\paragraph{Signed context.}
+Every signature binds the chain identifier, protocol domain, session
+$(\beta,r)$, voting configuration, assigned region and message type.
+View messages also bind $(g,t)$ and the L1 authority reference
+$\tagg{AUTH}_{r,g}$. Their full view is $(\beta,r,g,t)$.
+The other signed fields are:
+\begin{itemize}
+\item \textbf{PROPOSE and fresh votes:} the generation's opening,
+position $j$, block type, physical position, DATA height and block hash;
+\item \textbf{NEWVIEW and ANCHOR-VOTE:} the chosen opening. NEWVIEW
+also binds its justification and entry proof;
+\item \textbf{STATUS:} the sender's entry lock and entry proof;
+\item \textbf{BLAME:} the view only, with no opening, block hash or
+progress count. All complaints for a view sign the same statement;
+\item \textbf{FINAL:} the session and DATA fields below, with no $g$ or $t$.
+\end{itemize}
+Displayed messages include $\beta$ and $r$ but omit the common chain,
+protocol, region and configuration fields where they are unambiguous.
+A verifier also checks the boundary that assigned the pair $(\beta,r)$;
+the pair alone is not evidence of authority.
+
+\paragraph{Rank and the base justification.}
+Within session $(\beta,r)$, a QC formed in term $(\beta,r,g,t)$ for block $B$ has \defterm{rank}
+$(g,t,k_{\beta,r}(B))$, compared lexicographically. The ANCHOR QC of generation
+$g$ has rank $(g,0,k_{\beta,r}(A_{\beta,r,g,0}))$, just below the generation's first
+fresh QC. A fixed total order on certified content breaks ties. Signer
+sets and encodings do not matter. The \defterm{opening
+identity} of generation $g$ is
+$(g,k_{\beta,r}(A_{\beta,r,g,0}),h(A_{\beta,r,g,0}),\Hash(A_{\beta,r,g,0}))$. In this document,
+``opening'' always means the generation's opening block $A_{\beta,r,g,0}$, as
+in Part~I. QCs are ranked only within the same session $(\beta,r)$.
+
+The anchor $A_{\beta,r,0,0}$ also has a \defterm{base justification} $Q_{\beta,r}^0$: the
+anchor together with its direct or covering commitment evidence in the
+boundary witness (\cref{sec:coverage,sec:witness}). Its justified block
+is exactly $A_{\beta,r,0,0}$, even if the evidence uses a receipt for a higher
+old-session block. That higher block is evidence only. $Q_{\beta,r}^0$ ranks
+below every QC of session $(\beta,r)$.
+Recovery uses it when no QC of the session is known. A QC of another
+session is never a justification in session $(\beta,r)$, so it cannot replace
+$A_{\beta,r,0,0}$.
+
+\paragraph{Regional receipts.}
+After a replica commits a DATA block $B$ of session $(\beta,r)$, by $B$'s own
+timer or as an ancestor, it sends
+\[
+ \langle\tagg{FINAL},\beta,r,\mathit{cfg}_r,h(B),\Hash(B)\rangle_v
+\]
+to its region. Matching FINAL messages of weight
+$>F_{i_{\beta,r}}$ form the \defterm{regional receipt} $\FC_{\beta,r}(B)$. The receipt carries $B$ and the ancestry needed to validate it, or
+refers to a validated local cache. Each correct holder of a complete
+result offers it to the Publish Layer and multicasts the full validated
+receipt, DATA and necessary dependencies to the fixed regional membership
+on first acquisition. Deduplicate by session and DATA hash; retain the
+outgoing action until dispatched. This rule also applies to a receipt
+used for Completion and to a Completed or archival holder. It may also
+send the result directly to other regions for early handoff.
+
+\begin{definition}[\defterm{Valid regional receipt}]
+\label{def:receipt}
+A regional receipt $\FC_{\beta,r}(B)$ is valid when all of the following hold:
+\begin{enumerate}[label=(\roman*)]
+\item $B$ is a DATA block of session $(\beta,r)$, extends $A_{\beta,r,0,0}$, and has
+$h(A_{\beta,r,0,0})<h(B)\le H_{\beta,r}$;
+\item distinct members in session $(\beta,r)$'s fixed voting snapshot have
+valid signatures on the same
+$\langle\tagg{FINAL},\beta,r,\mathit{cfg}_r,h(B),\Hash(B)\rangle$,
+with total weight $>F_{i_{\beta,r}}$ and the signed context specified above; and
+\item $B$ and its required ancestry pass the block-validation rules of
+\cref{sec:admission}.
+\end{enumerate}
+The verifier checks this evidence; it does not replay the signers'
+timers. The weight threshold guarantees at least one correct signer,
+who sends FINAL only after committing $B$.
+\end{definition}
+Here $\mathit{cfg}_r$ identifies session $(\beta,r)$'s \defterm{fixed voting snapshot}.
+When we write $\FC(B)$ without a session subscript, we mean the receipt
+from the session that produced $B$. The inherited anchor keeps that
+receipt; it does not acquire a new one. A verifier outside
+the region checks condition~(iii) from evidence, as
+\cref{sec:admission} explains.
+\begin{itemize}
+\item FINAL binds no generation or term. So FINAL messages for one block
+combine across recoveries. The block hash keeps the block's signed
+context.
+\item If a DRAIN commits $T_{\beta,r}$, replicas send FINAL for $T_{\beta,r}$, never for
+the DRAIN.
+\item Replicas of session $(\beta,r)$ send no FINAL for $A_{\beta,r,0,0}$. It keeps its original commitment evidence, which may come from an
+earlier session if intermediate sessions added no DATA.
+\item A replica may also commit $B$ and its uncommitted
+ancestors when it obtains a valid $\FC_{\beta,r}(B)$ of its own session.
+Completion does this for $T_{\beta,r}$ (\cref{alg:steady}). Such a commit
+sends no FINAL, because the receipt already exists. Only Completion
+also cancels timers. Receipts of other sessions serve only as history or anchor
+evidence. They never change this session's locks or log.
+\end{itemize}
+
+\paragraph{Receipt coverage.}
+\label{sec:coverage}
+A valid $\FC_{\beta,r}(D)$ also proves commitment of every DATA ancestor $B$
+of $D$ in the same session. At least one correct signer committed
+$D$, which commits those ancestors. The \defterm{covering evidence} includes the
+valid receipt for $D$ and the fully verified ancestry linking $D$ to $B$.
+It does not claim that the signatures name $B$ directly.
+
+This coverage never substitutes for a receipt from a different session.
+It also does not replace the check that $B$ belongs to the authorized
+external branch. A later Force may discard $D$ while keeping $B$; the
+regional commitment evidence for $B$ still holds. External observers,
+retained-anchor witnesses, and base justifications may use direct or
+covering evidence. No extra FINAL messages or certificate round are
+needed. We use ``\defterm{commitment evidence} for $B$'' for either form.
+
+\subsection{Admission, validation, and engine states}
+\label{sec:admission}
+\paragraph{\defterm{Admission.}}
+Replica $v$ admits views as follows.
+\begin{itemize}
+\item $(\beta,r,0,0)$ is admitted at $v$'s Ready event for the boundary that
+opens session $(\beta,r)$ (\cref{def:ready}). The witness is the \defterm{entry proof}.
+The NEWVIEW must choose exactly $A_{\beta,r,0,0}$.
+\item $(\beta,r,g,0)$ with $g>0$ is admitted once $v$ holds
+$\tagg{AUTH}_{r,g}$ and a quit proof for generation $g-1$. That proof is
+the \defterm{entry proof}. The NEWVIEW is justified by a QC of an earlier
+generation of session $(\beta,r)$, or by $Q_{\beta,r}^0$.
+\item $(\beta,r,g,t)$ with $t>0$ is admitted once $v$ also holds the terminal
+QCs of terms $0,\ldots,t-1$, each for DATA below $H_{\beta,r}$.
+\end{itemize}
+Term zero is admitted before its NEWVIEW arrives. Its progress checks
+therefore run even if the initial leader is silent. Fresh proposals need
+the generation's ANCHOR QC. This holds in every generation, including
+generation $0$ of the first session from genesis; Part~I's
+genesis shortcut does not apply. A
+message is \defterm{admissible} if its view is admitted and its signatures
+are valid.
+
+A verifier that is not a replica of the session has no
+admission events. When it validates history (\cref{def:receipt},
+\cref{sec:external}), a view counts as admitted if the evidence contains
+its \defterm{admission witness}: the boundary witness for $(\beta,r,0,0)$, the chain of
+entry proofs for $(\beta,r,g,0)$, and the earlier terminal QCs for $t>0$.
+
+\paragraph{\defterm{Complete validation.}}
+Validation checks signatures, authority, admission, block type, quota,
+both positions, the L1 and Espresso reference rules, the parent rule
+(\cref{tab:parent}), parent QCs, hash links, and application validity
+throughout the required ancestry. Every relevant ancestor includes its
+signed proposal and block data; a chain of certificate hashes alone is
+not enough. Dependencies come from the message or a validated local
+cache. Correct senders send \defterm{complete validation bundles}. A reference is
+allowed only if the receiver can resolve it within the delay bound of
+\cref{ass:network}. Bundles list each dependency once.
+
+\paragraph{Evidence takes priority.}
+Before validating a message or discarding a duplicate, inspect all signed
+material in it for a quit proof (\cref{sec:quit}). A proof needs its own
+valid signatures and admission witnesses. A valid proof counts even if
+the message that carries it is invalid or incomplete. Compare incoming
+material with all retained material, not only with objects inside the
+message.
+
+\paragraph{One proposal-processing rule during normal operation.}
+Unless retirement has closed the signing gate, every admitted fresh
+proposal of the current generation that $v$ has not voted for invokes the
+Vote step. Closing programs still inspect and forward signed evidence. This includes proposals in attached
+histories, proposals of earlier terms, and proposals whose blocks are
+already committed as ancestors. A proposal's identity is
+$(\beta,r,g,t,j,\Hash(B))$. The signer set or encoding of its parent QC does
+not change it. Deduplicate by this identity after evidence inspection.
+Old-generation proposals are retained without new votes or timers.
+Future-generation messages wait for entry.
+
+\paragraph{Engine states.}
+A replica runs one engine for each session pair $(\beta,r)$ assigned to its region.
+Engines of different sessions remain separate, even if they use the
+same session index. The engine of
+session $(\beta,r)$ uses the following three core phases. The full
+program lifecycle adds Waiting, Ready and Terminated in
+\cref{sec:session-lifecycle}.
+\begin{itemize}
+\item \textbf{\defterm{Active}:} the current generation is admitted and unfrozen.
+The engine proposes, votes, and changes terms.
+\item \textbf{\defterm{Frozen}:} the current generation has a quit proof. The
+engine stops proposals, votes, and term changes. It still processes
+evidence, old votes, QCs, receipts, and recovery.
+\item \textbf{\defterm{Completed}:} the replica holds $\FC_{\beta,r}(T_{\beta,r})$ satisfying
+\cref{def:receipt}.
+Production in session $(\beta,r)$ is over, even if the external handoff is still
+pending. The engine only serves data.
+\end{itemize}
+Committing $T_{\beta,r}$ locally does not complete the engine. Other members may
+still need this replica's recovery votes before a receipt forms. Each
+message goes to the engine named by its signed pair $(\beta,r)$, so
+evidence from one session or branch never freezes another. These engine
+states do not describe external finality. The external chain may move
+to another branch while an old engine still runs. L1 status
+updates do not rewrite an engine's state or log. Effective Force closes
+the external version; the manager then requests the explicit retirement
+procedure of \cref{sec:retirement}. A closing Active or Frozen program
+keeps that core phase until genuine Completion or FinishClose.
+
+\begin{table}[htbp]\centering\small
+\caption{Parent selection for the next fresh position $j$ of term $(\beta,r,g,t)$.}
+\label{tab:parent}
+\begin{tabularx}{\linewidth}{@{}l Y Y@{}}
+\toprule
+Condition & $B_{\mathrm{parent}}$ & $Q_{\mathrm{parent}}$\\
+\midrule
+$j=0,t=0$ (DATA or DRAIN) & Opening $A_{\beta,r,g,0}$ & Its ANCHOR QC in $(\beta,r,g,0)$\\
+$j=0,t>0$ & Anchor $A_{\beta,r,g,t}$, the terminal block of $(\beta,r,g,t-1)$ & Its proposal QC in $(\beta,r,g,t-1)$\\
+$1\le j<m_{\beta,r,g,t}$ & Position $j-1$ of $(\beta,r,g,t)$ & Its proposal QC in $(\beta,r,g,t)$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Regional protocols}
+\label{sec:protocols}
+Protocols 1 and 2 run inside the engine of one session $(\beta,r)$. They are
+Protocols 1 and 2 of Part~I~\cite{part1} with the changes listed below.
+\RR{Red text} marks the retained regional changes from Part~I.
+The new outer selection reference is defined in \cref{sec:blocks}.
+External replay never changes the expiry of an existing regional timer.
+Retirement blocks fresh signing, new timers and further entry under the
+following gate; only genuine Quit or Completion cancels an existing timer.
+
+\paragraph{Notation.}
+The full view is $(\beta,r,g,t)$ throughout. Every anchor, receipt and
+entry time below names its branch and session explicitly. In these two
+protocols, $\Delta$ and $F$ mean $\Delta_{i_{\beta,r}}$ and
+$F_{i_{\beta,r}}$. The authority fields $\mathit{cfg}_r$, $\TB_r$ and
+$\tagg{AUTH}_{r,g}$ retain their numeric indices: a later branch that
+reuses $r$ reads the same immutable authority. Its anchor, endpoint and
+engine state can still differ.
+
+\paragraph{Changes from Part~I.}
+\begin{enumerate}[label=\arabic*.]
+\item \emph{Stake.} Certificates need weight $>F$, not $f+1$ signatures.
+\item \emph{Blocks.} A block also carries its session, physical
+position, type, L1 reference $\rho$, and Espresso reference $\xi$
+(\cref{sec:blocks}). Validity
+checks all of them.
+\item \emph{Quota.} A term has $m_{\beta,r,g,t}\le K$ positions. No term follows
+$H_{\beta,r}$.
+\item \emph{DRAIN.} A drain generation proposes one DRAIN. Its vote
+counts as progress.
+\item \emph{Receipts.} Replicas send FINAL after committing DATA. A
+receipt for $T_{\beta,r}$ completes the engine (new step~5 of \cref{alg:steady}).
+\item \emph{Timers.} Completion also cancels timers. A force never does.
+\item \emph{Recovery entry.} After the $\Delta$ wait, a replica enters
+when $\tagg{AUTH}_{r,g+1}$ is finalized. $Q_{\beta,r}^0$ can serve as the entry
+lock and as the justification.
+\item \emph{Genesis.} The initial session $(\beta,0)$ also certifies its anchor with an
+ANCHOR QC before its first fresh proposal.
+\item \emph{Sessions.} Each message goes to the engine of its session.
+The initial session $(\beta,0)$ opens by bootstrap (\cref{alg:bootstrap}).
+\end{enumerate}
+
+\paragraph{Retirement gate and core events.}
+Before any fresh proposal, DATA/DRAIN/ANCHOR vote, STATUS/NEWVIEW,
+progress-check BLAME, term entry or recovery entry, require that
+the manager has no authenticated $\tagg{Closed}[\beta]$, the program's
+\texttt{close\_requested} is false, and it is not Terminated.
+Apply the same check to buffered-message and authority-arrival callbacks.
+This gate never prevents checking, comparing, retaining and relaying
+signed evidence, processing a genuine Quit, executing a surviving commit
+timer, sending its FINAL, or applying a valid receipt and Completion.
+It does not overwrite a lock or cancel a timer. \Cref{sec:retirement}
+defines its trigger and drain. Core entry, Quit, recovery, Completion
+and timer-drain changes emit a \texttt{CoreEvent} to the local manager;
+that event does not change public $G$.
+
+\paragraph{Message-processing order.}\leavevmode
+\RR{Replica $v$ first passes each message to the engine of the session
+pair $(\beta,r)$ that the message binds. L1 updates go to \cref{alg:force}. Boundary witnesses and receipts of
+other sessions go to \cref{alg:rotation,alg:external}.} The engine handles each received
+message in this order:
+\begin{enumerate}[label=(\arabic*)]
+\item check all signed material for a quit proof;
+\item check completeness and validity;
+\item process attached DATA \RR{and DRAIN} proposals under Vote, parents
+first;
+\item process attached terminal QCs under step~4 of \cref{alg:steady},
+in increasing term order;
+\item process the message itself.
+\end{enumerate}
+When a message and a timer fall at the same time, $v$ handles the
+message first.
+
+\subsection{Steady state}
+\label{sec:steady}
+\Cref{alg:steady} gives the steady state of a session: proposals, votes,
+timers, term rotation, and completion.
+
+\begin{protocol}{alg:steady}{Propose, vote, commit, normal rotation\RR{, and completion}}
+Replica $v$ runs these steps \RR{in the engine of session $(\beta,r)$}. Its
+current term is $(\beta,r,g,t)$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Propose.} Run this step only if $v=L(\beta,r,g,t)$, $g$ is
+unfrozen\RR{, and session $(\beta,r)$ is not complete}.
+\RR{In a DATA generation,} for each position
+$j=0,\ldots,\RR{m_{\beta,r,g,t}}-1$, in order:
+ \begin{itemize}
+ \item Wait until $v$ holds $B_{\mathrm{parent}}$ and
+       $Q_{\mathrm{parent}}$ for $j$ (\cref{tab:parent}).
+ \item Build \RR{$B=(\beta,r,k,h,\tagg{DATA},x,\Hash(B_{\mathrm{parent}}),\rho,\xi)$,
+       with $k$ and $h$ from \cref{sec:quota} and the references
+$\rho,\xi$ from \cref{sec:blocks}}.
+       The batch $x$ follows \cref{sec:requests}.
+ \item Broadcast
+       $P=\langle\tagg{PROPOSE},\beta,r,g,t,j,B,Q_{\mathrm{parent}}\rangle_v$
+       with its validation bundle \RR{to regional replicas. }
+ \item Process $P$ under Vote.
+ \end{itemize}
+ \RR{In a drain generation, propose once, at $(t,j)=(0,0)$. The block is
+ a DRAIN with parent $A_{\beta,r,g,0}$, no batch, DATA height $H_{\beta,r}$, and the L1
+ and Espresso references of $T_{\beta,r}$. Broadcast and process it as above.}
+ Do not wait for the parent to commit. Never sign two different
+ blocks for one position. A resend repeats the same $P$.
+
+\item \textbf{Vote.} Run this step on every DATA \RR{or DRAIN} proposal
+$P$ of term $(\beta,r,g_P,t_P)$ at position $j_P$. Here $t_P$ may be earlier
+than $t$. The step also applies to proposals inside attached histories.
+ \begin{enumerate}[label=(\alph*)]
+ \item If $P$ or its attached material contains a quit proof for $g$,
+       run Quit and stop.
+ \item If $g_P<g$, retain $P$ and stop. If $g_P>g$, buffer $P$
+       until $v$ enters generation $g_P$.
+ \item If $g$ is frozen \RR{or session $(\beta,r)$ is complete}, retain $P$ and
+       stop.
+ \item If a dependency is missing, retain $P$, request the dependency,
+       and stop. Rerun this step when it arrives.
+ \item If $P$ is invalid, discard it and stop. \RR{Validity includes the
+       block type, the quota, both positions, and the L1 and Espresso references.}
+ \item If $v$ has already voted for $P$, stop.
+       A duplicate never restarts a timer.
+ \item Otherwise, let $\tau_v(P)$ be the current time. Forward $P$ and
+       its bundle to all \RR{regional replicas. }
+       Broadcast
+       $\langle\tagg{DATA\mbox{-}VOTE},\beta,r,g,t_P,j_P,\Hash(B)\rangle_v$
+       \RR{(DRAIN-VOTE if $B$ is a DRAIN)}.
+       Start the commit timer of $P$. It expires at $\tau_v(P)+2\Delta$.
+ \end{enumerate}
+
+\item \textbf{Commit.} When the timer of $P$ expires, commit $B$ and
+its uncommitted ancestors. \RR{For each DATA block $D$ of session $(\beta,r)$
+that this commits, send
+$\langle\tagg{FINAL},\beta,r,\mathit{cfg}_r,h(D),\Hash(D)\rangle_v$ to the regional fixed membership and the Publish Layer collection interface. A committed DRAIN yields FINAL for $T_{\beta,r}$, never for
+itself. } Only Quit \RR{and Completion} cancel a timer. Entering a
+new term does not cancel it. A QC never starts a timer. \RR{A force
+instruction never cancels a timer.}
+
+\item \textbf{Terminal QC and rotation.} Run this step the first time
+$v$ obtains a valid terminal QC for a term $(\beta,r,g,t')$.
+``Obtains'' means that $v$ assembles the QC from votes or finds it in
+any message, including as another proposal's $Q_{\mathrm{parent}}$.
+ \begin{enumerate}[label=(\alph*)]
+ \item Process each unseen proposal in the QC's history under Vote,
+       parents first.
+ \item If $g$ is now frozen, stop. \RR{If the QC certifies DATA at
+       $H_{\beta,r}$, or a DRAIN, stop: no next term exists.}
+ \item Send the QC and its validation bundle to $L(\beta,r,g,t'+1)$.
+ \item If $t\le t'$, enter $(\beta,r,g,t'+1)$ and set $e_v(\beta,r,g,t'+1)$ to the
+       current time. Cancel the progress checks of all earlier
+       terms.
+ \end{enumerate}
+ A QC never moves $v$ to an earlier term. It never changes a recorded
+ entry time.
+
+\item \RR{\textbf{Completion.} Run this step the first time $v$ obtains a
+regional receipt $\FC_{\beta,r}(T_{\beta,r})$ satisfying \cref{def:receipt}.}
+ \begin{itemize}\color{rrRed}
+ \item Multicast the complete validated terminal receipt and its dependencies
+       to the fixed regional membership, once, and persist this outgoing action.
+ \item Commit $T_{\beta,r}$ and its uncommitted ancestors.
+ \item Mark session $(\beta,r)$ Completed. Stop its proposals, votes, progress
+       checks, term changes, and recovery. Cancel its unexpired timers.
+ \item Offer the complete terminal result to the Publish Layer.
+       It may also be sent directly to the next region.
+ \item Keep serving data. \Cref{alg:rotation} runs the handoff.
+ \end{itemize}
+ \RR{A force instruction never runs this step.}
+\end{enumerate}
+\end{protocol}
+
+\Needspace{9\baselineskip}
+The \defterm{acceptance time} $\tau_v(P)$ is when complete validation and the first
+vote occur, not an earlier arrival of an incomplete packet. Each replica
+records its own entry time for each term. In session $(\beta,r)$, $e_v(\beta,r,0,0)$ is
+set at the atomic Ready/Enter event, in step~1 of \cref{alg:bootstrap}. For $g>0$, $e_v(\beta,r,g,0)$ is
+set in step~3 of \cref{alg:recovery}. For $t>0$, $e_v(\beta,r,g,t)$ is set in
+step~4 of \cref{alg:steady}. A term's progress checks therefore start
+when the term is admitted locally, not when its leader's first proposal
+arrives. A silent new leader cannot delay them.
+
+A proposal or QC at height $H_{\beta,r}$ does not end the session. Without a
+quit, the timer of $T_{\beta,r}$ commits it; no later block is needed. Only a
+receipt for $T_{\beta,r}$ completes the engine.
+
+\subsection{Quit proofs and recovery}
+\label{sec:quit}
+A quit proof freezes a generation. \Cref{alg:recovery} then moves the
+session to the next generation.
+
+\begin{protocol}{alg:recovery}{Blame, quit, and recovery}
+Replica $v$ runs these steps \RR{in the engine of session $(\beta,r)$}. Its
+current term is $(\beta,r,g,t)$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Blame.} \RR{Let $q=m_{\beta,r,g,t}$ in a DATA generation and
+$q=1$ in a drain generation.} For each $p=1,\ldots,\RR{q}$, run a
+progress check at time
+\[
+ e_v(\beta,r,g,t)+(2p+4)\Delta.
+\]
+\RR{Schedule the check for $p=1$ at entry, even if the opening is not yet
+known. Schedule the others once $q$ is known. A check whose time has
+already passed runs at once.}
+At that time, broadcast $\langle\tagg{BLAME},\beta,r,g,t\rangle_v$ if all of
+these hold:
+ \begin{itemize}
+ \item $v$'s current term is still $(\beta,r,g,t)$, $g$ is unfrozen\RR{, and
+       session $(\beta,r)$ is not complete};
+ \item $v$ has cast DATA \RR{or DRAIN} votes for fewer than $p$ positions
+       of term $(\beta,r,g,t)$ (ANCHOR votes do not count);
+ \item $v$ has not yet sent BLAME for $(\beta,r,g,t)$.
+ \end{itemize}
+
+\item \textbf{Quit.} Run this step the first time $v$ holds a quit proof
+for its current generation $g$.
+ \begin{itemize}
+ \item Freeze $g$. Stop all progress checks, proposals, votes, and
+       term changes in $g$. Cancel every unexpired commit timer of $g$.
+ \item Set $a_v$ to the current time. Broadcast the proof.
+ \item Keep all commitments. Keep collecting votes and QCs of $g$.
+       They can raise the entry lock chosen in step~3. \RR{Keep
+       processing regional receipts (step~5 of \cref{alg:steady}).}
+ \item If the proof is of type (b) or (c), submit it to L1. Do
+       not wait for L1 to process it.
+ \end{itemize}
+
+\item \textbf{Status and entry.} \RR{Skip this step if session $(\beta,r)$ is
+complete.} \RR{Wait until at least $a_v+\Delta$ and until
+$\tagg{AUTH}_{r,g+1}$ is finalized. Set $e_v(\beta,r,g+1,0)$ to the time both
+conditions hold, and read that authority from L1.} Then:
+ \begin{itemize}
+ \item Set the entry lock $Q_v$ to the highest-ranked QC
+       (DATA\RR{, DRAIN,} or ANCHOR) that $v$ knows from generations
+       $0,\ldots,g$\RR{, or to $Q_{\beta,r}^0$ if it knows none}.
+       $Q_v$ never changes after this. QCs that arrive later do not
+       update it.
+ \item Enter $(\beta,r,g+1,0)$ as unfrozen and start its progress checks.
+       \RR{Keep $A_{\beta,r,0,0}$, $H_{\beta,r}$, and the voting snapshot of session $(\beta,r)$.}
+ \item Send $\langle\tagg{STATUS},\beta,r,g+1,0,Q_v,E\rangle_v$ and its
+       validation bundle to $L(\beta,r,g+1,0)$. Here $E$ is the quit proof for
+       $g$, which is also the entry proof of $g+1$.
+ \item Process any buffered proofs for $g+1$.
+ \end{itemize}
+
+\item \textbf{New-view.} Run this step only at $L(\beta,r,g+1,0)$. Wait $2\Delta$
+after its own entry. If $g+1$ is still current and unfrozen:
+ \begin{itemize}
+ \item Let $Q^*$ be the highest-ranked QC from generations $0,\ldots,g$
+       that the leader knows, including the QCs in STATUS
+       messages\RR{; if it knows none, let $Q^*=Q_{\beta,r}^0$}.
+ \item Let $A_{\beta,r,g+1,0}$ be the block that $Q^*$ certifies. \RR{If
+       $h(A_{\beta,r,g+1,0})<H_{\beta,r}$, generation $g+1$ is a DATA generation.
+       Otherwise it is a drain generation.}
+ \item Broadcast
+       $\langle\tagg{NEWVIEW},\beta,r,g+1,0,A_{\beta,r,g+1,0},Q^*,E\rangle_{L(\beta,r,g+1,0)}$
+       with its validation bundle. Choose only one opening block for
+       $g+1$.
+ \end{itemize}
+
+\item \textbf{Anchor vote.} On receiving a NEWVIEW for $g+1$:
+ \begin{enumerate}[label=(\alph*)]
+ \item If it contains a quit proof for $g+1$, run Quit and stop.
+ \item Validate its leader, entry proof $E$, opening block $A_{\beta,r,g+1,0}$,
+       $Q^*$, and dependencies. If data are missing, request them and
+       wait without voting. If the message is invalid, discard it.
+ \item Vote only if all of these hold: $g+1$ is current and unfrozen; $v$
+       has cast no ANCHOR vote in $g+1$; and $\rank(Q^*)\ge\rank(Q_v)$.
+ \item To vote, forward the NEWVIEW to all replicas. Broadcast
+       \[\langle\tagg{ANCHOR\mbox{-}VOTE},\beta,r,g+1,0,\Hash(A_{\beta,r,g+1,0})\rangle_v.\]
+       Start no timer. Use no fresh position.
+ \end{enumerate}
+ Matching ANCHOR votes \RR{of total weight $>F$} form the ANCHOR QC.
+ When $L(\beta,r,g+1,0)$ obtains it, the leader starts Propose in
+ \cref{alg:steady} at $j=0$\RR{; in a drain generation, this is the
+ DRAIN}. Every replica, including one that cast no ANCHOR vote,
+ processes DATA \RR{and DRAIN} proposals backed by a valid ANCHOR QC
+ under Vote.
+\end{enumerate}
+\end{protocol}
+
+\paragraph{\defterm{Complete quit proofs.}}
+For an admitted generation $g$ \RR{of session $(\beta,r)$}, a proof consists of
+either:
+\begin{enumerate}[label=(\alph*)]
+\item distinct signatures \RR{of total weight $>F$} on the same
+$\langle\tagg{BLAME},\beta,r,g,t\rangle$ for an admitted term, with that term's
+admission witness;
+\item two different admissible DATA \RR{or DRAIN} blocks signed by
+$L(\beta,r,g,t)$ at the same $(\beta,r,g,t,j)$, with their admission \RR{and quota}
+witnesses; or
+\item two valid NEWVIEWs signed by $L(\beta,r,g,0)$ selecting different opening
+blocks for generation $g$.
+\end{enumerate}
+\RR{A DATA block beyond the quota, or a DRAIN outside a drain generation,
+is invalid. It is rejected and never counts for (b).}
+Different openings count even when their blocks are comparable, because
+they fix different starting heights $h(A_{\beta,r,g,0})$. The height formula then
+maps the same position to different heights.
+
+Different QCs for the same opening block are not equivocation. Evidence
+from any admitted term can freeze its generation, including a term not
+yet locally reached. Old-generation proofs are archival and may be
+submitted to L1. \RR{Evidence from another session never freezes this
+engine.} Future-generation proofs are buffered until entry. Neither
+resets an unrelated recovery.
+
+The Publish Layer uses these DATA and FINAL receipts. No publication
+acknowledgement is required for regional commitment or Completion.
+Participants may forward regional bundles directly; no external send
+or Espresso confirmation delays a regional vote or timer.
+
+The entry-lock test governs ANCHOR voting only. A replica that has
+committed $T_{\beta,r}$ locally still takes part in recovery until it holds
+$\FC_{\beta,r}(T_{\beta,r})$, because other members may need its votes. This continued-participation
+rule applies until a verified RequestClose closes the fresh-action gate.
+
+\section{Regional and global finality}
+\label{sec:external}
+Regional commitment and global acceptance are separate events.
+A node follows a production branch $R_u$ and a continuous global DATA
+prefix $G_u$. The branch may extend several normal sessions beyond
+$G_u$. A Force closes that extension, never $G_u$ itself.
+
+\subsection{Regional finality}
+\label{sec:regional-finality}
+The commit-window progress statements below concern normally running
+sessions with no RequestClose during the stated interval. Closing
+sessions instead use \cref{sec:retirement}; they may retain a local
+commitment without forming a complete receipt. This qualification is a
+scope of the claim, not an added assumption about all executions.
+\begin{definition}[\defterm{Regional finality}]
+\label{def:regional-finality}
+A DATA block $B$ has regional finality on a specified production branch
+when its boundary history assigns it to its claimed region and session,
+it has valid direct or same-session covering commitment evidence, and
+the DATA path to it is valid and continuous. Each session on that path
+supplies its own authority and commitment evidence.
+\end{definition}
+The region is derived from the boundary before its receipt is checked.
+A valid receipt does not authorize another region's DATA or a different
+session. Current live/off state does not replace historical authority.
+When a Force closes an unconfirmed suffix, the receipts remain evidence
+about the old regional engine. They no longer authorize that suffix to
+extend the global prefix.
+
+\paragraph{Remark (Commitment by one replica and by all replicas).}
+Here ``all replicas'' means all correct voters of the session that
+produced $B$. Consider that session's regional engine, with recovery
+authorities set in advance.
+\begin{enumerate}[label=(\arabic*),itemsep=4pt]
+\item \textbf{What a receipt proves.} A valid direct or covering
+receipt proves that at least one correct replica has committed $B$.
+Other correct replicas may still have running timers, or may have
+canceled their timers on Quit. Regional finality does not assert that
+they have all committed already.
+
+\item \textbf{When all replicas commit.} Regional safety preserves
+$B$ through recovery: the selected anchor is $B$ or a descendant of
+$B$. ANCHOR voting re-certifies that block but starts no commit timer.
+Suppose a correct replica votes for and forwards a fresh DATA or DRAIN
+proposal for a descendant $D$ at time $s$. If no correct replica freezes
+that generation through $s+3\Delta_{i_{\beta,r}}$, all correct replicas commit
+$B$ by that time. Replicas that have not completed the session vote by
+$s+\Delta_{i_{\beta,r}}$; their timers commit $D$ and its ancestors at most
+$2\Delta_{i_{\beta,r}}$ later. Completion may cancel a timer, but first commits
+$T_{\beta,r}$ and its ancestors, including $B$. In particular, a DRAIN need not
+itself commit at a replica that completes through the receipt for $T_{\beta,r}$.
+
+\item \textbf{Why one honest leader is not enough.} An honest leader
+may finish its term before its timers expire. A Byzantine successor
+can then equivocate and freeze the generation. What is needed is the
+uninterrupted commit window in (2). Under regional safety and the
+progress conditions of \cref{sec:progress}, including permanent
+equivocation exclusion and fair leader schedules, the engine eventually
+obtains such a window while it continues to run, or completes through
+the terminal receipt. Earlier recoveries do not revoke $B$. These
+conditions do not give a fixed bound on when the window begins.
+
+\item \textbf{When a replica can know.} A correct regional replica
+that directly commits $D$ by its timer at time $c$ can conclude that
+all correct regional replicas have committed $B$ if it remains Active
+in the same generation through $c+2\Delta_{i_{\beta,r}}$, after processing
+messages due at that time. Other replicas' timers are due by
+$c+\Delta_{i_{\beta,r}}$. A Quit that canceled one of those timers would reach
+this replica by $c+2\Delta_{i_{\beta,r}}$ and freeze its generation. A replica
+whose timer was canceled by Completion has already committed $B$.
+Normal term rotation does not affect this test.
+
+\item \textbf{What an external observer can know.} A receipt alone
+does not establish that uninterrupted window. The delivery bounds cover
+complete submitted results, not every regional BLAME or quit event. The
+absence of a published quit proof therefore does not prove that no replica
+quit. Espresso evidence establishes public availability of the result.
+A bound on when every replica executes its local commit step would also
+need the relevant online and receipt-processing conditions. This protocol
+uses Espresso acceptance to protect the external prefix against Force;
+it does not use an external all-replicas-committed test.
+\end{enumerate}
+
+
+
+\subsection{Published records and the global interpreter}
+\label{sec:exports}
+The Publish Layer of \cref{sec:delivery} carries complete regional
+results to Espresso. A sender is an existing participant performing this
+task, not a new consensus authority. It builds an EXPORT, submits it and
+tracks whether its DATA enters $G$. The leader-first and sponsored-backup
+implementation is deferred to \cref{sec:publish-implementation}.
+
+An \tagg{EXPORT} record binds the chain identifier, branch version,
+expected global base, an ordered nonempty interval of DATA, and the
+evidence needed to validate that interval. Evidence includes regional
+receipts, ancestry, REGULAR boundaries, historical authorities and
+native application context. A direct or covering receipt is supplied
+for each session's DATA. A receipt from a later session does not cover
+an earlier session. DRAIN may occur in supporting regional ancestry,
+but is never exported as application DATA.
+
+An EXPORT can contain the missing end of region A and the beginning
+of region B. It therefore need not wait for a separate L1 publication
+or for each ancestor to be submitted in its own Espresso transaction.
+The entire record is checked on a temporary state. Either all of its
+DATA, counts and normal boundary transitions are accepted, or none are.
+Another receipt encoding or signer set does not create another DATA
+position. Publication and global acceptance are different events:
+$T_{\rm pub}+T_E$ bounds delivery of the submitted result, not acceptance
+of an invalid or stale EXPORT. An authenticated record can still provide
+regional evidence for direct handoff or replay even if that particular
+EXPORT does not advance $G$. Its contents must pass their own checks.
+
+\paragraph{Acceptance.}
+After the block's prelude in \cref{alg:force}, a record is accepted
+only if all of these checks succeed:
+\begin{enumerate}[label=(\roman*)]
+\item the expected base equals the current $G$, including its prefix
+commitment and session provenance;
+\item the record's branch version is open, and every block is assigned to the
+session reached by the validated normal boundary chain;
+\item the DATA heights begin at $h(G)+1$, parents and hashes agree,
+and no input or intermediate session is omitted or repeated;
+\item regional commitment evidence, application validity and quota
+checks succeed for every block;
+\item each Espresso selection reference used by the record lies
+strictly before its containing Espresso block, and its historical
+eligibility snapshot is authenticated;
+\item a branch version created by a Force in $J_q$ first exports in a block
+strictly after $J_q$.
+\end{enumerate}
+The record is then committed atomically in namespace order.
+Each new DATA increases the appropriate export-session count. On its
+terminal DATA, that session's export window is cancelled. Its normal
+successor becomes the next export session when the fixed selection
+rule resolves. Its regional engine may have started much earlier.
+
+A valid terminal DATA may enter $G$ even if no successor is yet
+eligible. The interpreter keeps that terminal anchor and enters
+\defterm{unassigned}. It runs no DATA window while no export duty is
+assigned. A proven absence of a candidate is different from unavailable
+evidence: missing history or authority evidence pauses the relevant
+verification and is never treated as an empty candidate set.
+When deferred evidence is obtained, replay resumes at the same canonical
+position; local retrieval time never supplies a new public timestamp.
+
+Malformed records and well-formed but invalid candidates have no
+effect on $G$ or its counts. A future-height record skipped before its
+ancestors are accepted must be submitted again. The interpreter never
+goes back to make an earlier rejected record global. An incomplete
+namespace download is not a malformed record: it prevents the block
+from being processed at all.
+
+\subsection{Global finality}
+\label{sec:global-finality}
+Let $S_u$ be observer $u$'s verified interpreter state. It contains $G_u$,
+the current branch version and export duty, windows, eligibility state, pending
+controls, and source-verification checkpoints.
+Initially it is a trusted checkpoint or the state derived from genesis.
+
+Its \defterm{public replay result} at a completed Espresso position is
+$G$, the branch version and closed-version set, assigned export duty and
+its windows, activated eligibility, applied-control effects and the
+public boundary/source-context records derived through that position.
+Historical eligibility and selection snapshots belong to this result.
+It excludes future controls not yet due, extra source-reading checkpoints,
+validation caches and locally prepared speculative programs.
+These auxiliary inputs may differ between observers reading the same
+Espresso prefix: one may already have fetched a later finalized L1 record
+whose activation is still in the future. Agreement on global output
+does not assert equality of those entire local states.
+A certifier transition still binds its actual full previous/next
+checkpoints and complete source inputs, as specified in Section~8.
+
+\begin{definition}[\defterm{Global finality at an observer}]
+\label{def:global-finality}
+Observer $u$ treats DATA block $B$ as globally final when it has
+authenticated and replayed a finalized Espresso prefix containing an
+accepted EXPORT that adds $B$ to $G_u$. Replay uses complete applicable
+L1 control history and the event order of \cref{alg:force}. All DATA
+predecessors are already accepted or are accepted in the same EXPORT.
+\end{definition}
+
+No extra waiting period follows this verification. A later Force
+preserves the entire existing $G_u$, including its original block and
+session identities. An old-version record after closure can still be
+finalized as raw Espresso bytes, but it is not an accepted chain result.
+Espresso inclusion alone, or a receipt alone, does not establish this
+definition.
+
+This is input-prefix finality. Espresso does not execute the native
+transactions or prove their resulting state. The regional validity
+contract and the execution-verification interface remain responsible
+for that property. Finality of a state claim or withdrawal on L1 is a
+separate stage. Publication lag never permits skipping globally final
+input.
+
+\subsection{References do not provide a commit clock}
+\label{sec:late-receipt}
+A block's L1 reference and Espresso selection reference are fixed when
+it is proposed. A later recovery or DRAIN may commit it long afterwards.
+Neither old reference starts an export window or establishes global
+finality. An export window starts when replay assigns the next DATA
+duty, and counts only newly accepted DATA from finalized Espresso
+records. Regional timers continue to use the real-time clock of
+\cref{ass:network}, not Espresso timestamps.
+
+\section{Cross-region rotation}
+\label{sec:xprotocols}
+
+\subsection{Four-module cross-region architecture}
+\label{sec:runtime-modules}
+Each correct regional replica runs a \defterm{Session Manager}. The
+manager observes finalized L1 and Espresso history, receives regional
+results, and manages independent programs named by $(\beta,r)$.
+It is local replicated logic, not an additional trusted regional
+controller. A region can run an old session while preparing a possible
+successor and handing an earlier session's data duties to storage and
+publication workers. The full regional view remains $(\beta,r,g,t)$.
+
+The cross-region interface has four modules. The Soft Force Detector
+recomputes delivery failure from authenticated history. The Multisig
+Health Controller submits the existing L1 controls from health and
+operational observations. These are parallel sources of intervention.
+The Cross-region Handler manages candidate and fixed handoffs. Each
+session's Ready and Activation Gate checks its exact authorized starting
+point before entering the regional engine.
+
+\begin{table}[htbp]\centering\small
+\caption{The four cross-region modules.}
+\label{tab:runtime-modules}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.22\linewidth}Y Y@{}}\toprule
+Module and executor & Inputs & Output and authority limit\\\midrule
+Soft detector; any verifier & Complete verified Espresso history,
+export duty, fixed windows and accepted counts & Recomputable failed-window
+condition; it does not itself change $\beta$.\\
+Multisig health controller; the existing committee & Regional health,
+synchronization and delivery observations & Future L1 MSIG, STATUS or
+CLEAR; it does not choose a retained height.\\
+Cross-region handler; each correct regional replica & Verified public
+updates, regional receipts and local task events & Prepare, activate,
+request close and transfer responsibilities; it does not replay Force
+a second time.\\
+Ready and activation gate; each session program & Fixed handoff,
+exact anchor, execution state and authority & Waiting or atomic entry
+through \cref{alg:bootstrap}; prefetching grants no voting right.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+Healthy regions keep watching both public streams even while they have
+no Active session. They can prepare data and authorities before being
+selected. Their public replay cursor, provisional programs and storage
+tasks are separate objects. Local lifecycle phases never determine
+whether an EXPORT may advance $G$.
+
+
+\begin{figure}[p]\centering
+\includegraphics[width=.98\linewidth,height=.87\textheight,keepaspectratio]{figures/cross_region_rotation_v3_2/modules.pdf}
+\caption{The four cross-region modules and their shared verification and
+publication services. Each regional node manages independent programs;
+prewarming and fixed-handoff activation use distinct paths.}
+\label{fig:runtime-modules}
+\end{figure}
+
+\subsection{Soft detection and multisig health control}
+\label{sec:runtime-controls}
+The Soft Force Detector takes a validated replay checkpoint and the
+complete following Espresso prefix. It reproduces the current export
+duty and settles its fixed windows as in \cref{sec:windows}. It returns
+either no failure, a failed-window descriptor with its first crossing
+header and supporting history, or a need for missing evidence. The
+descriptor binds the chain, current branch version, export-session pair,
+window start, deadline, target and accepted count. Missing namespace or
+control evidence is never a zero count.
+
+Only DATA actually appended to $G$ counts. Duplicates, DRAIN, proposal
+QCs and invalid EXPORTs do not count. The observed export session can
+lag several speculative production sessions. Polling only supplies new
+history; its frequency and local reception time do not decide a failure.
+Every recipient recomputes a supplied descriptor against its own
+authenticated prefix. Protocol~5 remains the sole Force transition:
+independent STATUS/CLEAR, the first matching MSIG, otherwise the
+automatic check, then the block's EXPORT payload. A computed soft
+condition cannot bypass a matching hard intervention in that prelude.
+
+The committee's health policy distinguishes four actions. To exclude
+an unsuitable region from future selection, it submits a future OFF.
+To end the current target version's production arrangement, it submits
+a future MSIG Force, with an OFF if continued exclusion is intended.
+After checking synchronization, data service and operational recovery,
+it may submit ON for future selections. To remove an automatic cooldown
+before expiry, it submits CLEAR explicitly. ON alone does not clear it.
+Each operation records its target, authorized changes and prospective
+activation time; concrete health thresholds remain an operational
+choice under \cref{ass:committee}.
+
+An MSIG targets a branch version. A regular handoff changes $r$ and
+therefore does not invalidate it. An earlier Force changes $\beta$ and
+can make it stale. Its attached configuration applies only when the
+target matches; an independent STATUS follows its own activation rule.
+Health observations do not directly change another replica's public
+state. All actions pass through finalized L1 and their future Espresso
+activation positions under the existing announcement condition.
+An ON does not certify future regional synchrony or replace the
+regional fault assumptions.
+
+\subsection{Cross-region Handler}
+\label{sec:session-manager}
+The manager serializes events that modify its local control state.
+Data retrieval and state restoration may run concurrently. Its
+inputs and outputs have the following meanings.
+
+\begin{table}[htbp]\centering\small
+\caption{Session Manager inputs.}
+\label{tab:manager-inputs}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.24\linewidth}Y@{}}\toprule
+Event & Validation and routing\\\midrule
+\texttt{L1Finalized} & Authenticate the complete control prefix and
+authorities; queue future controls without activating them.\\
+\texttt{EspressoFinalized} & Authenticate complete ordered history;
+consume the state transition produced by \cref{alg:external,alg:force}.\\
+\texttt{RegionalFinalized} & Validate the DATA, complete FINAL receipt
+and required ancestry; route to the producing pair and offer the result
+to the Publish Layer.\\
+\texttt{MaterialAvailable} & Check the target pair, anchor's producing
+pair, height and hash, requested object and verified result; update only
+the matching preparation or fixed handoff.\\
+\texttt{CoreEvent} & Accept an event from the named local engine;
+record its view, quit, recovery, Completion or retirement progress.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+The manager retains $\tagg{Closed}[\beta]$ with its authenticated proof
+even if it has no program for that version. This is public source evidence,
+not a new committee certificate. Program deletion cannot delete the map
+or its pending control-routing duties. Before processing a complete
+old-session proposal, ReadyBundle, authority packet or archived message,
+the dispatcher checks this map. If closure forbids entry or a fresh
+action, it serves and relays the full closure using the packet's verified
+historical membership context as specified in \cref{sec:retirement}.
+Silently dropping the packet is not permitted. This control response
+does not sign a BFT vote or revive the terminated engine.
+
+One FINAL signature is not a \texttt{RegionalFinalized} event. Existing
+participants collect matching signatures into the receipt of
+\cref{def:receipt}. A correct holder delivers the complete result to
+the manager and the entered source engine, multicasts the complete
+receipt and dependencies to the fixed regional membership, and offers
+it to the Publish Layer. The source engine applies the existing receipt and Completion
+rules. A program that has not entered only caches the result; receipt
+arrival cannot create an engine or skip its handoff checks. Aggregation
+is not a new consensus round. $T_{\rm pub}$ still starts when a complete
+result becomes available.
+
+The outputs are \texttt{Prepare/Fetch}, naming the target and exact
+requested material; \texttt{Activate}, invoking Protocol~4 once;
+\texttt{RequestClose}, carrying a verified closure cause;
+\texttt{OfferResult}, preserving original DATA and receipt fields;
+and \texttt{Persist/Release}, recording state and transferring resource
+responsibilities. A cached callback is material, not an activation
+command. A late result can be useful to storage without matching the
+program's current preparation target.
+
+\begin{protocol}[H]{alg:rotation}{Handle cross-region events and manage sessions}
+Each correct regional replica runs this handler independently.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Validate the event.} Route authenticated public input,
+regional results and local callbacks by their stated context. Preserve
+pending requests and source evidence. Reject a purported completion
+whose material or session does not match its request.
+\item \textbf{Consume public replay.} For new public history, run or
+consume \cref{alg:external}, including \cref{alg:force} in its canonical
+order. Use its resulting $\beta$, $G$, eligibility snapshots, duty and
+boundary records. This handler never increments $\beta$, chooses a
+different cutoff or modifies $G$ independently.
+\item \textbf{Reconcile handoffs.} From valid terminal receipts,
+derive regular boundaries while their version remains open. Consume
+fixed Force boundaries from replay. Verify them by
+\cref{sec:witness}. Prepare selected local targets; send complete
+handoff material to the selected members when available. A future
+Force does not block a current regular handoff.
+\item \textbf{Reconcile candidates.} Recompute possible future
+targets from the current export context, $G$, eligible regions and
+known future controls. Update only unfixed preparations. A different
+target pair uses a different record. Pause obsolete speculative work;
+terminate an unentered program only when verified facts make that
+target impossible or assign its fixed handoff to another region.
+\item \textbf{Handle closure and results.} Store every verified closure
+in the manager's durable $\tagg{Closed}[\beta]$ map. Gate new entry and
+fresh actions regardless of phase. For each known session snapshot in
+that version, including unentered and archived programs, run the complete
+closure relay and idempotent \texttt{RequestClose} of \cref{sec:retirement}.
+If the snapshot is not yet known, retain a pending relay obligation.
+Any later old-session packet with the necessary context triggers this
+control response before ordinary processing. Keep signed routing,
+historical evidence and publication duties. Apply terminal receipts
+to entered source engines under the existing Completion rule.
+\item \textbf{Check and enter.} For each selected local Waiting
+program with a fixed handoff, check \cref{def:ready}. In the same local
+event, recheck public validity and the durable entry flag, record Ready,
+and invoke Protocol~4 Enter atomically. A failed check leaves Waiting
+or applies a justified cancellation; it does not partially initialize
+the engine.
+\item \textbf{Persist and dispatch.} Durably record state changes,
+entry and exit records, and required outgoing actions before exposing
+them. Dispatch asynchronous work with its full target and anchor
+context. Repeated events resume outstanding actions without creating
+another logical entry.
+\end{enumerate}
+\end{protocol}
+
+The public interpreter has one mutation path: Protocol~5 defines
+control, window and Force transitions; Protocol~6 authenticates and
+applies them and accepts EXPORTs. Protocol~3 consumes those results.
+Protocols~1 and~2 update only the named session's regional core.
+An implementation may place these modules in one process without
+changing this division of authority.
+
+\subsection{Session lifecycle}
+\label{sec:session-lifecycle}
+The manager maintains the following record for each local program:
+\[
+\begin{aligned}
+\tagg{Program}[\beta,r]=(&\mathit{phase},\mathit{preparing\_plan},
+ \mathit{fixed\_handoff},\mathit{anchor\_block},\\
+ &\mathit{execution\_state},\mathit{authority\_and\_bounds},
+ \mathit{core\_state},\mathit{pending\_fetches},\\
+ &\mathit{entered},\mathit{close\_requested},\mathit{closure\_evidence},\\
+ &c_v,d_v,\mathit{publication\_and\_retention\_handles}).
+\end{aligned}
+\]
+The six phases describe the local program, not public finality.
+\begin{description}[style=nextline,leftmargin=1.5em,labelindent=0pt,labelwidth=1.5em]
+\item[Waiting.] The program is preparing a possible or selected
+handoff. It may fetch data, recover state and cache evidence. It has
+not entered its regional engine, signed a regional vote or started
+a regional commit or progress timer.
+\item[Ready.] A fixed handoff, its exact anchor state and all entry
+dependencies have passed the gate below. Enter follows in the same
+serialized event; Ready introduces no extra scheduling delay.
+\item[Active.] The program has entered an unfrozen regional
+generation. Initial STATUS, the $2\Delta$ wait, NEWVIEW and ANCHOR
+certification all occur in Active. The core runs Protocols~1 and~2,
+subject only to the explicit retirement interface in
+\cref{sec:retirement} when closure is requested.
+\item[Frozen.] The current generation has a valid Quit proof.
+The original evidence, receipt and recovery rules apply. Force alone
+does not establish a Quit proof or cause this phase.
+\item[Completed.] The entered engine has obtained a valid terminal
+receipt and performed the original Completion action. It has stopped
+regional production and cancelled timers as specified there. Data
+delivery and retention responsibilities may remain.
+\item[Terminated.] The logical program has exited. It processes no
+BFT timer and issues no BFT signature. Durable storage and publication
+workers retain its required evidence and duties. An exit record prevents
+late messages from restarting it.
+\end{description}
+
+Normal transitions are Waiting to Ready to Active; Active to Frozen
+on Quit; Frozen to Active on the original recovery admission, with
+$g$ advanced and $t=0$; and Active or Frozen to Completed on terminal
+Completion. Waiting or Ready may terminate when their target is
+definitively invalid. Completed may terminate after responsibility
+transfer; if RequestClose began while Active or Frozen, the original
+drain deadline still applies. Active or Frozen may terminate only through the retirement
+contract in \cref{sec:retirement}. While close is pending, they retain
+their core phase and set \texttt{close\_requested}; there is no seventh
+phase.
+
+An unfixed \texttt{preparing\_plan} can change when $G$, the source
+duty or candidate eligibility changes. The fixed handoff cannot.
+Its target pair, assigned region, initial anchor, source context,
+selection position, authority and reference bounds remain immutable.
+In particular, a later OFF does not replace a historical regular
+selection. Local locks, votes, view entry times and timers belong to
+one pair only. Recovering a crashed process resumes this durable
+logical record; it does not clear its votes or perform another initial
+Enter. Storage and task references carry the full pair and anchor
+identity. No additional protocol-level session identifier is needed.
+
+Several regions may hold unfixed Waiting preparations for the same
+future pair. Only the region selected by the fixed handoff can enter.
+Temporary loss of candidate eligibility may pause work without
+terminating a preparation that could become eligible again. A retired
+record remains a tombstone even after active resources are released.
+
+An Active old program may already lack permission to extend $G$.
+A Completed or Terminated program's existing results may still be
+accepted if their version and interval satisfy the public acceptance
+rules. The phase does not revoke or create that permission.
+
+\subsection{Handoff records, anchors and Ready}
+\label{sec:witness}
+Let $\tagg{NextLive}(i,M)$ first search the other regions after $i$
+in the fixed cyclic order $\mathcal L_R$. If none is eligible, return
+$i$ itself when it is eligible; otherwise return $\bot$. Eligibility
+still combines the historical governance flag, cooldown and positive
+designated-authority weight. For the synthetic genesis source $\bot$,
+search the whole list from its first region. Same-region renewal creates
+a new pair and fresh core state; it never reuses the old engine.
+
+An AUTO cooldown still applies to its source. If no alternative exists,
+the pending boundary waits until the source becomes eligible again;
+duplicate replay never restarts that cooldown. OFF remains effective
+until a later ON. An MSIG that intends to exclude its source must include
+or separately schedule OFF; Force alone may renew that same region when
+it is the only eligible candidate. This is an explicit selector change,
+not a new availability premise.
+
+A pending boundary stores source context
+$(i_b,\beta_b,r_b)$ and next index $r_b+1$. A regular boundary uses
+its completed predecessor. A Force with an assigned export duty
+captures that duty's context. With no assigned duty, a Force reuses
+the stored source context. Repeated Forces before assignment replace
+the pending cause and version without incrementing an unopened
+session. Genesis uses $(\bot,\bot,-1)$.
+
+For REGULAR, the successor of $(\beta,r)$ is $(\beta,r+1)$ and
+inherits exactly $T_{\beta,r}$. For Force, the new version's index is
+$r_b+1$ and its anchor is exactly $G$ before the triggering block's
+payload. The producer of that anchor need not be the captured export
+session. The anchor keeps its original producing pair, hash and
+commitment evidence.
+
+For a regular boundary set $q_0$ to the height of
+$\xi(T_{\beta,r})$; for Force set $q_0$ to its triggering height.
+Using the source region just defined and the designated next authority,
+the fixed selection is
+\[
+ q_s=\min\{q\ge q_0:
+ \tagg{NextLive}(i_b,\chi_E(q))\ne\bot\},\qquad
+ i_{\rm next}=\tagg{NextLive}(i_b,\chi_E(q_s)).
+\]
+The search uses verified history only. Missing evidence causes a wait,
+not a skipped candidate. A later snapshot cannot change an established
+minimum. Regular selection need not wait for the terminal DATA to be
+published. Its signed selection reference may be historical; no
+receive-time freshness rule is added here.
+
+\paragraph{Typed handoff packet.}
+A handoff packet contains the fields below. References can name
+authenticated cached objects or objects still to be fetched; a reference
+alone does not establish Ready.
+\begin{table}[htbp]\centering\small
+\caption{Handoff packet fields.}
+\label{tab:handoff-packet}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.26\linewidth}Y@{}}\toprule
+Field & Type and meaning\\\midrule
+Domain and kind & Chain/protocol domain; one of REGULAR, MSIG, AUTO.\\
+Source context & Predecessor pair $(\beta_b,r_b)$ and source region
+$i_b$, including the stored context when no duty is assigned.\\
+Target & Target pair $(\beta',r')$ and selected region $i_{\rm next}$.\\
+Anchor & Producing pair, DATA height, hash, full DATA or reference,
+and original direct or covering commitment evidence.\\
+Authority & Finalized $\tagg{AUTH}_{r',0}$, its fixed configuration,
+quota, and publication-height proof.\\
+Selection and bounds & $q_0,q_s$, authenticated selection snapshot,
+$q^{\rm open}_{\beta',r'}$ and $\lambda^{\rm open}_{\beta',r'}$.\\
+Cause and evidence & Mode-specific cause; trusted or validated replay
+checkpoint, complete required L1/Espresso history and regional proofs.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Handoff verification.}
+\label{sec:verify-handoff}
+The pure procedure $\tagg{VerifyHandoffHistory}(C,\mathcal H,P)$ takes an
+authorized replay checkpoint $C$, required source history $\mathcal H$
+and packet $P$. It returns historical fixed fields, invalid, or needs
+evidence. It authenticates what the boundary established; it does not
+require its version to remain open now and grants no entry permission.
+A separate activation predicate is given after the procedure. Neither
+procedure changes public replay.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item Check the domain, field types, source and target names. Replay
+authenticated compatible history from $C$ through all positions
+needed by the cause, historical selection and original admission.
+Verify complete applicable controls, not only inclusion of the named
+control. Consult validated caches when available.
+\item For REGULAR, validate the predecessor's own fixed boundary,
+initial authority, exact quota and terminal DATA
+$h(T_{\beta_b,r_b})=h(A_{\beta_b,r_b,0,0})+\TB_{r_b}$.
+Validate its terminal FINAL receipt, ancestry and signed $\xi$.
+Require $\beta'=\beta_b$ and $r'=r_b+1$. The anchor must equal the
+terminal DATA. Recursively validate the predecessor boundary in this same
+historical mode; current closure does not erase its original evidence.
+\item For MSIG, verify its authorized finalized L1 record, control
+sequence and first-crossing header $J_{q(\theta_a)}$. Replay the
+entire prelude and check that this is the first due Force whose target
+matches the entry version. Check attached changes only under this
+match. A stale instruction or another due instruction consumed by the
+same prelude cannot form a second boundary.
+\item For AUTO, replay the fixed window's count and first deadline
+crossing from complete history. Check insufficient accepted DATA and
+the absence of a matching higher-priority MSIG in that prelude.
+Check the cooldown derived at the realized triggering timestamp.
+A supplied alarm or a local timeout is not proof.
+\item For either Force, obtain the captured source context, old and
+new versions, retained prefix and boundary from that unique replay
+transition. Require $\beta'=\beta_{\rm entry}+1$, $r'=r_b+1$ and
+anchor equality with pre-payload $G$, including prefix provenance.
+During an unassigned interval, verify the stored context and any
+intervening Forces rather than inventing an empty export session.
+A later Force supersedes this boundary for future activation, but does
+not invalidate its historical cause, original selection or retained anchor.
+\item Recompute the first eligible $q_s$ from $q_0$ and all required
+historical snapshots. Check target region and immutable next authority.
+Set $q^{\rm open}_{\beta',r'}=q_s$ and
+$\lambda^{\rm open}_{\beta',r'}$ to the maximum of the anchor's L1
+reference height and the initial authority's publication height.
+Validate the anchor's original direct or covering commitment evidence
+under \cref{sec:coverage}, its complete block and required ancestry.
+Do not relabel it with the target pair.
+\item Compare the derived fixed fields with $P$ and any existing
+fixed record for its target pair. Equal duplicates share that record;
+different fixed fields for the same pair are rejected. A packet cannot
+replace an already installed handoff. This step records historical facts,
+not a claim that the target may still enter.
+\end{enumerate}
+
+\paragraph{Permission to enter now.}
+\label{sec:can-enter}
+$\tagg{CanEnter}(S,P)$ takes the manager's current verified public state
+$S$ and a packet whose historical check has passed. It requires that the
+target version is current and open, the packet is the still-applicable
+fixed boundary, this replica's region is selected, and the local record
+has no prior initial entry, close request or Terminated record, and the
+manager has no authenticated $\tagg{Closed}[\beta]$ for that target.
+A Closed record blocks entry even before a complete per-session $c_v$
+can be set; context resolution and closure relay still run before refusal. Ready
+also checks the exact anchor state and dependencies below. A duplicate
+already-entered record can be serviced without another Enter.
+
+All initial entry paths use both predicates. Receipt, ancestry and
+retained-anchor validation use historical validation only, and global
+EXPORT acceptance independently checks its current append permission.
+For example, after Force closes version 7, the original boundary and
+receipt for retained DATA 108 of $(7,20)$ remain valid history.
+$\tagg{CanEnter}$ rejects reopening $(7,20)$, while a valid new Force
+packet may inherit that same DATA in $(8,21)$. A cache miss follows the
+same historical checks as a cache hit; no prior cached verdict is assumed.
+
+A Force without an eligible successor still has a fixed cause,
+anchor, source context and new version. The interpreter retains that
+pending boundary. It has no complete selected packet and cannot make
+a program Ready until the first eligible historical position fixes
+the target region. A later Force can supersede it while preserving the
+same stored predecessor context. The synthetic genesis boundary is
+verified against the initial checkpoint and selection rule of
+\cref{sec:l1}; it does not claim a nonexistent REGULAR, MSIG or AUTO
+cause.
+
+\begin{definition}[\defterm{Ready}]
+\label{def:ready}
+A local Waiting program for $(\beta,r)$ is Ready precisely when:
+\begin{enumerate}[label=(\roman*)]
+\item historical handoff verification fixes this target pair and selects the
+replica's region, or the authenticated genesis rule does so; the separate
+current-activation predicate also passes;
+\item its exact anchor's original producing pair, height, hash,
+complete DATA and commitment evidence have been validated;
+\item the native execution state needed to continue after this
+anchor has been recovered and verified against that same anchor;
+\item the matching finalized authority, fixed quota, separate
+reference lower bounds and all validation dependencies are available;
+a finalized Espresso header strictly after $q^{\rm open}_{\beta,r}$ is
+available with complete verification evidence for the eventual terminal
+selection reference;
+\item the manager's processed public history has not closed or
+superseded the handoff; and
+\item the durable record has never performed initial Enter and has
+no Terminated tombstone.
+\end{enumerate}
+\end{definition}
+
+State recovery uses the existing native validation interface. Cached state
+for DATA 110 cannot make a program anchored at 112 Ready. A future Force
+announcement still permits only Waiting/preparation. The complete regional
+message interface below states exactly what is relayed and what its
+receiver can conclude.
+
+\input{sections/rotation_v3_4_ready_bundle.tex}
+
+\subsection{Activation and bootstrap}
+\label{sec:ready}
+\begin{protocol}[H]{alg:bootstrap}{Enter and bootstrap the selected session}
+Replica $v\in V_{i_{\beta,r}}$ runs these steps for one fixed target
+$(\beta,r)$. Let $\Delta=\Delta_{i_{\beta,r}}$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Enter.} In the Ready event, atomically recheck
+$\tagg{CanEnter}$ and the manager's Closed map, then check and set
+the durable initial-entry flag. Install $A_{\beta,r,0,0}$,
+$\tagg{AUTH}_{r,0}$, $\TB_r$ and both opening reference bounds.
+Set the entry lock to $Q^0_{\beta,r}$. Enter $(\beta,r,0,0)$
+unfrozen, change Ready to Active, record $e_v(\beta,r,0,0)$ once,
+and start the original progress checks. Send STATUS with this lock
+and the fixed handoff to the initial leader, and process buffered
+proofs for this session. Persist entry before dispatching signatures.
+\item \textbf{Choose the anchor.} The initial leader waits
+$2\Delta$ from its own entry. If the view remains current and
+unfrozen and the retirement contract permits the action, send NEWVIEW
+choosing exactly $A_{\beta,r,0,0}$, justified by $Q^0_{\beta,r}$
+and the fixed handoff.
+\item \textbf{Certify and produce.} Members apply the original
+ANCHOR-vote step of \cref{alg:recovery}. On the ANCHOR QC, the leader
+starts \cref{alg:steady} at DATA height $h(A_{\beta,r,0,0})+1$
+and physical position 1. Local failures use the same recovery rules.
+All these steps occur in Active, except when the original Quit,
+Completion or explicit retirement transition intervenes.
+\end{enumerate}
+\end{protocol}
+
+Let $e=\min_v e_v(\beta,r,0,0)$ over correct members. Under the
+complete-handler timing contract just stated, if the handoff remains
+activatable and bootstrap is not interrupted, all correct members enter
+by $e+\Delta$. With a correct initializer and no Quit, NEWVIEW is sent
+by $e+3\Delta$, its ANCHOR QC reaches the leader by $e+5\Delta$, and
+first DATA reaches all correct members by $e+6\Delta$. These bounds
+start at first actual Enter, not at public assignment or candidate creation.
+If native installation remains outside bounded message processing, these
+bounds have not been established; the extra delay is not silently absorbed
+into $\Delta$. No public deadline is reset by either implementation.
+
+\paragraph{The public export clock.}
+Public replay assigns an export duty independently of a member's
+phase. Its window starts at the containing EXPORT's timestamp for
+an already selectable normal successor, at the triggering block's
+timestamp for an immediately selected forced successor, or at the
+first eligible selection block when the boundary previously had no
+assigned duty. A selected program may still be Waiting while that
+public window runs. Download completion, Ready, process restart and
+duplicate handoffs never reset its deadline. Only an unassigned duty
+has no DATA window. Missing evidence pauses replay at its canonical
+position; it does not create a later public opening time.
+
+\subsection{Concurrent candidates and races}
+\label{sec:runtime-races}
+Suppose A's session is $(7,20)$ with terminal DATA 110, B already
+produces in $(7,21)$, and $G$ ends at 108. A future MSIG targets
+version 7. B can retain its old Active program while preparing
+candidate $(8,21)$ from 108. If $G$ advances to 109, that preparation
+can change to 109; the old Active program's initial anchor remains
+110. If Force then fixes B as successor with anchor 109, all further
+preparation is for that fixed anchor. B can enter $(8,21,0,0)$ while
+$(7,21)$ closes under \cref{sec:retirement}. Their locks, votes,
+entry times and timers are distinct.
+
+If A's terminal 110 enters $G$ before Force, the export context can
+advance to B. The candidate then becomes $(8,22)$ at the next eligible
+region after B. With cyclic order A, B, C, D, a prospective OFF(C)
+that has become effective before the Force selection can redirect
+this still-unfixed candidate to D. If Force finally retains B's 112,
+the fixed target is D's $(8,22)$ with original anchor producer
+$(7,21)$. D must verify state at 112 before starting DATA 113.
+Earlier preparation of $(8,21)$ or of state at 109 grants no entry.
+OFF cannot rewrite an already fixed regular handoff.
+
+A terminal receipt received before Force can prepare or start a
+regular successor in the old version. Once the same node verifies
+Force, it cancels an invalid unentered target or requests retirement
+of the entered one. If Force arrives first, the late receipt is
+retained as regional evidence and cannot resurrect the closed target.
+Nodes can briefly have different speculative programs; the same
+verified public prefix fixes the same public state and Force boundary.
+
+Every fetch callback retains its original target and anchor identity.
+A reply for $(7,21)$ at 110 cannot make $(8,21)$ at 108 Ready.
+An old candidate reply may be cached and independently validated for
+another use, but it cannot overwrite a fixed anchor. Duplicate receipts,
+packets and callbacks cannot run initial Enter twice. A stale MSIG
+following an earlier AUTO neither closes the new version nor applies
+its attached configuration. Reconciliation discards its obsolete
+preparation basis without invalidating a different fixed handoff.
+
+
+\begin{figure}[p]\centering
+\includegraphics[width=.98\linewidth,height=.87\textheight,keepaspectratio]{figures/cross_region_rotation_v3_2/candidate_ready.pdf}
+\caption{A changing Force candidate while the old program continues.
+The finalized boundary fixes the target and exact anchor; only then can
+verified state at that anchor enable Ready and Enter.}
+\label{fig:runtime-candidates}
+\end{figure}
+
+\subsection{Graceful close and termination}
+\label{sec:runtime-close}
+Public closure and program exit are separate events. Protocol~5
+immediately removes a closed version's permission for new global
+appends. Protocol~3 stores the verified closure and runs its manager-level
+dissemination for every known session snapshot, regardless of program
+phase. Entered programs also drain through \texttt{RequestClose}. The request is
+idempotent and records \texttt{close\_requested}; it is neither Quit
+nor terminal Completion. The exact restrictions on new work, treatment
+of existing timers and messages, and admissible \texttt{FinishClose}
+condition are defined by \cref{sec:retirement}. The drain threshold is derived from the existing regional bound;
+resource transfer has no new time bound. A new
+session need not wait for the old program to finish closing.
+
+For an unentered program, definitive invalidation cancels pending
+entry and can release preparation tasks after the durable closure,
+pending-relay and late-message duties have transferred. It has no
+regional timers or votes to drain, but it must not stop the manager's
+closure dissemination. For Completed, the original Completion action has
+already stopped the core. For an Active or Frozen program, only the
+retirement contract can authorize \texttt{FinishClose}. An empty local
+timer list, a different current public version, or a locally observed
+terminal block alone is not that authorization.
+
+In every case resource release requires durable exit and responsibility
+records. Required committed DATA, receipts, regional evidence, anchors
+and recoverable state must remain accessible under the existing
+retention rules. Outstanding complete results and publication retries
+are transferred to the Publish Layer, and pending requests in discarded
+suffixes remain available for reproposal. Storage and publication
+workers acknowledge the responsibilities they accept before the
+program releases its last required copy. Later messages can update
+those services without reactivating the logical engine. Terminated
+does not undo regional commitments, remove DATA from $G$, or authorize
+stake withdrawal.
+
+\input{sections/rotation_v3_4_retirement.tex}
+
+\section{The Force handler}
+\label{sec:force}
+Protocol~5 closes the external branch. Protocol~3 consumes the verified
+closure and separately retires old programs under \cref{sec:retirement}. The interpreter derives an automatic Force itself
+or applies a previously announced multisignature Force.
+Both retain the same object: the entire global prefix immediately
+before the triggering Espresso block's payload.
+
+\subsection{Export duties and block-missing windows}
+\label{sec:windows}
+An export duty belongs to the session responsible for the next DATA
+height after $G$. Its window parameters come from its fixed initial
+authority, not from a later parameter update.
+Let $R$ be its remaining DATA quota when a window opens. All targets
+below are positive because completion removes the duty before $R=0$
+can open another window.
+
+At public opening timestamp $\theta_0$, create the startup window
+\[
+ [\theta_0,\theta_0+W_{\rm start}),\qquad
+ m=\min\{m_{\rm start},R\}.
+\]
+After it succeeds, use consecutive fixed windows of length
+$W_{\rm run}$, each with target $m=\min\{q_{\min},R\}$ measured from
+that window's opening. The window stores its start, deadline, target,
+accepted count and phase. A new block increments the count only after
+its EXPORT is accepted into $G$. Each DATA is counted once in its own
+session. Empty DATA counts under the same quota rule; DRAIN, heartbeats,
+proposal QCs, duplicate records and future-session data behind a gap
+do not count.
+
+At the first Espresso block crossing the deadline, compare the count
+with the target. Success opens the next fixed window and resets its
+count. Extra output is not banked as unlimited credit for later windows.
+If several deadlines have passed, settle the successful windows in
+order and stop at the first failure. It produces one automatic Force.
+A terminal DATA accepted before its deadline cancels that session's
+remaining checks, even if the final window has not expired.
+
+The intervals are half-open. DATA with a timestamp equal to the
+deadline is too late for that window. The check runs before the first
+block's payload at that timestamp, not after all blocks that may
+eventually share the timestamp.
+
+\paragraph{What a failure establishes.}
+Failure means that the next required output was not delivered to the
+global prefix at the specified rate. It does not identify a faulty
+proposer, submitting participant, region or network. Failure to form a
+complete receipt, restore state, deliver a result, or obtain Espresso
+service can cause the same observation. A missed service bound violates
+that liveness premise; the Force rule does not identify the cause. It is a recovery condition,
+not automatically slashable equivocation or a proof of censorship.
+
+\subsection{Scheduled control and two kinds of Force}
+\label{sec:force-stages}
+An MSIG Force binds the chain, target branch version $\beta$, activation
+timestamp $\theta_a$, control sequence and authorized configuration
+changes. Its L1 sequence identifies the instruction. It contains no
+retained DATA height. The committee submits it under
+\cref{ass:committee,ass:monitor} and serves its finalized evidence.
+Signing alone does not start the submission bound.
+
+L1 finalization makes the instruction known, but does not yet close
+the branch. Its effect begins only at $J_{q(\theta_a)}$.
+Until then, normal production, normal handoffs and valid exports can
+continue. A node does not veto future global output merely because a
+Force has been announced.
+
+At activation, execute the instruction only if its target version is
+still current. If an earlier Force changed that version, mark the
+instruction processed without closing the new branch or applying its
+attached configuration. A normal regional handoff does not change
+$\beta$, so it does not cancel the instruction. A separately scheduled
+STATUS remains independent. These target checks and the priority of
+MSIG over AUTO are unchanged from version 3.
+
+An automatic Force binds the chain, old branch version, export-session pair,
+failed-window identity and triggering Espresso header. Its cause
+deadline is the failed window's deadline; its realized time is the
+timestamp of that triggering block. No transaction is needed to create
+this derived event. An optional published audit record does not grant
+it a second effect.
+
+\begin{protocol}{alg:force}{Process the prelude and close a branch}
+Before processing the payload of each authenticated finalized Espresso
+block $J_q$, let $\theta=\theta_q$ and capture the entry branch version.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Apply status.} From the complete control prefix, apply
+all due independent STATUS and CLEAR records not yet applied, in
+$(\theta_a,c)$ order. Mark them applied. Later blocks with the same
+timestamp do not repeat them.
+
+\item \textbf{Apply a multisignature Force.} Examine due Force
+records in that same order. Apply only the first record whose target
+matches the entry branch version. Capture the assigned export duty's context,
+or the stored boundary context while no export duty is assigned. Apply that record's
+attached configuration and close the branch version. Consume every other due
+Force as stale, without applying its attached configuration. If a
+matching Force closes the branch version, cancel its old export window and
+skip step 3.
+
+\item \textbf{Check delivery.} If an export session exists, settle
+its deadlines at or below $\theta$ as in \cref{sec:windows}.
+On the first failed window, capture that export duty's source region,
+index and branch version,
+set its cooldown to $\theta+C_{\rm auto}$, and close the branch version.
+An unavailable namespace or control proof cannot establish a failure.
+
+\item \textbf{Preserve and reopen.} For either closure, retain all
+of $G$ and its provenance. Archive the old branch version's unconfirmed suffix
+and normal successors. Record the cause, triggering header, retained
+anchor, captured source context and selection lower bound $q$.
+Increment $\beta$ by one. Do not accept new-version DATA in $J_q$ itself.
+
+\item \textbf{Select or wait.} Record the pre-payload eligibility
+snapshot $\chi_E(q)$. Resolve the new boundary, or an older unassigned
+boundary, by its first eligible historical selection position.
+When a duty opens, start a fresh startup budget at its canonical
+opening timestamp. If no candidate exists, keep the anchor and run
+no DATA window. Then return to payload processing.
+\end{enumerate}
+\end{protocol}
+
+The cooldown is a replay-derived eligibility restriction. Governance ON
+alone does not clear it; an explicit CLEAR can. Governance OFF continues
+to exclude a region even after its cooldown expires.
+Window and quota parameters remain fixed for the duty. A control that
+needs to end it early uses an MSIG Force, not a retroactive deadline
+change.
+
+If Espresso time jumps across several scheduled thresholds, all those
+events are first observable at the same block boundary. Step 1 processes
+the independent status changes before either Force, and the matching
+MSIG Force takes precedence over the entry session's automatic check.
+No DATA is inserted between these prelude events. New startup windows
+begin at the realized selection timestamp, not at an old missed
+deadline, so a single block does not time out every new successor.
+
+\subsection{Processing rules and control completeness}
+\label{sec:control-completeness}
+Control ingestion verifies a full L1 prefix and retains a pending
+activation queue. A sequence number alone does not mean all ingested
+records have activated. The interpreter processes each control once,
+in its recorded target context. A closed branch version is never reopened by
+an ON update, a repeated Force or a late regional receipt.
+
+Every correct observer refreshes its complete finalized control view
+before confirming an Espresso interval. The advance-announcement
+assumptions ensure that all controls applicable to that interval are
+already available. Missing evidence pauses replay. A new observer
+reconstructs the same history; it does not reject an old instruction
+merely because it learned it late.
+
+A certifier's pure core must bind its supplied L1 checkpoint, control
+sequence and history commitment. Its L1 acceptance interface must
+reject an attestation that omits applicable controls. A conservative
+implementation requires the advertised complete control version to
+match the version required by the accepting contract; a stale version
+is refreshed before retry. More selective checks require an equivalent
+completeness proof. Proof of one event's inclusion is not proof that
+no intervening control exists.
+
+Discovery of a previously omitted control that should have affected
+already confirmed history violates the completeness or announcement
+premise. It is not a new permission to roll back $G$, apply the Force
+at an arbitrary later point, or let nodes choose by local arrival time.
+This protocol's conditional guarantees do not specify recovery from
+that premise violation.
+
+\section{The external observer}
+\label{sec:observers}
+An observer keeps the provisional production branch, persistent global
+prefix, source-verification cursors and interpreter state. It does not
+store per-block relay clocks or a committee-protected prefix.
+The same deterministic logic can run inside the certifier.
+
+\begin{protocol}{alg:external}{Verify Espresso output and advance the prefix}
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Authenticate inputs.} Obtain the next finalized
+Espresso block and complete namespace evidence, linked to the trusted
+quorum and prior prefix. Obtain the complete applicable finalized L1
+control context and required historical authorities. If any required
+history is unavailable, wait without treating it as empty.
+
+\item \textbf{Run the prelude.} Execute \cref{alg:force} before
+reading this block's payload. Persist the eligibility snapshot for this
+Espresso position. Deliver each verified closure and its complete source
+proof to the local Session Manager. Every correct regional node independently
+runs or consumes this verified transition. Its manager stores and propagates
+closure for all known old-version snapshots, including Waiting/Ready and
+archived records; missing context leaves a durable pending relay.
+This notification invokes \cref{sec:retirement}, not a best-effort alarm
+restricted to currently Active workers.
+
+\item \textbf{Accept exports in order.} Decode records in canonical
+namespace order. For each EXPORT, run \cref{sec:exports} on a temporary
+state, including each normal boundary and session count. Commit the
+whole update only if it passes. Invalid candidates do not change $G$
+or restart a clock. Supporting evidence can be cached after validation.
+
+\item \textbf{Persist and expose.} Persist the resulting state and
+source cursors. Newly accepted DATA is global now, without another
+timer or L1 transaction. Expose provisional output separately.
+On closure, archive only the unconfirmed suffix and keep all of $G$.
+\end{enumerate}
+\end{protocol}
+
+The expected base of an EXPORT is the DATA frontier and its binding
+prefix digest, with provenance. It is not the hash of the entire
+interpreter state: an empty Espresso block can change time, controls
+and windows without changing this base. The certifier's state-transition
+attestation, in contrast, binds the complete previous and next replay
+checkpoints as well as the published range.
+
+\subsection{Requests and retained data}
+\label{sec:requests}
+A request is \defterm{admissible} when it passes the application's admission
+checks. Each node queues it in order of first receipt. Repeated delivery
+does not change its queue position. New arrivals do not move
+ahead of queued requests, and different nodes need not have the same
+queue order. A correct leader skips requests
+already in its proposed ancestry, including the inherited regional
+prefix, and fills the batch with the oldest remaining requests that fit.
+If no request can be included, it may propose an empty DATA block.
+
+A request is finally removed from the pending queue only when included
+in the global prefix. A request in a discarded regional suffix remains
+pending and can be proposed on the new branch. Regional commitment or
+regular handoff alone does not remove it. Keep the block data and
+receipts needed for recovery and checkpoint verification. Before finalized Espresso
+inclusion, keep complete results available to the Publish Layer and
+direct readers. After finalization, other regions may retrieve them from
+authenticated Espresso history. Preserve required archival or checkpoint
+coverage; global promotion does not authorize deleting the only copy.
+
+
+
+\paragraph{Faithful publication.}
+The proposer or batcher publishes the next complete interval after
+$C_{\rm pub}$, even if a Force has changed the current region.
+The interval must belong to $G$, preserve order and multiplicity, and
+match the DA payload and native execution evidence. An unavailable
+accepted payload causes waiting, not an invented replacement.
+The exact native adapter is specified separately: a Force cannot move
+back from a partial-EVM anchor simply because the next signer cannot
+continue it. It must obtain a legal continuation or wait.
+
+\section{Examples and guarantees}
+\label{sec:examples}
+\subsection{Regular rotation and a late DRAIN}
+\label{sec:regular-example}
+Let $h(A_{\beta,r,0,0})=100$, $\TB_r=10$ and $K=4$. The normal DATA terms
+produce 101--104, 105--108 and 109--110. A terminal QC below 110 moves
+to the next term. A receipt for DATA 110 opens the next region, which
+starts DATA 111 after Ready and bootstrap. No global wait is inserted.
+
+\begin{figure}[htbp]\centering
+\input{figures/sync_hotstuff_rr_rotation_v3_1/regular-handoff.tex}
+\caption{Normal cross-region rotation retains the DATA, FINAL and
+ANCHOR sequence. The historical Espresso selection snapshot fixes the
+successor. Regional production and Espresso publication proceed in
+parallel. Neither the terminal receipt nor the new region waits for
+global confirmation.}
+\label{fig:regular-cross-region}
+\end{figure}
+\FloatBarrier
+
+Now suppose 110 has a QC but its timer is cancelled by Quit.
+Recovery opens at height 110 and proposes a DRAIN, which supplies a
+new timer without using DATA quota. When it commits the terminal DATA,
+replicas send FINAL for 110, not for DRAIN. The normal successor still
+inherits 110. Its old L1 and Espresso references do not establish an
+earlier commitment or export time.
+
+Suppose $G$ is only at 100 while A has committed 110 and B has committed
+111. The Publish Layer can export 101--111 with the required A and B receipts
+and normal witness. Once that complete EXPORT is accepted from finalized
+Espresso history, the entire interval becomes global. A lone record for
+111 cannot bypass missing ancestors.
+
+\subsection{A multisignature Force and the retained anchor}
+\label{sec:force-example}
+Let the region order be A, B, C. A's session $(7,20)$ produces
+DATA 101--110. Its terminal receipt lets B start session $(7,21)$
+before Espresso has confirmed all of A's DATA. Suppose B has produced
+through 115, while $G$ ends at 108. A is still the export region:
+its session owes the next DATA, 109.
+
+The committee submits an MSIG instruction targeting version 7 with
+activation time 120 and an attached OFF(A). It submits early enough
+for the full L1 visibility bound. Before the first finalized Espresso
+block with timestamp at least 120, valid old-version exports may still
+advance $G$.
+
+Suppose $G$ still ends at 108 at that boundary. Nodes and certifiers
+check that the current version is 7, apply OFF(A), and close version 7
+before reading the block's payload. They preserve 108 and reject any
+later export of the old A:109--110 and old B:111--115. The old regional
+receipts remain evidence of regional commitment, not permission to
+append to $G$.
+
+If B is eligible, it opens a new session $(8,21)$ from 108. Its entry
+view is $(8,21,0,0)$. This is a different engine from $(7,21)$.
+After Ready and the normal ANCHOR bootstrap, it proposes DATA 109.
+Its new-version DATA can be accepted only in a later Espresso block.
+There is no second Espresso-to-L1 confirmation round before bootstrap.
+
+Two variations explain the target check. If AUTO already changed
+version 7 to 8 before timestamp 120, the MSIG instruction is stale:
+it neither closes version 8 nor applies its attached OFF(A). If A
+instead completed its export and B became the export region through
+normal handoff, the version is still 7. The instruction still applies,
+preserves the newer $G$, and selects after B. To make OFF(A) apply even
+when the Force becomes stale, submit it as an independent STATUS.
+
+With a DATA quota of ten, the two B sessions can have different
+endpoints: $(7,21)$ starts after 110, while $(8,21)$ starts after 108.
+They read the same $\TB_{21}=10$ but have endpoints 120 and 118.
+The pair identifies the engine; the numeric index selects its authority.
+
+\begin{figure}[htbp]\centering
+\input{figures/sync_hotstuff_rr_rotation_v3_1/forced-handoff.tex}
+\caption{Multisignature Force: L1 supplies a future-dated instruction;
+the first finalized Espresso timestamp crossing fixes its boundary.
+The complete pre-boundary global prefix survives. State transfer and
+the original regional bootstrap follow; old regional engines are not
+silently stopped.}
+\label{fig:forced-cross-region}
+\end{figure}
+
+\FloatBarrier
+\subsection{Four concrete view updates after Force}
+\label{sec:force-view-examples}
+The view is $(\beta,r,g,t)$: branch version, regional turn,
+recovery number and leader term. An effective Force increments $\beta$;
+the new session starts with $g=t=0$. Its turn number is $r_c+1$, where
+$r_c$ is the session that owes the next DATA after $G$. It is not
+necessarily the latest production turn.
+
+The following examples use the region order A, B, C. Each effective
+Force has an eligible successor that completes Ready and the normal
+bootstrap. MSIG instructions satisfy the advance-announcement condition.
+The first three examples apply to either an effective MSIG Force or
+an AUTO Force; the fourth explains why a stale MSIG does nothing.
+
+\Needspace{10\baselineskip}
+\paragraph{Example 1: A produces and also owes the next DATA.}
+A is in view $(7,20,2,3)$. Its session produces DATA 101--110,
+but $G$ ends at 108. A still owes DATA 109, so $r_c=20$.
+A Force selects B, whose new entry view is
+\[
+ (7,20,2,3)\xrightarrow{\text{Force}}(8,21,0,0).
+\]
+Version 7 becomes 8. Turn 20 is followed by turn 21. Recovery and
+leader numbers restart at zero because B opens a new session.
+B starts DATA 109 after bootstrap. DATA through 108 is retained.
+
+\paragraph{Example 2: normal handoff and global confirmation have reached B.}
+A first hands off normally:
+\[
+ (7,20,0,2)\xrightarrow{\text{regular}}(7,21,0,0).
+\]
+B then changes leader and reaches $(7,21,0,1)$. Suppose $G$ now ends
+at B's DATA 113. B owes DATA 114, so $r_c=21$. A Force selecting C gives
+\[
+ (7,21,0,1)\xrightarrow{\text{Force}}(8,22,0,0).
+\]
+C starts DATA 114. A scheduled MSIG targeting version 7 still matches:
+the earlier regular handoff changed $r$, not $\beta$.
+
+\paragraph{Example 3: C produces, but global confirmation still waits for A.}
+A's session $(7,20)$ has committed DATA 101--110. B's session
+$(7,21)$ has committed 111--120. C is producing later DATA in view
+$(7,22,1,2)$. However, $G$ still ends at 108. The next required DATA
+is A's 109, so the export turn is still $r_c=20$.
+
+A Force selects after A. If B is eligible, its new entry view is
+\[
+ (8,21,0,0),\qquad\text{not }(8,23,0,0).
+\]
+The calculation uses the unfinished export turn 20, not C's latest
+production turn 22. Old A:109--110, old B:111--120 and C's later output
+cannot append after closure. New B starts DATA 109 from the retained 108.
+Although the numeric turn falls from the latest production index 22 to
+21, no globally confirmed DATA is removed. Sessions $(7,21)$ and
+$(8,21)$ have separate engines.
+
+\paragraph{Example 4: AUTO has already made a scheduled MSIG stale.}
+An MSIG instruction targets version 7 at Espresso timestamp 120.
+At timestamp 115, AUTO instead causes
+\[
+ (7,20,2,3)\xrightarrow{\text{AUTO}}(8,21,0,0).
+\]
+By the first crossing of 120, suppose the new session has reached
+$(8,21,1,2)$. The MSIG still targets 7, but the current version is 8.
+It is marked processed without executing. Assuming no other transition
+is due, the view stays
+\[
+ (8,21,1,2)\xrightarrow{\text{stale MSIG}}(8,21,1,2).
+\]
+None of the four fields changes. Its attached configuration also has
+no effect; an independent STATUS follows its own activation rule.
+
+\paragraph{If no successor is available.}
+An effective Force still increments $\beta$ and retains $G$, but the
+public boundary remains unassigned. It has not yet opened a new regional view.
+For example, after closing export session $(7,20)$ it waits in version
+8; a selected successor can later enter $(8,21,0,0)$ at Ready.
+If another effective Force acts before any successor opens, the version
+becomes 9 but the stored predecessor index remains 20. The eventual
+entry view is then $(9,21,0,0)$, not $(9,22,0,0)$.
+
+\subsection{A failed window and equal timestamps}
+\label{sec:window-example}
+For illustration, let the startup window be $[0,4)$ with target one,
+and later windows have length four and target two, subject to remaining
+quota. One DATA at time 1 satisfies startup. If only one further DATA
+is accepted at time 5, the running window $[4,8)$ fails.
+A record in the first block timestamped 8 is too late to repair it.
+The automatic Force preserves the two accepted DATA and closes their
+branch version before reading that block's payload.
+
+\begin{figure}[htbp]\centering
+\input{figures/sync_hotstuff_rr_rotation_v3_1/observer-finality.tex}
+\caption{External confirmation and a block-missing Force. Only accepted
+DATA counts. The running-window example assumes at least two DATA
+remain due; in general the target is capped by remaining quota.
+Deadline-equal output cannot revive the expired branch version.}
+\label{fig:observer-finality}
+\end{figure}
+\FloatBarrier
+
+If Espresso jumps from timestamp 5 to 30, the same first failed window
+is detected at the latter block. A new successor starts its window at
+30, not at 8. If another Espresso block also has timestamp 30, it does
+not repeat the old control events or Force. A due status update at the
+same crossing is applied first, so the successor uses the prescribed
+eligibility snapshot.
+
+\subsection{Conditional safety and lifecycle invariants}
+\label{sec:safety-argument}
+The statements below separate global interpretation from regional
+execution. They do not assert liveness from safety. The model and
+verification interfaces remain those of Section~2.
+
+\begin{proposition}[Common interpretation and preservation of global DATA]
+\label{prop:global-prefix}
+Let two correct observers start from the same authenticated interpreter
+checkpoint and apply Protocols~5 and~6 under the stated history,
+announcement and verification premises. Their global DATA sequences are
+prefix-comparable. Replaying the same complete Espresso prefix with all
+applicable L1 controls verified yields the same public replay result
+defined in \cref{sec:global-finality}. It does not require identical
+future-control queues or source-reading checkpoints. Every accepted DATA
+block retains its content,
+position and producing identity forever. Once a version is closed, no
+later EXPORT adds new DATA from that version to $G$.
+\end{proposition}
+\begin{proof}
+Induct over the common finalized Espresso sequence and, within a block,
+its prelude and ordered EXPORT records. At the initial checkpoint the
+public replay results agree. Complete applicable L1 controls, immutable authorities,
+Espresso headers and namespace contents authenticate the same next
+input. Advance announcement ensures the relevant control prefix is
+available before that crossing; a verifier lacking evidence waits.
+The status order, first matching MSIG, alternative AUTO check, fixed
+windows and first eligible historical selection are deterministic.
+They therefore produce the same applied prelude result. Future controls
+not yet due cannot change this result; they may remain in different local
+queues until the required authenticated history is read.
+
+An EXPORT is tested against that state and the exact current DATA base.
+Regional and native validation use the stated sound interfaces and the
+same data. Acceptance atomically appends exactly the next continuous
+range; rejection appends nothing. This gives identical public replay
+results after each record. The induction does not compare extra L1
+fetches or future queues. Different verified Espresso prefix lengths
+are ordered by its prefix property, so the two DATA outputs occur at
+ordered steps of the same append-only public sequence.
+
+Inspect preservation at each step. STATUS, CLEAR and window settlement
+remove no DATA. Force retains all of $G$ before payload and changes only
+the authority for future appends. Selection of an unassigned boundary
+also preserves $G$. EXPORT only extends it. Retained DATA keeps its
+original producing pair and hash. Closed versions are never reopened,
+and every later EXPORT checks the current version for new DATA. Thus
+neither an old regular successor nor a late receipt can append a closed
+suffix. Local Handler phases and retirement do not mutate $G$, so they
+add no exception to this induction.
+\end{proof}
+
+\begin{proposition}[Fixed entry and isolation of local programs]
+\label{prop:program-isolation}
+Under the regional-validity and source-verification premises, each
+opened pair $(\beta,r)$ has one fixed handoff. At a correct replica,
+initial Enter occurs at most once for that pair, uses exactly that
+handoff's anchor and state, and never uses an obsolete task callback
+as authority. Actions for one pair do not alter another pair's locks,
+votes, timers or entry time. Candidate preparation creates none of
+these BFT actions.
+\end{proposition}
+\begin{proof}
+Proceed from the initial checkpoint through successive handoffs.
+For a regular handoff, the predecessor's fixed boundary and quota fix
+its terminal height; regional validity fixes the terminal DATA and its
+signed selection reference. The least eligible position fixes the
+region and designated authority. For Force, common replay fixes the
+old and new versions, source context and exact retained $G$; historical
+selection then fixes the target. Repeated Forces without assignment
+change $\beta$ but keep the stored predecessor index. They cannot
+reuse an already opened pair. Handoff verification rejects conflicting
+fixed fields instead of replacing an existing record.
+
+A preparation may have several candidate anchors over time. None is
+eligible for Enter until verification installs the actual handoff.
+Material callbacks retain the requested pair and anchor identity;
+the gate checks the exact fixed state and separate current-activation predicate.
+The serialized Ready/Enter event tests and sets the durable entry flag
+before dispatching signatures. Repetition, restart and late callbacks
+therefore cannot repeat Enter or reset its entry time. Each core
+message is authenticated and routed by the pair it signs; local tasks
+use the same pair and anchor context. Waiting does not run the core.
+Closing and Terminated records prevent a late event from reopening an
+old program. These checks establish the stated isolation by induction
+over the local event sequence.
+\end{proof}
+
+This is local authorization relative to a node's processed public
+prefix. It does not claim that all nodes learn a finalized Force at the
+same real time. A lagging node can briefly run an old program, but
+\cref{prop:global-prefix} still excludes its closed-version output.
+\Cref{prop:retirement-safety} checks the additional regional retirement
+behavior. Neither proposition independently re-proves all of Part~I
+or the baseline DATA/DRAIN and application-validation interfaces.
+
+\subsection{Progress conditions and limits}
+The regional engine keeps its original fair-schedule, exclusion and
+uninterrupted-commit-window conditions. Normal handoff still needs
+state transfer and authority, but no Espresso confirmation of its
+terminal DATA when direct transfer succeeds. Espresso retrieval provides
+the alternative path. Global output uses the Publish Layer and Espresso
+service bounds, but also needs complete next results and successful
+acceptance before the fixed deadlines. The transport bounds alone do not
+establish that end-to-end rate.
+
+A Force needs a recoverable retained anchor and an eligible successor.
+Its startup budget starts at the public opening, not at a replica's
+later Ready time. Fixed budgets therefore also assume timely startup
+for some serving interval. An empty DATA can satisfy protocol delivery
+without establishing user-transaction inclusion or censorship resistance.
+The revised selector permits one eligible region to renew its own turn,
+subject to its governance state and cooldown. This removes one selection
+stall but does not establish that its next result beats a fixed cutoff.
+
+Espresso's own failure prevents new global confirmation and automatic
+crossings. A future-dated multisignature Force removes the need for a
+second L1 round trip, but still waits for its announced Espresso
+boundary and subsequent Ready. This document gives no unconditional
+wall-clock bound on failover or withdrawal.
+
+\subsection{What the selection repairs establish}
+\label{sec:selection-repairs}
+\begin{proposition}[Advancing normal selection and same-region renewal]
+\label{prop:selection-repairs}
+Along consecutive regular handoffs, the opening selection heights strictly
+increase. If there are infinitely many such handoffs and eligibility is
+a fixed nonempty set after some Espresso height, each member of that set
+is selected repeatedly. Separately, a fixed pending boundary with no
+eligible alternative can select its own source once that source is
+eligible. Neither statement proves timely global acceptance.
+\end{proposition}
+\begin{proof}
+For a regular successor,
+\[
+ q^{\rm open}_{\beta,r+1}
+ =q_s\ge \operatorname{height}(\xi(T_{\beta,r}))
+ >q^{\rm open}_{\beta,r}.
+\]
+These heights are integers, so infinitely many regular handoffs cannot
+stay below any fixed historical height. Once past the eligibility-change
+height, the cyclic search visits the fixed eligible set in order. If it
+has one member, the fallback renews that member; otherwise the search
+returns the next member before returning to the source. A finite cyclic
+list therefore visits each eligible member repeatedly.
+
+For the second statement, the historical search takes the least position
+at which its selector returns a region. If no other region is eligible,
+that selector returns the source exactly when the source itself is eligible.
+An AUTO-imposed finite cooldown can expire under growing Espresso time;
+this does not override OFF. A later effective Force may supersede the
+pending boundary, which is why the statement fixes the boundary.
+Selection creates a new pair; it neither runs Enter nor accepts DATA.
+\end{proof}
+
+The fixed-eligibility and infinite-handoff conditions specify this
+proposition's scope; they are not added environmental assumptions for
+the complete protocol. In particular, this proposition does not prove
+that such a successful infinite sequence exists.
+
+\subsection{Liveness targets not yet established}
+\label{sec:liveness-counterexamples}
+The complete target still includes continuing global progress with a
+usable region, useful service for healthy eligible regions, and request
+progress. These are stronger than selecting a region or keeping old
+DATA recoverable. The independent v3.2 review gives the following
+obstructions, which the interface and selector repairs do not remove.
+
+\paragraph{A stronger slow-session trace.}
+Use regions A and B, each with two correct unit-weight members and one
+silent Byzantine member, $W=3,F=1,\Delta=1$. All authorities and state
+are available. Later duties have quota one, startup target one,
+$W_{\rm start}=6$ and $C_{\rm auto}=1/2$. No committee operation
+interrupts them. Espresso timestamps equal real time, and complete
+results meet $T_{\rm pub}=T_E=1$.
+
+After an arbitrarily long finite successful prefix, open a duty at time
+$a$. In v3.3 the next Espresso header can appear at $a+\varepsilon$,
+for $0<\varepsilon<1/10$; both correct members pass Ready and Enter then.
+The correct initializer sends NEWVIEW at $a+2+\varepsilon$, obtains
+the other member's ANCHOR vote at $a+4+\varepsilon$, and proposes the
+terminal DATA. It votes immediately; the other member votes at
+$a+5+\varepsilon$. The two commit timers expire at
+$a+6+\varepsilon$ and $a+7+\varepsilon$. The earliest complete FINAL
+receipt is no earlier than the latter time when the Byzantine member
+withholds its FINAL.
+
+AUTO already closed this version at $a+6$, with accepted count zero.
+Closure does not cancel those timers; the complete result later forms
+and is published within its stated service bounds, but cannot enter
+$G$. The successor opens at $a+6$. The prior source's cooldown has
+expired before it is next needed at $a+12$. Repeat while alternating
+each region's correct initializer identities. Every correct identity
+actually enters, proposes DATA and commits infinitely often; this
+trace does not exploit an unused nominal leader schedule. Strictly
+advancing references and complete receipt multicast do not make a
+complete result exist before its first honest commitments.
+
+The finite-interval reading of \emph{some sustained service interval} is
+satisfied by the successful prefix. Under that reading, $G$ then stops.
+If the adjacent service prose instead requires sufficiently long
+successful intervals for every future duty or an infinite tail, the
+trace is excluded by that stronger interpretation. The frozen text
+does not formalize that quantifier. Neither interpretation can be
+silently substituted for the other in a liveness proof.
+
+\paragraph{Global growth does not prove request progress.}
+Give a correct admissible request $x$ to every correct node and put it
+first in their queues. Every correct-led slow DATA above includes $x$.
+Interleave fast sessions led by a Byzantine initializer which follows
+the signing rules but proposes an empty DATA. With sufficiently small
+actual message delays, after its required $2\Delta$ wait this session
+forms its receipt at about $a+4$, and its EXPORT can be accepted before
+$a+5<a+6$. Both regions can receive such successful sessions repeatedly.
+The remaining turns rotate among all correct identities and follow the
+slow trace. They really produce $x$, but only in closed suffixes.
+No equivocation is needed, so eventual equivocator exclusion does not
+remove the fast initializer. Empty DATA is valid and counts for delivery.
+
+Thus $G$ and each region's accepted output can grow forever while $x$
+never enters $G$. Pending-request preservation and finite older queues
+hold. Correct leader fairness alone does not imply that some correct-led
+output wins the global deadline. A stronger acceptance-service reading
+must explicitly cover the required correct output or requests, rather
+than merely some other successful EXPORT.
+
+\paragraph{What the earlier examples do and do not show.}
+The old constant-$q_0$ A/B cycle could keep a later-ON C out of historical
+selection. Its status as a counterexample to all progress premises
+depended on whether leader fairness already quantified over C's leaders.
+The new strict-reference rule removes that protocol-level cycle without
+claiming it was valid under every fairness interpretation.
+Likewise, v3.2's sole-eligible-region stall violated the full premise
+that an unassigned boundary eventually has another eligible region.
+The fallback removes that rule-level exclusion; it does not prove the
+stronger one-live-region goal against continual preemption.
+
+The two service quantifiers need an exact interpretation, and fixed
+cutoffs still need a protocol repair that does not repeatedly invalidate
+all useful work. Increasing a constant alone does not bound unbounded
+state preparation or recovery-authority waits. An architecture with
+protected work or deferred effective Force would change cutoff semantics
+and must say so explicitly. This version does not make that change or
+claim the complete goal achieved.
+
+\Needspace{18\baselineskip}
+\subsection{Open design and implementation questions}
+\begin{enumerate}[label=(\arabic*)]
+\item Pin the concrete Espresso finality, timestamp and namespace-proof
+profile, including clock lead and history retention.
+\item Fix registry/control-proof encodings and the certifier's
+complete-control-version acceptance rule.
+\item Choose window and cooldown parameters from explicit service
+assumptions, and address the service-window failures in the preceding section.
+\item Specify native execution and signing continuation at every
+allowed global anchor, including partial-EVM state if supported.
+\item Independently verify the retirement extension and its conditional
+regional safety argument; do not reuse the old universal-QC lemma after
+the signing gate closes.
+\item Complete staking retirement and show that the Publish Layer
+implementation meets its service bound. A missed delivery window alone
+is not a proof of proposer equivocation.
+\end{enumerate}
+
+\section{Implementing the Publish Layer}
+\label{sec:publish-implementation}
+The preceding protocols use a delivery-service assumption. The following
+leader-first design explains how existing participants can implement it.
+It introduces no new consensus round and no exclusive publisher role.
+The implementation must meet $T_{\rm pub}$; the sketch alone is not a
+proof of that bound.
+
+\subsection{Leader first, with permissionless backup}
+The proposing regional leader is the preferred sender. Once it has the
+complete finalized result, it builds and submits an EXPORT immediately.
+Other replicas continue collecting FINAL messages, retaining payloads and
+making complete results available to the service. Commitment and
+Completion do not wait for a publication acknowledgement.
+
+Another replica or an external data verifier may submit the same result
+without the leader's permission. An implementation may give the leader a
+short first opportunity, but the backup delay, data retrieval and retries
+must fit within $T_{\rm pub}$ from complete-result availability. A private
+announcement that the leader has sent something is not enough to suppress
+backup indefinitely. The service checks submission and Espresso evidence.
+
+The fallback sender uses the original DATA and receipt. It cannot replace
+the DATA, rewrite its session pair or create FINAL on behalf of the region.
+The service guarantees delivery through an available path; no particular
+sender is guaranteed to win the submission race.
+
+\subsection{Fee sponsorship}
+A backup sender need not hold tokens or pay from its own balance. It may
+use a funded relay, a prepaid submission account, or another sponsored
+route that can submit to Espresso. The route carries the verified result;
+it does not acquire authority to change its content.
+
+Someone still supplies the fee resources. To justify the publication
+bound, a complete result covered by the service assumption must have access to a funded,
+working route even when the original leader is unavailable. A sender can
+try another route if one refuses or fails. The concrete sponsorship and
+admission mechanism is an implementation choice; this protocol assumes
+no Espresso application smart contract for it.
+
+\subsection{Duplicates, retries and acceptance}
+Different senders may carry the same result in different EXPORT records.
+The DATA's producing pair $(\beta,r)$ and block hash identify the output;
+receipt encoding, signer set and sender do not create a second output.
+Only a valid next interval advances $G$ and its window count.
+
+After submission, service workers track the Espresso record and replay
+its acceptance. If another submission has already advanced $G$, they
+rebuild an EXPORT for the remaining continuous suffix. DATA already in
+$G$ is complete. A result rejected because of a gap must be resubmitted
+after its predecessors; an old record is not accepted retroactively.
+A closed version never regains permission through a retry, although its
+record can still serve as historical regional evidence.
+
+The two service bounds establish delivery and visibility of a submitted
+record. They do not by themselves bound a sequence of stale-base retries.
+Progress therefore still needs a serving interval in which complete next
+results are accepted before the delivery deadlines, as stated in
+\cref{sec:progress}. Regional production and state transfer must also fit
+that interval.
+
+\subsection{Retention and incentives}
+Before finalized Espresso inclusion, the holders of a complete result
+keep its payload and evidence available to backup senders. Afterward,
+Espresso's retained, authenticated history is the common retrieval path.
+Direct transfer can still accelerate regular handoff and state recovery.
+Retirement and checkpoint rules must preserve every required copy.
+
+Submission rewards and reimbursement may fund this service. They must not
+count duplicate DATA as new progress. A missed delivery window alone does
+not prove that the original leader, a verifier or a sponsor equivocated.
+This document does not derive a slashing rule from that timeout.
+
+\Needspace{14\baselineskip}
+\begingroup\small
+\begin{thebibliography}{9}
+\bibitem{part1}
+Sync HotStuff RR, Part I: Core Protocol. Design document, 13 October 2026.
+Companion source: \href{run:sync_hotstuff_rr_part1_core.tex}{Part I core protocol}.
+\bibitem{sync}
+I. Abraham, D. Malkhi, K. Nayak, L. Ren, and M. Yin.
+\emph{Sync HotStuff: Simple and Practical Synchronous State Machine Replication}.
+IEEE Symposium on Security and Privacy, 2020, pp. 106--118.
+\href{https://conferences.computer.org/sp/pdfs/sp/2020/349700a106.pdf}{Published paper}.
+\bibitem{certification}
+MegaETH Specification, PR~8, \emph{Block Certification}.
+Commit \texttt{aedc2826663b}.
+\href{https://github.com/megaeth-labs/specification/tree/aedc2826663b134ee25d26bea17e70c6d23d321c/specs/block-certification}{Pinned specification}.
+Its Espresso and certifier verification interfaces are a reference;
+the rotation and window rules in this document are new.
+\end{thebibliography}
+\endgroup
+\end{document}

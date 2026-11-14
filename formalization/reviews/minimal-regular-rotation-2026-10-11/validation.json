@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-11",
+  "source": "formalization/minimal_regular_rotation_v4.tex",
+  "before_sha256": "c1481e575741fc47def83e94fc27cad4ec38c3e7b91c509cd7df2412ab25d0f1",
+  "after_sha256": "e8085829f424b100895038d31b30027b74c9f8b73b51926bcc6ed5385464d48f",
+  "core_protocol_unchanged_except_cross_reference": true,
+  "validation_and_proofs_unchanged": true,
+  "figures_added": 4,
+  "pages": 7,
+  "built_in_compile": "success",
+  "overfull_or_underfull_boxes": false,
+  "separate_pdf_exported": false
+}

@@ -1,0 +1,1822 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,aliascnt}
+\usepackage{booktabs,tabularx,array,enumitem,needspace,float,xltabular}
+\usepackage[section]{placeins}
+\usepackage{xcolor,tikz,mdframed}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{fancyhdr}
+\hypersetup{pdftitle={Sync HotStuff RR v4.5},pdfsubject={Sequencer rotation with regional and global finality}}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small Sync HotStuff RR v4.5}\rhead{\small Sequencer rotation and finality}
+\cfoot{\thepage}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\topfraction}{.92}
+\renewcommand{\textfraction}{.06}
+\renewcommand{\floatpagefraction}{.85}
+\makeatletter
+\setlength{\@fptop}{0pt}\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\definecolor{rrRed}{HTML}{A51C30}
+\definecolor{rrBlue}{HTML}{2563EB}
+\definecolor{rrTeal}{HTML}{0F766E}
+\definecolor{rvBlue}{HTML}{1D4ED8}
+\newcommand{\RR}[1]{{\color{rrRed}#1}}
+% v4.5 revision marks: blue text is new or changed relative to v4.4, and a
+% tag links to its entry in Appendix A. Use \revmarksfalse for a clean copy.
+\newif\ifrevmarks
+\revmarkstrue
+\newcommand{\Rv}[1]{\ifrevmarks\leavevmode{\color{rvBlue}#1}\else#1\fi}
+\newcommand{\Chg}[1]{\leavevmode\hypertarget{chg:#1}{#1}}
+\newcommand{\Cid}[1]{\ifrevmarks\textsuperscript{\hyperlink{chg:#1}{\color{rvBlue}\sffamily\scriptsize#1}}\fi}
+\newcommand{\QC}{\mathcal C}
+\newcommand{\FC}{\mathcal F}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\Del}{\operatorname{Del}}
+\newcommand{\Twait}{T_{\rm wait}}
+\newcommand{\TB}{\mathit{TB}}
+\newcommand{\tagg}[1]{\ensuremath{\mathsf{#1}}}
+\newtheorem{definition}{Definition}[section]
+\newaliascnt{assumption}{definition}
+\newtheorem{assumption}[assumption]{Assumption}
+\aliascntresetthe{assumption}
+\crefname{assumption}{assumption}{assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\newcounter{protocol}
+% Protocol boxes float to the top of a page, so long boxes leave no gaps.
+\newenvironment{protocol}[2]{\begin{figure}[htbp]\refstepcounter{protocol}\label{#1}
+\begin{mdframed}[linewidth=.6pt,skipabove=0pt,skipbelow=0pt,
+innertopmargin=7pt,innerbottommargin=7pt]\small
+\textbf{Protocol \theprotocol. #2}\par\smallskip}{\end{mdframed}\end{figure}}
+\crefname{protocol}{Protocol}{Protocols}
+\Crefname{protocol}{Protocol}{Protocols}
+\title{Sync HotStuff RR v4.5\\\large Sequencer Rotation with Regional and Global Finality}
+\author{}\date{12 October 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+\Rv{\Cid{A1}Sync HotStuff RR lets several regions take turns as the
+sequencer of one chain. One turn of one region is a \emph{session}.
+Inside a session, the region runs a stake-weighted version of synchronous
+Sync HotStuff (RR v3.3) until it commits a fixed quota of DATA blocks;
+the next live region then continues from the last block (regular
+handoff). If a region fails, an honest multisignature committee posts a
+Force on L1. The Force cuts the session's external history at a chosen
+height and hands the turn to another region (forced handoff). A block is
+\emph{regionally final} when it has a valid commit receipt from the
+region and session that the rotation history assigns to it. It becomes
+\emph{globally final} at an observer after a further waiting period,
+which starts when the observer relays the complete commit evidence to
+the committee. The period covers the committee's monitoring, its
+decision window, and the L1 finalization of any Force, so a valid Force
+never removes a globally final block. A Force passes three stages:
+Submitted, L1-finalized, and L1-activated. Finalization stops the
+affected blocks from becoming global; activation switches the external
+branch, and the old regional log stays unchanged. We specify the model, six
+protocols, and a conditional safety argument. Version 4.5 revises v4.4
+for clarity. It keeps every protocol step, fixes ambiguous rules and
+unhandled cases, and marks each change (Appendix~\ref{app:changes}).}
+Full regional and complexity analyses remain outside this draft.
+\end{abstract}
+
+\ifrevmarks
+\begin{center}
+\fbox{\parbox{.95\linewidth}{\small\textbf{Reading the v4.5 marks.}
+Black text is unchanged from v4.4, except Appendix~\ref{app:changes},
+which is new. \Rv{Blue text is new or changed in v4.5.} A blue tag such as \Cid{C2} links to the change log in
+Appendix~\ref{app:changes}, which also lists removed text. Red keeps its v4.4
+meaning: a difference from RR v3.3 in the regional protocols. Set
+\texttt{\textbackslash revmarksfalse} in the preamble for a clean copy.}}
+\end{center}
+\fi
+
+\section{Overview}
+\label{sec:overview}
+RR v3.3~\cite{rr33} revises standard-synchronous Sync HotStuff~\cite{sync}
+for one region. This draft keeps v4.3's regional protocols and lets several regions
+take turns producing blocks. Session $r$ is one turn, served by region $i_r$.
+\Rv{\Cid{B3}\Cref{tab:roles} lists the participants. A \emph{node} is any
+participant that follows the external chain; every replica is a node.
+Each node is also an \emph{observer}: it keeps its own global prefix
+(\cref{sec:external}). We write ``observer $u$'' when a rule depends on
+$u$'s local state.}
+
+\begin{table}[htbp]\centering\small
+\caption{\Rv{Participants and their responsibilities.}}
+\label{tab:roles}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.15\linewidth}>{\raggedright\arraybackslash}p{.25\linewidth}Y@{}}
+\toprule
+\Rv{Role} & \Rv{Who} & \Rv{Responsibility}\\
+\midrule
+\Rv{L1} & \Rv{The settlement chain} & \Rv{Public source of authority:
+voters, leaders, and quotas of each session; status updates and Forces
+(\cref{sec:model}).}\\
+\Rv{Replica} & \Rv{A member of a region's voting set $V_i$} &
+\Rv{Runs the regional engine of each session of its region
+(\cref{alg:steady,alg:recovery}); enters a new session when its region
+is selected (\cref{alg:bootstrap}).}\\
+\Rv{Committee} & \Rv{One honest multisignature service} &
+\Rv{Monitors regional output, keeps a protected prefix, and posts status
+updates and Forces (\cref{sec:force}).}\\
+\Rv{Node (observer)} & \Rv{Every replica and every external verifier} &
+\Rv{Follows the current branch, processes L1 records, and maintains
+regional and global finality (\cref{alg:rotation}, steps 2--3 of
+\cref{alg:force}, and \cref{alg:external}).}\\
+\Rv{Backbone} & \Rv{The network between regions} & \Rv{Eventually
+delivers blocks, receipts, and witnesses. It never chooses the next
+region; L1 records and regional certificates do.}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A session ends by a \emph{regular} handoff, after its last quota block
+$T_r$ commits, or by a \emph{forced} handoff, when an L1 force
+instruction cuts its external history at a DATA height $h_*$.
+\Cref{sec:examples} gives both paths. \Rv{\Cid{B2}Either ending fixes a
+\emph{boundary}: the retained anchor block, the next region, and the L1
+height that selected it (\cref{sec:witness}). A Force can replace a
+regular boundary, even after the regular successor has started; the
+sessions after the replaced boundary are then discarded. Sessions
+therefore form \emph{branches}. A session is identified by its
+\emph{session ID} $\sigma_r$, the hash of the boundary that opened it,
+and not by its index $r$, which a Force may reuse. A node's
+\emph{current branch} is the one selected by regular boundaries and
+activated Forces.}
+
+\Rv{\Cid{A1}Finality has two levels (\cref{sec:external}). A block is
+regionally final when the rotation history assigns it to a region and
+session, and a valid receipt from that session proves its commitment. A
+receipt alone does not prove that the producing region was authorized.
+A block becomes globally final at an observer after a waiting period
+that starts when the observer relays the complete commit evidence to the
+committee, never at the block's older L1 reference. Regular handoffs use
+regional finality only; they never wait for global finality.}
+
+A view is $(r,g,t)$: session $r$, recovery generation $g$, and leader
+term $t$. Views on one branch are ordered lexicographically. Each session starts at
+$(r,0,0)$. \Cref{tab:views} lists the four ways to change view. The
+first two happen inside region $i_r$, as in v3.3. The members of the
+next region take the last two.
+
+\begin{table}[htbp]\centering\small
+\caption{The four view changes.}
+\label{tab:views}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.19\linewidth}>{\raggedright\arraybackslash}p{.12\linewidth}Y>{\raggedright\arraybackslash}p{.23\linewidth}@{}}
+\toprule
+Change & New view & Trigger & Commit timers\\
+\midrule
+Normal rotation & $(r,g,t+1)$ & A terminal QC of term $t$, for DATA below $H_r$ & Keep running.\\
+Recovery & $(r,g+1,0)$ & A quit proof for generation $g$, then a $\Delta$ wait\Rv{, and $\tagg{AUTH}_{r,g+1}$} & Canceled in generation $g$.\\
+Regular handoff & $(r+1,0,0)$ & Ready on a REGULAR witness, which holds a receipt for $T_r$ (\cref{sec:ready}) & \Rv{\Cid{C13}The old engine cancels its own timers in Completion (\cref{alg:steady}).}\\
+Forced handoff & $(r+1,0,0)$ & Ready on a FORCE witness, which holds an activated force & The old engine is unchanged.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+A QC for DATA at $H_r$, or for a DRAIN, starts no new term. A status
+update without a force changes no view. Recovery keeps the session's
+quota. \Rv{\Cid{A5}A Force may replace a regular boundary. The new
+session has a different session ID, even if it reuses the numeric
+index.}
+
+\section{Model and assumptions}
+\label{sec:model}
+
+\subsection{L1 control state}
+\label{sec:l1}
+At each finalized L1 height, nodes read the same authority records and
+status-update list (\cref{tab:l1}).
+Finalized L1 block headers also give their authenticated timestamps.
+The multisignature committee posts status updates. A regular handoff
+needs no new L1 transaction.
+
+\begin{table}[htbp]\centering\small
+\caption{L1 records used by the protocol.}
+\label{tab:l1}
+\begin{tabularx}{\linewidth}{@{}p{.27\linewidth}Y@{}}
+\toprule
+Field & Meaning\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Authority} $\tagg{AUTH}_{r,g}$}\\
+Stake configuration & The members $V_i$ of each region, their public
+keys and voting weights, \Rv{\Cid{B7}the Byzantine bound $F_i$ used as
+the certificate threshold,} and protocol parameters such as $K$ and
+$\Delta_i$.\\
+Leader schedule & The leaders within each region. Once a boundary
+chooses $i_r$, this gives $L(r,g,t)\in V_{i_r}$.\\
+Regional quota $\TB_r$ & The number of new DATA blocks that session $r$
+may add. Recovery does not reset it.\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Status update}}\\
+Status map $\chi$ & Live or off, for each region.\\
+Force flag & True if the update forces a handoff.\\
+Target session $r$ & The session to cut, identified by its index and
+\Rv{session ID $\sigma_r$}. Used only if the flag is true.\\
+\Rv{Retained height} $h_*$ & The last DATA height that the external chain keeps
+from session $r$. Used only if the flag is true. It is a height, not a
+block hash.\\
+Activation height $\lambda_a$ & The update takes effect once L1 block
+$\lambda_a$ is finalized. \Rv{\Cid{B8}An update included in L1 block
+$\lambda_p$ must have $\lambda_a\ge\lambda_p+N$, where the notice period
+$N$ is a number of L1 blocks fixed by the initial configuration. The L1
+timestamp $\theta_a$ of block $\lambda_a$ only labels the activation; no
+rule waits for a local clock to reach it.}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{\Rv{Authority records.}}
+\Rv{\Cid{C1}L1 publishes one authority $\tagg{AUTH}_{r,g}$ for each
+session index $r$ and generation $g$. $\tagg{AUTH}_{r,0}$ fixes the
+session's voting snapshot $\mathit{cfg}_r$ (members, weights, $F_i$,
+$\Delta_i$, and $K$), its quota $\TB_r$, and the leader schedule of
+generation~$0$. For $g>0$, only the leader schedule of $\tagg{AUTH}_{r,g}$ is
+used; the snapshot and the quota stay those of $\tagg{AUTH}_{r,0}$. The handoff chooses region $i_r$
+(\cref{sec:witness}), and the session reads its voters and leaders for
+that region. L1 does not see regular boundaries, so records are keyed by
+index: a session opened by a Force that reuses index $r$ reads the same
+records for its own region.}
+
+\paragraph{\Rv{Status updates.}}
+Status updates follow these rules.
+\begin{itemize}
+\item Each update is posted at least a configured notice period before
+its activation height\Rv{, as \cref{tab:l1} specifies}. Nodes may prepare during this period. The status map and production authority change at activation.
+\item Activation heights increase from one update to the next. Nodes
+apply updates in L1 order. The \emph{effective status map}
+$\chi(\lambda)$ at L1 height $\lambda$ is the map of the latest \Rv{valid}
+update whose activation height is at most $\lambda$. \Rv{\Cid{C3}Such an
+update lies in an L1 block at or below $\lambda$. Once height $\lambda$ is
+finalized, $\chi(\lambda)$ is therefore fixed, and every node computes
+the same map.}
+\item \Rv{\Cid{B4}An update whose force flag is false is \emph{passive};
+it changes only the status map. An update whose force flag is true is a
+\emph{Force}; its status map must mark the target region off.}
+\item Nodes check each update's authorization and L1 finality.
+\Rv{\Cid{C8}They ignore an update that is unauthorized, violates the
+notice period, or does not increase the activation height.} A
+finalized record never changes.
+\end{itemize}
+\Rv{\Cid{A6}The committee's rules for submitting updates and Forces are
+in \cref{sec:force-stages}.}
+
+\paragraph{\Rv{Force scope and validity.}}
+\Rv{\Cid{A2}A Force $F$ names a target session $\sigma$, with index $r$,
+and a retained height $h_*$. Its \emph{deletion scope} $\Del(F)$ is the
+set of external blocks that $F$ removes:}
+\begin{enumerate}[label=(\roman*)]
+\item \Rv{the DATA blocks of $\sigma$ above height $h_*$; and}
+\item \Rv{every block of every session that follows $\sigma$ on its
+branch, that is, every session reached through $\sigma$'s regular
+boundary (\cref{sec:witness}), including sessions that start after $F$
+is posted.}
+\end{enumerate}
+\Rv{$F$ replaces $\sigma$'s regular boundary by a forced one at $h_*$,
+even when $h_*=H_r$. If a block is in $\Del(F)$, so are its descendants.
+The rest of this draft refers to $\Del(F)$ instead of restating it.
+\Cid{B4}A Force is \emph{applicable} at a node if its target session is
+on the node's current branch.}
+
+\Rv{\Cid{C8}A node also ignores a Force unless all of the following
+hold: its target session is on the node's current branch and has not
+been the target of an earlier Force; $h(A_{r,0,0})\le h_*\le H_r$ in the
+target session; and every earlier Force activated before this one was
+included in L1. These checks need the target's boundary. A node that
+does not have it yet keeps the record and checks it when the boundary
+arrives (\cref{alg:force}). Under \cref{ass:committee}, every committee
+update passes all checks.}
+
+\paragraph{\Rv{Genesis.}}
+\Rv{\Cid{C4}The initial configuration fixes the cyclic region order
+$\mathcal L_R$, the genesis block, an initial L1 height
+$\lambda_{\rm gen}$, and an initial status map that is effective from
+$\lambda_{\rm gen}$. A synthetic genesis boundary opens session $0$:
+$\lambda^{\rm open}_0$ is the least finalized L1 height at least
+$\lambda_{\rm gen}$ at which some region is live, and $i_0$ is the first
+live region in $\mathcal L_R$ under $\chi(\lambda^{\rm open}_0)$. Until
+such a height is finalized, this boundary waits, like any other
+boundary (\cref{sec:witness}).}
+
+\subsection{Stake and faults}
+\label{sec:stake}
+Member $v$ of region $i$ has voting weight $\omega_{i,v}>0$. Let
+$W_i=\sum_{v\in V_i}\omega_{i,v}$. \Rv{\Cid{B7}The stake configuration
+fixes a bound $F_i<W_i/2$, and} Byzantine members of region $i$ hold
+total weight at most $F_i$. Every regional certificate needs
+matching signatures from distinct members with total weight greater than
+$F_i$. So every certificate has a correct signer, and the correct members
+alone can form one. This replaces the $f+1$ of $n=2f+1$ in v3.3.
+
+Membership and weights stay fixed for a whole session, including its
+recoveries. Slashing and status updates do not change them. A later
+session checks old certificates against the old snapshot. The bound
+$F_i$ counts every key of the snapshot that is compromised while its
+certificates are still accepted. Compromise of old keys after that is
+outside this model.
+
+Correct replicas keep their protocol state and committed blocks.
+Signatures cannot be forged, and hashes are binding.
+
+\subsection{Assumptions}
+\label{sec:assumptions}
+\begin{assumption}[Finalized L1 records]
+\label{ass:authority}
+At every finalized L1 block height, the authority records and the ordered
+list of status updates through that height are common knowledge. These
+finalized records never change.
+\end{assumption}
+A replica uses only finalized records. If an authority needed for entry
+is not yet finalized, the replica waits for it.
+
+\begin{assumption}[Authenticated synchronous communication and global clock]
+\label{ass:network}
+\leavevmode\par
+\begin{itemize}
+\item Messages use authenticated communication channels.
+\item Within region $i$, the actual delay of a correct-to-correct
+message is $\delta\le\Delta_i$; $\delta$ may differ across messages.
+\item All nodes share a global clock.
+\end{itemize}
+\end{assumption}
+The delay bound includes delivery and processing of complete validation
+dependencies. Each replica records its own entry and voting events on
+the global clock.
+
+\begin{assumption}[Cross-region backbone]
+\label{ass:backbone}
+A backbone eventually delivers each session's committed blocks, with
+their regional receipts, to all other nodes. Its delay has no fixed
+bound.
+\end{assumption}
+
+\begin{assumption}[Honest multisignature committee]
+\label{ass:committee}
+The multisignature committee is one honest, coordinated service. It
+keeps durable state for validated receipts, their first validation times,
+a protected prefix, and its outstanding Force. It follows
+\cref{sec:l1,sec:force}. It never authorizes a Force from a stale copy
+of its protected prefix.
+\end{assumption}
+
+\begin{assumption}[Bounded monitoring and Force finalization]
+\label{ass:monitor}
+\Rv{\Cid{A7}There are finite bounds $T_{\rm mon}$ and $T_{\rm L1}$,
+measured on the shared global clock, such that:}
+\begin{itemize}
+\item \Rv{\emph{Monitoring.}} When a correct observer validates and sends a complete regional
+finality bundle \Rv{at time $s$}, the \Rv{committee} receives it and validates its historical
+regional evidence \Rv{by $s+T_{\rm mon}$}. The bound includes required data, missing history,
+and processing. Bundles may be batched and may use resolvable caches.
+\item \Rv{\emph{Force finalization.}} A valid Force transaction submitted through the L1 service \Rv{at
+time $s$} becomes finalized and available to correct observers \Rv{by
+$s+T_{\rm L1}$}. This bound includes transaction inclusion and finalization.
+\end{itemize}
+\end{assumption}
+\Rv{\Cid{A7}The committee's decision window $T_{\rm msig}$ is a configured
+parameter, not an environment bound; \cref{sec:protection} gives the rule
+that uses it.} The monitoring path has a bound; the ordinary backbone need only deliver
+eventually. \Rv{Meeting $T_{\rm mon}$ requires the configured data and
+processing capacity, not honesty alone. No monitoring acknowledgement is
+required. L1 block timestamps label L1 blocks but do not state when they
+became finalized; every deadline in this draft uses the global clock.}
+
+\subsection{Conditions for progress}
+\label{sec:progress}
+The deferred liveness analysis will also use these conditions.
+\begin{itemize}
+\item \textbf{Schedules.} Correct leaders get repeated turns in views
+that are actually entered. This includes recovery initializers and
+DATA-producing turns across sessions. Turns in views that are never
+reached do not count.
+\item \textbf{Exclusion.} Leaders exposed for equivocation are eventually
+excluded by later authorities, as in v3.3's accountability assumption.
+\item \textbf{Committee service.} The committee gives working regions
+enough uninterrupted time to produce DATA, complete handoffs, and pass
+the global waiting period.
+\item \textbf{Handoff service.} Every submitted Force eventually reaches
+its finite activation height. Required authorities eventually become
+available. A waiting handoff eventually has another live region and
+can obtain its anchor data from outside the failed region.
+\item \textbf{Requests.} A correct client's request that remains
+admissible eventually reaches every region that continues to serve.
+Each request fits in one DATA batch. Each node keeps pending requests
+in the order it first receives them, with only finitely many requests
+ahead of any one request (\cref{sec:requests}).
+\end{itemize}
+
+\section{Regional engine: definitions}
+\label{sec:regional}
+
+\Cref{tab:notation} collects the notation used below. Anchor indices
+are always written in full.
+\begin{table}[htbp]\centering\small
+\caption{Notation.}\label{tab:notation}
+\begin{tabularx}{\linewidth}{@{}p{.29\linewidth}Y@{}}
+\toprule Symbol & Meaning\\\midrule
+$(r,g,t)$; $j$ & Session, recovery generation, leader term; position
+within that term. \Rv{\Cid{B1}Indices refer to one branch, on which index $r$ names session $\sigma_r$.}\\
+\Rv{$\sigma_r$} & \Rv{Session ID: the hash of the boundary that opened
+session $r$ (\cref{sec:witness}).}\\
+$i_r$; $V_i$ & Region serving session $r$; members of region $i$.\\
+$\omega_{i,v}$; $W_i$; $F_i$ & Member weight; total regional weight;
+\Rv{configured} upper bound on Byzantine weight, with $F_i<W_i/2$.\\
+$\Delta_i$; $K$ & Regional message-delay bound; maximum DATA blocks
+in a leader term.\\
+$\tagg{AUTH}_{r,g}$; $\mathit{cfg}_r$ & Finalized authority for the
+generation; identifier of the session's fixed voting snapshot.\\
+$A_{r,g,t}$ & Anchor immediately before term $(r,g,t)$.\\
+$A_{r,0,0}$; $A_{r,g,0}$ & Inherited session anchor; generation anchor
+chosen at initialization or recovery\Rv{, also called the generation's
+\emph{opening}}.\\
+$h(B)$; $k_r(B)$ & DATA height from genesis; physical position within
+session $r$, counting DATA and DRAIN.\\
+$\TB_r$; $H_r$; $T_r$ & Session DATA quota; last allowed DATA height;
+DATA block at that height.\\
+$m_{r,g,t}$ & Number of fresh positions in the term.\\
+$L(r,g,t)$ & Leader of the view.\\
+$\QC_{r,g,t}(B)$; ANCHOR QC & Proposal certificate for $B$;
+certificate re-certifying $A_{r,g,0}$.\\
+$\FC_r(B)$ & Regional receipt: matching FINAL signatures of weight
+$>F_{i_r}$, validated by \cref{def:receipt}.\\
+$Q_r^0$; $Q_v$; $Q^*$ & Inherited anchor's commitment evidence; replica's entry
+lock; justification selected by the recovery leader.\\
+$e_v(r,g,t)$; $\tau_v(P)$; $a_v$ & Local view-entry time; time of first
+validated vote for proposal $P$; time of receiving a quit proof.\\
+$\rho$; $\lambda(B)$ & Block's finalized L1 reference; its L1 height.\\
+$\chi(\lambda)$; $\mathcal L_R$ & Effective live/off map at L1 height
+$\lambda$; cyclic region order.\\
+$h_*$; $\lambda_a$; \Rv{$N$} & \Rv{\Cid{B6}Retained DATA height of a
+Force; activation L1 height; notice period in L1 blocks.}\\
+\Rv{$\Del(F)$} & \Rv{Deletion scope of Force $F$ (\cref{sec:l1}).}\\
+$\lambda_s$; $\lambda_r^{\rm open}$ & Successor-selection L1 height;
+selection height of the boundary that opened session $r$.\\
+$G_u$; $G_{\rm msig}$ & \Rv{\Cid{C15}Last block of observer $u$'s
+global prefix, initially a trusted checkpoint}; the committee's internal
+protected checkpoint. Both include \Rv{session IDs}.\\
+$s_u(B)$; \Rv{$\mu(B)$} & First full validation and relay by observer $u$;
+first full validation by the committee.\\
+$T_{\rm mon}$; $T_{\rm msig}$; $T_{\rm L1}$ & Monitoring bound;
+committee decision window\Rv{, a parameter}; Force submission-to-finalization bound.\\
+\Rv{$\Twait$} & Observer waiting period,
+$T_{\rm mon}+T_{\rm msig}+T_{\rm L1}$.\\
+$E$; \Rv{Ready} & Entry proof; completion of the
+successor's boundary, history, and authority validation \Rv{(\cref{def:ready})}.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Blocks, positions, and L1 references}
+\label{sec:blocks}
+The anchor $A_{r,g,t}$ is the block immediately before the first fresh
+position of view $(r,g,t)$. We always write all three indices.
+\begin{itemize}
+\item $A_{r,0,0}$ is the DATA block inherited from the preceding
+session; $A_{0,0,0}$ is genesis. It keeps the regional commitment evidence from the session that
+produced it: a direct or covering receipt as defined in
+\cref{sec:coverage}. Genesis has synthetic evidence.
+\item For $g>0$, NEWVIEW chooses the recovery anchor $A_{r,g,0}$
+(\cref{alg:recovery}). It is certified but may be uncommitted.
+\item For $t>0$, $A_{r,g,t}$ is the terminal DATA block of term
+$(r,g,t-1)$, certified by that term's terminal QC.
+\end{itemize}
+The anchor of a view never changes. The generation starts at
+$A_{r,g,0}$; later terms use their own anchors $A_{r,g,t}$. ANCHOR voting
+re-certifies only $A_{r,g,0}$, once per generation.
+
+Each block has two positions.
+\begin{itemize}
+\item The \emph{DATA height} $h(B)$ counts the DATA blocks on the chain
+from genesis to $B$.
+\item The \emph{physical position} $k_r(B)$ counts DATA and DRAIN blocks
+within session $r$, with $k_r(A_{r,0,0})=0$. This local count does not change
+the signed fields of $A_{r,0,0}$.
+\end{itemize}
+A new block of session $r$ has the form
+\[
+ B=(r,k,h,\mathit{type},x,\Hash(B_{\rm parent}),\rho),
+ \qquad \mathit{type}\in\{\tagg{DATA},\tagg{DRAIN}\},
+\]
+with $k=k_r(B_{\rm parent})+1$. A DATA block carries a batch $x$ of
+requests and has $h=h(B_{\rm parent})+1$. A DRAIN block carries no batch
+and has $h=h(B_{\rm parent})$.
+
+\paragraph{L1 references.}
+The reference $\rho$ names a finalized L1 block. It holds that L1
+block's height $\lambda(B)$ and hash, and a registry proof for the L1
+control records up to that height. These rules hold:
+\begin{itemize}
+\item along DATA ancestry, $\lambda$ never decreases;
+\item the first DATA block of session $r$ has $\lambda\ge
+\lambda^{\rm open}_r$, the selection height of the boundary that opened
+session $r$ (\cref{sec:witness}\Rv{; for session $0$, \cref{sec:l1}});
+\item a DRAIN block copies the reference of $T_r$.
+\end{itemize}
+The authenticated timestamp of the L1 block named by $\rho$ can be
+read from its header. It is not a commit timestamp for $B$. Recovery
+may commit $B$ much later \Rv{\Cid{A3}(\cref{sec:late-receipt}). The
+regional Vote step applies no receive-time freshness filter to $\rho$.}
+
+The reference of $T_r$ gives the starting L1 height for selecting the
+regular successor (\cref{sec:witness}). It cannot protect a block from
+an activated force, even if the reference predates the force.
+
+Regional validity uses only the session's fixed authority. Later L1
+updates do not change it. A regionally valid block can still be left out
+of the external chain (\cref{sec:external}).
+
+\subsection{Session quota, term positions, and DRAIN}
+\label{sec:quota}
+\paragraph{1. Fix the session endpoint.}
+Session $r$ may add $\TB_r\ge1$ DATA blocks after $A_{r,0,0}$. Its last
+DATA height is
+\[
+ H_r=h(A_{r,0,0})+\TB_r.
+\]
+The DATA block at this height is $T_r$. Recovery never changes $H_r$.
+The quota counts the DATA blocks after $A_{r,0,0}$ in a proposal's
+ancestry, whether committed or not. DRAIN, resends, and ANCHOR votes
+use no quota.
+
+\paragraph{2. Produce DATA while space remains.}
+If $h(A_{r,g,0})<H_r$, generation $(r,g)$ is a \emph{DATA generation}.
+Each term begins at its anchor $A_{r,g,t}$ and has
+\[
+ m_{r,g,t}=\min\{K,\;H_r-h(A_{r,g,t})\}
+\]
+new positions, numbered $j=0,\ldots,m_{r,g,t}-1$. At position $j$, the
+DATA block has
+\[
+ h=h(A_{r,g,t})+j+1,\qquad
+ k=k_r(A_{r,g,t})+j+1.
+\]
+A new position is called a \emph{fresh position}; its block is a
+\emph{fresh block}. The anchor itself is not fresh. The last position
+$j=m_{r,g,t}-1$ is the \emph{terminal position}, and its QC is the
+\emph{terminal QC}.
+
+If the terminal DATA height is below $H_r$, its QC admits term
+$(r,g,t+1)$, with that terminal block as $A_{r,g,t+1}$. If it is $H_r$,
+there is no next term. Only the last DATA term can have fewer than $K$
+positions. The initial generation is always a DATA generation, since
+$\TB_r\ge1$.
+
+\paragraph{3. Use DRAIN when recovery starts at the endpoint.}
+If $g>0$ and $h(A_{r,g,0})=H_r$, generation $(r,g)$ is a
+\emph{drain generation}. It has only term $t=0$ and position $j=0$,
+with $m_{r,g,0}=1$. Its one fresh block is DRAIN, whose parent is
+$A_{r,g,0}$ and whose justification is the generation's ANCHOR QC.
+It carries no requests, keeps DATA height $H_r$, and has no next term.
+
+DRAIN supplies a commit timer. ANCHOR voting starts no timer, so
+re-certifying $A_{r,g,0}$ alone does not commit it. At height $H_r$, a
+DATA child would exceed the quota. The DRAIN child's timer instead
+commits its ancestors, including $T_r$.
+\begin{itemize}
+\item A DATA generation that reaches $H_r$ does not append DRAIN.
+It waits for $T_r$'s timer or recovers after a quit.
+\item A later drain generation may start from an earlier DRAIN.
+Each interrupted recovery may add one DRAIN, so their total number
+is not bounded.
+\item The choice depends on the recovery anchor's DATA height, not on
+whether a replica has already committed $T_r$.
+\end{itemize}
+DRAIN stays in the regional log. The external chain contains only DATA,
+and the next session inherits $T_r$.
+
+\paragraph{Example.}
+Let $h(A_{r,0,0})=100$, $\TB_r=10$, and $K=4$, so $H_r=110$.
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}\toprule
+View & Anchor height & Fresh DATA heights\\\midrule
+$(r,0,0)$ & 100 & 101--104\\
+$(r,0,1)$ & 104 & 105--108\\
+$(r,0,2)$ & 108 & 109--110\\\bottomrule
+\end{tabular}
+\end{center}
+Recovery from DATA 107 starts a new generation whose first term produces
+108--110. Recovery from certified DATA 110 starts a drain generation.
+In both cases, the endpoint remains 110.
+
+\subsection{Certificates and signed messages}
+\label{sec:certificates}
+\Cref{tab:certificates} lists the certificates of a session. Each needs
+matching signatures from distinct members of $V_{i_r}$ with total weight
+$>F_{i_r}$.
+
+\begin{table}[htbp]\centering\small
+\caption{Certificates of a session.}
+\label{tab:certificates}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.25\linewidth}>{\raggedright\arraybackslash}p{.24\linewidth}Y@{}}
+\toprule
+Certificate & Signed message & Purpose\\
+\midrule
+Proposal QC $\QC_{r,g,t}(B)$ & DATA-VOTE or DRAIN-VOTE & Justifies a
+child. A terminal QC below $H_r$ also admits the next term.\\
+ANCHOR QC & ANCHOR-VOTE & Re-certifies the opening $A_{r,g,0}$ in
+generation $g$, before any fresh proposal.\\
+BLAME proof & BLAME & Freezes a generation (\cref{sec:quit}).\\
+Regional receipt $\FC_r(B)$ & FINAL & Proves that a correct replica
+committed DATA block $B$.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A correct replica casts at most one fresh vote per $(r,g,t,j)$ and one
+ANCHOR vote per $(r,g)$. DATA and DRAIN votes follow the same rule but
+are different signed types. No QC and no ANCHOR vote starts a commit
+timer.
+
+\paragraph{Signed context.}
+Every signature binds the \Rv{\Cid{B1}session ID $\sigma_r$}, the
+voting configuration, session $r$, region $i_r$, and the message type.
+This separates ordinary continuation from a later force fork
+(\cref{sec:witness}). Messages of a view also bind the L1
+authority and $(r,g,t)$. The other signed fields are:
+\begin{itemize}
+\item \textbf{PROPOSE and fresh votes:} the \Rv{opening identity
+(below)}, position $j$, block
+type, physical position, DATA height, and block hash;
+\item \textbf{NEWVIEW and ANCHOR-VOTE:} the identity of the chosen
+opening. NEWVIEW also binds its justification and entry proof;
+\item \textbf{STATUS:} the sender's entry lock and entry proof. No
+opening is needed;
+\item \textbf{BLAME:} the view only. It binds no opening, block hash, or
+progress count. All complaints for a view thus sign the same statement,
+even before NEWVIEW;
+\item \textbf{FINAL:} session-stable fields only (below).
+\end{itemize}
+Message displays omit these context fields.
+
+\paragraph{Rank and the base justification.}
+Within session $r$, a QC formed in term $(r,g,t)$ for block $B$ has rank
+$(g,t,k_r(B))$, compared lexicographically. The ANCHOR QC of generation
+$g$ has rank $(g,0,k_r(A_{r,g,0}))$, just below the generation's first
+fresh QC. A fixed total order on certified content breaks ties. Signer
+sets and encodings do not matter. \Rv{\Cid{B1}The \emph{opening
+identity} of generation $g$ is}
+$(g,k_r(A_{r,g,0}),h(A_{r,g,0}),\Hash(A_{r,g,0}))$. \Rv{In this draft,
+``opening'' always means the generation's opening block $A_{r,g,0}$, as
+in v3.3; a session is named by its session ID.}
+
+The anchor $A_{r,0,0}$ also has a \emph{base justification} $Q_r^0$: the
+anchor together with its direct or covering commitment evidence in the
+boundary witness (\cref{sec:coverage,sec:witness}). Its justified block
+is exactly $A_{r,0,0}$, even if the evidence uses a receipt for a higher
+old-session block. That higher block is evidence only. $Q_r^0$ ranks
+below every QC of session $r$.
+Recovery uses it when no QC of the session is known. A QC of another
+session is never a justification in session $r$, so it cannot replace
+$A_{r,0,0}$.
+
+\paragraph{Regional receipts.}
+After a replica commits a DATA block $B$ of session $r$, by $B$'s own
+timer or as an ancestor, it sends
+\[
+ \langle\tagg{FINAL},\mathit{cfg}_r,r,h(B),\Hash(B)\rangle_v
+\]
+to its region and to the backbone. Matching FINAL messages of weight
+$>F_{i_r}$ form the regional receipt $\FC_r(B)$. The receipt carries $B$ and the ancestry needed to validate it, or
+refers to a validated local cache.
+
+\begin{definition}[Valid regional receipt]
+\label{def:receipt}
+A regional receipt $\FC_r(B)$ is valid when all of the following hold:
+\begin{enumerate}[label=(\roman*)]
+\item $B$ is a DATA block of session $r$, extends $A_{r,0,0}$, and has
+$h(A_{r,0,0})<h(B)\le H_r$;
+\item distinct members in session $r$'s fixed voting snapshot have
+valid signatures on the same
+$\langle\tagg{FINAL},\mathit{cfg}_r,r,h(B),\Hash(B)\rangle$,
+with total weight $>F_{i_r}$ and the signed context specified above; and
+\item $B$ and its required ancestry pass the block-validation rules of
+\cref{sec:admission}.
+\end{enumerate}
+The verifier checks this evidence; it does not replay the signers'
+timers. The weight threshold guarantees at least one correct signer,
+who sends FINAL only after committing $B$.
+\end{definition}
+Here $\mathit{cfg}_r$ identifies session $r$'s fixed voting snapshot.
+When we write $\FC(B)$ without a session subscript, we mean the receipt
+from the session that produced $B$. The inherited anchor keeps that
+receipt; it does not acquire a new one. \Rv{\Cid{C5}A verifier outside
+the region checks condition~(iii) from evidence, as
+\cref{sec:admission} explains.}
+\begin{itemize}
+\item FINAL binds no generation or term. So FINAL messages for one block
+combine across recoveries. The block hash keeps the block's signed
+context.
+\item If a DRAIN commits $T_r$, replicas send FINAL for $T_r$, never for
+the DRAIN.
+\item Replicas of session $r$ send no FINAL for $A_{r,0,0}$. It keeps its original commitment evidence, which may come from an
+earlier session if intermediate sessions added no DATA.
+\item A replica may \Rv{\Cid{C6}also commit $B$ and its uncommitted
+ancestors when it obtains a valid $\FC_r(B)$} of its own session.
+\Rv{Completion does this for $T_r$ (\cref{alg:steady}). Such a commit
+sends no FINAL, because the receipt already exists. Only Completion
+also cancels timers.} Receipts of other sessions serve only as history or anchor
+evidence. They never change this session's locks or log.
+\end{itemize}
+
+\paragraph{Receipt coverage.}
+\label{sec:coverage}
+A valid $\FC_r(D)$ also proves commitment of every DATA ancestor $B$
+of $D$ in the same \Rv{session}. At least one correct signer committed
+$D$, which commits those ancestors. The covering evidence includes the
+valid receipt for $D$ and the fully verified ancestry linking $D$ to $B$.
+It does not claim that the signatures name $B$ directly.
+
+This coverage never substitutes for a receipt from a different session.
+It also does not replace the check that $B$ belongs to the authorized
+external branch. A later Force may discard $D$ while keeping $B$; the
+regional commitment evidence for $B$ still holds. External observers,
+retained-anchor witnesses, and base justifications may use direct or
+covering evidence. No extra FINAL messages or certificate round are
+needed. We use ``commitment evidence for $B$'' for either form.
+
+\subsection{Admission, validation, and engine states}
+\label{sec:admission}
+\paragraph{Admission.}
+Replica $v$ admits views as follows.
+\begin{itemize}
+\item $(r,0,0)$ is admitted at $v$'s Ready event for the boundary that
+opens session $r$ (\cref{def:ready}). The witness is the entry proof.
+The NEWVIEW must choose exactly $A_{r,0,0}$.
+\item $(r,g,0)$ with $g>0$ is admitted once $v$ holds
+$\tagg{AUTH}_{r,g}$ and a quit proof for generation $g-1$. That proof is
+the entry proof. The NEWVIEW is justified by a QC of an earlier
+generation of session $r$, or by $Q_r^0$.
+\item $(r,g,t)$ with $t>0$ is admitted once $v$ also holds the terminal
+QCs of terms $0,\ldots,t-1$, each for DATA below $H_r$.
+\end{itemize}
+Term zero is admitted before its NEWVIEW arrives. Its progress checks
+therefore run even if the initial leader is silent. Fresh proposals need
+the generation's ANCHOR QC. This holds in every generation, including
+generation $0$ of session $0$; unlike v3.3, genesis has no shortcut. A
+message is \emph{admissible} if its view is admitted and its signatures
+are valid.
+
+\Rv{\Cid{C5}A verifier that is not a replica of the session has no
+admission events. When it validates history (\cref{def:receipt},
+\cref{sec:external}), a view counts as admitted if the evidence contains
+its admission witness: the boundary witness for $(r,0,0)$, the chain of
+entry proofs for $(r,g,0)$, and the earlier terminal QCs for $t>0$.}
+
+\paragraph{Complete validation.}
+Validation checks signatures, authority, admission, block type, quota,
+both positions, the L1-reference rules, the parent rule
+(\cref{tab:parent}), parent QCs, hash links, and application validity
+throughout the required ancestry. Every relevant ancestor includes its
+signed proposal and block data; a chain of certificate hashes alone is
+not enough. Dependencies come from the message or a validated local
+cache. Correct senders send complete validation bundles. A reference is
+allowed only if the receiver can resolve it within the delay bound of
+\cref{ass:network}. Bundles list each dependency once.
+
+\paragraph{Evidence takes priority.}
+Before validating a message or discarding a duplicate, inspect all signed
+material in it for a quit proof (\cref{sec:quit}). A proof needs its own
+valid signatures and admission witnesses. A valid proof counts even if
+the message that carries it is invalid or incomplete. Compare incoming
+material with all retained material, not only with objects inside the
+message.
+
+\paragraph{One proposal-processing rule.}
+Every admitted fresh proposal of the current generation that $v$ has not
+voted for invokes the Vote step. This includes proposals in attached
+histories, proposals of earlier terms, and proposals whose blocks are
+already committed as ancestors. A proposal's identity is
+$(r,g,t,j,\Hash(B))$. The signer set or encoding of its parent QC does
+not change it. Deduplicate by this identity after evidence inspection.
+Old-generation proposals are retained without new votes or timers.
+Future-generation messages wait for entry.
+
+\paragraph{Engine states.}
+A replica runs one engine for each \Rv{\Cid{B1}session ID} of its region.
+Engines \Rv{of different sessions} remain separate, even if they use the
+same session index. The engine of
+session $r$ is in one of three states.
+\begin{itemize}
+\item \textbf{Active:} the current generation is admitted and unfrozen.
+The engine proposes, votes, and changes terms.
+\item \textbf{Frozen:} the current generation has a quit proof. The
+engine stops proposals, votes, and term changes. It still processes
+evidence, old votes, QCs, receipts, and recovery.
+\item \textbf{Complete:} the replica holds $\FC_r(T_r)$ satisfying
+\cref{def:receipt}.
+Production in session $r$ is over, even if the external handoff is still
+pending. The engine only serves data.
+\end{itemize}
+Committing $T_r$ locally does not complete the engine. Other members may
+still need this replica's recovery votes before a receipt forms. Each
+message goes to the engine identified by its \Rv{session ID}, so
+evidence from one session or branch never freezes another. These engine
+states do not describe external finality. The external chain may move
+to another branch while an old engine still runs. \Rv{\Cid{A4}L1 status
+updates and Forces never change an engine's state, timers, or log; they
+act only on the external branch (\cref{alg:rotation}).}
+
+\begin{table}[htbp]\centering\small
+\caption{Parent selection for the next fresh position $j$ of term $(r,g,t)$.}
+\label{tab:parent}
+\begin{tabularx}{\linewidth}{@{}l Y Y@{}}
+\toprule
+Condition & $B_{\mathrm{parent}}$ & $Q_{\mathrm{parent}}$\\
+\midrule
+$j=0,t=0$ (DATA or DRAIN) & Opening $A_{r,g,0}$ & Its ANCHOR QC in $(r,g,0)$\\
+$j=0,t>0$ & Anchor $A_{r,g,t}$, the terminal block of $(r,g,t-1)$ & Its proposal QC in $(r,g,t-1)$\\
+$1\le j<m_{r,g,t}$ & Position $j-1$ of $(r,g,t)$ & Its proposal QC in $(r,g,t)$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Regional protocols}
+\label{sec:protocols}
+Protocols 1 and 2 run inside the engine of one session $r$. They are the
+protocols of v3.3 with the changes listed below. \RR{Red text} marks
+every difference from v3.3, in the boxes, in the message-processing
+order, and in the quit proofs. Explanations stay outside the boxes.
+
+\paragraph{Notation.}
+All anchors and view times use their full session indices. The displayed
+regional messages omit $r$, but their signatures bind the \Rv{session ID
+$\sigma_r$} and $r$. In these two protocols, $\Delta$ and $F$ mean
+$\Delta_{i_r}$ and $F_{i_r}$.
+
+\paragraph{Changes from v3.3.}
+\begin{enumerate}[label=\arabic*.]
+\item \emph{Stake.} Certificates need weight $>F$, not $f+1$ signatures.
+\item \emph{Quota.} A term has $m_{r,g,t}\le K$ positions. No term follows
+$H_r$.
+\item \emph{DRAIN.} A drain generation proposes one DRAIN. Its vote
+counts as progress.
+\item \emph{Receipts.} Replicas send FINAL after committing DATA. A
+receipt for $T_r$ completes the engine (new step~5 of \cref{alg:steady}).
+\item \emph{Timers.} Completion also cancels timers. A force never does.
+\item \emph{Recovery entry.} After the $\Delta$ wait, a replica enters
+when $\tagg{AUTH}_{r,g+1}$ is finalized. $Q_r^0$ can serve as the entry
+lock and as the justification.
+\item \emph{Sessions.} Each message goes to the engine of its session.
+Session $0$ opens by bootstrap (\cref{alg:bootstrap}).
+\end{enumerate}
+
+\paragraph{Message-processing order.}\leavevmode
+\RR{Replica $v$ first passes each message to the engine of the session
+\Rv{ID} that the message binds. L1 updates go to \cref{alg:force}. Boundary witnesses and receipts of
+other sessions go to \cref{alg:rotation,alg:external}.} The engine handles each received
+message in this order:
+\begin{enumerate}[label=(\arabic*)]
+\item check all signed material for a quit proof;
+\item check completeness and validity;
+\item process attached DATA \RR{and DRAIN} proposals under Vote, parents
+first;
+\item process attached terminal QCs under step~4 of \cref{alg:steady},
+in increasing term order;
+\item process the message itself.
+\end{enumerate}
+When a message and a timer fall at the same time, $v$ handles the
+message first.
+
+\subsection{Steady state}
+\label{sec:steady}
+\Cref{alg:steady} gives the steady state of a session: proposals, votes,
+timers, term rotation, and completion.
+
+\begin{protocol}{alg:steady}{Propose, vote, commit, normal rotation\RR{, and completion}}
+Replica $v$ runs these steps \RR{in the engine of session $r$}. Its
+current term is $(r,g,t)$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Propose.} Run this step only if $v=L(r,g,t)$, $g$ is
+unfrozen\RR{, and session $r$ is not complete}.
+\RR{In a DATA generation,} for each position
+$j=0,\ldots,\RR{m_{r,g,t}}-1$, in order:
+ \begin{itemize}
+ \item Wait until $v$ holds $B_{\mathrm{parent}}$ and
+       $Q_{\mathrm{parent}}$ for $j$ (\cref{tab:parent}).
+ \item Build \RR{$B=(r,k,h,\tagg{DATA},x,\Hash(B_{\mathrm{parent}}),\rho)$,
+       with $k$ and $h$ from \cref{sec:quota} and an L1 reference $\rho$}.
+       The batch $x$ follows \Rv{\cref{sec:requests}}.
+ \item Broadcast
+       $P=\langle\tagg{PROPOSE},g,t,j,B,Q_{\mathrm{parent}}\rangle_v$
+       with its validation bundle.
+ \item Process $P$ under Vote.
+ \end{itemize}
+ \RR{In a drain generation, propose once, at $(t,j)=(0,0)$. The block is
+ a DRAIN with parent $A_{r,g,0}$, no batch, DATA height $H_r$, and the L1
+ reference of $T_r$. Broadcast and process it as above.}
+ Do not wait for the parent to commit. Never sign two different
+ blocks for one position. A resend repeats the same $P$.
+
+\item \textbf{Vote.} Run this step on every DATA \RR{or DRAIN} proposal
+$P$ of term $(r,g_P,t_P)$ at position $j_P$. Here $t_P$ may be earlier
+than $t$. The step also applies to proposals inside attached histories.
+ \begin{enumerate}[label=(\alph*)]
+ \item If $P$ or its attached material contains a quit proof for $g$,
+       run Quit and stop.
+ \item If $g_P<g$, retain $P$ and stop. If $g_P>g$, buffer $P$
+       until $v$ enters generation $g_P$.
+ \item If $g$ is frozen \RR{or session $r$ is complete}, retain $P$ and
+       stop.
+ \item If a dependency is missing, retain $P$, request the dependency,
+       and stop. Rerun this step when it arrives.
+ \item If $P$ is invalid, discard it and stop. \RR{Validity includes the
+       block type, the quota, both positions, and the L1 reference.}
+ \item If $v$ has already voted for $P$, stop.
+       A duplicate never restarts a timer.
+ \item Otherwise, let $\tau_v(P)$ be the current time. Forward $P$ and
+       its bundle to all replicas. Broadcast
+       $\langle\tagg{DATA\mbox{-}VOTE},g,t_P,j_P,\Hash(B)\rangle_v$
+       \RR{(DRAIN-VOTE if $B$ is a DRAIN)}.
+       Start the commit timer of $P$. It expires at $\tau_v(P)+2\Delta$.
+ \end{enumerate}
+
+\item \textbf{Commit.} When the timer of $P$ expires, commit $B$ and
+its uncommitted ancestors. \RR{For each DATA block $D$ of session $r$
+that this commits, send
+$\langle\tagg{FINAL},\mathit{cfg}_r,r,h(D),\Hash(D)\rangle_v$ to the region
+and the backbone. A committed DRAIN yields FINAL for $T_r$, never for
+itself. Relay each receipt of session $r$ that $v$ obtains to the region
+and the backbone.} Only Quit \RR{and Completion} cancel a timer. Entering a
+new term does not cancel it. A QC never starts a timer. \RR{A force
+instruction never cancels a timer.}
+
+\item \textbf{Terminal QC and rotation.} Run this step the first time
+$v$ obtains a valid terminal QC for a term $(r,g,t')$.
+``Obtains'' means that $v$ assembles the QC from votes or finds it in
+any message, including as another proposal's $Q_{\mathrm{parent}}$.
+ \begin{enumerate}[label=(\alph*)]
+ \item Process each unseen proposal in the QC's history under Vote,
+       parents first.
+ \item If $g$ is now frozen, stop. \RR{If the QC certifies DATA at
+       $H_r$, or a DRAIN, stop: no next term exists.}
+ \item Send the QC and its validation bundle to $L(r,g,t'+1)$.
+ \item If $t\le t'$, enter $(r,g,t'+1)$ and set $e_v(r,g,t'+1)$ to the
+       current time. Cancel the progress checks of all earlier
+       terms.
+ \end{enumerate}
+ A QC never moves $v$ to an earlier term. It never changes a recorded
+ entry time.
+
+\item \RR{\textbf{Completion.} Run this step the first time $v$ obtains a
+regional receipt $\FC_r(T_r)$ satisfying \cref{def:receipt}.}
+ \begin{itemize}\color{rrRed}
+ \item Commit $T_r$ and its uncommitted ancestors.
+ \item Mark session $r$ complete. Stop its proposals, votes, progress
+       checks, term changes, and recovery. Cancel its unexpired timers.
+ \item Relay $\FC_r(T_r)$ and its bundle to the region and the backbone.
+ \item Keep serving data. \Cref{alg:rotation} runs the handoff.
+ \end{itemize}
+ \RR{A force instruction never runs this step.}
+\end{enumerate}
+\end{protocol}
+
+The acceptance time $\tau_v(P)$ is when complete validation and the first
+vote occur, not an earlier arrival of an incomplete packet. Each replica
+records its own entry time for each term. In session $r$, $e_v(r,0,0)$ is
+set at Ready, in step~\Rv{1\Cid{C12}} of \cref{alg:bootstrap}. For $g>0$, $e_v(r,g,0)$ is
+set in step~3 of \cref{alg:recovery}. For $t>0$, $e_v(r,g,t)$ is set in
+step~4 of \cref{alg:steady}. A term's progress checks therefore start
+when the term is admitted locally, not when its leader's first proposal
+arrives. A silent new leader cannot delay them.
+
+A proposal or QC at height $H_r$ does not end the session. Without a
+quit, the timer of $T_r$ commits it; no later block is needed. Only a
+receipt for $T_r$ completes the engine.
+
+\subsection{Quit proofs and recovery}
+\label{sec:quit}
+A quit proof freezes a generation. \Cref{alg:recovery} then moves the
+session to the next generation.
+
+\begin{protocol}{alg:recovery}{Blame, quit, and recovery}
+Replica $v$ runs these steps \RR{in the engine of session $r$}. Its
+current term is $(r,g,t)$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Blame.} \RR{Let $q=m_{r,g,t}$ in a DATA generation and
+$q=1$ in a drain generation.} For each $p=1,\ldots,\RR{q}$, run a
+progress check at time
+\[
+ e_v(r,g,t)+(2p+4)\Delta.
+\]
+\RR{Schedule the check for $p=1$ at entry, even if the opening is not yet
+known. Schedule the others once $q$ is known. A check whose time has
+already passed runs at once.}
+At that time, broadcast $\langle\tagg{BLAME},g,t\rangle_v$ if all of
+these hold:
+ \begin{itemize}
+ \item $v$'s current term is still $(r,g,t)$, $g$ is unfrozen\RR{, and
+       session $r$ is not complete};
+ \item $v$ has cast DATA \RR{or DRAIN} votes for fewer than $p$ positions
+       of term $(r,g,t)$ (ANCHOR votes do not count);
+ \item $v$ has not yet sent BLAME for $(r,g,t)$.
+ \end{itemize}
+
+\item \textbf{Quit.} Run this step the first time $v$ holds a quit proof
+for its current generation $g$.
+ \begin{itemize}
+ \item Freeze $g$. Stop all progress checks, proposals, votes, and
+       term changes in $g$. Cancel every unexpired commit timer of $g$.
+ \item Set $a_v$ to the current time. Broadcast the proof.
+ \item Keep all commitments. Keep collecting votes and QCs of $g$.
+       They can raise the entry lock chosen in step~3. \RR{Keep
+       processing regional receipts (step~5 of \cref{alg:steady}).}
+ \item If the proof is of type (b) or (c), submit it to L1. Do
+       not wait for L1 to process it.
+ \end{itemize}
+
+\item \textbf{Status and entry.} \RR{Skip this step if session $r$ is
+complete.} \RR{Wait until at least $a_v+\Delta$ and until
+$\tagg{AUTH}_{r,g+1}$ is finalized. Set $e_v(r,g+1,0)$ to the time both
+conditions hold, and read that authority from L1.} Then:
+ \begin{itemize}
+ \item Set the entry lock $Q_v$ to the highest-ranked QC
+       (DATA\RR{, DRAIN,} or ANCHOR) that $v$ knows from generations
+       $0,\ldots,g$\RR{, or to $Q_r^0$ if it knows none}.
+       $Q_v$ never changes after this. QCs that arrive later do not
+       update it.
+ \item Enter $(r,g+1,0)$ as unfrozen and start its progress checks.
+       \RR{Keep $A_{r,0,0}$, $H_r$, and the voting snapshot of session $r$.}
+ \item Send $\langle\tagg{STATUS},g+1,0,Q_v,E\rangle_v$ and its
+       validation bundle to $L(r,g+1,0)$. Here $E$ is the quit proof for
+       $g$, which is also the entry proof of $g+1$.
+ \item Process any buffered proofs for $g+1$.
+ \end{itemize}
+
+\item \textbf{New-view.} Run this step only at $L(r,g+1,0)$. Wait $2\Delta$
+after its own entry. If $g+1$ is still current and unfrozen:
+ \begin{itemize}
+ \item Let $Q^*$ be the highest-ranked QC from generations $0,\ldots,g$
+       that the leader knows, including the QCs in STATUS
+       messages\RR{; if it knows none, let $Q^*=Q_r^0$}.
+ \item Let $A_{r,g+1,0}$ be the block that $Q^*$ certifies. \RR{If
+       $h(A_{r,g+1,0})<H_r$, generation $g+1$ is a DATA generation.
+       Otherwise it is a drain generation.}
+ \item Broadcast
+       $\langle\tagg{NEWVIEW},g+1,0,A_{r,g+1,0},Q^*,E\rangle_{L(r,g+1,0)}$
+       with its validation bundle. Choose only one opening block for
+       $g+1$.
+ \end{itemize}
+
+\item \textbf{Anchor vote.} On receiving a NEWVIEW for $g+1$:
+ \begin{enumerate}[label=(\alph*)]
+ \item If it contains a quit proof for $g+1$, run Quit and stop.
+ \item Validate its leader, entry proof $E$, opening block $A_{r,g+1,0}$,
+       $Q^*$, and dependencies. If data are missing, request them and
+       wait without voting. If the message is invalid, discard it.
+ \item Vote only if all of these hold: $g+1$ is current and unfrozen; $v$
+       has cast no ANCHOR vote in $g+1$; and $\rank(Q^*)\ge\rank(Q_v)$.
+ \item To vote, forward the NEWVIEW to all replicas and broadcast
+       $\langle\tagg{ANCHOR\mbox{-}VOTE},g+1,0,\Hash(A_{r,g+1,0})\rangle_v$.
+       Start no timer. Use no fresh position.
+ \end{enumerate}
+ Matching ANCHOR votes \RR{of total weight $>F$} form the ANCHOR QC.
+ When $L(r,g+1,0)$ obtains it, the leader starts Propose in
+ \cref{alg:steady} at $j=0$\RR{; in a drain generation, this is the
+ DRAIN}. Every replica, including one that cast no ANCHOR vote,
+ processes DATA \RR{and DRAIN} proposals backed by a valid ANCHOR QC
+ under Vote.
+\end{enumerate}
+\end{protocol}
+
+\paragraph{Complete quit proofs.}
+For an admitted generation $g$ \RR{of session $r$}, a proof consists of
+either:
+\begin{enumerate}[label=(\alph*)]
+\item distinct signatures \RR{of total weight $>F$} on the same
+$\langle\tagg{BLAME},g,t\rangle$ for an admitted term, with that term's
+admission witness;
+\item two different admissible DATA \RR{or DRAIN} blocks signed by
+$L(r,g,t)$ at the same $(r,g,t,j)$, with their admission \RR{and quota}
+witnesses; or
+\item two valid NEWVIEWs signed by $L(r,g,0)$ selecting different opening
+blocks for generation $g$.
+\end{enumerate}
+\RR{A DATA block beyond the quota, or a DRAIN outside a drain generation,
+is invalid. It is rejected and never counts for (b).}
+Different openings count even when their blocks are comparable, because
+they fix different starting heights $h(A_{r,g,0})$. The height formula then
+maps the same position to different heights.
+
+Different QCs for the same opening block are not equivocation. Evidence
+from any admitted term can freeze its generation, including a term not
+yet locally reached. Old-generation proofs are archival and may be
+submitted to L1. \RR{Evidence from another session never freezes this
+engine.} Future-generation proofs are buffered until entry. Neither
+resets an unrelated recovery.
+
+The entry-lock test governs ANCHOR voting only. A replica that has
+committed $T_r$ locally still takes part in recovery until it holds
+$\FC_r(T_r)$, because other members may need its votes.
+
+\section{Regional and global finality}
+\label{sec:external}
+\Rv{\Cid{A8}This section uses the branch, session ID, and boundary
+witness of \cref{sec:witness}, and the deletion scope $\Del(F)$ of
+\cref{sec:l1}.}
+
+\subsection{Regional finality}
+\label{sec:regional-finality}
+\Rv{\Cid{C15}Each observer $u$ keeps a \emph{global prefix}: a sequence
+of DATA blocks that $u$ never rolls back. Its last block, with its
+session ID, is $u$'s global checkpoint $G_u$. Initially, $G_u$ is
+genesis or a checkpoint that $u$ explicitly trusts.}
+The checkpoint includes, or authenticates, its \Rv{session ID}, rotation
+position, voting configuration, and processed L1 history. The observer
+uses the current finalized L1 records to extend that history.
+
+\begin{definition}[Regional finality]
+\label{def:regional-finality}
+A DATA block $B$ \Rv{of session $\sigma_r$} has regional finality in an observer's current snapshot
+when all of the following hold:
+\begin{enumerate}[label=(\roman*)]
+\item \Rv{\Cid{C16}Starting from $G_u$, the regular boundaries and
+activated Forces give a current branch on which $\sigma_r$ is the
+session that covers DATA height $h(B)$, and $i_r$ is the region of
+$\sigma_r$.}
+% \item The proposal's view $(r,g,t)$, leader, anchor, and signed context are valid under that session's historical authority.
+\item $B$ has valid regional commitment evidence: its direct receipt
+under \cref{def:receipt}, or a covering receipt under \cref{sec:coverage}.
+\item The DATA history from $G_u$ through $B$ is a valid, continuous
+extension. Every DATA block has direct or covering commitment evidence
+from its own \Rv{session}. No
+activated Force removes any part of this history.
+\end{enumerate}
+\end{definition}
+The assigned region is derived before its receipt is checked. A region's
+valid receipt does not authorize that region to produce another region's
+blocks. The current live/off map also does not replace the historical
+authority of a retained block.
+
+Regional finality is relative to the current external branch. A later
+Force may remove that output. Its original regional commitment and
+receipt remain valid evidence about the old engine. A finalized Force
+that has not activated does not yet change this branch; it affects
+global finality as specified below. \Rv{\Cid{B4}The DATA blocks with
+regional finality on $u$'s current branch form $u$'s \emph{regional
+output}.}
+
+\subsection{Global finality}
+\label{sec:global-finality}
+A \emph{complete regional-finality bundle} contains the blocks, receipts,
+application history, boundary witnesses, and finalized L1 proofs needed
+to verify the path from a trusted checkpoint. Previously validated data
+may be cached. A valid descendant receipt can cover DATA ancestors in
+its own \Rv{session}, with their fully verified ancestry. Hashes
+alone do not supply missing block data or another session's evidence.
+
+Let $s_u(B)$ be the first time observer $u$ completely validates regional
+finality for $B$ and sends its complete bundle to the \Rv{committee}.
+Process ancestors before children and do this for every newly
+validated DATA block. Set each time once. Different signer sets,
+certificate encodings, duplicate bundles, and later recovery do not reset
+it. If a node loses its timing record, it waits again from a new relay.
+It cannot reconstruct an earlier start from the block's L1 reference.
+
+\Rv{\Cid{B6}The observer waiting period is}
+\[
+ \Rv{\Twait}=T_{\rm mon}+T_{\rm msig}+T_{\rm L1}.
+\]
+The three terms pay for complete monitoring, the committee's decision,
+and L1 finalization. The bounds are those of \cref{ass:monitor}\Rv{, and
+$T_{\rm msig}$ is the window of \cref{sec:protection}}.
+
+\begin{definition}[Global finality at an observer]
+\label{def:global-finality}
+At global-clock time $z$, observer $u$ may append DATA block $B$ to its
+global prefix if:
+\begin{enumerate}[label=(\roman*)]
+\item $B$ has regional finality under \Rv{\Cid{C11}$u$'s finalized L1
+snapshot at time $z$ (\cref{alg:external}, step~1)};
+\item all preceding DATA blocks \Rv{on $u$'s current branch} are already
+in $u$'s global prefix;
+\item $z\ge s_u(B)+\Rv{\Twait}$; and
+\item \Rv{\Cid{A2}$B\notin\Del(F)$ for every L1-finalized Force $F$
+whose target session is on $u$'s current branch, whether or not $F$ has
+activated.}
+\end{enumerate}
+At a deadline shared with L1 finalization, process the finalized Force
+first, then test these conditions.
+\end{definition}
+Only a continuous DATA prefix becomes global. DRAIN has no external
+finality of its own. Regular handoff and regional production do not
+wait for this promotion.
+
+This is an observer's verified, persistent state. Observers may confirm
+the same block at different times. There is no new global certificate,
+\Rv{\Cid{B5}per-block committee acknowledgement (a ``KEEP'' message),}
+or L1 transaction for promotion. A new observer must
+start from a checkpoint it explicitly trusts, or verify the required
+history and complete its own waiting periods. A block and its regional
+receipt alone do not prove a third party's global-finality claim.
+
+\subsection{Why the block's old timestamp is not the waiting start}
+\label{sec:late-receipt}
+\Rv{\Cid{A3}The L1 reference in a DATA block is fixed when the block is
+proposed. The block may obtain a QC, survive several interrupted
+recoveries, and commit much later, for example by a DRAIN that keeps the
+reference unchanged. A wait measured from that reference's timestamp
+could therefore end before any commit evidence exists. The external wait
+starts instead at $s_u(B)$, after complete receipt validation and relay;
+an old proposal or QC starts no such wait. This affects only observers:
+regional proposal timers, locks, and the FINAL format are unchanged.}
+
+\section{Cross-region rotation}
+\label{sec:xprotocols}
+
+\subsection{Anchors, successor selection, and boundary identity}
+\label{sec:witness}
+Let $\tagg{NextLive}(i,\chi)$ be the first other live region after $i$
+in the cyclic list $\mathcal L_R$. Search at most one cycle. If none
+exists, the result is $\bot$ and the handoff waits.
+
+A regular handoff inherits $A_{r+1,0,0}=T_r$. A forced handoff inherits
+the DATA block at $h_*$ on the target session's branch. If
+$h_*=h(A_{r,0,0})$, it reuses $A_{r,0,0}$ and its original direct or covering commitment
+evidence.
+Define the starting selection height by
+\[
+ \lambda_0=\begin{cases}
+ \lambda(T_r),&\text{regular handoff},\\
+ \max\{\lambda_a,\lambda(A_{r+1,0,0})\},&\text{forced handoff}.
+ \end{cases}
+\]
+The selection height $\lambda_s$ is the least finalized L1 height at
+least $\lambda_0$ with another live region. Use the status map effective
+at that height and set
+\[
+ i_{r+1}=\tagg{NextLive}(i_r,\chi(\lambda_s)),\qquad
+ \lambda^{\rm open}_{r+1}=\lambda_s.
+\]
+If no such height is finalized yet, retain the anchor and wait.
+\Rv{\Cid{C3}By \cref{sec:l1}, every node computes the same
+$\chi(\lambda_s)$, and hence the same successor.} Once
+selected, later passive status maps do not reselect this boundary.
+An applicable activated Force may replace a regular boundary.
+\Rv{\Cid{C14}A forced boundary is never replaced, because a session is
+the target of at most one Force. It is discarded only together with its
+branch, by a Force on an earlier session.}
+
+A boundary witness contains its REGULAR or FORCE mode, the predecessor
+\Rv{session ID}, the retained anchor and its commitment evidence, the successor,
+$\lambda_s$, and the needed L1 proofs. \Rv{\Cid{B4}A REGULAR witness
+carries the predecessor's \emph{terminal receipt}, a valid
+$\FC_r(T_r)$.} A FORCE witness also identifies
+the activated instruction. The successor's finalized authority must be
+available before entry. Genesis uses a synthetic witness and receipt
+\Rv{(\cref{sec:l1})}.
+
+\paragraph{\Rv{Session IDs and branches.}}
+\Rv{\Cid{A5}The canonical identity of a boundary determines the session
+ID of the session it opens:}
+\[
+ \Rv{\sigma_{r+1}=\Hash\bigl(\sigma_r,\ \text{mode},\ \Hash(A_{r+1,0,0}),\
+ i_{r+1},\ \lambda_s,\ \text{Force identity, if any}\bigr).}
+\]
+Signer sets and encodings do not change it. Regional signatures already
+bind \Rv{$\sigma_r$ (\cref{sec:certificates}). \Cid{B2}A \emph{branch}
+is a chain of sessions $\sigma_0,\sigma_1,\ldots$ in which each witness
+names the previous session. A node's \emph{current branch} starts at its
+checkpoint and follows the regular boundaries, except where an activated
+Force has replaced one (\cref{alg:rotation}).} An external block is
+identified by \Rv{the pair $(\sigma_r,\Hash(B))$}. Protected and global
+prefixes retain this provenance; a matching \Rv{index,} height\Rv{,} or
+hash \Rv{in} another \Rv{session} is not a replacement for the same block.
+\Rv{Receipts, records, and timers are keyed by this pair.}
+
+\subsection{Regular and forced handoff}
+\begin{protocol}{alg:rotation}{Rotate regions}
+Each node runs this handler on \Rv{its current branch}.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Regular completion.} On a valid terminal receipt
+$\FC_r(T_r)$:
+\begin{itemize}
+\item Verify the authorized regional source and exactly $\TB_r$ DATA
+blocks after $A_{r,0,0}$.
+\item Apply current activated Forces. If they remove this regular
+boundary, retain its receipt only as old regional evidence.
+\item Otherwise select the successor under \cref{sec:witness} and
+form the REGULAR witness. \Rv{\Cid{C9}Send the witness and its full
+bundle to the members of $V_{i_{r+1}}$ over the backbone.}
+\end{itemize}
+Do not wait for $T_r$ to become global. A submitted or finalized but
+inactive Force does not stop this regular path.
+
+\item \textbf{Activated Force.} On notification from \cref{alg:force}:
+\begin{itemize}
+\item \Rv{\Cid{A2}Remove $\Del(F)$ from the current branch: the target
+session's DATA above $h_*$ and every session after its replaced regular
+boundary.} This includes regular successors that started during the notice period.
+\Rv{Archive their evidence.}
+\item \Rv{\Cid{C10}Keep the global prefix $G_u$ unchanged, with the same
+block provenance.} A valid Force cannot remove it.
+\item Fetch the retained anchor, its original commitment evidence, and the missing
+application history. If they are not locally available, wait.
+\item Select the successor and form the FORCE witness. \Rv{\Cid{C9}Send
+it with its full bundle to the members of $V_{i_{r+1}}$, which start the
+new session when Ready.}
+\end{itemize}
+The old regional engines keep their own logs and protocol state. This
+handler does not cancel their commit timers or create a quit proof.
+
+\item \textbf{Track the branch.} Use the \Rv{session ID} to route
+messages and store receipts. A new Force \Rv{session} may reuse a numeric
+session index, but it never reuses the old \Rv{session}'s locks, votes,
+entry clock, or observer waiting times.
+\end{enumerate}
+\end{protocol}
+
+\subsection{Ready and the common bootstrap}
+\label{sec:ready}
+\begin{definition}[Ready]
+\label{def:ready}
+A member $v$ of the chosen successor is Ready when it has completely
+validated \Rv{\Cid{B4}a boundary witness on its current branch}, its
+anchor and missing application history, and the matching finalized
+authority.
+A regular witness proves the terminal receipt and quota. A force
+witness proves the activated instruction and retained anchor instead.
+\end{definition}
+A proposal, QC, submitted Force, or status map alone does not grant entry.
+At Ready, relay the complete bundle to all successor members. Their
+complete validation is their own Ready event. Duplicate witnesses do
+not reset state. Having entered an old discarded branch does not block
+entry to a new \Rv{session} with the same numeric session index.
+
+\begin{protocol}{alg:bootstrap}{Bootstrap the selected region}
+Replica $v\in V_{i_{r+1}}$ runs these steps for one validated
+\Rv{session $\sigma_{r+1}$}.
+Here $\Delta=\Delta_{i_{r+1}}$.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Enter.} At Ready, install $A_{r+1,0,0}$,
+$\tagg{AUTH}_{r+1,0}$, $\TB_{r+1}$, and \Rv{$\lambda^{\rm
+open}_{r+1}=\lambda_s$}. Set the entry lock
+to $Q^0_{r+1}$. Enter $(r+1,0,0)$ unfrozen, record its entry time once,
+and start progress checks. Send STATUS with this lock and boundary
+witness to the initial leader. Process buffered proofs for this \Rv{session}.
+\item \textbf{Choose the anchor.} The initial leader waits $2\Delta$
+after its own entry. If the view remains current and unfrozen, it sends
+NEWVIEW choosing exactly $A_{r+1,0,0}$, justified by $Q^0_{r+1}$ and
+the boundary witness.
+\item \textbf{Certify and produce.} Members apply the ANCHOR-vote step
+of \cref{alg:recovery}. On the ANCHOR QC, the leader starts
+\cref{alg:steady} at DATA height $h(A_{r+1,0,0})+1$ and physical
+position 1. Later local failures use the same recovery protocol.
+\end{enumerate}
+\end{protocol}
+
+Let \Rv{\Cid{B6}$e=\min_v e_v(r+1,0,0)$ over correct members $v$, the}
+first correct Ready time. The complete-bundle relay makes
+all correct members enter by $e+\Delta$. With a correct initializer and
+no quit, NEWVIEW is sent by $e+3\Delta$, its ANCHOR QC reaches the
+leader by $e+5\Delta$, and the first DATA proposal reaches all correct
+members by $e+6\Delta$. This meets the first progress check. Transfer
+before Ready remains subject to the backbone's eventual-delivery rule.
+
+\section{The L1 Force handler}
+\label{sec:force}
+
+\subsection{The committee's internal protected prefix}
+\label{sec:protection}
+The committee maintains a protected checkpoint $G_{\rm msig}$, starting
+at the common trusted checkpoint. It stores the complete validated
+prefix and its branch provenance. This is internal state, not a KEEP
+certificate or an extra finality level exposed to clients.
+\Rv{\Cid{A2}It records a promise: every later Force $F$ satisfies
+$\Del(F)\cap G_{\rm msig}=\emptyset$.}
+
+\Rv{\emph{Registration.}} On a complete regional-finality bundle, validate the whole missing path
+from a trusted checkpoint under the supplied historical L1 snapshot,
+parents first. Register \Rv{$\mu(B)$} once for each newly validated DATA block.
+If a Force removed a block while the bundle was in transit, its historical
+evidence can still be validated, but the block is only archived. It is
+never protected. Ancestors in that path are registered no
+later than descendants. A duplicate or a different receipt encoding
+does not restart a deadline. The monitoring bound gives
+\[
+ \Rv{\mu(B)}\le s_u(B)+T_{\rm mon}
+\]
+for every correct observer whose relay validates that block. An earlier
+committee observation may make \Rv{$\mu(B)$} smaller.
+
+\Rv{\emph{Protection.}} At time \Rv{$\mu(B)+T_{\rm msig}$}, if $B$ remains on the \Rv{current} branch,
+the committee protects the next continuous prefix through $B$, unless
+\Rv{$B\in\Del(F)$ for its outstanding Force $F$}. Already protected blocks
+stay protected. Blocks removed by an activated Force stay archived.
+\Rv{Only registered blocks are protected, so every} protected block has direct or covering commitment
+evidence and the history needed to serve as a retained anchor.
+
+\Rv{\Cid{A9}\emph{Event order.} Protection and actual Force submission
+are processed by one coordinated state machine, in time order:}
+\begin{enumerate}[label=(\arabic*)]
+\item \Rv{before a submission at time $s$, complete every protection
+whose deadline is strictly before $s$;}
+\item \Rv{at $s$, recheck $\Del(F)\cap G_{\rm msig}=\emptyset$, even if
+signatures were collected earlier, and submit;}
+\item \Rv{then complete the protections whose deadline is $s$.}
+\end{enumerate}
+Background processing delay never extends a deadline.
+
+\Rv{While $F$ is outstanding, receipts for blocks in $\Del(F)$, including
+future descendants of the replaced regular boundary, do not enter
+$G_{\rm msig}$.} Receipts for the retained prefix
+continue to be processed. After activation, removed blocks remain
+archived and cannot regain protection through a status update.
+
+\subsection{A Force instruction and its three stages}
+\label{sec:force-stages}
+
+\begin{protocol}{alg:force}{Submit, finalize, and activate a Force}
+The committee runs step 1. \Rv{\Cid{B3}Every node} runs steps 2 and 3.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Submit \Rv{\Cid{A10}(committee)}.} On a decision to replace an unavailable region:
+\begin{itemize}
+\item Finish all strictly overdue protections. Require no outstanding
+Force \Rv{\Cid{C2}and no unfinalized update}. Identify the exact target
+\Rv{session} on the \Rv{current} branch. Reject a target \Rv{that was already
+the target of a Force}.
+\item Choose an available DATA anchor on the target's current
+\Rv{branch}, with direct or covering commitment evidence and
+$h(A_{r,0,0})\le h_*\le H_r$. Verify
+its regional history on the current branch. \Rv{\Cid{A2}Require
+$\Del(F)\cap G_{\rm msig}=\emptyset$.}
+\item If protected output already lies beyond the target's regular
+boundary, \Rv{no $h_*$ meets this requirement, and} that boundary cannot be replaced. A stale failure report may
+mark the old region off for future selection; it cannot remove that
+protected output.
+\item Keep the anchor, commitment evidence, and needed history available outside
+the failed region. A known suitable anchor is enough; no proof of a
+globally highest committed block is required.
+\item Choose a finite activation height \Rv{as in \cref{sec:force-stages}}.
+Mark the target region off in the future status map. Atomically
+submit the authorized transaction and record \Rv{$\Del(F)$}. Then
+process protections due at the same time.
+\end{itemize}
+If a Force is already outstanding, retain new failure reports. Re-evaluate
+them on the branch present after activation. \Rv{If only a passive update
+is unfinalized, wait for its finalization.}
+
+\item \textbf{L1 finalized \Rv{(node)}.} On reading a finalized Force record:
+\begin{itemize}
+\item Verify its authorization, instruction identity, \Rv{target session},
+L1 proof, and activation fields. Use the common finalized L1 history.
+\Rv{\Cid{C7}If the target session is not yet known, keep the record and
+resume this step when its boundary arrives. Then check the target and
+$h_*$ (\cref{sec:l1}); ignore an invalid record.}
+\item Record \Rv{$\Del(F)$ as its future deletion}. This applies even
+when $h_*=H_r$.
+\item Prevent global promotion of \Rv{$\Del(F)$} at once. Cache or fetch
+the retained anchor for the coming handoff. Ordinary regional BFT and
+regular handoffs continue until activation.
+\end{itemize}
+
+\item \textbf{L1 activated \Rv{(node)}.} Once the activation L1 block is finalized,
+apply the status update and invoke the forced path in \cref{alg:rotation}.
+Apply the instruction once. An already applied instruction or its retry
+does not cause another fork, reset a timer, or veto the new branch.
+Keep its historical cut when checking old-branch evidence.
+\end{enumerate}
+\end{protocol}
+
+The instruction binds the chain, target session \Rv{ID} and index $r$,
+retained DATA height $h_*$, status map, and activation L1 height
+$\lambda_a$. Its identity is the hash of these canonical fields, not a
+transaction hash or a choice of multisignature encoding. Retries keep
+the same identity and effect.
+
+\begin{table}[htbp]\centering\small
+\caption{Force stages and their effects.}\label{tab:force-stages}
+\begin{tabularx}{\linewidth}{@{}p{.19\linewidth}Y Y@{}}\toprule
+Stage & Event & Effect\\\midrule
+Submitted & The signed instruction is actually handed to the bounded
+L1 submission service. & The committee records \Rv{$\Del(F)$ as a
+pending deletion} and stops protecting \Rv{it}. Signing alone is not submission.\\
+L1 finalized & The instruction appears in finalized L1 records. & All
+observers block global promotion of \Rv{$\Del(F)$}. Production
+authority is not yet changed.\\
+L1 activated & L1 block $\lambda_a$ is finalized. & Apply the status map
+and perform the external fork and rotation.\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{\Rv{Committee rules for updates.}}
+\begin{itemize}
+\item Only one Force may be outstanding from Submitted through activation.
+The committee keeps its contents fixed and resubmits as needed. It does
+not use a cancellable or replaceable pending Force to postpone protection.
+\item \Rv{\Cid{C2}The committee submits an update only after every update
+it submitted earlier is finalized. L1 order therefore equals submission
+order, and a passive update cannot overtake a pending Force. Passive
+updates may still be submitted after an outstanding Force is finalized;
+they activate after it.}
+\item \Rv{It chooses $\lambda_a$ above the activation height of every
+earlier update, and large enough that $\lambda_a\ge\lambda_p+N$ holds
+for any inclusion height $\lambda_p$ reached within $T_{\rm L1}$.}
+\item \Rv{\Cid{C14}A session is the target of at most one Force.} A new
+Force may follow after activation, against \Rv{any session on the
+resulting branch that has not been a target, including the session that
+the activated Force opened.} A later live status does not restore
+\Rv{a} deleted suffix.
+\end{itemize}
+This restriction serializes exceptional Force instructions. Regular
+handoffs still run off L1.
+
+\subsection{Processing rules}
+\Rv{\Cref{alg:force} gives the processing rules.} A \Rv{node} that first sees the instruction after its activation height
+processes finalization and activation in order during that same update.
+It does not wait for another message. Malformed or unauthorized records
+are rejected \Rv{(\cref{sec:l1})}. An archived
+instruction is interpreted only in its original branch context.
+
+The L1 record does not certify the committee's private receipt times.
+The committee's protection rule is part of the honest-service assumption.
+Observers rely on that rule and the stated time bounds; they need neither
+a committee acknowledgement nor a view of its mempool submissions.
+
+\section{The external observer}
+\label{sec:observers}
+Each observer keeps two prefixes: \Rv{its regional output
+(\cref{sec:regional-finality})} and an
+irreversible global prefix ending at $G_u$. It also keeps current
+finalized L1 proofs, boundary history, and first relay times.
+
+\begin{protocol}{alg:external}{Verify output and advance global finality}
+Observer $u$ runs these steps. At equal time, step 1 precedes step 3.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Update L1.} Read and validate the current finalized
+records. Run \Rv{steps 2 and 3 of} \cref{alg:force}, including any activation already due.
+Keep each pending Force's \Rv{$\Del(F)$}. If the finalized
+snapshot is not available, defer global promotion.
+\Rv{\Cid{C11}Before step~3 runs at time $z$, run this step at $z$, so the
+snapshot holds every Force available by $z$ (\cref{ass:monitor}).}
+
+\item \textbf{Accept and relay regional output.} On new block evidence:
+\begin{itemize}
+\item Recover the missing path from \Rv{$G_u$}. Verify
+regional finality, including the derived region and \Rv{session}.
+Process DATA ancestors before children. Request missing data or receipts.
+\item Append valid blocks on the current branch to regional output.
+For each block not previously relayed, set $s_u(B)$ when full validation
+and relay occur, and send its complete bundle to the committee.
+\item Batch or deduplicate transmission without delaying it beyond
+the monitoring bound. Keep the original time on duplicates.
+\end{itemize}
+
+\item \textbf{Promote the next DATA block.} Starting immediately after
+$G_u$, apply \cref{def:global-finality} using the \Rv{snapshot of step~1}.
+If the next block lacks evidence, has not waited \Rv{$\Twait$}, or is
+\Rv{in $\Del(F)$ for} an applicable finalized Force, stop promotion there.
+Otherwise append it to the global prefix and continue in order.
+
+\item \textbf{Maintain the prefixes.} On a Force activation, \Rv{remove
+$\Del(F)$ from the regional output}. Archive \Rv{its} evidence. A valid Force preserves $G_u$. Treat any
+purported removal of $G_u$ as a violation of the assumed control
+service; do not roll back the global prefix.
+\end{enumerate}
+\end{protocol}
+
+The key for a timer or block record is its \Rv{session ID} and block
+hash, not its numeric height alone. New blocks on a forced branch start
+new waits. The same retained block keeps its earlier wait. Persistence
+prevents replay from restarting waits; a node that cannot recover its
+local timing state conservatively waits again.
+
+\subsection{Requests and retained data}
+\label{sec:requests}
+A request is admissible when it passes the application's admission
+checks. Each node queues it in order of first receipt. Repeated delivery
+does not change its queue position. \Rv{\Cid{A6}New arrivals do not move
+ahead of queued requests, and different nodes need not have the same
+queue order.} A correct leader skips requests
+already in its proposed ancestry, including the inherited regional
+prefix, and fills the batch with the oldest remaining requests that fit.
+\Rv{If no request can be included, it may propose an empty DATA block.}
+
+A request is finally removed from the pending queue only when included
+in the global prefix. A request in a discarded regional suffix remains
+pending and can be proposed on the new branch. Regional commitment or
+regular handoff alone does not remove it. Keep the block data and
+receipts needed for recovery and checkpoint verification; global
+promotion does not authorize deleting their only available copy.
+
+\section{Examples and guarantees}
+\label{sec:examples}
+
+\subsection{Regular rotation and a late DRAIN}
+Let $h(A_{r,0,0})=100$, $\TB_r=10$, and $K=4$. The terms produce
+DATA 101--104, 105--108, and 109--110. A terminal receipt for DATA 110
+permits normal rotation to the selected region, which starts with DATA
+111. No global wait is inserted into this handoff.
+
+Now suppose DATA 110 has a QC but its timer is cancelled by Quit.
+Recovery opens at 110 and produces DRAIN. When DRAIN commits 110,
+replicas send FINAL for 110. Its old L1 reference stays unchanged.
+An observer that first validates and relays that receipt at time 100
+starts $s_u(110)=100$, even if the block's L1 timestamp was 0. It waits
+until $100+\Rv{\Twait}$. A Force submitted at 95 and finalized at 105 is seen
+during that wait and prevents global promotion if it cuts below 110.
+There is no need to protect an uncommitted QC from time 0.
+
+\subsection{A Force submitted before the committee deadline}
+Suppose a correct observer validates and relays DATA 107 at time 100.
+Let $T_{\rm mon}=2$, $T_{\rm msig}=5$, and $T_{\rm L1}=3$, so
+\Rv{$\Twait=10$}. The committee validates it by 102 and decides by 107.
+A Force submitted at 107 is finalized by 110. At 110 the observer
+processes that record before its global test. If the Force keeps only
+DATA 106, it cannot promote 107, even if activation is at 115. At
+activation, 107 and its old descendants are removed. The new region may
+produce a different 107 under a new \Rv{session}, with a new observer
+wait.
+
+If no Force is submitted by the committee's actual deadline, its
+protected prefix advances through 107. A later Force must preserve it.
+The observer can promote 107 at 110 if its predecessors are already
+global and the current L1 history passes the checks. The committee sends
+no KEEP message in either case.
+
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  box/.style={draw,rounded corners=2pt,align=center,text width=3.65cm,
+  minimum height=1.2cm,inner sep=4pt},
+  arr/.style={-{Stealth[length=2mm]},semithick}]
+\node[box,fill=rrBlue!7] (s) at (0,0) {Submitted\\committee records the cut};
+\node[box,fill=rrRed!7] (f) at (5.25,0) {L1 finalized\\affected blocks cannot be global};
+\node[box,fill=rrTeal!8] (a) at (10.5,0) {L1 activated\\external branch switches};
+\draw[arr] (s)--node[above,yshift=8mm,font=\scriptsize]{at most $T_{\rm L1}$}(f);
+\draw[arr] (f)--node[above,yshift=8mm,font=\scriptsize,align=center]{activation block\\finalizes}(a);
+\end{tikzpicture}
+\caption{Three stages of one Force. The global waiting period covers
+monitoring, the decision window, and Force finalization. A finalized
+instruction blocks promotion before the external fork activates.}
+\label{fig:force-stages}
+\end{figure}
+
+\subsection{Conditional protection argument}
+\label{sec:safety-argument}
+Assume regional safety and receipt validity within each \Rv{session},
+the stated honest committee rules, and the monitoring and L1 bounds.
+\Rv{\Cid{A2}We show by induction over $u$'s promotions, starting from its
+trusted checkpoint, that no valid Force removes a block from a correct
+observer's global prefix.}
+
+\Rv{Suppose $u$ promotes $B$ at time $z\ge s_u(B)+\Twait$. Let
+$d=\mu(B)+T_{\rm msig}$ be the committee's deadline for $B$. Since
+$\mu(B)\le s_u(B)+T_{\rm mon}$,}
+\[
+ \Rv{d+T_{\rm L1}\le s_u(B)+\Twait\le z.}
+\]
+\Rv{Let $F$ be any Force with $B\in\Del(F)$.}
+\begin{itemize}
+\item \Rv{\emph{$F$ was submitted at or before $d$.} Then $F$ is
+finalized and available by $d+T_{\rm L1}\le z$. Step~1 of
+\cref{alg:external} reads it before step~3, so condition~(iv) of
+\cref{def:global-finality} fails; if $F$ has already activated, $B$ has
+no regional finality. Either way, $u$ does not promote $B$.}
+\item \Rv{\emph{$F$ was submitted after $d$.} By the first case, no Force
+outstanding at $d$ contains $B$, and $B$, which is regionally final at
+$z$, was not removed before $d$. So the committee protected $B$ at $d$.
+A Force submitted later satisfies $\Del(F)\cap G_{\rm msig}=\emptyset$,
+which contradicts $B\in\Del(F)$.}
+\end{itemize}
+\Rv{The same relay registers $B$'s ancestors no later than $B$, so the
+protected prefix through $B$ is continuous.}
+
+Equal-time submission precedes protection, and equal-time L1
+finalization precedes observer promotion. There is no gap at either
+endpoint. The single outstanding Force has a fixed, irrevocable effect;
+an ignored or cancelled placeholder cannot extend a protection deadline.
+Induction from the trusted checkpoint therefore prevents an accepted
+Force from deleting a correct observer's global prefix. Regional safety
+and deterministic rotation supply the common retained branch between
+Forces. This argument is conditional on those properties; it is not a
+new proof of the weighted regional BFT.
+
+\subsection{Progress conditions and limits}
+The local engine and regular handoff retain their original progress
+conditions. A global prefix grows when complete regional evidence keeps
+arriving, monitoring meets its bound, and a working branch remains
+uncut long enough to pass \Rv{$\Twait$}. Observers need not confirm at the same
+time. Unbounded backbone delay still prevents a fixed end-to-end bound
+from regional commitment to every observer's confirmation.
+
+Force recovery also needs eventual activation, an available retained
+anchor, a live successor, and its authority. The bound $T_{\rm L1}$ ends
+at Force finalization; it is not a bound on reaching any arbitrarily
+chosen future activation height. Only one live region is insufficient
+for indefinite quota rotations because NextLive excludes the current
+region. Repeated failures can also prevent a stable global extension.
+These are progress conditions, not reasons to revoke an existing global
+prefix.
+
+\begingroup\small
+\begin{thebibliography}{9}
+\bibitem{rr33}
+Sync HotStuff RR v3.3: Proposal Timers and Terminal-QC Handoff.
+Specification draft, 12 October 2026
+(\texttt{sync\_hotstuff\_rr\_v3\_3.tex}).
+\bibitem{sync}
+I. Abraham, D. Malkhi, K. Nayak, L. Ren, and M. Yin.
+\emph{Sync HotStuff: Simple and Practical Synchronous State Machine Replication}.
+IEEE Symposium on Security and Privacy, 2020, pp. 106--118.
+\href{https://conferences.computer.org/sp/pdfs/sp/2020/349700a106.pdf}{Published paper}.
+\end{thebibliography}
+\endgroup
+
+\appendix
+\section{Changes from v4.4}
+\label{app:changes}
+Each entry names the problem found in v4.4 and the change made in v4.5.
+IDs match the tags in the text and the review note
+\texttt{reviews/sync-hotstuff-rr-v4-5-2026-10-12/revision-plan.md}.
+No protocol step was added, removed, or reordered. Section and protocol
+numbers are unchanged from v4.4; table numbers are those of v4.5, which
+adds the participants table as \cref{tab:roles}.
+
+\begingroup\small
+\begin{xltabular}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.05\linewidth}>{\raggedright\arraybackslash}p{.17\linewidth}Y@{}}
+\toprule
+ID & Where & Problem in v4.4 $\rightarrow$ change in v4.5\\
+\midrule
+\endfirsthead
+\toprule
+ID & Where & Problem in v4.4 $\rightarrow$ change in v4.5\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{3}{@{}l}{\textbf{A. Structure and redundancy}}\\
+\Chg{A1} & Abstract, \S1 & The abstract described v4.4 relative to v4.3 and used undefined terms (KEEP, ``the waiting rule''). $\rightarrow$ Standalone abstract; a participants table; a short statement of the two finality levels.\\
+\Chg{A2} & \S2.1; Def.~5.2; \S7; Protocols 3, 5, 6; \S9.3 & The set of blocks a Force removes was restated six times in different words. $\rightarrow$ One definition, $\Del(F)$, cited everywhere; the protection argument is written as two cases over $\Del(F)$.\\
+\Chg{A3} & \S3.1, \S5.3 & ``The wait starts at relay, not at the L1 reference'' appeared in seven places. $\rightarrow$ Explained once in a shorter \S5.3; removed from \S3.1 and the \S8 introduction.\\
+\Chg{A4} & \S2.1, \S3.4, Protocol 6 & ``A finalized but inactive Force blocks only global promotion'' appeared in seven places. $\rightarrow$ Kept in Def.~5.2, the stage table, and Protocol 5; removed from \S2.1 and Protocol 6. \S3.4 states once that L1 updates never change an engine.\\
+\Chg{A5} & \S1, \S6.1, \S8 & Session identity was restated in six places without a formula. $\rightarrow$ $\sigma_{r+1}$ is defined by a formula in \S6.1 and cited.\\
+\Chg{A6} & \S2.1, \S2.4, \S7.2, \S8.1 & Duplicates: the one-outstanding-Force rule (\S2.1 and \S7.2) and request ordering (\S2.4 and \S8.1). $\rightarrow$ Each rule is stated once, in \S7.2 and \S8.1.\\
+\Chg{A7} & Assumption 5 & The assumption mixed two environment bounds with a committee rule ($T_{\rm msig}$ and protection). $\rightarrow$ $T_{\rm mon}$ and $T_{\rm L1}$ remain assumptions; $T_{\rm msig}$ is a configured parameter used in \S7.1.\\
+\Chg{A8} & \S5 & \S5 used the branch, session identity, and Force scope before \S6--7 defined them. $\rightarrow$ $\Del(F)$ is defined in \S2.1; \S5 opens with pointers to the definitions it uses.\\
+\Chg{A9} & \S7.1 & The committee's event order was given in prose. $\rightarrow$ A three-step ordered rule.\\
+\Chg{A10} & Protocol 5 & Steps run by different roles had no role labels. $\rightarrow$ Each step title names its role.\\
+\multicolumn{3}{@{}l}{\textbf{B. Terms and notation}}\\
+\Chg{B1} & \S3, \S3.3, \S3.4 & ``Opening'' meant both the generation's opening block $A_{r,g,0}$ and the boundary that opened a session; ``opening identity'' was defined only in the first sense but used in the second. $\rightarrow$ ``Opening'' keeps only its v3.3 meaning. The session sense is the session ID $\sigma_r$.\\
+\Chg{B2} & \S1, \S6.1 & ``Branch'' was used 31 times without a definition. $\rightarrow$ Branch and current branch are defined.\\
+\Chg{B3} & \S1, Protocol 5 & Node, observer, L1 watcher, verifier, monitor, and multisignature service were used without a stated relation. $\rightarrow$ A participants table; ``L1 watcher'' became ``node'', and ``monitor'' became ``committee''.\\
+\Chg{B4} & \S2.1, \S5.1, \S6.1, Def.~6.1 & Undefined terms: passive update, applicable Force, terminal receipt, regional output, and ``currently applicable'' witness. $\rightarrow$ Each is defined at first use.\\
+\Chg{B5} & \S5.2 & ``KEEP message'' was never defined. $\rightarrow$ Explained once: a per-block committee acknowledgement, which this protocol does not use.\\
+\Chg{B6} & Table 4, \S5.2, \S6.3 & $W$ (waiting period) clashed with $W_i$ (regional weight), and $m(B)$ (committee time) with $m_{r,g,t}$ (term length). The first Ready time $e$ was undefined. $\Xi$, $\mathsf{RF}$, $\mathsf{GF}$, and $\mathcal W$ were defined but unused, and no rule used $\theta_a$. $\rightarrow$ $\Twait$, $\mu(B)$, and $e=\min_v e_v(r+1,0,0)$. Unused symbols are removed; $\theta_a$ appears only as a label in Table~3.\\
+\Chg{B7} & Table 3, \S2.2 & $F_i$ is a certificate threshold but was not listed as a configured parameter. $\rightarrow$ It is part of the stake configuration.\\
+\Chg{B8} & Table 3 & The notice period had no unit and no reference point. $\rightarrow$ $\lambda_a\ge\lambda_p+N$, with $N$ in L1 blocks after the inclusion height $\lambda_p$.\\
+\multicolumn{3}{@{}l}{\textbf{C. Ambiguities and unhandled cases}}\\
+\Chg{C1} & \S2.1 & It was unclear what $\tagg{AUTH}_{r,g}$ may change for $g>0$, and how records are keyed when a Force reuses index $r$ (L1 cannot see regular boundaries). $\rightarrow$ $g=0$ fixes the snapshot and the quota; for $g>0$ only the leader schedule is used. Records are keyed by index.\\
+\Chg{C2} & \S2.1, \S7.2, Protocol 5 & Passive updates could be submitted while a Force was not yet finalized. L1 could then include them out of activation order, which made the Force malformed. $\rightarrow$ The committee submits one update at a time; nodes ignore an update that does not increase the activation height.\\
+\Chg{C3} & \S2.1, \S6.1 & It was not stated that $\chi(\lambda)$ is fixed once $\lambda$ is finalized, which successor selection relies on. $\rightarrow$ Stated, with the reason.\\
+\Chg{C4} & \S2.1 & Genesis: ``If no region is live, initialization waits'', and $\lambda^{\rm open}_0$ was undefined. $\rightarrow$ A genesis boundary uses the general selection rule from $\lambda_{\rm gen}$.\\
+\Chg{C5} & \S3.3, \S3.4 & Receipt validation (Def.~3.1(iii)) checks admission, a local replica event that an external verifier does not have. $\rightarrow$ A verifier checks admission witnesses in the evidence.\\
+\Chg{C6} & \S3.3 & ``A replica may commit the DATA prefix of a valid receipt'' was in no protocol box, and its FINAL behaviour was unclear. $\rightarrow$ It is optional and sends no FINAL; only Completion also cancels timers.\\
+\Chg{C7} & Protocol 5, step 2 & A node that had not yet received the Force's target session (the backbone has no delay bound) could not ``verify the target'', and rejecting would split nodes. $\rightarrow$ The node keeps the record until the target's boundary arrives.\\
+\Chg{C8} & \S2.1, Protocol 5 & ``Malformed records are rejected'' did not list the checks. $\rightarrow$ The checks are listed, and invalid records are ignored.\\
+\Chg{C9} & Protocol 3 & ``Transfer its full bundle'' did not say to whom. $\rightarrow$ To the successor's members, over the backbone.\\
+\Chg{C10} & Protocol 3, step 2 & ``Keep the same protected and global prefix'' was addressed to nodes, but only the committee has a protected prefix. $\rightarrow$ Nodes keep $G_u$.\\
+\Chg{C11} & Def.~5.2, Protocol 6 & The safety argument needs an L1 snapshot that is current at the promotion time $z$; the rules did not require one. $\rightarrow$ Step~1 runs at $z$ before step~3.\\
+\Chg{C12} & After Protocol 1 & Wrong reference: $e_v(r,0,0)$ is set in step~1 of Protocol 4, not step~2. $\rightarrow$ Fixed.\\
+\Chg{C13} & Table 2 & For the regular handoff, the timers cell said ``already complete'', which need not hold when the successor enters. $\rightarrow$ The old engine cancels its own timers in Completion.\\
+\Chg{C14} & \S6.1, \S7.2 & ``Each exact target opening can be forced only once'' and ``endpoint fixed by a Force'' were unclear. $\rightarrow$ A session is the target of at most one Force, and a forced boundary is never replaced.\\
+\Chg{C15} & \S5.1, Table 4 & $G_u$ meant both the trusted starting checkpoint and the moving end of the global prefix. $\rightarrow$ It is the last block of $u$'s global prefix, initially a trusted checkpoint.\\
+\Chg{C16} & Def.~5.1(i) & ``$B$'s position'' could mean the DATA height or the physical position. $\rightarrow$ The session that covers DATA height $h(B)$ on the current branch.\\
+\end{xltabular}
+\endgroup
+
+\paragraph{Removed text.}
+\S2.1: the sentence on a finalized Force before activation (A4) and the
+one-outstanding-Force paragraph (A6); \S2.4: the request-ordering
+paragraph, merged into \S8.1 (A6); \S3.1: ``This draft therefore does
+not age a block\ldots'' (A3); \S5.3: five of its nine sentences (A3);
+\S7.1: ``It does not protect a QC-only block\ldots'', which follows from
+registration; \S7.2: the $\theta_a$ paragraph (B6); \S7.3: ``Valid
+history under this protocol has no competing outstanding Force\ldots''
+(C8); \S8: ``It never uses only a block's older L1 reference\ldots''
+(A3); Protocol 3, step 2: ``Keep the target session's DATA prefix
+through $h_*$'', implied by removing $\Del(F)$ (A2); Protocol 6, step 2:
+the sentence on finalized but inactive Forces (A4); the notation entries $\Xi$ and $\mathsf{Ready}_v(\mathcal W)$, and
+the unused macros $\mathsf{RF}$ and $\mathsf{GF}$ (B6).
+
+\paragraph{Open issues kept from v4.4.}
+These need a design decision and are not changed here.
+(D1) An engine whose session was cut or discarded keeps running until it
+completes; the draft does not say when it may stop.
+(D2) The format of the registry proof in $\rho$.
+(D3) A Byzantine leader may choose an old $\lambda(T_r)$, which is bounded
+below by $\lambda^{\rm open}_r$, to influence successor selection.
+(D4) With one live region, quota rotation stops, because NextLive
+excludes the current region.
+(D5) How L1 publishes $\tagg{AUTH}_{r,g}$ for future indices without an
+L1 transaction per regular handoff.
+(D6) The margin in $\lambda_a$ that the committee needs depends on the L1
+block rate, which the model does not bound.
+
+\end{document}

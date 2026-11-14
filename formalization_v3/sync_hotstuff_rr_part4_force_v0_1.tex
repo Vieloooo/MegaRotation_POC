@@ -1,0 +1,329 @@
+% Build Part II v4.6 first, then this file, from formalization_v3/.
+% Cross-document references use the companion Part II .aux file.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,aliascnt}
+\usepackage{booktabs,tabularx,array,enumitem,needspace,float}
+\usepackage[section]{placeins}
+\usepackage{xcolor,tikz,mdframed,graphicx}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
+\usepackage{xr-hyper}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{fancyhdr}
+\hypersetup{pdftitle={Sync HotStuff RR, Part IV: Force Handler and Publish Layer (v0.1)},pdfsubject={Atomic branch updates, the Force runtime handler and Publish Layer implementation}}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}\fancyhf{}
+\lhead{\small Sync HotStuff RR, Part IV}\rhead{\small Force and Publish Layer v0.1}
+\cfoot{\thepage}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\topfraction}{.92}
+\renewcommand{\textfraction}{.06}
+\renewcommand{\floatpagefraction}{.85}
+\makeatletter
+\setlength{\@fptop}{0pt}\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\definecolor{rrRed}{HTML}{A51C30}
+\definecolor{rrBlue}{HTML}{2563EB}
+\definecolor{rrTeal}{HTML}{0F766E}
+\newcommand{\RR}[1]{{\color{rrRed}#1}}
+\newcommand{\QC}{\mathcal C}
+\newcommand{\FC}{\mathcal F}
+\newcommand{\Hash}{\mathsf H}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\TB}{\mathit{TB}}
+\newcommand{\tagg}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\defterm}[1]{\textcolor{rrBlue}{\textit{#1}}}
+\newtheorem{definition}{Definition}[section]
+\newaliascnt{assumption}{definition}
+\newtheorem{assumption}[assumption]{Assumption}
+\aliascntresetthe{assumption}
+\crefname{assumption}{assumption}{assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\newaliascnt{proposition}{definition}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\crefname{proposition}{proposition}{propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\newcounter{protocol}
+% Protocol boxes float to the top of a page, so long boxes leave no gaps.
+\newenvironment{protocol}[3][htbp]{\begin{figure}[#1]\refstepcounter{protocol}\label{#2}
+\begin{mdframed}[linewidth=.6pt,skipabove=0pt,skipbelow=0pt,
+innertopmargin=7pt,innerbottommargin=7pt]\small
+\textbf{Protocol \theprotocol. #3}\par\smallskip}{\end{mdframed}\end{figure}}
+\crefname{protocol}{Protocol}{Protocols}
+\Crefname{protocol}{Protocol}{Protocols}
+\title{Sync HotStuff RR, Part IV: Force Handler and Publish Layer (v0.1)}
+\author{}\date{Version 0.1 --- 20 October 2026}
+\externaldocument[II-]{sync_hotstuff_rr_part2_rotation_v4_6}
+\begin{document}
+\maketitle
+\begin{abstract}
+This document contains the Force handler and Publish Layer implementation
+extracted from Part~II, version~4.6. It details how an explicit L1 atomic branch update closes
+its target branch, installs a new region map and restarts from the
+retained global prefix~$G$. The handler is the runtime form of the
+atomic-update prelude in Part~II's global-finality rule; it does not
+apply an update a second time. The Publish Layer implementation describes
+leader-first submission, permissionless backup, fee sponsorship, retries
+and retention under Part~II's delivery-service assumptions.
+\end{abstract}
+
+\paragraph{Companion document and scope.}
+Read this document with
+\href{sync_hotstuff_rr_part2_rotation_v4_6.pdf}{Part~II: Sequencer Rotation,
+version~4.6}. Part~II defines the model, authorities, control log,
+activation assumptions, replay state, target-index rule and Session
+Manager. It retains the Force transition in the global-finality rule,
+the handoff and Force-close interfaces, examples, the security and
+lifecycle guarantees, and reference control policy. It also defines the
+publication-service assumptions and source-retention requirements used
+by the implementation here. All notation and assumptions here are those
+of Part~II. References marked ``of Part~II'' point to that companion;
+the remaining references are local to this document.
+
+\section{The Force handler}
+\label{sec:force}
+\Cref{alg:force} details the atomic-update prelude of
+\cref{II-alg:global-rule} of Part~II; it is the same transition, not a second
+application of the update. It executes explicit L1 instructions.
+Once the closure is verified, \cref{II-alg:rotation} of Part~II immediately terminates
+the local old-version programs (\cref{II-sec:force-close} of Part~II). Silence, a
+health report or a local timeout never runs this transition.
+
+\subsection{What an instruction says}
+\label{sec:force-stages}
+An MSIG is an atomic branch update
+$U=(\mathit{chain},c,\theta_a,\beta_{\rm target},S_{\rm new})$
+(\cref{II-def:control-update} of Part~II). It names the branch version to close and the
+complete map to install on the next version. These two effects are
+inseparable: if the target is current, both occur; if the target is
+stale, neither occurs. The update names no retained height. Where the new
+branch starts is decided when the instruction executes: if the committee
+saw $G=108$ when it signed but $G=112$ when the update takes effect, 112
+is kept. The committee submits the instruction under
+\cref{II-ass:committee,II-ass:services} of Part~II. L1 finalization makes it known; its
+effect begins at $J_{q(\theta_a)}$. Until then, regular handoffs and
+valid old-version output continue. A regular handoff changes $r$, not
+$\beta$.
+
+\paragraph{Why the target version is checked.}
+Suppose instruction X says ``at time 120, close branch version 7''. If
+in the meantime A only handed off to B by a regular handoff, the version
+is still 7, so X executes at 120 and closes all of version 7, including
+B's regular successor. But if another Force has already moved the
+version to 8, X does not execute: its target is 7, and it never turns
+into ``close whatever version is current''. So a late or duplicate
+instruction cannot cut off a newer branch version: its target is stale
+(\cref{II-def:control-effect} of Part~II).
+
+\paragraph{The export session.}
+The \defterm{export session} is responsible for the next DATA after $G$.
+Its source context, fixed quota and accepted count decide the target
+index of a Force (\cref{II-sec:retry-slot} of Part~II). It has no cross-region failure
+timer. Its program may still be Assigned while this public responsibility
+exists, and a later regular program may already be producing.
+
+The newly installed map changes eligibility for the new branch only. An
+update whose map leaves the source region ON can select that region again
+when it is the only eligible one. If no region is eligible, the new
+boundary keeps its anchor and target index without opening a regional
+engine. Since the map is immutable within that version, only another
+successful atomic update can supersede this unassigned boundary and try
+a different complete map.
+
+\begin{protocol}{alg:force}{Apply an atomic branch update}
+Before the payload of authenticated finalized block $J_q$, let
+$\theta=\theta_q$ and record the branch version $\beta_0$ at the start
+of the block.
+\begin{enumerate}[label=\textbf{\arabic*)},itemsep=3pt]
+\item \textbf{Read the activated update.}
+Use the authenticated activated-update input $\Lambda_q$ supplied for
+$J_q$ (\cref{II-sec:logical-carrier} of Part~II). By \cref{II-ass:single-activation} of Part~II, it is empty
+or a singleton. If it is empty, return to ordered payload processing.
+Otherwise write
+\[
+ \Lambda_q=\{U_q\},\qquad
+ U_q=(\mathit{chain},c_q,\theta_a,\beta_{\rm target},S_{\rm new}).
+\]
+Repeated source delivery never processes $U_q$ twice.
+
+\item \textbf{Check its target.}
+Advance the processed control cursor past $U_q$. If
+$\beta_{\rm target}\ne\beta_0$, the whole update is stale: leave all
+other protocol state unchanged and return to ordered payload processing. If
+$\beta_{\rm target}=\beta_0$, continue to Step~3. No output, Ready,
+elapsed-time or health condition is checked.
+
+\item \textbf{Close, install the map and keep $G$.}
+If $\mathsf{Tail}=\tagg{NEXT}(\nu)$, record
+$\operatorname{sid}(\nu)$, $i(\nu)$ and $a(G,\nu)$; if
+$\mathsf{Tail}=\tagg{PENDING}(\omega)$, read the stored source context
+and target index from $\omega$.  Let $i_{\rm src}=i(\nu)$ in the first
+case and the stored source region in the second. Keep all of $G$ as it
+stands at the start of $J_q$, with its original block-bound records. Keep
+$U_q$ and the header of $J_q$ as closure evidence. Close $\beta_0$, set
+$\beta'=\beta_0+1$ exactly once and install
+$S_{\beta'}:=S_{\rm new}$. Deliver this verified closure to the Manager's
+Force-close rule immediately, independently of target-authority
+availability. Fix the
+target index $r'$ by \cref{II-sec:retry-slot} of Part~II, let
+$A=\operatorname{last}(G)$ and compute
+$i'=\tagg{NextLive}(i_{\rm src},S_{\beta'};\beta',r')$ using the new target's
+$\tagg{AUTH}_{\beta',r',0}$ (\cref{II-sec:authority-context} of Part~II).
+Reusing $r'$ does not reuse an old branch's authority. If required source
+evidence is missing, pause without interpreting the candidate set. With complete evidence, set
+\[
+ \mathsf{Tail}:=
+ \begin{cases}
+ \tagg{PENDING}(\tagg{FORCE}(c_q,q),\beta',r',i_{\rm src},A,q),
+   & i'=\bot,\\
+ \tagg{NEXT}(\beta',r',i',A,h(A)+\TB_{r'},q,
+              \tagg{FORCE}(c_q,q)),& i'\ne\bot.
+ \end{cases}
+\]
+Archive the closed version's unconfirmed suffix and regular successors.
+The new engine, when entered, starts with fresh core state and $g=t=0$.
+No new-version DATA is accepted in $J_q$ itself.
+
+\item \textbf{Persist once.}
+Persist the processed control cursor, the new version and map, the closed
+mark, $G$ and the new tail as one replay transition. Then return to
+ordered payload processing.
+\end{enumerate}
+\end{protocol}
+
+The cutoff and retained anchor are fixed even if target evidence arrives
+later. Resume the same canonical operation; never rerun a persisted
+update. A successful update can have a fixed closure while target
+selection still waits for its authority evidence. In contrast, later
+Espresso blocks alone never revisit a PENDING boundary: changing its map
+requires another successful atomic update.
+
+Every prelude executes at most one Force. The activation thresholds of
+two Forces are at least $T_{\rm update}$ apart
+(\cref{II-def:control-valid} of Part~II); no DATA, Ready or other output is required
+between them.
+Each update must still satisfy its own authorization,
+advance-announcement and target-version conditions.
+
+\subsection{Atomic maps, stale updates and the cutoff}
+If an update's target is stale, the entire update is a no-op. It does not
+install $S_{\rm new}$, close the current version, select a region or
+choose an anchor. If the map change is still desired, the committee must
+submit a fresh update targeting the current version. This atomic rule is
+why a map change cannot retroactively revise a regular handoff within an
+open version.
+
+All control effects come before the payload of the triggering block.
+DATA accepted in earlier blocks stays in $G$. An old-version result in
+the triggering block cannot cancel a Force by arriving with late
+progress. It may be kept as regional evidence but cannot append its
+suffix. A newer version starts only from the fixed retained anchor.
+
+For example, take threshold $d=120$ and Espresso blocks with timestamps
+119, 122 and 125. The block at 119 accepts valid DATA of the current
+version. The block at 122 is the first to reach 120, so the Force runs
+first and old-version DATA in that block can no longer be accepted;
+nor can any later old-version DATA. New-version DATA can be accepted only
+from the block after 122.
+
+A proof of closure contains the actual MSIG and the complete applicable
+source context. A bare timestamp, an unavailable RPC response, an
+unfinalized control or a monitoring alarm is not such a proof. After
+learning of the closure, regional Session Managers apply
+the Force-close rule of \cref{II-alg:rotation} of Part~II; the cutoff does not wait
+for a node to learn it or release resources.
+
+\section{Implementing the Publish Layer}
+\label{sec:publish-implementation}
+The protocols in Part~II use a delivery-service assumption. The following
+leader-first design explains how existing participants can implement it.
+It adds no consensus round and no exclusive publisher role.
+The implementation must meet $T_{\rm pub}$; the sketch alone is not a
+proof of that bound.
+
+\subsection{Leader first, with permissionless backup}
+The proposing regional leader is the preferred sender. Once it has the
+complete finalized result, it builds and submits an EXPORT immediately.
+Other replicas continue collecting FINAL messages, keeping payloads and
+making complete results available to the service. Commitment and
+Completion do not wait for a publication acknowledgement.
+
+Another replica or an external data verifier may submit the same result
+without the leader's permission. An implementation may give the leader a
+short first opportunity, but the backup delay, data retrieval and retries
+must fit within $T_{\rm pub}$ from complete-result availability. A private
+announcement that the leader has sent something is not enough to suppress
+backup indefinitely. The service checks submission and Espresso evidence.
+
+The fallback sender uses the original DATA and receipt. It cannot replace
+the DATA, rewrite its session pair or create FINAL on behalf of the region.
+The service guarantees delivery through an available path; no particular
+sender is guaranteed to win the submission race.
+
+\subsection{Fee sponsorship}
+A backup sender need not hold tokens or pay from its own balance. It may
+use a funded relay, a prepaid submission account, or another sponsored
+route that can submit to Espresso. The route carries the verified result;
+it does not acquire authority to change its content.
+
+Someone still supplies the fee resources. To justify the publication
+bound, a complete result covered by the service assumption must have access to a funded,
+working route even when the original leader is unavailable. A sender can
+try another route if one refuses or fails. The concrete sponsorship and
+admission mechanism is an implementation choice; this protocol assumes
+no Espresso application smart contract for it.
+
+\subsection{Duplicates, retries and acceptance}
+Different senders may carry the same complete result in different EXPORTs.
+The signed producing pair and block hash identify each DATA; changing a
+receipt encoding, signer set or outer hint does not create a new output.
+Accepted ancestors are reused as evidence and receive no second count.
+A compatible next DATA can be extracted even when the sender's expected
+base is stale or its result is listed only among supporting ancestry.
+
+The Session Manager tracks the original EXPORT record and its per-DATA
+acceptance. A complete next result already published with a bad hint is
+interpreted at that source position under the same rule; a corrected
+EXPORT is unnecessary.
+If a genuine gap or an absent required object prevents acceptance, the
+objects already published stay in $\mathcal O_q$; once the missing
+objects appear in a later block, \cref{II-alg:global-rule} of Part~II accepts the
+result there without republication. No bound on when the missing
+objects arrive is inferred. A closed version never regains append
+permission.
+
+The two service bounds concern complete-result delivery and visibility.
+The conditional progress discussion of \cref{II-sec:global-progress} of Part~II
+uses those actual recorded bytes. It does not assume a bounded retry
+with a corrected expected-base hint. Terminal DATA commits before successor authority
+resolution. Preparation for a selected live region has the separate
+scope of \cref{II-ass:ready-service} of Part~II; arbitrary archive catch-up has no
+uniform bound. \Cref{II-sec:transport-scope} of Part~II states what the transport
+must put into Espresso for the rule to use it.
+
+\subsection{Retention and incentives}
+Before finalized Espresso inclusion, the holders of a complete result
+keep its payload and evidence available to backup senders. Afterward,
+Espresso's retained, authenticated history supplies returning readers and
+initial hydration. Prepared regional nodes additionally keep the raw
+source bytes under \cref{II-sec:source-retention} of Part~II; finalization does not
+replace that retained copy by an eventual archive pointer. Direct transfer
+can still accelerate regular handoff and state recovery. Program
+termination and checkpointing preserve required evidence and outgoing
+sends.
+
+Submission rewards and reimbursement may fund this service. They must not
+count duplicate DATA as new progress. A report of delayed delivery
+alone does not prove that the original leader, verifier or sponsor
+equivocated. Health policy and any objectively verifiable penalties
+are separate from the Force acceptance rule.
+
+\end{document}

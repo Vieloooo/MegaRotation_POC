@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-19",
+  "scope": "Updated Chinese revision outline and four diagrams: four module interfaces, health policy boundary, candidate concurrency, exact-anchor readiness. No formal protocol edits.",
+  "compile": "latexmk -xelatex passed",
+  "pages": 4,
+  "layout_warnings": [],
+  "rendered_pages_visually_checked": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "markdown_local_links_checked": 12,
+  "missing_links": [],
+  "interface_review": "Second reader compared four-module boundaries with v3.9. Clarified health report versus signing policy, L1 context of Soft Detector, and close/cancel transitions. All four diagrams visually checked.",
+  "assumptions": "No assumption or formal manuscript file edited in this architecture revision.",
+  "files": {
+    "formalization_v2/sync_hotstuff_rr_part2_v3_2_revision_outline_zh.md": "5f6b7bf81d6c164cfc91833223919fc65fc283c42b8f55deba30accdc5e2245c",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh.tex": "55913516ac88fff9ca2886648dc292db451e557a190918c68487a9f0810b6085",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh.pdf": "c25a45f526be1b4a60244851f1481f53070466b626600c90d2ffc8fddca5572b",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh-1.png": "dbceaa29c468f4be3ed11ea97812f8f49612cb29abde864a55d9382be19a4eb6",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh-2.png": "4cbaec5ea3c56961622344441809aee4b441bac0fc1e6b56b14292037ce4f97f",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh-3.png": "d93b2232397a962abca74cd6e0ee499fadc29fd2d2656c10032b784d54ae476a",
+    "formalization_v2/figures/cross_region_rotation_arch_revision/architecture_zh-4.png": "83fbbeb9b6ff23fdb4bd5b7cb88a69c419c791b7ac9da037accd79997828f74b"
+  }
+}

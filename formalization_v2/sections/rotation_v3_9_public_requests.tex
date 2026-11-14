@@ -1,0 +1,175 @@
+% Version 3.9: nonblocking request import from retained public DATA bytes.
+% Insert after the installed-snapshot relay and before INPUT_REPORT.
+\paragraph{Request import from retained public DATA.}
+\label{sec:public-request-import}
+Each correct node's persistent request owner also runs the local import
+loop below. Its input is the actual bytes already retained in
+\tagg{PublicStore}, not a request query to an old roster. Its output is
+a store of unvalidated request candidates and, after the ordinary
+request checks, entries in the existing pending FIFO. Import neither
+validates its containing DATA nor changes $G$, a boundary, a lock, a
+vote, a report or an entry gate. In particular, it does not reopen a
+closed session.
+
+The owner retains an append-only source-work journal $Q^{\rm src}_v$,
+an append-only candidate store $U_v$, and an append-only checking journal
+$Q^{\rm chk}_v$. Each journal has a durable completion cursor and, for
+its current finite job, a saved local subposition. Candidate entries
+retain their exact bytes, source-object occurrence paths and local
+arrival numbers. Checking outcomes and pending-store updates are
+durable. A completed job is marked complete; its evidence is not
+deleted. Existing pending entries retain their first-receipt order.
+
+When complete raw source content is retained, append its actual retained
+root and dictionary cut to $Q^{\rm src}_v$ before releasing the source
+input or its enqueue obligation. Do the same when an exact public
+reference target is subsequently acquired. On first enabling this rule,
+enqueue one fixed finite cut of the already retained roots; concurrent
+acquisitions append separate jobs. This is a local scan of held bytes,
+not a new hydration or Ready condition. The new journal cursor is
+independent of source availability, P6 and regional entry cursors.
+Retaining the descriptor does not run its scan in a timed handler.
+
+A source job follows the original typed fields and list positions of
+\cref{sec:logical-carrier}, including DATA in proposals, ancestry and
+boundary evidence. In the existing block tuple
+\[
+ B=(\beta,r,k,h,\mathit{type},\mathit{batch},
+          \Hash(B_{\rm parent}),\rho,\xi),
+\]
+it extracts the actual entries of $\mathit{batch}$ only when the local
+structure identifies a DATA body and supplies those entry bytes.
+DRAIN has no batch. Arbitrary witness strings, request hashes and a
+sender's object index are not DATA batch entries. Decode independently
+represented typed children even if a sibling or enclosing proof fails.
+Malformed bytes without that logical structure yield no invented entry.
+
+The job traverses supplied inline objects and exact public targets held
+at its fixed dictionary cut, visiting each actual object once. It saves
+an unresolved edge without waiting for or fetching its target; a later
+acquisition supplies another job. A cycle cannot cause repeated visits.
+Thus the job has a finite fixed input. It does not fetch AUTH, native
+state, source history or optional proof targets. Outer chain, version,
+base and interval hints, P6 rejection and branch closure do not filter
+this scan. An actual DATA entry is still only a candidate, including
+when the containing DATA claims the wrong signed domain.
+
+Append each new exact candidate byte string to $U_v$ before advancing
+past its batch position. Before successful request validation,
+deduplicate only identical bytes, with byte equality or a binding
+content commitment, and preserve their source occurrences. A claimed
+client identifier creates no duplicate marker. Invalid encodings and
+failed authentication cannot reserve an identifier or suppress a later
+valid request. $U_v$ is explicitly unvalidated: its entries are not
+eligible reports, authenticated relays or executable requests.
+
+\paragraph{Checking candidates without a moving target.}
+When the ordinary application interface has completely prepared an exact
+parent $P$, enqueue a checking job for the finite current cut of $U_v$.
+When a new candidate is retained and such a parent is already prepared,
+enqueue a check of that candidate at that parent. Equal
+candidate-byte/parent checks need not be repeated. Each job retains the
+already available read context needed by the ordinary finite request
+check, including its exact native state, until the check finishes.
+A pointer to a subsequently mutated engine state is not such a context.
+Any required snapshot construction must actually finish before this
+notification; neither its cost nor instantaneous copying is inferred
+from the import rule. Ready does not wait for this construction.
+Changing the active parent does not retarget or cancel an old job.
+These jobs acquire no absent validation input and cause no state
+reconstruction; preparing a parent keeps its original prerequisites.
+
+At that fixed $P$, run the ordinary chain/domain, client authentication,
+canonicalization and application-admission checks. A failed check is an
+outcome only for those bytes at that parent, not a permanent rejection
+of an asserted identity or a substitute for checks at later parents.
+A success establishes $\operatorname{enc}(x)$ and the request's actual
+logical identity under the original request interface. Only now merge
+retransmissions by that validated identity; an asserted equal identifier
+alone is insufficient. If its identity is already in $G$, record the
+outcome without adding an active pending entry. Otherwise persist it in
+the ordinary pending store, preserving an existing entry's FIFO position
+or assigning the next first-receipt position to a new entry, and invoke
+the same installed-snapshot relay rule. A successful check at an old
+parent is not admission at a newer one.
+
+The loop continuously alternates finite local steps on the oldest
+unfinished source job and the oldest unfinished checking job, skipping
+an empty journal. Within each job it follows the saved field or
+candidate order. New jobs go to the tail and cannot overtake a fixed
+job. The node continues these steps until each queued finite job is
+complete; session changes and repeated new arrivals cannot suspend it
+indefinitely. This is an explicit eventual local-work duty, with no
+wall-clock deadline, throughput bound or finite-storage claim.
+Neither queue waits on a fetch or on the other queue's completion.
+Ordinary messages, timers, P6, Ready and report emission do not wait for
+the import loop, its backlog, or an import watermark. Their original
+processing bounds are not bounds on this deferred work.
+
+The journals, bytes, read contexts and pending enqueue obligations belong
+to the node, independently of a producing engine or import worker.
+Waiting, Frozen, Completed, Terminated, \texttt{RequestClose}, Closed,
+checkpoint compaction and advancement of $G$ cannot drop them. A worker
+exit transfers them durably and a restart resumes their exact cursors.
+The existing public-source retention rules continue to govern their
+underlying bytes. Inclusion in $G$ removes an active pending request;
+it does not erase raw evidence or turn a rejected record into accepted
+history.
+
+\paragraph{Interface to reports and FIFO filling.}
+The set $E_v(P)$ below is still the exact eligible projection of the
+authenticated pending store. An unvalidated entry of $U_v$ is not yet a
+pending request; deferred checking is not permission to omit an admitted
+pending request from $E_v(P)$. A successful import enters the ordinary
+request-processing interface, which completes the required exact-parent
+admission and ancestry filtering before exposing the updated projection.
+At report emission and FIFO filling, use the completely validated actual
+parent, its native state and complete ancestry, including inherited
+global history and speculative ancestors. A previous import check or
+public occurrence replaces none of those checks. Earlier entries in a
+batch still affect admission of the remainder. An emitted report remains
+immutable; an import completed later is available to later report
+contexts and ordinary FIFO filling.
+
+\begin{proposition}[Import after a first public carrier]
+\label{prop:v39-public-request-import}
+Suppose an original complete public result $R_0$ contains the complete
+bytes of a request $x$ in an actual DATA batch in its old logical fields
+or unchanged public source denotations. If a correct node follows and
+retains those actual bytes and continues the local loop, it eventually
+retains $x$ in $U_v$, even if the record is rejected or its branch is
+closed. If, after that retention, an exact parent at which $x$ passes
+the ordinary request checks is completely prepared, or such a parent
+is already prepared then, the request eventually enters the pending
+store unless its identity has already entered $G$.
+\end{proposition}
+\begin{proof}
+The original public fields determine the DATA body and its actual batch
+entries. Source retention records a job for each acquired root or exact
+target. Each fixed job has only finitely many predecessors, a finite
+input and finite local traversal; tail arrivals cannot overtake it.
+The prescribed loop therefore reaches the actual entry and persists its
+bytes. Failed hints, branch closure and unrelated witness failures are
+not scan gates. An unresolved edge alone supplies no bytes, but the
+hypothesis supplies acquisition of its actual target and hence its job.
+Exact-byte deduplication only finds a copy already retained; an invalid
+claimed identifier cannot suppress the entry.
+
+The prepared-parent event or candidate arrival likewise records a fixed
+finite checking job. Its retained local context needs no fetch. FIFO
+service eventually completes the ordinary successful check of $x$ and
+updates the pending store. A later parent cannot cancel that work.
+Thereafter the ordinary pending rule retains the request until its
+identity enters $G$, while every report and batch independently checks
+eligibility at its own exact parent.
+\end{proof}
+
+This result gives no bound from public visibility to pending admission.
+In particular, valid candidate bytes cannot be omitted forever merely
+by leaving their finite checking job unprocessed, but import need not
+finish before any particular report. The proposition neither forms
+the first $x$-bearing $R_0$ nor ensures that every future roster knows
+$x$ before its first DATA. It adds no request-publication service,
+cross-snapshot message guarantee or historical quorum-availability
+premise. Accepted-report awareness remains a separate condition of
+\cref{prop:v38-request-inclusion}.

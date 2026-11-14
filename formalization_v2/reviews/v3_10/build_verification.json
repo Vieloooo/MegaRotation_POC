@@ -1,0 +1,30 @@
+{
+  "version": "3.10",
+  "status": "Not accepted as final: CE-OC and JG-I1 recorded; fixed/clarified in v3.11",
+  "pdf_pages": 92,
+  "compile": "latexmk/pdflatex passed",
+  "compile_warnings": [],
+  "protocol_boxes": 6,
+  "snapshot_files": 26,
+  "snapshot_and_live_hash_check": "26/26 matched",
+  "frozen_model": "English Model and Chinese section 2 unchanged from v3.1",
+  "render": "All 92 pages rendered at 65 dpi; six contact sheets visually inspected",
+  "detail_pages_visually_checked": [],
+  "main_sha256": "1555702839d5d117a95428953d91efcd28154c96a719119a2d178086d7e45bab",
+  "chinese_sha256": "b7182eaa5eeaf568c2a1f022b09483d4f671335dcf1e5c9634f624add715eed3",
+  "pdf_sha256": "9a5df56f4ab141ed4558a4da1732781ac8cb79e7c456c7079da7eefb69842bd9",
+  "review_reports": [
+    "fresh_safety.md",
+    "fresh_progress.md",
+    "fresh_interfaces.md"
+  ],
+  "review_sha256": {
+    "fresh_safety.md": "9fb5f9517fa15336510d2057355309eb36b93753b0eecba78c519533dde0f31e",
+    "fresh_progress.md": "93755a429e83103053adfa1bc7a86dbf409f80c2300db4cdbcd344cfc6bb18d1",
+    "fresh_interfaces.md": "ebb388f551acec1fbc65a4bb5fa8e9439119b69de79040c19f5698806082ec6b"
+  },
+  "missing_markdown_links": [],
+  "protocol_box_check": "Compiled labels1-6 include imported Force protocol",
+  "validation_limits": "Manual proof/adversarial review and document checks; no executable protocol/model checker or deployment benchmark",
+  "goal_status": "Historical failed candidate"
+}

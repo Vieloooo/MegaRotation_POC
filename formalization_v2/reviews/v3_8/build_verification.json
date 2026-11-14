@@ -1,0 +1,27 @@
+{
+  "version": "3.8",
+  "status": "Three fresh independent reviews found no defect in stated conditional safety, DATA progress, regional service, report timing and accepted-awareness request proof; arbitrary-roster request awareness remains unresolved",
+  "pdf_pages": 77,
+  "compile": "latexmk/pdflatex passed",
+  "compile_warnings": [],
+  "protocol_boxes": 6,
+  "render": "77 pages rendered and all five contact sheets inspected; new pages 58-61 individually inspected at 120 dpi",
+  "frozen_model": "English Model and Chinese section 2 unchanged from v3.1",
+  "snapshot_files": 23,
+  "missing_markdown_links": [],
+  "review_reports": [
+    "fresh_safety.md",
+    "fresh_progress.md",
+    "fresh_model_carriage.md"
+  ],
+  "main_sha256": "c8611baf07c74f34512a182b0b3ace81d6f8f3cf65fb0cb567af696ec8a73574",
+  "chinese_sha256": "f6e9224fd65ccc76b46718ae5ee1459620c3b78976095837014040a212078ad8",
+  "pdf_sha256": "d32dd44f026f080ecc9d1ccc8040cf2e975c82862fe4476d37436372e12a8768",
+  "review_sha256": {
+    "fresh_safety.md": "b2d8ce261201fdbe2f92a467942865afba755ad4c93388f8c415c161aa0cf3fa",
+    "fresh_progress.md": "cc3dcb3a12bbf909857e73fe60941380db5b5b8b1ef8df003d40b145eab13e2f",
+    "fresh_model_carriage.md": "92789dc47f586a7eddd8a6f83ccfbea5daa6027c905d2c85e46d3a07e7b13319"
+  },
+  "goal_completion": "Not achieved: full request inclusion across arbitrary disjoint AUTH rosters is unresolved; original communication domain clarification pending",
+  "protocol_box_check": "Compiled labels 1 through 6, including imported Force protocol"
+}

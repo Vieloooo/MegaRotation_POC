@@ -1,0 +1,35 @@
+% Adapted from formalization/figures/v2-major/regional-pipeline.tex.
+% Original count-based Sync HotStuff: no stake weights or stream receipts.
+% Time is schematic; the overlap illustrates delta < Delta.
+\begin{tikzpicture}[
+  x=1cm,y=1cm,font=\footnotesize,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=1.8mm]},semithick},
+  event/.style={draw,rounded corners=2pt,align=center,fill=white,inner sep=4pt},
+  lab/.style={fill=white,inner sep=1pt,align=center}
+]
+  \path[use as bounding box] (0,-.3) rectangle (14.7,3.7);
+  \node[anchor=east] at (.75,2.55) {$B_k$};
+  \draw[flow] (.9,2.55) -- (14.2,2.55);
+  \node[event] (prop) at (2.0,2.55) {Leader\\proposal};
+  \node[event] (vote) at (4.7,2.55) {Validate;\\forward and vote};
+  \node[event] (qc) at (7.5,2.55) {$\QC_v(B_k)$};
+  \node[event] (commit) at (12.4,2.55) {Local\\commit};
+  \node[lab] at (4.7,3.17) {all-to-all};
+  \draw[semithick,syncTeal] (4.7,1.92) -- (12.4,1.92);
+  \draw[syncTeal] (4.7,1.81) -- (4.7,2.03);
+  \draw[syncTeal] (12.4,1.81) -- (12.4,2.03);
+  \node[lab] at (10.8,1.92) {$2\Delta$ from local vote};
+
+  \node[anchor=east] at (.75,.75) {$B_{k+1}$};
+  \draw[flow] (7.5,.75) -- (14.2,.75);
+  \node[event] (child) at (7.5,.75) {Child\\proposal};
+  \node[event] (cvote) at (10.4,.75) {Validate;\\forward and vote};
+  \node[event] (cqc) at (13.1,.75) {$\QC_v(B_{k+1})$};
+  \draw[flow] (qc.south) -- (child.north);
+  \node[lab,anchor=east] at (6.8,1.15)
+    {Parent QC permits child;\\parent need not be committed};
+  \draw[semithick,syncBlue] (10.4,.05) -- (14.0,.05);
+  \draw[syncBlue] (10.4,-.06) -- (10.4,.16);
+  \draw[flow,syncBlue] (14.0,.05) -- (14.35,.05);
+  \node[lab] at (12.45,.05) {child timer continues};
+\end{tikzpicture}

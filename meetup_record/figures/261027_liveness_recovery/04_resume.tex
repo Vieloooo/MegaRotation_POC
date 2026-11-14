@@ -1,0 +1,37 @@
+\begin{tikzpicture}
+\path[use as bounding box] (-.2,-1.0) rectangle (21.8,13.6);
+\node[heading] at (10.8,13.0) {Kill 停旧工作；RESUME 固定同一个新起点};
+\node[card,fill=gray!5,text width=18.2cm] (kill) at (10.8,11.35) {
+  \textbf{先 Kill：} $D$ 已经定下不相容的块，或 $G$ 已不可能再接这个 session。\\
+  Manager 关闭本地程序，保留结果与证据；Kill 本身不修改 $G$，也不提交 L1 交易。
+};
+\node[box,fill=forceB,draw=rose,text width=5.1cm,minimum height=1.65cm] (one) at (3.2,8.65) {
+  \textbf{1. M 选择未来高度 $h$}\\确认紧急状态与服务恢复\\发布 RESUME 和新 policy
+};
+\node[box,fill=forceB,draw=rose,text width=5.1cm,minimum height=1.65cm] (two) at (10.8,8.65) {
+  \textbf{2. L1 同一交易}\\记录 RESUME\\Inbox cursor override 到 $h$
+};
+\node[box,fill=settled,kept,text width=5.1cm,minimum height=1.65cm] (three) at (18.4,8.65) {
+  \textbf{3. 按 L1 顺序派生}\\先处理已接纳输入\\再把空缺补到 $h$
+};
+\draw[recover] (one) -- (two); \draw[recover] (two) -- (three);
+\node[box,fill=settled,kept,text width=5.1cm,minimum height=1.8cm] (four) at (18.4,5.2) {
+  \textbf{4. GFR 处理 RESUME}\\$G$ 对齐到这次的 $D[h]$\\固定锚点，关闭旧分支
+};
+\node[box,fill=regionA,text width=5.1cm,minimum height=1.8cm] (five) at (10.8,5.2) {
+  \textbf{5. 新 session 准备}\\后续 Espresso 块上完成分配\\验证 $D[h]$ 的精确执行状态
+};
+\node[box,fill=regularB,text width=5.1cm,minimum height=1.8cm] (six) at (3.2,5.2) {
+  \textbf{6. 从 $h+1$ 出块}\\使用新程序与新授权\\Batcher 从新 cursor 继续
+};
+\draw[recover] (three) -- node[tag,right] {公共输入齐备后} (four);
+\draw[recover] (four) -- (five); \draw[recover] (five) -- (six);
+\node[card,fill=green!4,draw=green,text width=18.2cm] at (10.8,2.45) {
+  \textbf{锚点是“这笔 RESUME 的目标高度 $h$ 处的派生块”。}\\
+  所有人处理到同一笔交易的 CursorSet，得到同一个块；本地同步更快、后来又看到更多 L1 块，都不会改变它。
+};
+\node[note,text width=19.7cm,anchor=north west] at (.8,1.05) {
+  $h$ 对应未来时间，为 L1 最终化、GFR 处理与状态准备留出预算。示例为约 20 分钟，须满足 drift 余量。\\
+  此前已接纳批次的数据若取不回，第 3、4 步等待；不能把未知数据当成空批次跳过。
+};
+\end{tikzpicture}

@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+.sisyphus/
+.vscode/
+.claude/pr-*-review.md
+
+blog/

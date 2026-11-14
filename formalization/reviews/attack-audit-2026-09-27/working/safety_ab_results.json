@@ -1,0 +1,37 @@
+{
+  "scope": "Exhaustive bounded semantic forwarding/retention abstraction; complete verified honest messages arrive by the next deadline. Signatures, parsers, resource admission and clocks are assumed. No proof of general correctness or implementation behavior.",
+  "results": [
+    {
+      "n": 4,
+      "byzantine_identities": 1,
+      "responsive_honest_identities": 3,
+      "semantic_values": 3,
+      "exhaustive_schedules": 512,
+      "disagreements": 0
+    },
+    {
+      "n": 4,
+      "byzantine_identities": 2,
+      "responsive_honest_identities": 2,
+      "semantic_values": 3,
+      "exhaustive_schedules": 4096,
+      "disagreements": 0
+    },
+    {
+      "n": 4,
+      "byzantine_identities": 2,
+      "responsive_honest_identities": 2,
+      "semantic_values": 4,
+      "exhaustive_schedules": 65536,
+      "disagreements": 0
+    },
+    {
+      "n": 5,
+      "byzantine_identities": 3,
+      "responsive_honest_identities": 2,
+      "semantic_values": 3,
+      "exhaustive_schedules": 262144,
+      "disagreements": 0
+    }
+  ]
+}

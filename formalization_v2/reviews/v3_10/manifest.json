@@ -1,0 +1,33 @@
+{
+  "version": "3.10",
+  "scope": "English formal source and dependencies; human clarification in review scope; Chinese companion separate",
+  "main_sha256": "1555702839d5d117a95428953d91efcd28154c96a719119a2d178086d7e45bab",
+  "files": {
+    "baseline/manifest.json": "d95999e9e95a9b958cf710de39b0171ae333b99c35de90c83bfc6fc4e433ca2b",
+    "baseline/model_and_assumptions.tex": "1309fa5f8db29f082c4757bb07a1c7c4aa6723a277a75cdbf976566e2f68a387",
+    "baseline/sync_hotstuff_rr_part1_core.tex": "00533f01567a90cd034e6c3869dfa561b7c5cf476312fc0ce8313b7060f654d3",
+    "baseline/sync_hotstuff_rr_part2_rotation_v3_1.tex": "483bdfbf3668a0f892af38df264655e54e0dbd73a1c26fbd45111d1730cec034",
+    "baseline/sync_hotstuff_rr_part2_rotation_v3_1_zh.md": "7dbd6035096fabf06f200f25183312c7708bbeab1cfade97fe560eda5184ac40",
+    "figures/cross_region_rotation_v3_2/modules.pdf": "cc16b85e71089d597c6b970b27a1a8c9ee8e80c03d34a39e0f7392ce85dba62d",
+    "figures/cross_region_rotation_v3_2/modules.tex": "5aea9ecc96c9d63b23e2df49c38cdb73bead660f7fd69de1f82c99428fb4a6a5",
+    "figures/cross_region_rotation_v3_5/candidate_ready.pdf": "9bed3112ec9c77d9c6924241ec89773d6966c4662d251badf50f027b72165b7e",
+    "figures/cross_region_rotation_v3_5/candidate_ready.tex": "c59a0ebda4c8e2f0190186174f7399d3eae53072eebb6cf11d83f49ee0225b16",
+    "figures/sync_hotstuff_rr_rotation_v3_1/regular-handoff.tex": "2d81433fcb0e5509d4ac3e4912ed85f5af78088c4983bc4b880f7fc7dbf63094",
+    "figures/sync_hotstuff_rr_rotation_v3_5/forced-handoff.tex": "53b6370496f548aabd1286b7c371b686143050ebd72e062b76269928cb64277b",
+    "figures/sync_hotstuff_rr_rotation_v3_6/observer-finality.tex": "2707d6823e7a865d47caf10bb949122a17ff122bd1dff2a00e3c78ea8f30a000",
+    "sections/rotation_v3_10_exports.tex": "5b5cdd9745d255cc30961bd551217f8a828960edc2cdf871e2c7a6ae7db4098e",
+    "sections/rotation_v3_10_input_selection.tex": "484249a49dbc293140d61bbf518f3df6594cbff37d3ec7cd7b7bc7cb1d1ddce8",
+    "sections/rotation_v3_10_liveness.tex": "3c0c1a5943df36908c09ec34dac34dcbcae845fd39c3074ed3ac7cc830615ea1",
+    "sections/rotation_v3_10_ownership.tex": "5952df7ab66e12fdbbdbb48f8b6c3c4dd3beeca03ac6d11db9e79ecd97319f1c",
+    "sections/rotation_v3_10_public_requests.tex": "1be92deba4065fe976b82238f5d0ea827eb0abe66bd0c2703bfd983f96a711da",
+    "sections/rotation_v3_10_ready_bundle.tex": "a2d57b26d16c920b47c6911a43185cc4a7bf20a74df64a032758e1dbd878869a",
+    "sections/rotation_v3_10_receipt_kernel.tex": "5891df938ef061b57ccae04bef91a3df907b4e71ebd7542468883d03ec5e38ae",
+    "sections/rotation_v3_10_requests.tex": "3e406d464e0d7468c296299a5c7cfa76ce919a6dd96d6b3c3d93a2083bea4ffa",
+    "sections/rotation_v3_10_retirement.tex": "e047357f63aaf81e6877b9c06b6ffd0e1ab5592cc77df810fe0bc18e85f8d785",
+    "sections/rotation_v3_10_source_step.tex": "179822ad6248789ab14255456ab9480bdd03529562d8907ed8b15964bde68f57",
+    "sections/rotation_v3_5_health.tex": "21ce547d20c30e42a61bd7c58a5d45e51b5fa2aeeb71bc84a1a995f93155e12b",
+    "sections/rotation_v3_6_control.tex": "37e7c065b33cead1f334878f9fe92e761472464e5a67292947cd9a4f251d2285",
+    "sections/rotation_v3_8_carrier.tex": "cb2de3e19a5c69d3a42ef1341eadd533336a3eeb75192813aff015483ed10c72",
+    "sync_hotstuff_rr_part2_rotation_v3_10.tex": "1555702839d5d117a95428953d91efcd28154c96a719119a2d178086d7e45bab"
+  }
+}

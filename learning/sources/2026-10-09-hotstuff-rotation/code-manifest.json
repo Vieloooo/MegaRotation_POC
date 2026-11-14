@@ -1,0 +1,155 @@
+[
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/README.md",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/README.md",
+    "local": "onflow--consensus__hotstuff__README.md",
+    "sha256": "65a5946d0faef02686aaea29d09341391cbcdb30ff0fbe204482eccf5a398b42"
+  },
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/pacemaker/pacemaker.go",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/pacemaker/pacemaker.go",
+    "local": "onflow--consensus__hotstuff__pacemaker__pacemaker.go",
+    "sha256": "252e1b91f9bf4b0d72056f2cb9b29cb2e6e9a3a6e90c518f6b207c1e4a503c6e"
+  },
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/pacemaker/view_tracker.go",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/pacemaker/view_tracker.go",
+    "local": "onflow--consensus__hotstuff__pacemaker__view_tracker.go",
+    "sha256": "60b82c1976c6c3e4cf21187928dcc33e2a981ce1f9a19c50ffc4312656475c9d"
+  },
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/safetyrules/safety_rules.go",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/safetyrules/safety_rules.go",
+    "local": "onflow--consensus__hotstuff__safetyrules__safety_rules.go",
+    "sha256": "5b6c7a79fa2c199527274ce1085c82fc2d9922a3b57d2240c7d0c1ffd2525d47"
+  },
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/forks/forks.go",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/forks/forks.go",
+    "local": "onflow--consensus__hotstuff__forks__forks.go",
+    "sha256": "20f5e12fce57c1ac00ccd175dfc0de3432303fbef7b753455c52b6e4c0ba50a6"
+  },
+  {
+    "repo": "onflow/flow-go",
+    "ref": "master",
+    "commit": "b85954c90eb9f8ab4b62a71641b2a53fb311a170",
+    "path": "consensus/hotstuff/committees/leader/leader_selection.go",
+    "url": "https://raw.githubusercontent.com/onflow/flow-go/b85954c90eb9f8ab4b62a71641b2a53fb311a170/consensus/hotstuff/committees/leader/leader_selection.go",
+    "local": "onflow--consensus__hotstuff__committees__leader__leader_selection.go",
+    "sha256": "dbf80f4614114a585c53d7389c3fb33eec77b05b4640dff3eab1bbd71c8ba44b"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/src/liveness/round_state.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/src/liveness/round_state.rs",
+    "local": "aptos-labs--consensus__src__liveness__round_state.rs",
+    "sha256": "12bcea79e68a47e936ccd4e9bd9deec880f2640176e070adae9ba600df92d9d1"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/src/round_manager.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/src/round_manager.rs",
+    "local": "aptos-labs--consensus__src__round_manager.rs",
+    "sha256": "a93a425376a46a4809ef365f388a8129dd98c43fbc947061770ff285bb11b7fd"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/src/liveness/leader_reputation.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/src/liveness/leader_reputation.rs",
+    "local": "aptos-labs--consensus__src__liveness__leader_reputation.rs",
+    "sha256": "487e38893c0ef308d4e9447141861d46d1c878bf195c3ae007d2710bd48f6217"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/safety-rules/src/safety_rules.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/safety-rules/src/safety_rules.rs",
+    "local": "aptos-labs--consensus__safety-rules__src__safety_rules.rs",
+    "sha256": "5515f47390faaea12ab126f5085c89a140476409a9504eb9679804c78ede2d69"
+  },
+  {
+    "repo": "category-labs/monad-bft",
+    "ref": "master",
+    "commit": "33e55fcca08ed3690a9a968217a0c54d33000fe4",
+    "path": "monad-consensus/src/pacemaker.rs",
+    "url": "https://raw.githubusercontent.com/category-labs/monad-bft/33e55fcca08ed3690a9a968217a0c54d33000fe4/monad-consensus/src/pacemaker.rs",
+    "local": "category-labs--monad-consensus__src__pacemaker.rs",
+    "sha256": "854679c67a1a4f9836787c899ce17a853904f6c806ca145081b9d28ed7a098f1"
+  },
+  {
+    "repo": "category-labs/monad-bft",
+    "ref": "master",
+    "commit": "33e55fcca08ed3690a9a968217a0c54d33000fe4",
+    "path": "monad-consensus/src/validation/safety.rs",
+    "url": "https://raw.githubusercontent.com/category-labs/monad-bft/33e55fcca08ed3690a9a968217a0c54d33000fe4/monad-consensus/src/validation/safety.rs",
+    "local": "category-labs--monad-consensus__src__validation__safety.rs",
+    "sha256": "a0659f3fe284fa1c3d9689268648633746f2bc9f8e40dfa57412c71e8dd19183"
+  },
+  {
+    "repo": "category-labs/monad-bft",
+    "ref": "master",
+    "commit": "33e55fcca08ed3690a9a968217a0c54d33000fe4",
+    "path": "monad-consensus/src/vote_state.rs",
+    "url": "https://raw.githubusercontent.com/category-labs/monad-bft/33e55fcca08ed3690a9a968217a0c54d33000fe4/monad-consensus/src/vote_state.rs",
+    "local": "category-labs--monad-consensus__src__vote_state.rs",
+    "sha256": "bee078a87a93902a23ae6766febba2f5b6c6e3bd2a84f91b61d2c43299389126"
+  },
+  {
+    "repo": "category-labs/monad-bft",
+    "ref": "master",
+    "commit": "33e55fcca08ed3690a9a968217a0c54d33000fe4",
+    "path": "monad-blocktree/src/blocktree.rs",
+    "url": "https://raw.githubusercontent.com/category-labs/monad-bft/33e55fcca08ed3690a9a968217a0c54d33000fe4/monad-blocktree/src/blocktree.rs",
+    "local": "category-labs--monad-blocktree__src__blocktree.rs",
+    "sha256": "f2c991748ff0e509c0f88bbef86c68890abd52bd27285aa5439a839da52b71b0"
+  },
+  {
+    "repo": "category-labs/monad-bft",
+    "ref": "master",
+    "commit": "33e55fcca08ed3690a9a968217a0c54d33000fe4",
+    "path": "monad-consensus-state/src/lib.rs",
+    "url": "https://raw.githubusercontent.com/category-labs/monad-bft/33e55fcca08ed3690a9a968217a0c54d33000fe4/monad-consensus-state/src/lib.rs",
+    "local": "category-labs--monad-consensus-state__src__lib.rs",
+    "sha256": "47b4ab268113fd11db9c3bcd71a0531ca0594f3d6ba6b0f0daabd2ecbe3455d6"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/safety-rules/src/lib.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/safety-rules/src/lib.rs",
+    "local": "aptos-labs--consensus__safety-rules__src__lib.rs",
+    "sha256": "1c71003b734f5235e39577cf83b1565437679cf767f219eb3d275133367a7ca2"
+  },
+  {
+    "repo": "aptos-labs/aptos-core",
+    "ref": "main",
+    "commit": "bc7baea6b85295edb533c22284f8474613d32624",
+    "path": "consensus/safety-rules/src/safety_rules_2chain.rs",
+    "url": "https://raw.githubusercontent.com/aptos-labs/aptos-core/bc7baea6b85295edb533c22284f8474613d32624/consensus/safety-rules/src/safety_rules_2chain.rs",
+    "local": "aptos-labs--consensus__safety-rules__src__safety_rules_2chain.rs",
+    "sha256": "25d781bdb6b35224cdf82f248c156c8354da7622cf637a70a9278ff1251ad45a"
+  }
+]

@@ -1,0 +1,11 @@
+# v3.7 independent frozen review
+
+This is an unverified candidate. Verify all manifest hashes; do not modify snapshot/ or read other reports/prior verdicts. The full v3.1 baseline and inherited Part I source are in snapshot/baseline; Model byte equality is not a semantic verdict.
+
+New public receipt rule: RawFINAL uses original signatures under authenticated fixed AUTH0. The kernel theorem must derive intrinsic regional/native input validity noncircularly from an actual correct FINAL action and unchanged full regional validation; receipt-triggered commits emit no FINAL. CheckFINAL and independent public boundary/G/quota/xi/beta/Force gates remain distinct. Regional full admission, exact native Ready state and C_pub execution/DA checks remain mandatory in their own scopes. Do not extend kernel soundness outside the original fixed-snapshot fault assumptions or to unbound sidecars.
+
+New source rules: full raw public-byte retention, fixed finite hydration, no session-driven pruning; logical carrier normalization with preserved source denotations and incremental optional-edge inventory; no eager AUTHg/native sidecar fetching. Check that the public-response dependency case split is complete and does not hide an unbounded mandatory read. The timed processing claim concerns prepared regional members, not arbitrary external-observer CPU/native performance. No new archival/authority/native preparation or retry bound may be assumed.
+
+Recheck the complete chain: inherited regional R_i, first-result formation and already-recorded carrier, terminal commit before successor authority, source-handler L, finite health controls, adaptive timestamp inequality, owed-set repeated service. Keep strict pre-payload cutoff, old-beta matching, MSIG priority, DATA/DRAIN and six Protocols.
+
+Request inclusion remains explicitly open; a known counterexample is stated. The user objective is not complete merely because some conditional safety or DATA-progress lemmas pass. Report objective and implementation limits honestly, and classify actual theorem/algorithm failures separately from unspecified concrete codecs or native adapters. This is a mathematical system design, not a deployed implementation certification.

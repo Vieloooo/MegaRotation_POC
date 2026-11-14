@@ -1,0 +1,11 @@
+# v3.9 independent frozen review
+
+Verify all manifest hashes before/after. Read only snapshot/, manifest and this scope; no authors' design notes, prior verdicts or other reviews. No repairs or source edits. Use proof-verifier discipline and Markdown Summary + Detailed Verification Log, classify Critical Error vs Justification Gap.
+
+New independent local request owner imports actual retained typed DATA batch bytes, including rejected/closed records, via durable FIFO source and checking journals. Unvalidated exact-byte candidates are separate from authenticated pending entries; a forged asserted ID must not poison a later valid request. Checks use a fixed already prepared native parent and retained immutable read context; jobs never retarget/cancel on G/parent/beta changes. Snapshot construction is not instantaneous or assigned a new bound. Import changes neither G nor entry/Force/receipt authority. No Ready/import watermark gate exists.
+
+Review actual SOURCESTEP/store/native-preparation/lifecycle hooks, source dictionary-cut and later-target jobs, cycles/malformed objects, candidate promotion and FIFO order, exact-parent E_v(P), same-snapshot relay, continuous fair local work and no hidden source/native fetch or new network guarantee. Preserve P6/Ready/REPORT message deadlines: only descriptor enqueue occurs in those handlers, never a deferred scan/wait. Verify whether these stated contracts genuinely avoid new timing/availability assumptions.
+
+The new proposition is only first-public-carrier -> actual bytes -> pending after a successful prepared-parent check. It claims no visibility-to-import deadline, first-carrier formation, or future-roster awareness before every report. Full request liveness remains OPEN; a separate ownership/hydration proposal is not enabled in this protocol. Keep this distinction from the original DATA/global/repeated-regional-service claims and the v3.8 accepted-awareness theorem.
+
+Retain original complete public R0, regional REPORT sidecars, raw FINAL kernel, DATA/DRAIN, strict pre-payload Force cutoff, MSIG priority/old-beta check, original six Protocols and immutable slot semantics. Model equals v3.1 literally; inspect semantic scope as well. No deployed codec/native benchmark or model checker is supplied.
