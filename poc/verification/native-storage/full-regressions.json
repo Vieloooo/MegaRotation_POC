@@ -1,0 +1,19 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--manifest-path",
+    "prototypes/i1b-runtime/Cargo.toml",
+    "--locked",
+    "--offline",
+    "--",
+    "--test-threads=1"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 4.518134844489396,
+  "artifacts": "/tmp/native-storage-all-regressions-4f889af-a2h_8lma",
+  "external_wall_cap_seconds": 60
+}

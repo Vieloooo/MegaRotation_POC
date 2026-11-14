@@ -1,0 +1,18 @@
+{
+  "candidate": "4f889afeb6901294a8f941a009cae3f759388485",
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "30s",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/deps/native_storage_independent-cc74d3b1e51886a9",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "wall_seconds": 0.7704983949661255,
+  "artifacts": "/tmp/native-storage-verify-4f889af-hogglb9o",
+  "test_source_sha256": "394a3f33e434dbacb4ad3253c7d9ea2bef75bd5707e6a600ca2c36183725d59e",
+  "binary_sha256": "54c10dfb4095f9490b858a53eccbdba6ff249815480377e72bcdcfe894dac901",
+  "external_wall_cap_seconds": 30,
+  "interpretation": "Initial fixture run: two verifier assertions corrected to the already-frozen source rules. Issued writes include failed OffsetOverflow attempts; Journal sync can use ordinary write plus Blob::sync for earlier mutation debt. No production defect or source change."
+}

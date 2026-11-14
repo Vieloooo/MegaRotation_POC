@@ -1,0 +1,17 @@
+{
+  "candidate": "4f889afeb6901294a8f941a009cae3f759388485",
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "30s",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/deps/native_storage_independent-cc74d3b1e51886a9",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 1.8437223546206951,
+  "artifacts": "/tmp/native-storage-verify-4f889af-final-zdxu5pu2",
+  "test_source_sha256": "433620ce30aa7a6e47b349b98d182668aebcae3af1d3a8c49f706c248a0b97b8",
+  "binary_sha256": "af4143585d75b465ddc90f66a042652b2386bb5abf1acf77dc3243633235c60d",
+  "external_wall_cap_seconds": 30
+}

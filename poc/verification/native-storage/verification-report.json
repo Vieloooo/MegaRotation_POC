@@ -1,0 +1,176 @@
+{
+  "candidate": "4f889afeb6901294a8f941a009cae3f759388485",
+  "baseline": "129a1206ddf4a5e94020c6347863be463fe233af",
+  "verdict": "PASS_FOR_RECORDED_NATIVE_STORAGE_PRIMITIVE_CASES",
+  "full_I1b": "INCONCLUSIVE",
+  "overall_I1": "INCONCLUSIVE",
+  "independence": "Expectations derived from accepted contract and pinned Storage/Blob/paged writer/segmented variable Journal before implementation inspection. No builder oracle or test support reused; builder raw exports preserved read-only.",
+  "source_authority": "Commonware2026.10.0 / upstream92a2f68a0e131c8b69de41e84aec37da6280f212; runtime includes previously verified i1b-controlled-spawn-v1 patch",
+  "contract_clarification": {
+    "authority": "Explicit lead instruction during this review",
+    "old_sha256": "898428ca5a82b08bcd5902cde35bbb840a16f49c168b3ec9c9556a4111540777",
+    "accepted_sha256": "ea70b261f2b0e57ac0a75c549a49a33a64196b97c37421866866f3aaf474010d",
+    "change": "All native method Err values remain typed, including write/sync; required adapter-evidence persistence failure belongs to deferred WITNESS. Handled-error Step is not successful durability/publication evidence."
+  },
+  "executed": {
+    "independent_tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "ignored": 0,
+    "external_wall_cap_seconds": 30,
+    "execution": "execution.json",
+    "log": "tests.log",
+    "full_regressions_passed": 68,
+    "prior_regressions_preserved": 57,
+    "full_regression_metadata": "full-regressions.json",
+    "full_regression_log": "full-regressions.log",
+    "format_check": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "case_matrix": [
+    {
+      "id": "S1",
+      "status": "PASS",
+      "test": "s1_s4_actual_buffers_options_ranges_and_typed_errors",
+      "evidence": "Actual open/write/read/read_at_buf/resize/sync/remove/scan plus default read_many/start_read_many; scatter layout2+3 and exact bytes/options/digests/IO ordering."
+    },
+    {
+      "id": "S2",
+      "status": "PASS",
+      "test": "s2_io_release_is_not_ordinary_authority",
+      "evidence": "Custom result waker observes publication_allowed=false in IO_RELEASE; attempted ordinary Clock read fails; consumer later runs ordinary only after release. Virtual clock unchanged across physical operations."
+    },
+    {
+      "id": "S3",
+      "status": "PASS",
+      "test": "s3_pending_open_observer_abandonment_does_not_hold_native_exclusivity; s3_ready_open_observer_abort_drops_channel_resource_before_next_open",
+      "evidence": "Pending observer dropped and successful result receiver aborted on Ready; following reopen succeeds with no artificial BlobAlreadyOpen."
+    },
+    {
+      "id": "S4",
+      "status": "PASS",
+      "test": "s1_s4_actual_buffers_options_ranges_and_typed_errors",
+      "evidence": "Exact BlobAlreadyOpen, BlobVersionMismatch expected/found, PartitionNameInvalid, PartitionMissing, Io(UnexpectedEof), and read/write/resize OffsetOverflow; handled errors do not globally fail."
+    },
+    {
+      "id": "S5",
+      "status": "PASS",
+      "test": "s5_remove_name_and_partition_keep_old_instances_readable",
+      "evidence": "Both name and partition removal preserve old unsynced bytes in old handles; recreated instances contain independent new bytes and distinct open IDs."
+    },
+    {
+      "id": "S6",
+      "status": "PASS",
+      "test": "s6_dropped_and_aborted_sync_observers_preserve_flush_and_release_ownership",
+      "evidence": "Dropped observer and aborted-retained observer both preserve flush. Next open is issued before SyncReady, completes after it, and succeeds after old wrapper drop."
+    },
+    {
+      "id": "S7",
+      "status": "PASS",
+      "test": "s7_binary_scan_sorting_does_not_depend_on_directory_creation_order",
+      "evidence": "Different native fixture directory creation orders produce identical sorted raw-byte scans and subsequent complete protocol traces; setup order recorded separately."
+    },
+    {
+      "id": "S8",
+      "status": "PASS",
+      "test": "s8_cancel_borrowed_grant_with_owned_active_io_then_repeat_failed_calls; s8_ready_result_is_retained_until_root_cleanup_and_reopen_is_unblocked; s8_synchronous_misuse_cannot_ack_or_drop_accepted_io",
+      "evidence": "Cancel borrowed grant with root-owned active IO; repeat failed grants/transport failure/shutdown. Inject failure after Ready before release. Root async cleanup returns from actual Runner, no successful faulted Ack; later raw native reopen proves exclusive resources released."
+    },
+    {
+      "id": "S9",
+      "status": "PASS",
+      "test": "s9_s10_real_artifacts_partial_pages_rewrite_replay_and_all_seed_wall_pairs",
+      "evidence": "Real BLS PoPs/votes and native Artifact Journal; exact independent varint offsets, pages256/logical244, independent CRC32C page extraction, partial rewrites, page crossing, new-runtime replay and post-replay append."
+    },
+    {
+      "id": "S10",
+      "status": "PASS",
+      "test": "s9_s10_real_artifacts_partial_pages_rewrite_replay_and_all_seed_wall_pairs; full-regressions.log",
+      "evidence": "Seeds7/42/99 \u00d7 physical wall pauses0/2ms: complete Journal/control/IO/result/artifact/file-digest records identical within pairs. All57 prior prototype regressions plus11 new tests pass."
+    }
+  ],
+  "journal_fixture": {
+    "members": 5,
+    "identity_seeds": "[16+i;32], i=0..4",
+    "bls_key_rng": "ChaCha20Rng([42;32])",
+    "pop_namespace": "I1b/storage/pop/v1",
+    "vote_namespace": "I1b/storage/vote/v1",
+    "member_to_signer_mapping": "explicit in each canonical.json; no member0/index0 assumption",
+    "epoch": 1,
+    "sections": [
+      1,
+      2
+    ],
+    "partition": "i1b-voter-0",
+    "compression": null,
+    "physical_page_size": 256,
+    "logical_payload_size": 244,
+    "crc_bytes": 12,
+    "cache_pages": 4,
+    "write_buffer": 488,
+    "replay_buffer": 256,
+    "replay_read_options": "DONT_CACHE",
+    "original_artifacts_per_run": 9,
+    "original_encoded_lengths": [
+      85,
+      85,
+      85,
+      52,
+      85,
+      85,
+      85,
+      4,
+      85
+    ],
+    "extra_post_replay_artifact": "section2 Certification(round epoch1/view2,true)",
+    "seeds": [
+      7,
+      42,
+      99
+    ],
+    "wall_pause_ms": [
+      0,
+      2
+    ],
+    "pairs_equal": 3,
+    "native_sync_write_operations_per_writer_run": 7,
+    "native_full_sync_operations_per_writer_run": 2,
+    "index": "journal-evidence-index.json"
+  },
+  "safety_boundaries": [
+    "IO_RELEASE result transfer is not ordinary authority.",
+    "Native start_sync acceptance is distinct from completion; queue owns and awaits inner completion.",
+    "Successful SYNC writes cover their submitted ranges, not unrelated earlier dirty bytes/resize.",
+    "Raw readability or successful replay is not a historical publication barrier proof."
+  ],
+  "open_source_findings": [],
+  "source_sha256": {
+    "poc/docs/contracts/task-contract-native-storage-v1.md": "ea70b261f2b0e57ac0a75c549a49a33a64196b97c37421866866f3aaf474010d",
+    "poc/docs/contracts/task-contract-i1b-v1.md": "b721213c9cda856a760aaa8f1fed68bebf5c18f09a00ac184651c551965f1f3c",
+    "poc/docs/contracts/i1b-runtime-slice-v1.md": "7a0c7afc0dbb98720771fdc7f6c01bb60652d427b68f9d4baf77fa7df8c4f9a2",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "8515bf7ae28a93a30651e03c2b33d39e7fb1bb26970eb91a9da4967619580400",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "6cb39b5ad3edf88d93ebd5f0e69d7fcb4640c1cea75994a0fcd8b88d181c5d64",
+    "poc/prototypes/i1b-runtime/src/context.rs": "987c6c3c184f25d12191c471f4f5fd94618564ed4bcf1dd23ce6d49e303de95b",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "255ad5d815ccfdea60be82786e8865c75e24ecb2caf8d8d74446360b732b85e8",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/verification/native-storage/acceptance.rs": "433620ce30aa7a6e47b349b98d182668aebcae3af1d3a8c49f706c248a0b97b8"
+  },
+  "artifacts": {
+    "independent": "/tmp/native-storage-verify-4f889af-final-zdxu5pu2",
+    "full_regressions": "/tmp/native-storage-all-regressions-4f889af-a2h_8lma",
+    "initial_oracle_correction": "initial-fixture-correction.json; initial run excluded from final PASS counts"
+  },
+  "production_edits": "None; only approved test target, independent verification files and exact lead-authorized contract clarification changed.",
+  "limits": [
+    "This is the primitive bridge only: NATIVE-WITNESS/outbox, actual signing/publication gates, native p2p/quota/engine and two-process integration remain pending.",
+    "Signed artifacts are deterministic offline fixtures; no live BFT quorum/finality or protocol-time signing claim.",
+    "The named pre-dispatch hold and Ready-before-release fault are controlled boundaries; actual hardware I/O hangs, disk-full/fsync failures and power-loss behavior were not injected.",
+    "All native errors are preserved by the generic forwarding path; tests exercise defined input/namespace/range errors, not every operating-system failure.",
+    "Replay/append ran only on owned fixture data; before/after raw pages were retained. No repairing replay was run on candidate/builder live evidence.",
+    "Native runtime reopen durability remains a primary-source guarantee, not independent proof of an earlier publication witness.",
+    "ReadMany ranges2\u20133 and scatter reads2chunks were exercised. Actual artifacts were <=85bytes and journal blob data <=64KiB; arbitrary trait-size/large-iovec behavior is outside these finite traces.",
+    "Different directory creation orders are fixture setup differences; only the subsequent protocol suffix is compared for S7. S10 compares complete same-input records without deleting logical fields.",
+    "External wall caps protect verification execution; production process-watchdog integration remains separate."
+  ]
+}

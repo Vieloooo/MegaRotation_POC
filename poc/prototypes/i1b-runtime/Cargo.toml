@@ -41,3 +41,7 @@ overflow-checks = true
 [[test]]
 name = "i1b_runtime_independent"
 path = "../../verification/i1b-runtime/acceptance.rs"
+
+[[test]]
+name = "native_storage_independent"
+path = "../../verification/native-storage/acceptance.rs"
