@@ -13,3 +13,7 @@ prost.workspace = true
 tokio.workspace = true
 tonic.workspace = true
 tokio-stream.workspace = true
+
+[[test]]
+name = "i1_acceptance"
+path = "../../verification/i1/acceptance.rs"

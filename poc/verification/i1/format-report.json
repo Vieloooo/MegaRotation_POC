@@ -1,0 +1,35 @@
+{
+  "command": "./poc/scripts/bootstrap.sh fmt --all",
+  "exit_code": 0,
+  "changed_files": [],
+  "pre_hashes": {
+    "poc/crates/replica-worker/src/main.rs": "8f42893259b583a32b156be300d6b9dd3fae27bbec048601b67c4f853e19f240",
+    "poc/crates/sim-hub/src/hub.rs": "fb86a52f482802a5fe2d862fb5ae7ca7da2435cdb75c05562489aed22b96553c",
+    "poc/crates/sim-hub/src/main.rs": "5401c24f3255617301cf582cfcc65fe8204014b6b3ad5204383c02e58c419b3c",
+    "poc/crates/sim-hub/src/scenario.rs": "c049d6a169abb27a43876ef893ff6a70a3d75b04c074432274568dceedb2fda6",
+    "poc/crates/sim-hub/src/transport.rs": "460fe2185c7677761cbfb1d7f7f983bd19af8f3de773ff8fb74ac6f301cf7766",
+    "poc/crates/sim-runtime/src/journal.rs": "78021ddacd4f20341b29e6abf7651333338fbc57bbdf31f4fff90bd18cbd4291",
+    "poc/crates/sim-runtime/src/lib.rs": "269e38d9b5401851f4ecaf0bde090a40f986c423861899bb842b639ea54734ac",
+    "poc/crates/sim-runtime/src/state.rs": "729a812607813801583f41ec29ce8e2cf4efbc8bce682bd56a2a1bbc3e5d9af1",
+    "poc/crates/sim-runtime/tests/journal_recovery.rs": "a624a7a02c815d6e71b12f5c36823c735b2c90b3a455d0a13eefdfe9087f30c4",
+    "poc/crates/types/build.rs": "5ce98915ae75ea9dd4376e75fdc77a70096ca4c118e89df12a3c601b79cd84c9",
+    "poc/crates/types/src/lib.rs": "4fe0f726feb12c1d0dfd55639af0fda9c891a1b09357e0b15737beecd39a8a01",
+    "poc/verification/i1/acceptance.rs": "add8161a41975d6734217ee5581f2c064c91dfd5ee8ea59b6900742e7eb04bed"
+  },
+  "post_hashes": {
+    "poc/crates/replica-worker/src/main.rs": "8f42893259b583a32b156be300d6b9dd3fae27bbec048601b67c4f853e19f240",
+    "poc/crates/sim-hub/src/hub.rs": "fb86a52f482802a5fe2d862fb5ae7ca7da2435cdb75c05562489aed22b96553c",
+    "poc/crates/sim-hub/src/main.rs": "5401c24f3255617301cf582cfcc65fe8204014b6b3ad5204383c02e58c419b3c",
+    "poc/crates/sim-hub/src/scenario.rs": "c049d6a169abb27a43876ef893ff6a70a3d75b04c074432274568dceedb2fda6",
+    "poc/crates/sim-hub/src/transport.rs": "460fe2185c7677761cbfb1d7f7f983bd19af8f3de773ff8fb74ac6f301cf7766",
+    "poc/crates/sim-runtime/src/journal.rs": "78021ddacd4f20341b29e6abf7651333338fbc57bbdf31f4fff90bd18cbd4291",
+    "poc/crates/sim-runtime/src/lib.rs": "269e38d9b5401851f4ecaf0bde090a40f986c423861899bb842b639ea54734ac",
+    "poc/crates/sim-runtime/src/state.rs": "729a812607813801583f41ec29ce8e2cf4efbc8bce682bd56a2a1bbc3e5d9af1",
+    "poc/crates/sim-runtime/tests/journal_recovery.rs": "a624a7a02c815d6e71b12f5c36823c735b2c90b3a455d0a13eefdfe9087f30c4",
+    "poc/crates/types/build.rs": "5ce98915ae75ea9dd4376e75fdc77a70096ca4c118e89df12a3c601b79cd84c9",
+    "poc/crates/types/src/lib.rs": "4fe0f726feb12c1d0dfd55639af0fda9c891a1b09357e0b15737beecd39a8a01",
+    "poc/verification/i1/acceptance.rs": "add8161a41975d6734217ee5581f2c064c91dfd5ee8ea59b6900742e7eb04bed"
+  },
+  "stdout": "",
+  "stderr": ""
+}

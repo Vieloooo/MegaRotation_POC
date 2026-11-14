@@ -1,0 +1,193 @@
+{
+  "candidate": "a5e6fd30fcb036f7b5dabe5dd6e59458b83d0dac",
+  "implementation_candidate": "3d413c4342b56250bb69a3d822a5693e84c1c2d7",
+  "candidate_difference": "a5e6fd3 adds I1b contract only; I1a implementation unchanged",
+  "workflow": "Expected outcomes derived from pinned sources and accepted contract before implementation review; candidate sources and raw runs read-only.",
+  "gate_results": {
+    "I1a": "INCONCLUSIVE_PENDING_REPLAY_MATRIX",
+    "I1b": "INCONCLUSIVE_UNIMPLEMENTED",
+    "overall_I1": "INCONCLUSIVE"
+  },
+  "pure_tests": {
+    "independent_passed": 13,
+    "incidental_imported_builder_tests": 2,
+    "failed": 0,
+    "log": "poc/verification/i1/pure-tests.log"
+  },
+  "socket_tests": {
+    "root_report": "poc/artifacts/verification/i1/independent-sockets-a5e6fd3/report.json",
+    "passed": 10,
+    "new_altered_duplicate_control": "PASS; poc/artifacts/verification/i1/independent-sockets-a5e6fd3/altered-duplicate-report.json"
+  },
+  "raw_trace_checks": {
+    "scenarios": 8,
+    "seeds": [
+      7
+    ],
+    "rows": 2357,
+    "committed_steps": 416,
+    "signed_intent_creations": 13,
+    "report": "poc/verification/i1/checker-report-seed7.json"
+  },
+  "resolved_findings": [
+    {
+      "id": "R1",
+      "issue": "Uncommitted retry bypassed fresh calibration",
+      "evidence": "regression_precommit_retry_cannot_bypass_recalibration; direct and harmless retries; before_append and partial_tail"
+    },
+    {
+      "id": "R2",
+      "issue": "Committed final frame could be truncated after length corruption",
+      "evidence": "regression_committed_length_corruption_truncation_and_context_fail_closed; N+1 with/without corrected complement and committed truncation"
+    },
+    {
+      "id": "R3",
+      "issue": "First receive persisted reference time only",
+      "evidence": "regression_first_local_receive_is_immutable_and_unsafe_is_not_retroactive"
+    },
+    {
+      "id": "R4",
+      "issue": "Same-tick event could precede required recovery",
+      "evidence": "socket_recovery_equal_tick_seed7/42/99"
+    },
+    {
+      "id": "R5",
+      "issue": "Invalid Ack effects could commit partially",
+      "evidence": "socket_invalid_ack_is_atomic; no bad-step AckCommitted"
+    }
+  ],
+  "matrix": [
+    {
+      "case": "I1-01",
+      "status": "PASS",
+      "evidence": "Eight seed7 runs: checked distinct simultaneously live PIDs, independent journal/head chains and actual raw RPC frames."
+    },
+    {
+      "case": "I1-02",
+      "status": "INCONCLUSIVE",
+      "evidence": "Full same-candidate wall-pause/reversed-start replay matrix still required; no rows excluded from logical trace comparison."
+    },
+    {
+      "case": "I1-03",
+      "status": "PASS",
+      "evidence": "clock-faults trace schedules other worker while sample pending; process/watchdog controls do not advance virtual time."
+    },
+    {
+      "case": "I1-04",
+      "status": "PASS",
+      "evidence": "Offsets \u00b11000; RPC profiles 50/250 and1000/10000us; same-node read values checked independently."
+    },
+    {
+      "case": "I1-05",
+      "status": "PASS",
+      "evidence": "Literal sample-as-of1000000 delivery1010000 gives1011000/1009000."
+    },
+    {
+      "case": "I1-06",
+      "status": "PASS",
+      "evidence": "Ten independent invalid-sample mutations plus malformed control protobuf and identity controls; rejection state immutability checked."
+    },
+    {
+      "case": "I1-07",
+      "status": "PASS",
+      "evidence": "Invalid sequence100 followed by valid sequence3; unrelated request2 remains outstanding."
+    },
+    {
+      "case": "I1-08",
+      "status": "PASS",
+      "evidence": "Lease-end\u22121/equal/+1 signing vectors; raw lease-expiry run and independent per-read/intent checks."
+    },
+    {
+      "case": "I1-09",
+      "status": "PASS",
+      "evidence": "Fresh sample after expiry preserves old terminal cid; lease-expiry run enters distinct next fixture."
+    },
+    {
+      "case": "I1-10",
+      "status": "PASS",
+      "evidence": "Original deadlines, early firing, cancellation/generation, renewal, overdue post-restart and terminal cancellation; exact eligible ticks checked."
+    },
+    {
+      "case": "I1-11",
+      "status": "PASS",
+      "evidence": "Close while work pending; stop\u22121/equal/+1 for both offset extrema."
+    },
+    {
+      "case": "I1-12",
+      "status": "PASS",
+      "evidence": "Staggered fixture lifecycle, repeated Create/Enter/Close, preserved signing/entry/view state."
+    },
+    {
+      "case": "I1-13",
+      "status": "PASS",
+      "evidence": "Five real checkpoint modes; independent protected-length, committed truncation, missing-head, payload/context and rehashed Ack/state corruption controls."
+    },
+    {
+      "case": "I1-14",
+      "status": "PASS",
+      "evidence": "Before-expiry recovery resumes only after fresh sample; after-expiry recovery leaves old cid terminal."
+    },
+    {
+      "case": "I1-15",
+      "status": "PASS",
+      "evidence": "Exact cached-Ack replay, changed cached-grant refusal, unsolicited Ack, identity controls, and real-gRPC altered duplicate Ack rejection passed."
+    },
+    {
+      "case": "I1-16",
+      "status": "PASS",
+      "evidence": "65536/65537 payload, actual exact/over1MiB gRPC, FIFO/declared jitter, offline/drop/retry identities and64-capacity overflow."
+    },
+    {
+      "case": "I1-17",
+      "status": "PASS",
+      "evidence": "Root executed own-child SIGKILL and actual30s wall watchdog; classified infrastructure failure, no RunComplete."
+    },
+    {
+      "case": "I1-18",
+      "status": "PASS",
+      "evidence": "Explicit pure close-first and completion-first at identical tick; both offset stop boundaries. Recovery equal-tick tests also passed seeds7/42/99."
+    },
+    {
+      "case": "I1-19",
+      "status": "PASS",
+      "evidence": "Six negative checker copies, including3 semantic mutants with recomputed state/Ack/journal-chain/head hashes."
+    },
+    {
+      "case": "I1-20",
+      "status": "PASS",
+      "evidence": "Durable pre-stop output replay does not increase creation count; terminal and signed history remain unchanged."
+    }
+  ],
+  "commands": [
+    "./poc/scripts/bootstrap.sh test --locked --offline -p sim-runtime --test i1_acceptance -- --test-threads=1",
+    "./poc/scripts/bootstrap.sh fmt --all -- --check",
+    ".build/target/debug/deps/i1_acceptance-ebf145fce19ca421 --ignored socket_ --test-threads=1 --nocapture",
+    ".build/target/debug/deps/i1_acceptance-ebf145fce19ca421 --ignored --exact socket_altered_duplicate_ack --test-threads=1 --nocapture",
+    "python3 poc/verification/i1/check_trace.py poc/artifacts/verification/i1/candidate-3d413c4-seed7/{healthy,clock-faults,lease-expiry,timers,close-work,restart-before-ack,restart-after-expiry,network-faults} --mutations --output poc/verification/i1/checker-report-seed7.json"
+  ],
+  "source_sha256": {
+    "poc/docs/contracts/task-contract-i1-v1.md": "04658debb7888b1fed9835b0a91c05b3ae34b71cbaf9696c0693c55b5a2c0504",
+    "poc/docs/contracts/i1-interface-annex-v1.md": "f7451d889d897ce988fee6756a62fd87bf722c90f04faf867d353f5a6d79d12d",
+    "poc/proto/i1.proto": "fdbe4a22c251077c4c58ad7d97853c890103204678b0d0e07d11d94da1fa7c14",
+    "poc/crates/types/src/lib.rs": "4fe0f726feb12c1d0dfd55639af0fda9c891a1b09357e0b15737beecd39a8a01",
+    "poc/crates/sim-runtime/src/lib.rs": "269e38d9b5401851f4ecaf0bde090a40f986c423861899bb842b639ea54734ac",
+    "poc/crates/sim-runtime/src/state.rs": "729a812607813801583f41ec29ce8e2cf4efbc8bce682bd56a2a1bbc3e5d9af1",
+    "poc/crates/sim-runtime/src/journal.rs": "78021ddacd4f20341b29e6abf7651333338fbc57bbdf31f4fff90bd18cbd4291",
+    "poc/crates/replica-worker/src/main.rs": "8f42893259b583a32b156be300d6b9dd3fae27bbec048601b67c4f853e19f240",
+    "poc/crates/sim-hub/src/hub.rs": "fb86a52f482802a5fe2d862fb5ae7ca7da2435cdb75c05562489aed22b96553c",
+    "poc/crates/sim-hub/src/transport.rs": "460fe2185c7677761cbfb1d7f7f983bd19af8f3de773ff8fb74ac6f301cf7766",
+    "poc/crates/sim-hub/src/scenario.rs": "c049d6a169abb27a43876ef893ff6a70a3d75b04c074432274568dceedb2fda6",
+    "poc/verification/i1/acceptance.rs": "add8161a41975d6734217ee5581f2c064c91dfd5ee8ea59b6900742e7eb04bed",
+    "poc/verification/i1/check_trace.py": "cef14278cb53afa7029c22bc1a0ce75f50fc9b0c709321a8bfb3d48806fdeb5d"
+  },
+  "limits": [
+    "Finite deterministic I1a fixtures, not a safety/liveness proof.",
+    "No full Commonware adapter, BLS/threshold, five-live-replica or15-worker integration claim.",
+    "Real process crashes and source synchronization order are checked; disk/controller power-loss durability is not proven.",
+    "Complete seed7/42/99 and wall-pause pairs remain simulator work.",
+    "Mock fixture view persistence is checked; full Session Program view/lifecycle conformance remains separate."
+  ],
+  "verifier_acceptance": "PASS for the recorded I1a source/guard/recovery/transport cases; no open source findings",
+  "simulator_repeatability": "PENDING: I1-02 wall-pause/reversed-start comparisons and full approved seed7/42/99 matrix",
+  "format_evidence": "poc/verification/i1/format-report.json; no source files changed, acceptance fixture pre/post hash identical"
+}

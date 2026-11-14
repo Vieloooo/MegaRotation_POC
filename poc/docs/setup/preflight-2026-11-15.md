@@ -19,3 +19,7 @@ This report continues the 2026-11-14 intake; see the adjacent JSON for machine-r
 Spec and verifier independently inspected v2/v10 and pinned Commonware 2026.10.0 (`92a2f68a0e131c8b69de41e84aec37da6280f212`) before implementation. Lead owns schema/dependencies/integration; one builder owns runtime/hub/worker. Verifier then checks a named candidate; simulator replays that exact verified revision. Two real-process fixture I1a evidence and actual Commonware runtime I1b evidence are reported separately; overall I1 requires both before three-region handoff claims.
 
 Artifacts: `../contracts/task-contract-i1-v1.md`, `../contracts/i1-interface-annex-v1.md`, `../contracts/i1-independent-expectations-v1.md`.
+
+## Follow-up network probe
+
+After local execution permission was granted, `ss -H -ltn` succeeded. Suggested L1 port 18545 is occupied by an existing service; later L1 setup must choose a free task-specific port. Suggested ports 19400/18080/18770 were not listening at this probe, and must be checked again at launch. I1 uses ephemeral loopback listeners and records actual endpoints in diagnostics. No existing service was stopped or changed.

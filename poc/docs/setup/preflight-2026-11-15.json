@@ -36,5 +36,16 @@
   "cache_policy": "registry copied (not symlinked) into .build/cargo; compiler read-only from parent; target .build/target",
   "commonware_version": "2026.10.0",
   "commonware_source_revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
-  "implementation_tests_run": []
+  "implementation_tests_run": [],
+  "followup_port_probe": {
+    "command": "ss -H -ltn (escalated read-only)",
+    "status": "success",
+    "suggested_l1_port_18545": "occupied; must not reuse or stop the existing service",
+    "i1_transport": "ephemeral loopback port recorded per run",
+    "suggested_other_ports_at_probe": {
+      "19400": "not listening",
+      "18080": "not listening",
+      "18770": "not listening"
+    }
+  }
 }

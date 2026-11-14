@@ -1,0 +1,146 @@
+{
+  "checker_sha256": "cef14278cb53afa7029c22bc1a0ce75f50fc9b0c709321a8bfb3d48806fdeb5d",
+  "runs": [
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "healthy",
+      "seed": 7,
+      "rows": 193,
+      "committed_steps": 36,
+      "signed_intents": 2,
+      "timer_deliveries": 2,
+      "network_deliveries": 2,
+      "trace_sha256": "5cdcdf78243cc9fa11064f6017621f637e9e8132cf8cdd0679ab1e529d8dfa1d",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/healthy",
+      "mutations": [
+        {
+          "mutation": "missing_sync",
+          "outcome": "REJECTED",
+          "reason": "missing sync-before-commit evidence"
+        },
+        {
+          "mutation": "orphan_effect",
+          "outcome": "REJECTED",
+          "reason": "output outside batch or changed ordered effect"
+        },
+        {
+          "mutation": "altered_duplicate",
+          "outcome": "REJECTED",
+          "reason": "altered or unsolicited duplicate Ack"
+        },
+        {
+          "mutation": "lease_extension_rehashed",
+          "outcome": "REJECTED",
+          "reason": "Enter: durable prior_lease_end_tick_us diverges from independent state"
+        },
+        {
+          "mutation": "post_close_intent_rehashed",
+          "outcome": "REJECTED",
+          "reason": "WorkCompleted: fixture terminal mutation"
+        },
+        {
+          "mutation": "sample_counter_poison_rehashed",
+          "outcome": "REJECTED",
+          "reason": "Sample: durable accepted_sequence diverges from independent state"
+        }
+      ]
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "clock-faults",
+      "seed": 7,
+      "rows": 147,
+      "committed_steps": 28,
+      "signed_intents": 0,
+      "timer_deliveries": 0,
+      "network_deliveries": 0,
+      "trace_sha256": "9d8cd7a8d9fda1037313077ff96b7e308d618458aba900fb1ad675e0c13451f7",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/clock-faults"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "lease-expiry",
+      "seed": 7,
+      "rows": 158,
+      "committed_steps": 31,
+      "signed_intents": 2,
+      "timer_deliveries": 0,
+      "network_deliveries": 0,
+      "trace_sha256": "05e42edbff984281e45281d747ec07a4b7cb12eb076091036ebc8dca206a3aec",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/lease-expiry"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "timers",
+      "seed": 7,
+      "rows": 145,
+      "committed_steps": 26,
+      "signed_intents": 0,
+      "timer_deliveries": 3,
+      "network_deliveries": 0,
+      "trace_sha256": "0efcdc1ce3a61edc4797f2a431cb5129ae51feca62b0db8faf20446c3793bd67",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/timers"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "close-work",
+      "seed": 7,
+      "rows": 122,
+      "committed_steps": 25,
+      "signed_intents": 2,
+      "timer_deliveries": 0,
+      "network_deliveries": 0,
+      "trace_sha256": "52bb586abde6c41c44a1ac4106189cc033ec614ecde9f54e4edffda022d6a02c",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/close-work"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "restart-before-ack",
+      "seed": 7,
+      "rows": 223,
+      "committed_steps": 38,
+      "signed_intents": 6,
+      "timer_deliveries": 1,
+      "network_deliveries": 0,
+      "trace_sha256": "95182d789f7abe53a6a4f6cf8c3b8ca9f1b74e6cc7c4eda69a80c6db04b5d5b6",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/restart-before-ack"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "restart-after-expiry",
+      "seed": 7,
+      "rows": 115,
+      "committed_steps": 21,
+      "signed_intents": 1,
+      "timer_deliveries": 0,
+      "network_deliveries": 1,
+      "trace_sha256": "b49a36526c5cf5ebeea43b860db2c37a653e17f40eab25694831666aa7afdaa4",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/restart-after-expiry"
+    },
+    {
+      "outcome": "PASS",
+      "gate": "I1a-recorded-trace",
+      "scenario": "network-faults",
+      "seed": 7,
+      "rows": 1254,
+      "committed_steps": 211,
+      "signed_intents": 0,
+      "timer_deliveries": 0,
+      "network_deliveries": 129,
+      "trace_sha256": "e4ca4091f43e793ceda915638b813f3019b65462883064cd39409c544c0f0899",
+      "path": "poc/artifacts/verification/i1/candidate-3d413c4-seed7/network-faults"
+    }
+  ],
+  "limits": [
+    "finite I1a fixtures only",
+    "no physical power-loss guarantee",
+    "no I1b or BFT safety/liveness claim"
+  ]
+}
