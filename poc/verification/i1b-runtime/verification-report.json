@@ -1,0 +1,234 @@
+{
+  "candidate": "3ab4549e48bf6e3e8fe49beed828430c974dba5e",
+  "upstream": "Commonware2026.10.0 /92a2f68a0e131c8b69de41e84aec37da6280f212",
+  "runtime_identity": "2026.10.0 plus local patch i1b-controlled-spawn-v1",
+  "verdict": "PASS_FOR_RECORDED_RUNTIME_SLICE_CASES",
+  "full_I1b": "INCONCLUSIVE_PENDING_STORAGE_P2P_SIGNING_ENGINE_AND_TWO_PROCESS_INTEGRATION",
+  "overall_I1": "INCONCLUSIVE",
+  "independence": "Expected P1\u2013P14, Clock/lease, Stopper and ChaCha/KDF vectors derived from frozen contracts and pinned source before candidate inspection. No builder test support/oracle reused.",
+  "tests": {
+    "independent_tests_per_run": 27,
+    "runs": 2,
+    "total_passed_executions": 54,
+    "failures": 0,
+    "ignored": 0,
+    "external_wall_cap_seconds": 30,
+    "execution": "execution.json",
+    "logs": [
+      "tests-pause0.log",
+      "tests-pause2.log"
+    ]
+  },
+  "repeatability": {
+    "whole_suite_wall_pause_ms": [
+      0,
+      2
+    ],
+    "complete_json_artifacts_compared": 80,
+    "all_identical": true,
+    "additional_internal_replay_seeds": [
+      7,
+      42,
+      99
+    ],
+    "cooperative_budget_pressure": "300 already-ready Tokio mpsc receives per controlled child, plus host consume_budget setup",
+    "duplicate_wakes_per_pending_poll": 100,
+    "comparison_fields": "Complete serialized logical events and application RNG draw values; no logical fields removed."
+  },
+  "runtime_case_matrix": [
+    {
+      "id": "P1",
+      "status": "PASS",
+      "tests": [
+        "p1_p4_native_registration_defers_factory_and_abort_drops_captures"
+      ],
+      "observation": "Constructor remains untouched before native full-job poll; ignored handles still execute through driver cases."
+    },
+    {
+      "id": "P2",
+      "status": "PASS",
+      "tests": [
+        "p2_p3_unawaited_constructor_and_poll_panics_stop_later_work"
+      ],
+      "observation": "Deferred constructor panic is observable with unawaited handle; later constructor count remains zero."
+    },
+    {
+      "id": "P3",
+      "status": "PASS",
+      "tests": [
+        "p2_p3_unawaited_constructor_and_poll_panics_stop_later_work"
+      ],
+      "observation": "Native user-future panic rejects step, suppresses Ack, drains and returns from Runner."
+    },
+    {
+      "id": "P4",
+      "status": "PASS",
+      "tests": [
+        "p1_p4_native_registration_defers_factory_and_abort_drops_captures",
+        "p9_parent_completion_and_abort_close_nested_unspawned_scopes"
+      ],
+      "observation": "Abort before first poll never invokes constructor; captured state drops once under explicit test scheduler/driver control."
+    },
+    {
+      "id": "P5",
+      "status": "PASS",
+      "tests": [
+        "p5_cancel_pending_future_observes_drop_panic"
+      ],
+      "observation": "Pending future was polled exactly once; cancellation invokes its panicking destructor without another user poll."
+    },
+    {
+      "id": "P6",
+      "status": "PASS",
+      "tests": [
+        "p6_missing_receiver_and_p7_retained_handle_or_value_drop_are_observed"
+      ],
+      "observation": "Parent drops receiver and remains pending, producer returns DropBomb, native result-send disposal causes failure."
+    },
+    {
+      "id": "P7",
+      "status": "PASS",
+      "tests": [
+        "p6_missing_receiver_and_p7_retained_handle_or_value_drop_are_observed"
+      ],
+      "observation": "Retained Handle<T> and retained returned T both drop in a later granted consumer poll, after producer disposal."
+    },
+    {
+      "id": "P8",
+      "status": "PASS",
+      "tests": [
+        "p8_normal_shutdown_explicit_job_drop_sets_failure_from_false"
+      ],
+      "observation": "Normal shutdown directly disposes suspended complete native job; initial failure is false and explicit disposal panic is caught."
+    },
+    {
+      "id": "P9",
+      "status": "PASS",
+      "tests": [
+        "p9_parent_completion_and_abort_close_nested_unspawned_scopes",
+        "p9_parent_abort_cascades_before_grandchild_first_poll"
+      ],
+      "observation": "Completion and explicit parent abort traverse unspawned scopes; never-polled descendant constructors remain zero, disposal precedes Ack."
+    },
+    {
+      "id": "P10",
+      "status": "PASS",
+      "tests": [
+        "p10_cancelled_transport_pump_leaves_registry_with_root"
+      ],
+      "observation": "Actual transport-only Tokio task is aborted; root retains protocol registry, drains captures, returns from native Runner."
+    },
+    {
+      "id": "P11",
+      "status": "PASS",
+      "tests": [
+        "p11_driver_panic_and_repeated_failed_reentry_preserve_custody",
+        "p11_root_controller_panic_still_returns_from_native_runner"
+      ],
+      "observation": "Action/root-controller panics, repeated nested grants, transport failure then grant, and shutdown inside action all preserve controlled custody."
+    },
+    {
+      "id": "P12",
+      "status": "PASS",
+      "tests": [
+        "p12_cancel_drop_wakes_sibling_and_quiescence_waits_for_it",
+        "p12_p13_cleanup_forbids_new_constructors_and_failed_step_is_not_released"
+      ],
+      "observation": "Destruction wakes sibling and driver drains to fixed point; failure cleanup rejects attempted constructor."
+    },
+    {
+      "id": "P13",
+      "status": "PASS",
+      "tests": [
+        "p12_p13_cleanup_forbids_new_constructors_and_failed_step_is_not_released"
+      ],
+      "observation": "Staged sentinel output is never released after failed step; ordinary callbacks/constructors and successful Ack are suppressed."
+    },
+    {
+      "id": "P14",
+      "status": "PASS",
+      "tests": [
+        "p14_exact_default_poll_bound_and_cleanup_limit_report_truthfully"
+      ],
+      "observation": "10000 logical polls succeeds; a10001st-required poll fails before execution. Cleanup-limit control has no completed-cleanup claim. Runner return is checked."
+    }
+  ],
+  "clock_checks": [
+    "Historical sample projection and actual governor/current equality for \u00b11000us",
+    "Positive+1ns absolute deadline rounds up; merely advancing tick does not fire timer",
+    "Signed pre-epoch\u22121ns\u21920us and\u22121001ns\u2192\u22121us",
+    "sleep(Duration) captures deadline at construction before first poll; already-past deadline requires explicit Timer input",
+    "Ten rejected samples preserve prior usable NodeClock; invalidseq100 does not poison subsequent validseq3",
+    "Lease and local-stop equality retire affectedcid without globalinfra failure; fresh calibration admits a differentcid only",
+    "Default timeout result wins when result and timer are both ready in the same poll",
+    "Native Stopper keeps first17 despite later99, waits for originalSignal holder, and times out using granted virtual time",
+    "Started Sleep transfers to sibling task with unchanged timer ID/deadline and wakes new owner"
+  ],
+  "rng_checks": [
+    "Literal zero-seed ChaCha20 mixed u32/u64/partial/empty fill outputs and exact cursor advancement",
+    "Seek/restore vectors at positions9,15,63 and streams0/51",
+    "Literal root/child/attribute KDF IDs and seeds",
+    "Repeated same-role contexts consume successive values without resetting; attribute role is separate",
+    "Fresh-driver restored continuation and invalid-role/duplicate initialization refusal",
+    "Reject hi>15 and draws reaching2^68 before consuming bytes; infallible adapter permanently fails and panics"
+  ],
+  "metrics_checks": "Actual registered Counter increments, same-key aliasing, Name/attributes and last-registration drop/encode removal checked.",
+  "closed_findings": [
+    {
+      "id": "RB1",
+      "issue": "Reentrant failed-first grant/shutdown could poison mutex and lose controlled custody",
+      "status": "REGRESSION_PASS",
+      "test": "p11_driver_panic_and_repeated_failed_reentry_preserve_custody"
+    },
+    {
+      "id": "RB2",
+      "issue": "Started Send sleep future could not transfer to sibling task",
+      "status": "REGRESSION_PASS",
+      "test": "regression_sleep_can_transfer_between_sibling_tasks_without_deadline_reset"
+    }
+  ],
+  "open_source_findings": [],
+  "provenance_checks": {
+    "vendor_changed_files_vs_upstream": [
+      "Cargo.toml",
+      "src/tokio/runtime.rs"
+    ],
+    "ordinary_spawner_and_remaining_source_byte_identical": true,
+    "candidate_sources_unchanged_during_verification": true,
+    "only_tracked_change": "Approved [[test]] entry in poc/prototypes/i1b-runtime/Cargo.toml"
+  },
+  "source_sha256": {
+    "poc/docs/contracts/task-contract-i1b-v1.md": "b721213c9cda856a760aaa8f1fed68bebf5c18f09a00ac184651c551965f1f3c",
+    "poc/docs/contracts/i1b-runtime-slice-v1.md": "7a0c7afc0dbb98720771fdc7f6c01bb60652d427b68f9d4baf77fa7df8c4f9a2",
+    "poc/vendor/commonware-runtime.provenance.json": "cf9df4ebf8867470028098ea197d6d8ff32d98c02ada257502c702ed806b2ffe",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/patches/commonware-runtime-controlled-spawn-v1.patch": "fcded76efe22885dde5e6cde4596ee70eeddbe83305150967fdbd92355f1e8f4",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "0e989cd454ed17540fadc4884a0d1af84dd814ae8f283b9601465ad352428562",
+    "poc/prototypes/i1b-runtime/src/context.rs": "0d2071872a9cb68c963c3c5f508d0975239d2298ea6abbb2a0aa05382d481701",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "91ede58b122e7e922cfffa2a3958829c72bdbecefb25f885dec046856959e63e",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "ac30528ea91fb34e36d4312efe99d490c4f941a0d9dff2b5e3b8c28e2b54e847",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/verification/i1b-runtime/acceptance.rs": "c75ada20d77276a20be07ae13b6845dd9d328fe3d2311238f3c1f2a30bfc321b"
+  },
+  "authoritative_artifacts": [
+    "/tmp/i1b-verify-3ab4549-finalpause0-_24m_j4r",
+    "/tmp/i1b-verify-3ab4549-finalpause2-7bvu8uqg"
+  ],
+  "excluded_attempt": "execution-stale-build-rejected.json records an old24-test binary invocation following a fixture-only failed compile; excluded from all final counts and acceptance.",
+  "checks": {
+    "locked_offline_compile": "PASS",
+    "cargo_fmt_check": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "scope_limits": [
+    "Finite in-process native runtime slice only; no Storage/Blob adapter, journal recovery, p2p/quota, GuardedScheme, engine or two-process wire claim.",
+    "P13 uses publication/queued-output sentinels; actual native signatures and transport release remain future integration obligations.",
+    "The30s external test cap protects against hanging tests; no intentionally nonreturning poll/destructor was injected and production process-watchdog integration is not verified.",
+    "Protocol-bearing Handle<T>/T remains inside controlled jobs in these cases; arbitrary external consumer disposal is outside the contract.",
+    "The submit callback and root profile/config identity are trusted prevalidated inputs; no general arbitrary callback or root-cancellation guarantee.",
+    "Fixed rate1 offsets only; nonzero drift/slew, real-network synchronization and hardware power-loss durability remain outside these results.",
+    "The complete upstream Commonware suite was not rerun; ordinary Spawner code preservation was checked byte-for-byte.",
+    "Full Session Program validity/first-receive admission vs native deterministic validity still requires the separate accepted mapping and safety argument."
+  ]
+}

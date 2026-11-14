@@ -1,0 +1,19 @@
+{
+  "candidate": "3ab4549e48bf6e3e8fe49beed828430c974dba5e",
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "30s",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/deps/i1b_runtime_independent-90271aeea3ef8f31",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "test_source_sha256": "afeb1f6718aabdf305d38e4eac0dd0daf4ffddd29d548e0aa518b1b7eade6bf7",
+  "binary_sha256": "3b72e21989866b1bb22f10cbc5ef819c3ca86cc2ce73d9280a9ed20f8253b787",
+  "exit_code": 0,
+  "wall_seconds": 0.7734966408461332,
+  "artifacts": "/tmp/i1b-verify-3ab4549-final-1061pf9l",
+  "external_wall_cap_seconds": 30,
+  "usable_as_current_fixture_evidence": false,
+  "reason": "Fixture compile failed due Counter type inference; this invocation ran the prior24-test binary and is excluded from final acceptance."
+}
