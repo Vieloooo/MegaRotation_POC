@@ -1,0 +1,40 @@
+{
+  "checked_date": "2026-11-15",
+  "cwd": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2",
+  "snapshot_commit": "8086ce146776b88ea917986a521b0587765e1de2",
+  "source_head": "476ee764ebd38f820f7aab7d20100436d45c140c",
+  "v2_sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+  "checksum_files": 1341,
+  "checksum_exit": 0,
+  "branch": "codex/poc-v2-i1",
+  "parent_head": "2b508adb9dec368f8a22021129361d22b746ffce",
+  "parent_status": " M README.md\n?? examples/consensus_replay.rs\n?? examples/consensus_replay/\n?? poc/\n?? visualization/\n",
+  "model_runtime_evidence": null,
+  "configured_main_model": "gpt-6-astra",
+  "configured_main_effort": "ultra",
+  "role_tools_available": [
+    "bft_spec",
+    "bft_builder",
+    "bft_verifier",
+    "bft_simulator"
+  ],
+  "actual_concurrency_slots": 7,
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "logical_cpus": 48,
+  "rustc": "1.95.0 (59807616e 2026-04-14)",
+  "cargo": "1.95.0 (f2d3ce0bd 2026-03-21)",
+  "node": "v22.19.0",
+  "npm": "11.8.0",
+  "python": "3.10.12",
+  "docker_client": "28.4.0",
+  "docker_daemon": "permission denied even after sandbox escalation; not required by I1",
+  "missing_path_tools": [
+    "forge",
+    "anvil",
+    "protoc"
+  ],
+  "cache_policy": "registry copied (not symlinked) into .build/cargo; compiler read-only from parent; target .build/target",
+  "commonware_version": "2026.10.0",
+  "commonware_source_revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+  "implementation_tests_run": []
+}

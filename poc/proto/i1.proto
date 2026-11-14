@@ -1,0 +1,71 @@
+syntax = "proto3";
+package rotation.i1;
+service Runtime {
+  rpc Register(RegisterRequest) returns (RegisterReply);
+  rpc ControlledRun(stream WorkerFrame) returns (stream HubFrame);
+}
+message RegisterRequest {
+  uint32 schema_version = 1; bytes run_id = 2; uint32 node_id = 3;
+  uint64 incarnation = 4; bytes config_hash = 5;
+  uint64 recovered_journal_seq = 6; bytes recovered_state_hash = 7;
+}
+message RegisterReply {
+  uint32 schema_version = 1; bytes run_id = 2; uint32 node_id = 3;
+  uint64 incarnation = 4; bytes clock_domain = 5; bytes config_hash = 6;
+}
+message WorkerFrame { oneof frame { RegisterRequest hello = 1; Ack ack = 2; } }
+message HubFrame { oneof frame { Grant grant = 1; Shutdown shutdown = 2; } }
+message Shutdown { string reason = 1; }
+message Grant {
+  uint32 schema_version = 1; bytes run_id = 2; uint32 node_id = 3;
+  uint64 incarnation = 4; uint64 logical_step_id = 5; uint64 event_id = 6;
+  uint64 tick_us = 7; uint64 causal_wave = 8; bytes tie_rank = 9;
+  Input input = 10; bytes grant_hash = 11;
+}
+message Ack {
+  uint32 schema_version = 1; bytes run_id = 2; uint32 node_id = 3;
+  uint64 incarnation = 4; uint64 logical_step_id = 5; uint64 event_id = 6;
+  bytes grant_hash = 7; AckStatus status = 8; repeated Effect effects = 9;
+  uint64 durable_journal_seq = 10; bytes state_hash = 11; bytes logical_ack_hash = 12;
+}
+enum AckStatus { QUIESCENT = 0; REJECTED = 1; }
+message Input {
+  oneof kind {
+    Empty request_sample = 1; ClockSample sample = 2; Fixture create = 3;
+    Cid enter = 4; Work begin_work = 5; Work work_completed = 6;
+    Timer arm_timer = 7; Timer cancel_timer = 8; Timer timer_fired = 9;
+    Envelope send = 10; Envelope deliver = 11; Cid close = 12;
+    Cid pause = 13; Cid resume = 14; Cid read_clock = 15;
+    Empty recover = 16; Cid anchor_ready = 17; Empty check_clock = 18;
+  }
+}
+message Empty {}
+message Cid { bytes cid = 1; }
+message Fixture { bytes cid = 1; sint64 stop_local_us = 2; }
+message Work { bytes cid = 1; uint64 slot = 2; bytes subject = 3; uint64 duration_us = 4; }
+message Timer { uint64 timer_id = 1; uint64 generation = 2; bytes cid = 3; sint64 local_deadline_us = 4; }
+message ClockRequest { uint64 request_id = 1; }
+message ClockSample {
+  bytes run_id = 1; uint32 node_id = 2; uint64 incarnation = 3;
+  uint64 request_id = 4; bytes clock_domain = 5; uint64 sequence = 6;
+  uint64 as_of_tick_us = 7; sint64 node_time_at_as_of_us = 8;
+  uint64 uncertainty_us = 9; uint64 lease_end_tick_us = 10; bytes rate_profile_ref = 11;
+}
+message Envelope {
+  bytes run_id = 1; uint32 src = 2; uint32 dst = 3; uint32 channel = 4;
+  bytes message_id = 5; bytes cid = 6; uint64 sent_at_tick_us = 7;
+  bytes payload_hash = 8; bytes payload_bytes = 9; uint32 attempt = 10;
+}
+message Effect {
+  oneof kind {
+    ClockRequest request_sample = 1; ClockSample sample_accepted = 2;
+    Notice sample_rejected = 3; Timer arm_timer = 4; Timer cancel_timer = 5;
+    Timer timer_observed = 6; Work work_started = 7; Envelope send = 8;
+    ClockRead clock_read = 9; Cid entered = 10; SignedIntent signed_intent = 11;
+    Notice terminated = 12; Envelope message_received = 13; Notice rejected = 14;
+    Cid created = 15; Cid anchor_ready = 16; Cid paused = 17; Cid resumed = 18;
+  }
+}
+message ClockRead { bytes cid = 1; string caller = 2; uint64 tick_us = 3; sint64 node_time_us = 4; uint64 lease_end_tick_us = 5; }
+message Notice { bytes cid = 1; string reason = 2; uint64 request_id = 3; }
+message SignedIntent { bytes cid = 1; uint64 slot = 2; bytes subject = 3; bytes intent_hash = 4; }
