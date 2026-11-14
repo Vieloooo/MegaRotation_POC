@@ -1,0 +1,1775 @@
+#[cfg(feature = "external")]
+use crate::Pacer;
+use crate::{
+    BlobLayout, BlobVersion, Clock, Error, Execution, Handle, METRICS_PREFIX, Name, SinkOf,
+    StreamOf, child_label,
+    network::{
+        metered::Network as MeteredNetwork,
+        tokio::{Config as TokioNetworkConfig, Network as TokioNetwork},
+    },
+    prefixed_name,
+    process::metered::Metrics as MeteredProcess,
+    signal::Signal,
+    storage::{
+        metered::Storage as MeteredStorage,
+        tokio::{Config as TokioStorageConfig, Storage as TokioStorage},
+    },
+    telemetry::metrics::{
+        CounterFamily, GaugeFamily, Metric, Register, Registered, Registry, add_attribute, raw,
+        task::Label, validate_label,
+    },
+    utils::{self, FactoryGuard, Panicker, signal::Stopper, supervision::Tree},
+};
+use commonware_macros::{select, stability};
+#[stability(BETA)]
+use commonware_parallel::{Rayon, rayon::ThreadPoolBuilder};
+use commonware_utils::{sync::Mutex, sys_rng};
+use governor::clock::{Clock as GClock, ReasonablyRealtime};
+use rand_core::{Rng, TryCryptoRng, TryRng};
+use std::{
+    convert::Infallible,
+    env,
+    future::{Future, poll_fn},
+    net::{IpAddr, SocketAddr},
+    num::NonZeroUsize,
+    ops::RangeInclusive,
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+    path::PathBuf,
+    pin::pin,
+    sync::Arc,
+    task::Poll,
+    time::{Duration, SystemTime},
+};
+use tokio::{
+    runtime::{Builder, Handle as RuntimeHandle},
+    sync::Notify,
+};
+
+#[derive(Debug)]
+struct Metrics {
+    tasks_spawned: CounterFamily<Label>,
+    tasks_running: GaugeFamily<Label>,
+}
+
+impl Metrics {
+    pub fn init(registry: &mut impl Register) -> Self {
+        Self {
+            tasks_spawned: registry.register(
+                "tasks_spawned",
+                "Total number of tasks spawned",
+                raw::Family::default(),
+            ),
+            tasks_running: registry.register(
+                "tasks_running",
+                "Number of tasks currently running",
+                raw::Family::default(),
+            ),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NetworkConfig {
+    /// If Some, explicitly sets TCP_NODELAY on the socket.
+    /// Otherwise uses system default.
+    ///
+    /// Defaults to `Some(true)`.
+    tcp_nodelay: Option<bool>,
+
+    /// Whether to set `SO_LINGER` to zero on the socket.
+    ///
+    /// When enabled, causes an immediate RST on close, avoiding
+    /// `TIME_WAIT` state. This is useful in adversarial environments to
+    /// reclaim socket resources immediately when closing connections to
+    /// misbehaving peers.
+    ///
+    /// Defaults to `true`.
+    zero_linger: bool,
+
+    /// Timeout for establishing an outbound TCP connection.
+    ///
+    /// Defaults to 10 seconds.
+    connect_timeout: Duration,
+
+    /// Read/write timeout for network operations.
+    ///
+    /// Bounds the full `Sink::send` and `Stream::recv` calls rather than each
+    /// individual socket syscall. Larger batched writes may therefore require a
+    /// larger timeout.
+    ///
+    /// Defaults to 60 seconds.
+    read_write_timeout: Duration,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            tcp_nodelay: Some(true),
+            zero_linger: true,
+            connect_timeout: Duration::from_secs(10),
+            read_write_timeout: Duration::from_secs(60),
+        }
+    }
+}
+
+/// Configuration for the `tokio` runtime.
+#[derive(Clone)]
+pub struct Config {
+    /// Number of threads to use for handling async tasks.
+    ///
+    /// Worker threads are always active (waiting for work).
+    ///
+    /// Tokio sets the default value to the number of logical CPUs.
+    worker_threads: usize,
+
+    /// Number of scheduler ticks between global queue polls.
+    ///
+    /// When unset, Tokio uses its default behavior for the multi-thread
+    /// scheduler. Smaller values reduce the delay before tasks woken from
+    /// outside a worker, such as io_uring completion notifications, are polled
+    /// from the global queue again.
+    global_queue_interval: Option<u32>,
+
+    /// Maximum number of threads to use for blocking tasks.
+    ///
+    /// Unlike worker threads, blocking threads are created as needed and
+    /// exit if left idle for too long.
+    ///
+    /// Tokio sets the default value to 512 to avoid hanging on lower-level
+    /// operations that require blocking (like `fs` and writing to `Stdout`).
+    ///
+    /// Tasks spawned with [`crate::Spawner::shared`] in blocking mode share this pool with the
+    /// blocking work behind storage operations and name resolution. A blocking task that waits
+    /// on them holds a thread they need, so enough such tasks exhaust the pool and deadlock.
+    max_blocking_threads: usize,
+
+    /// Stack size to use for runtime-owned threads.
+    ///
+    /// Defaults to the system stack size when the current platform exposes it,
+    /// and otherwise falls back to Rust's default spawned-thread stack size.
+    ///
+    /// See [utils::thread::system_thread_stack_size].
+    thread_stack_size: usize,
+
+    /// Whether or not to catch panics.
+    catch_panics: bool,
+
+    /// Base directory for all storage operations, created at start if missing
+    /// and held for the run.
+    storage_directory: PathBuf,
+
+    /// Blob layouts accepted by storage.
+    ///
+    /// Defaults to [BlobLayout::ALL] and must be non-empty. New blobs use the latest layout in
+    /// the range. Existing blobs outside it fail to open with [Error::BlobLayoutMismatch], so
+    /// restrict the range to what a rollback target can read before the upgraded binary first
+    /// opens storage.
+    storage_blob_layouts: RangeInclusive<BlobLayout>,
+
+    /// Network configuration.
+    network_cfg: NetworkConfig,
+}
+
+impl Config {
+    /// Returns a new [Config] with default values.
+    pub fn new() -> Self {
+        let rng = sys_rng().next_u64();
+        let storage_directory = env::temp_dir().join(format!("commonware_tokio_runtime_{rng}"));
+        Self {
+            worker_threads: 2,
+            global_queue_interval: None,
+            max_blocking_threads: 512,
+            thread_stack_size: utils::thread::system_thread_stack_size(),
+            catch_panics: false,
+            storage_directory,
+            storage_blob_layouts: BlobLayout::ALL,
+            network_cfg: NetworkConfig::default(),
+        }
+    }
+
+    // Setters
+    /// See [Config]
+    pub const fn with_worker_threads(mut self, n: usize) -> Self {
+        self.worker_threads = n;
+        self
+    }
+    /// See [Config]
+    pub const fn with_global_queue_interval(mut self, n: u32) -> Self {
+        self.global_queue_interval = Some(n);
+        self
+    }
+    /// See [Config]
+    pub const fn with_max_blocking_threads(mut self, n: usize) -> Self {
+        self.max_blocking_threads = n;
+        self
+    }
+    /// See [Config]
+    pub const fn with_thread_stack_size(mut self, n: usize) -> Self {
+        self.thread_stack_size = n;
+        self
+    }
+    /// See [Config]
+    pub const fn with_catch_panics(mut self, b: bool) -> Self {
+        self.catch_panics = b;
+        self
+    }
+    /// See [Config]
+    pub const fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+        self.network_cfg.connect_timeout = timeout;
+        self
+    }
+    /// See [Config]
+    pub const fn with_read_write_timeout(mut self, d: Duration) -> Self {
+        self.network_cfg.read_write_timeout = d;
+        self
+    }
+    /// See [Config]
+    pub const fn with_tcp_nodelay(mut self, n: Option<bool>) -> Self {
+        self.network_cfg.tcp_nodelay = n;
+        self
+    }
+    /// See [Config]
+    pub const fn with_zero_linger(mut self, l: bool) -> Self {
+        self.network_cfg.zero_linger = l;
+        self
+    }
+    /// See [Config]
+    pub fn with_storage_directory(mut self, p: impl Into<PathBuf>) -> Self {
+        self.storage_directory = p.into();
+        self
+    }
+    /// See [Config]
+    ///
+    /// # Panics
+    ///
+    /// Panics if `layouts` is empty.
+    pub fn with_storage_blob_layouts(mut self, layouts: RangeInclusive<BlobLayout>) -> Self {
+        assert!(
+            !layouts.is_empty(),
+            "storage blob layouts must be non-empty"
+        );
+        self.storage_blob_layouts = layouts;
+        self
+    }
+
+    // Getters
+    /// See [Config]
+    pub const fn worker_threads(&self) -> usize {
+        self.worker_threads
+    }
+    /// See [Config]
+    pub const fn global_queue_interval(&self) -> Option<u32> {
+        self.global_queue_interval
+    }
+    /// See [Config]
+    pub const fn max_blocking_threads(&self) -> usize {
+        self.max_blocking_threads
+    }
+    /// See [Config]
+    pub const fn thread_stack_size(&self) -> usize {
+        self.thread_stack_size
+    }
+    /// See [Config]
+    pub const fn catch_panics(&self) -> bool {
+        self.catch_panics
+    }
+    /// See [Config]
+    pub const fn connect_timeout(&self) -> Duration {
+        self.network_cfg.connect_timeout
+    }
+    /// See [Config]
+    pub const fn read_write_timeout(&self) -> Duration {
+        self.network_cfg.read_write_timeout
+    }
+    /// See [Config]
+    pub const fn tcp_nodelay(&self) -> Option<bool> {
+        self.network_cfg.tcp_nodelay
+    }
+    /// See [Config]
+    pub const fn zero_linger(&self) -> bool {
+        self.network_cfg.zero_linger
+    }
+    /// See [Config]
+    pub const fn storage_directory(&self) -> &PathBuf {
+        &self.storage_directory
+    }
+    /// See [Config]
+    pub const fn storage_blob_layouts(&self) -> &RangeInclusive<BlobLayout> {
+        &self.storage_blob_layouts
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Runtime based on [Tokio](https://tokio.rs).
+pub struct Executor {
+    registry: Registry,
+    metrics: Arc<Metrics>,
+    runtime: RuntimeHandle,
+    tasks: Arc<TaskTracker>,
+    shutdown: Mutex<Stopper>,
+    panicker: Panicker,
+    thread_stack_size: usize,
+}
+
+/// Closes task admission and tracks wrappers through user-future drop and descendant cleanup.
+#[derive(Default)]
+struct TaskTracker {
+    state: Mutex<TaskTrackerState>,
+    idle: Notify,
+}
+
+#[derive(Default)]
+struct TaskTrackerState {
+    active: usize,
+    closed: bool,
+}
+
+impl TaskTracker {
+    fn admit(self: &Arc<Self>) -> Option<TaskGuard> {
+        let mut state = self.state.lock();
+        if state.closed {
+            return None;
+        }
+        state.active = state.active.checked_add(1).expect("active task overflow");
+        Some(TaskGuard(Arc::clone(self)))
+    }
+
+    fn close(&self) {
+        self.state.lock().closed = true;
+    }
+
+    async fn wait(&self) {
+        loop {
+            // Subscribe before checking so the final task cannot notify between the check and wait.
+            let idle = self.idle.notified();
+            if self.state.lock().active == 0 {
+                return;
+            }
+            idle.await;
+        }
+    }
+}
+
+struct TaskGuard(Arc<TaskTracker>);
+
+impl Drop for TaskGuard {
+    fn drop(&mut self) {
+        let mut state = self.0.state.lock();
+        state.active = state.active.checked_sub(1).expect("active task underflow");
+        if state.active == 0 {
+            drop(state);
+            self.0.idle.notify_one();
+        }
+    }
+}
+
+/// Implementation of [crate::Runner] for the `tokio` runtime.
+pub struct Runner {
+    cfg: Config,
+}
+
+impl Default for Runner {
+    fn default() -> Self {
+        Self::new(Config::default())
+    }
+}
+
+impl Runner {
+    /// Initialize a new `tokio` runtime with the given number of threads.
+    pub const fn new(cfg: Config) -> Self {
+        Self { cfg }
+    }
+}
+
+impl crate::Runner for Runner {
+    type Context = Context;
+
+    fn start<F, Fut>(self, f: F) -> Fut::Output
+    where
+        F: FnOnce(Self::Context) -> Fut,
+        Fut: Future,
+    {
+        // Create a new registry
+        let mut registry = Registry::new();
+        let mut runtime_registry = registry.sub_registry(METRICS_PREFIX);
+
+        // Initialize runtime
+        let metrics = Arc::new(Metrics::init(&mut runtime_registry));
+        let mut builder = Builder::new_multi_thread();
+        builder
+            .worker_threads(self.cfg.worker_threads)
+            .max_blocking_threads(self.cfg.max_blocking_threads)
+            .thread_stack_size(self.cfg.thread_stack_size)
+            .enable_all();
+        if let Some(global_queue_interval) = self.cfg.global_queue_interval {
+            builder.global_queue_interval(global_queue_interval);
+        }
+        let runtime = builder.build().expect("failed to create Tokio runtime");
+
+        // Initialize panicker
+        let (panicker, panicked) = Panicker::new(self.cfg.catch_panics);
+
+        // Collect process metrics.
+        //
+        // We prefer to collect process metrics outside of `Context` because
+        // we are using `runtime_registry` rather than the one provided by `Context`.
+        let process = MeteredProcess::init(&mut runtime_registry);
+        runtime.spawn(process.collect(tokio::time::sleep));
+
+        // Initialize storage
+        let storage = MeteredStorage::new(
+            TokioStorage::new(TokioStorageConfig::new(
+                self.cfg.storage_directory.clone(),
+                self.cfg.storage_blob_layouts.clone(),
+            )),
+            &mut runtime_registry,
+        );
+
+        // Under the hold, a prior run's operations have finished. Linux flushes the filesystem.
+        // Other platforms sync the storage directory here so inherited partition removals are
+        // durable, then partition directories and existing blob contents on first access.
+        if let Err(e) = crate::storage::sync(&self.cfg.storage_directory) {
+            panic!(
+                "failed to sync storage at startup ({}): {e}",
+                self.cfg.storage_directory.display()
+            );
+        }
+
+        // Initialize network
+        let config = TokioNetworkConfig::default()
+            .with_connect_timeout(self.cfg.network_cfg.connect_timeout)
+            .with_read_timeout(self.cfg.network_cfg.read_write_timeout)
+            .with_write_timeout(self.cfg.network_cfg.read_write_timeout)
+            .with_tcp_nodelay(self.cfg.network_cfg.tcp_nodelay)
+            .with_zero_linger(self.cfg.network_cfg.zero_linger);
+        let network = MeteredNetwork::new(TokioNetwork::new(config), &mut runtime_registry);
+
+        // Initialize executor
+        let executor = Arc::new(Executor {
+            registry,
+            metrics,
+            runtime: runtime.handle().clone(),
+            tasks: Arc::new(TaskTracker::default()),
+            shutdown: Mutex::new(Stopper::default()),
+            panicker,
+            thread_stack_size: self.cfg.thread_stack_size,
+        });
+
+        // Get metrics
+        let label = Label::root();
+        executor.metrics.tasks_spawned.get_or_create(&label).inc();
+        let gauge = executor.metrics.tasks_running.get_or_create(&label).clone();
+
+        // Run the future
+        let tree = Tree::root();
+        let context = Context {
+            storage,
+            name: label.name().to_string(),
+            attributes: Vec::new(),
+            executor: executor.clone(),
+            network,
+            tree: Arc::clone(&tree),
+            execution: Execution::default(),
+        };
+
+        // Keep observing task panics until every admitted task has drained. The boxed root
+        // is destroyed when it completes, while tasks can still be admitted.
+        let output = catch_unwind(AssertUnwindSafe(|| {
+            // The factory runs on this thread outside block_on, so give it the runtime context
+            // that tokio primitives such as timers require.
+            let root = {
+                let _enter = runtime.enter();
+                Box::pin(f(context))
+            };
+            runtime.block_on(panicked.interrupt(async {
+                let output = root.await;
+                executor.tasks.close();
+                tree.abort();
+                executor.tasks.wait().await;
+                output
+            }))
+        }));
+
+        // Finish cleanup if the root or a task panic unwound first.
+        executor.tasks.close();
+        tree.abort();
+        runtime.block_on(executor.tasks.wait());
+        gauge.dec();
+
+        match output {
+            Ok(output) => output,
+            Err(panic) => resume_unwind(panic),
+        }
+    }
+}
+
+type Storage = MeteredStorage<TokioStorage>;
+type Network = MeteredNetwork<TokioNetwork>;
+
+/// Implementation of [crate::Spawner], [crate::Clock],
+/// [crate::Network], and [crate::Storage] for the `tokio`
+/// runtime.
+pub struct Context {
+    name: String,
+    attributes: Vec<(String, String)>,
+    executor: Arc<Executor>,
+    storage: Storage,
+    network: Network,
+    tree: Arc<Tree>,
+    execution: Execution,
+}
+
+impl Context {
+    /// Access the [Metrics] of the runtime.
+    fn metrics(&self) -> &Metrics {
+        &self.executor.metrics
+    }
+}
+
+impl crate::Spawner for Context {
+    fn dedicated(mut self) -> Self {
+        self.execution = Execution::Dedicated;
+        self
+    }
+
+    fn shared(mut self, blocking: bool) -> Self {
+        self.execution = Execution::Shared(blocking);
+        self
+    }
+
+    fn spawn<F, Fut, T>(mut self, f: F) -> Handle<T>
+    where
+        F: FnOnce(Self) -> Fut + Send + 'static,
+        Fut: Future<Output = T> + Send + 'static,
+        T: Send + 'static,
+    {
+        // Get metrics
+        let (_, metric) = spawn_metrics!(self);
+
+        // Track supervision before resetting configuration
+        let parent = Arc::clone(&self.tree);
+        let past = self.execution;
+        self.execution = Execution::default();
+        let (child, aborted) = Tree::child(&parent);
+        if aborted {
+            return Handle::closed(metric);
+        }
+        self.tree = child;
+
+        // Spawn the task
+        let executor = self.executor.clone();
+        let Some(task_guard) = executor.tasks.admit() else {
+            return Handle::closed(metric);
+        };
+
+        // The factory runs user code. If it unwinds, the guard finishes the
+        // running gauge and closes the supervision node the wrapper never received.
+        let guard = FactoryGuard::new(&parent, metric);
+        let future = f(self);
+        let (f, handle) = Handle::init(
+            future,
+            guard.disarm(),
+            executor.panicker.clone(),
+            Arc::clone(&parent),
+        );
+
+        // Destroying a finished or cancelled future, or an undelivered output, can
+        // unwind outside the user-poll boundary. Report it before releasing the tracker.
+        let panicker = executor.panicker.clone();
+        let f = async move {
+            let _task_guard = task_guard;
+            let mut f = pin!(f);
+            poll_fn(|cx| {
+                catch_unwind(AssertUnwindSafe(|| f.as_mut().poll(cx))).unwrap_or_else(|panic| {
+                    panicker.notify(panic);
+                    Poll::Ready(())
+                })
+            })
+            .await;
+        };
+
+        if matches!(past, Execution::Dedicated) {
+            utils::thread::spawn(executor.thread_stack_size, {
+                // Ensure the task can access the tokio runtime
+                let handle = executor.runtime.clone();
+                move || {
+                    handle.block_on(f);
+                }
+            });
+        } else if matches!(past, Execution::Shared(true)) {
+            executor.runtime.spawn_blocking({
+                // Ensure the task can access the tokio runtime
+                let handle = executor.runtime.clone();
+                move || {
+                    handle.block_on(f);
+                }
+            });
+        } else {
+            executor.runtime.spawn(f);
+        }
+
+        handle
+    }
+
+    async fn stop(self, value: i32, timeout: Option<Duration>) -> Result<(), Error> {
+        let stop_resolved = {
+            let mut shutdown = self.executor.shutdown.lock();
+            shutdown.stop(value)
+        };
+
+        // Wait for all tasks to complete or the timeout to fire
+        let timeout_future = timeout.map_or_else(
+            || futures::future::Either::Right(futures::future::pending()),
+            |duration| futures::future::Either::Left(self.sleep(duration)),
+        );
+        select! {
+            result = stop_resolved => {
+                result.map_err(|_| Error::Closed)?;
+                Ok(())
+            },
+            _ = timeout_future => Err(Error::Timeout),
+        }
+    }
+
+    fn stopped(&self) -> Signal {
+        self.executor.shutdown.lock().stopped()
+    }
+}
+
+#[stability(BETA)]
+impl crate::Strategizer for Context {
+    fn strategy(&self, parallelism: NonZeroUsize) -> Rayon {
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(parallelism.get())
+            .stack_size(self.executor.thread_stack_size)
+            .build()
+            .expect("failed to create Tokio Rayon thread pool");
+        Rayon::with_pool(Arc::new(pool))
+    }
+}
+
+impl crate::Supervisor for Context {
+    fn child(&self, label: &'static str) -> Self {
+        let (tree, _) = Tree::child(&self.tree);
+        Self {
+            name: child_label(&self.name, label),
+            attributes: self.attributes.clone(),
+            executor: self.executor.clone(),
+            storage: self.storage.clone(),
+            network: self.network.clone(),
+            tree,
+            execution: Execution::default(),
+        }
+    }
+
+    fn with_attribute(mut self, key: &'static str, value: impl std::fmt::Display) -> Self {
+        // Validate label format (must match [a-zA-Z][a-zA-Z0-9_]*)
+        validate_label(key);
+
+        // Add the attribute to the list of attributes
+        add_attribute(&mut self.attributes, key, value);
+        self
+    }
+
+    fn name(&self) -> Name {
+        Name {
+            label: self.name.clone(),
+            attributes: self.attributes.clone(),
+        }
+    }
+}
+
+impl crate::Metrics for Context {
+    fn register<N: Into<String>, H: Into<String>, M: Metric>(
+        &self,
+        name: N,
+        help: H,
+        metric: M,
+    ) -> Registered<M> {
+        let name = name.into();
+        let help = help.into();
+        let metric = Arc::new(metric);
+        self.executor.registry.register(
+            prefixed_name(&self.name, &name),
+            help,
+            self.attributes.clone(),
+            metric,
+        )
+    }
+
+    fn encode(&self) -> String {
+        self.executor.registry.encode()
+    }
+}
+
+impl Clock for Context {
+    fn current(&self) -> SystemTime {
+        SystemTime::now()
+    }
+
+    fn sleep(&self, duration: Duration) -> impl Future<Output = ()> + Send + 'static + use<> {
+        tokio::time::sleep(duration)
+    }
+
+    fn sleep_until(
+        &self,
+        deadline: SystemTime,
+    ) -> impl Future<Output = ()> + Send + 'static + use<> {
+        let duration_until_deadline = deadline.duration_since(self.current()).unwrap_or_default();
+        tokio::time::sleep(duration_until_deadline)
+    }
+}
+
+#[cfg(feature = "external")]
+impl Pacer for Context {
+    fn pace<'a, F, T>(
+        &'a self,
+        _latency: Duration,
+        future: F,
+    ) -> impl Future<Output = T> + Send + 'a
+    where
+        F: Future<Output = T> + Send + 'a,
+        T: Send + 'a,
+    {
+        // Execute the future immediately
+        future
+    }
+}
+
+impl GClock for Context {
+    type Instant = SystemTime;
+
+    fn now(&self) -> Self::Instant {
+        self.current()
+    }
+}
+
+impl ReasonablyRealtime for Context {}
+
+impl crate::Network for Context {
+    type Listener = <Network as crate::Network>::Listener;
+
+    async fn bind(&self, socket: SocketAddr) -> Result<Self::Listener, Error> {
+        self.network.bind(socket).await
+    }
+
+    async fn dial(&self, socket: SocketAddr) -> Result<(SinkOf<Self>, StreamOf<Self>), Error> {
+        self.network.dial(socket).await
+    }
+}
+
+impl crate::Resolver for Context {
+    async fn resolve(&self, host: &str) -> Result<Vec<IpAddr>, Error> {
+        // Uses the host's DNS configuration (e.g. /etc/resolv.conf). This delegates to the
+        // system's libc resolver.
+        //
+        // The `:0` port is required by lookup_host's API but is not used
+        // for DNS resolution.
+        let addrs = tokio::net::lookup_host(format!("{host}:0"))
+            .await
+            .map_err(|e| Error::ResolveFailed(e.to_string()))?;
+        Ok(addrs.map(|addr| addr.ip()).collect())
+    }
+}
+
+impl TryRng for Context {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(sys_rng().next_u32())
+    }
+
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(sys_rng().next_u64())
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
+        sys_rng().fill_bytes(dest);
+        Ok(())
+    }
+}
+
+impl TryCryptoRng for Context {}
+
+impl crate::Storage for Context {
+    type Blob = <Storage as crate::Storage>::Blob;
+
+    async fn open_versioned(
+        &self,
+        partition: &str,
+        name: &[u8],
+        versions: std::ops::RangeInclusive<BlobVersion>,
+    ) -> Result<(Self::Blob, u64, BlobVersion), Error> {
+        self.storage.open_versioned(partition, name, versions).await
+    }
+
+    async fn remove(&self, partition: &str, name: Option<&[u8]>) -> Result<(), Error> {
+        self.storage.remove(partition, name).await
+    }
+
+    async fn scan(&self, partition: &str) -> Result<Vec<Vec<u8>>, Error> {
+        self.storage.scan(partition).await
+    }
+}
+
+#[cfg(test)]
+#[allow(deprecated)]
+mod tests {
+    use super::*;
+    use crate::{
+        AbortOnDrop, Blob as _, Metrics, Network, Resolver, Runner as _, Sink, Spawner as _,
+        Storage as _, Strategizer as _, Stream, Supervisor as _, telemetry::metrics::raw::Counter,
+        tokio::telemetry,
+    };
+    use bytes::Bytes;
+    use commonware_parallel::Strategy as _;
+    use commonware_utils::{NZUsize, channel::oneshot};
+    use rstest::rstest;
+    use std::{
+        self,
+        collections::HashMap,
+        net::{IpAddr, Ipv4Addr, Ipv6Addr},
+        str::FromStr,
+        sync::atomic::{AtomicBool, Ordering},
+    };
+    use tracing::{Level, error};
+
+    struct TaskDropGate {
+        entered: std::sync::mpsc::Sender<()>,
+        release: std::sync::mpsc::Receiver<()>,
+    }
+
+    impl Drop for TaskDropGate {
+        fn drop(&mut self) {
+            let _ = self.entered.send(());
+            let _ = self.release.recv();
+        }
+    }
+
+    /// Signals when dropped.
+    struct NotifyDrop(std::sync::mpsc::Sender<()>);
+
+    impl Drop for NotifyDrop {
+        fn drop(&mut self) {
+            let _ = self.0.send(());
+        }
+    }
+
+    /// Panics when destroyed.
+    struct PanicOnDrop;
+
+    impl Drop for PanicOnDrop {
+        fn drop(&mut self) {
+            panic!("disposal panic");
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum Disposal {
+        /// The task returns a value after its handle was dropped.
+        Output,
+        /// The handle aborts a pending task.
+        Cancel,
+        /// The task's future completes.
+        Ready,
+    }
+
+    fn placed(context: Context, execution: Execution) -> Context {
+        match execution {
+            Execution::Dedicated => context.dedicated(),
+            Execution::Shared(blocking) => context.shared(blocking),
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum RootExit {
+        Return,
+        FuturePanic,
+        ConstructorPanic,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum JoinRelease {
+        Task,
+        Completion,
+        Output,
+    }
+
+    fn spawn_drop_gated_task(
+        context: Context,
+        execution: Execution,
+        drop_gate: TaskDropGate,
+        ready: Option<oneshot::Sender<()>>,
+    ) {
+        placed(context, execution).spawn(move |context| async move {
+            let _context = context;
+            let _drop_gate = drop_gate;
+            if let Some(ready) = ready {
+                ready.send(()).unwrap();
+            }
+            futures::future::pending::<()>().await;
+        });
+    }
+
+    fn assert_runner_drains_spawned_task(execution: Execution, root_exit: RootExit) {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let (drop_entered_tx, drop_entered_rx) = std::sync::mpsc::channel();
+        let (drop_release_tx, drop_release_rx) = std::sync::mpsc::channel();
+        let (runner_done_tx, runner_done_rx) = std::sync::mpsc::channel();
+        let runner = std::thread::spawn(move || {
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                let drop_gate = TaskDropGate {
+                    entered: drop_entered_tx,
+                    release: drop_release_rx,
+                };
+                match root_exit {
+                    RootExit::ConstructorPanic => {
+                        Runner::new(cfg).start(move |context| -> futures::future::Pending<()> {
+                            spawn_drop_gated_task(context, execution, drop_gate, None);
+                            panic!("root constructor panic after spawning child");
+                        })
+                    }
+                    RootExit::Return | RootExit::FuturePanic => {
+                        Runner::new(cfg).start(move |context| async move {
+                            spawn_drop_gated_task(context, execution, drop_gate, Some(ready_tx));
+                            ready_rx.await.unwrap();
+                            assert!(
+                                matches!(root_exit, RootExit::Return),
+                                "root future panic after spawning child"
+                            );
+                        })
+                    }
+                }
+            }));
+            runner_done_tx.send(result.is_err()).unwrap();
+        });
+
+        drop_entered_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("spawned task was not canceled after the root returned");
+        let early = runner_done_rx.recv_timeout(Duration::from_millis(250));
+        let returned_before_cleanup = match early {
+            Ok(panicked) => Some(panicked),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => None,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("Runner::start exited without reporting its result")
+            }
+        };
+        drop_release_tx.send(()).unwrap();
+        let panicked = returned_before_cleanup.unwrap_or_else(|| {
+            runner_done_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("Runner::start did not return after task cleanup completed")
+        });
+        runner.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert!(
+            returned_before_cleanup.is_none(),
+            "Runner::start returned before {execution:?} task cleanup completed"
+        );
+        assert_eq!(panicked, !matches!(root_exit, RootExit::Return));
+    }
+
+    fn run_with_returned_strategy(retain: bool) -> Option<Rayon> {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let (strategy_tx, strategy_rx) = std::sync::mpsc::channel();
+        let runner = std::thread::spawn(move || {
+            let strategy = Runner::new(cfg).start(move |context| async move {
+                let strategy = context.strategy(NZUsize!(2));
+                strategy.spawn(1, |_| ()).await;
+                retain.then_some(strategy)
+            });
+            strategy_tx.send(strategy).unwrap();
+        });
+
+        let strategy = strategy_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("Runner::start did not return after the strategy completed work");
+        runner.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+        strategy
+    }
+
+    #[test]
+    fn test_strategy_spawn_keeps_sibling_futures_polling() {
+        // One runtime worker must be able to poll the branch that releases the offloaded job.
+        let cfg = Config::new().with_worker_threads(1);
+        let storage_directory = cfg.storage_directory().clone();
+        let ready_branch_ran = Runner::new(cfg).start(|context| async move {
+            let strategy = context.strategy(NZUsize!(2));
+            let (gate_tx, gate_rx) = std::sync::mpsc::channel::<()>();
+            let mut job = Box::pin(strategy.spawn(1, move |_| {
+                gate_rx.recv_timeout(Duration::from_secs(5)).is_ok()
+            }));
+            select! {
+                _ = job.as_mut() => false,
+                _ = futures::future::ready(()) => {
+                    gate_tx.send(()).unwrap();
+                    assert!(job.await, "the gate must open before the job gives up");
+                    true
+                },
+            }
+        });
+
+        // Finish filesystem cleanup before asserting progress.
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert!(
+            ready_branch_ran,
+            "the sibling branch must run while the job is in flight"
+        );
+    }
+
+    #[test]
+    fn test_storage_blob_layout_restriction() {
+        // The default policy accepts legacy V0 blobs while selecting V1 for new blobs.
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        assert_eq!(cfg.storage_blob_layouts(), &BlobLayout::ALL);
+
+        let partition = "layout_restriction";
+        let v0_name = b"v0";
+        let partition_directory = storage_directory.join(partition);
+        std::fs::create_dir_all(&partition_directory).unwrap();
+        let v0_path = partition_directory.join(commonware_formatting::hex(v0_name));
+        let v0_bytes = crate::storage::tests::v0_blob_bytes(0, b"payload");
+        std::fs::write(&v0_path, &v0_bytes).unwrap();
+
+        Runner::new(cfg).start(|context| async move {
+            let (blob, size) = context.open(partition, v0_name).await.unwrap();
+            assert_eq!(size, 7);
+            let payload = blob
+                .read_at(0, 7, crate::ReadOptions::default())
+                .await
+                .unwrap();
+            assert_eq!(payload.coalesce(), b"payload".as_slice());
+        });
+
+        // A V1-only policy rejects V0 without modifying it and creates new blobs as V1.
+        let cfg = Config::new()
+            .with_storage_directory(storage_directory.clone())
+            .with_storage_blob_layouts(BlobLayout::V1..=BlobLayout::V1);
+        Runner::new(cfg).start(|context| async move {
+            let result = context.open(partition, v0_name).await;
+            assert!(matches!(
+                result,
+                Err(Error::BlobLayoutMismatch { expected, found })
+                    if expected == (BlobLayout::V1..=BlobLayout::V1)
+                        && found == BlobLayout::V0
+            ));
+
+            context.open(partition, b"v1").await.unwrap();
+        });
+
+        assert_eq!(std::fs::read(&v0_path).unwrap(), v0_bytes);
+        let v1_path = partition_directory.join(commonware_formatting::hex(b"v1"));
+        let v1 = std::fs::read(&v1_path).unwrap();
+        assert_eq!(&v1[..4], &BlobLayout::V1.magic());
+
+        // A V0-only policy rejects the intact header-only V1 blob without healing it and
+        // creates new blobs the rollback target can read and write.
+        let cfg = Config::new()
+            .with_storage_directory(storage_directory.clone())
+            .with_storage_blob_layouts(BlobLayout::V0..=BlobLayout::V0);
+        Runner::new(cfg).start(|context| async move {
+            let result = context.open(partition, b"v1").await;
+            assert!(matches!(
+                result,
+                Err(Error::BlobLayoutMismatch { expected, found })
+                    if expected == (BlobLayout::V0..=BlobLayout::V0)
+                        && found == BlobLayout::V1
+            ));
+
+            let (blob, size) = context.open(partition, b"rollback").await.unwrap();
+            assert_eq!(size, 0);
+            blob.write_at(0, b"rollback!".as_slice(), crate::WriteOptions::SYNC)
+                .await
+                .unwrap();
+            drop(blob);
+            let (blob, size) = context.open(partition, b"rollback").await.unwrap();
+            assert_eq!(size, 9);
+            let payload = blob
+                .read_at(0, 9, crate::ReadOptions::default())
+                .await
+                .unwrap();
+            assert_eq!(payload.coalesce(), b"rollback!".as_slice());
+        });
+
+        assert_eq!(std::fs::read(&v1_path).unwrap(), v1);
+        let rollback_path = partition_directory.join(commonware_formatting::hex(b"rollback"));
+        let rollback = std::fs::read(rollback_path).unwrap();
+        assert_eq!(&rollback[..4], &BlobLayout::V0.magic());
+        assert_eq!(&rollback[8..], b"rollback!");
+        let _ = std::fs::remove_dir_all(storage_directory);
+    }
+
+    #[test]
+    #[should_panic(expected = "non-empty")]
+    fn test_storage_blob_layout_restriction_rejects_empty_range() {
+        let _ = Config::new().with_storage_blob_layouts(BlobLayout::V1..=BlobLayout::V0);
+    }
+
+    #[test]
+    fn test_default_thread_stack_size_uses_system_default() {
+        let cfg = Config::new();
+        assert_eq!(
+            cfg.thread_stack_size(),
+            utils::thread::system_thread_stack_size()
+        );
+    }
+
+    /// The root factory runs on the caller's thread before the root is polled, yet it holds the
+    /// context, so futures it builds eagerly from runtime primitives must be usable.
+    #[test]
+    fn test_root_factory_builds_runtime_futures() {
+        let cfg = Config::new().with_worker_threads(2);
+        Runner::new(cfg).start(|context| {
+            let sleep = context.sleep(Duration::from_millis(1));
+            let deadline = context.sleep_until(context.current() + Duration::from_millis(1));
+            async move {
+                sleep.await;
+                deadline.await;
+            }
+        });
+    }
+
+    #[test]
+    fn test_runner_waits_for_spawned_task_cancellation() {
+        for execution in [
+            Execution::Shared(false),
+            Execution::Shared(true),
+            Execution::Dedicated,
+        ] {
+            for root_exit in [
+                RootExit::Return,
+                RootExit::FuturePanic,
+                RootExit::ConstructorPanic,
+            ] {
+                assert_runner_drains_spawned_task(execution, root_exit);
+            }
+        }
+    }
+
+    /// A task panic raised while the runner drains tasks after the root returns
+    /// fails the runner.
+    #[test]
+    fn test_runner_propagates_panic_during_drain() {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            Runner::new(cfg).start(|context| async move {
+                // Only the runner's tree abort after the root returns drops the sentinel.
+                let (sentinel_started_tx, sentinel_started_rx) = oneshot::channel();
+                let (sentinel_dropped_tx, sentinel_dropped_rx) = std::sync::mpsc::channel();
+                context.child("sentinel").spawn(move |_| async move {
+                    let _notify = NotifyDrop(sentinel_dropped_tx);
+                    sentinel_started_tx.send(()).unwrap();
+                    futures::future::pending::<()>().await;
+                });
+                sentinel_started_rx.await.unwrap();
+
+                // The child blocks its poll until that abort, then panics.
+                let (started_tx, started_rx) = oneshot::channel();
+                context
+                    .child("late")
+                    .dedicated()
+                    .spawn(move |_| async move {
+                        started_tx.send(()).unwrap();
+                        sentinel_dropped_rx.recv().unwrap();
+                        panic!("drain panic");
+                    });
+                started_rx.await.unwrap();
+            })
+        }));
+        let _ = std::fs::remove_dir_all(storage_directory);
+        let panic = result.expect_err("Runner::start returned after a task panicked during drain");
+        assert_eq!(utils::extract_panic_message(&*panic), "drain panic");
+    }
+
+    /// Panics raised while destroying a task's future or undelivered output are
+    /// task panics. A handle still waiting on the task resolves to closed.
+    #[rstest]
+    fn test_disposal_panic_is_task_panic(
+        #[values(Disposal::Output, Disposal::Cancel, Disposal::Ready)] disposal: Disposal,
+        #[values(
+            Execution::Shared(false),
+            Execution::Shared(true),
+            Execution::Dedicated
+        )]
+        execution: Execution,
+        #[values(false, true)] catch: bool,
+    ) {
+        let cfg = Config::new().with_catch_panics(catch);
+        let storage_directory = cfg.storage_directory().clone();
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            Runner::new(cfg).start(|context| async move {
+                let child = placed(context.child("disposal"), execution);
+                match disposal {
+                    Disposal::Output => {
+                        // Drop the handle while the task runs so its output
+                        // cannot be delivered.
+                        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+                        let (release_tx, release_rx) = std::sync::mpsc::channel();
+                        let handle = child.spawn(move |_| async move {
+                            entered_tx.send(()).unwrap();
+                            release_rx.recv().unwrap();
+                            PanicOnDrop
+                        });
+                        entered_rx.recv().unwrap();
+                        drop(handle);
+                        release_tx.send(()).unwrap();
+                    }
+                    Disposal::Cancel => {
+                        // Abort the task once it holds a value that panics on drop.
+                        let (ready_tx, ready_rx) = oneshot::channel();
+                        let handle = child.spawn(move |_| async move {
+                            let _guard = PanicOnDrop;
+                            ready_tx.send(()).unwrap();
+                            futures::future::pending::<()>().await;
+                        });
+                        ready_rx.await.unwrap();
+                        handle.abort();
+                        assert!(matches!(handle.await, Err(Error::Closed)));
+                    }
+                    Disposal::Ready => {
+                        // The completed future panics when destroyed, before
+                        // its result is published.
+                        let guard = PanicOnDrop;
+                        let result = child
+                            .spawn(move |_| {
+                                poll_fn(move |_| {
+                                    let _guard = &guard;
+                                    Poll::Ready(())
+                                })
+                            })
+                            .await;
+                        assert!(matches!(result, Err(Error::Closed)));
+                    }
+                }
+
+                // A caught disposal panic leaves the runner usable.
+                context.child("survivor").spawn(|_| async {}).await.unwrap();
+            })
+        }));
+        let _ = std::fs::remove_dir_all(storage_directory);
+        if catch {
+            result.expect("caught disposal panic failed the runner");
+        } else {
+            let panic = result.expect_err("disposal panic did not fail the runner");
+            assert_eq!(utils::extract_panic_message(&*panic), "disposal panic");
+        }
+    }
+
+    /// Records the tracker's active count for each error logged on the installing thread.
+    struct ActiveOnError {
+        /// Tracker of the runner under test.
+        tasks: Arc<TaskTracker>,
+        /// Active counts observed when errors were logged.
+        active: Arc<Mutex<Vec<usize>>>,
+    }
+
+    impl tracing::Subscriber for ActiveOnError {
+        fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+            *metadata.level() == Level::ERROR
+        }
+
+        fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+
+        fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+
+        fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+
+        fn event(&self, _: &tracing::Event<'_>) {
+            self.active.lock().push(self.tasks.state.lock().active);
+        }
+
+        fn enter(&self, _: &tracing::span::Id) {}
+
+        fn exit(&self, _: &tracing::span::Id) {}
+    }
+
+    /// A disposal panic is reported while its task is still tracked, so the runner cannot
+    /// finish draining before the panic is published.
+    #[test]
+    fn test_disposal_panic_reported_before_tracker_release() {
+        let cfg = Config::new().with_catch_panics(true);
+        let storage_directory = cfg.storage_directory().clone();
+        let active = Arc::new(Mutex::new(Vec::new()));
+        let observed = active.clone();
+        Runner::new(cfg).start(|context| async move {
+            // The only tracked task records the tracker when its panic is logged.
+            let subscriber = ActiveOnError {
+                tasks: context.executor.tasks.clone(),
+                active: observed,
+            };
+            let (ready_tx, ready_rx) = oneshot::channel();
+            let handle = context
+                .child("disposal")
+                .dedicated()
+                .spawn(move |_| async move {
+                    std::mem::forget(tracing::subscriber::set_default(subscriber));
+                    let _guard = PanicOnDrop;
+                    ready_tx.send(()).unwrap();
+                    futures::future::pending::<()>().await;
+                });
+            ready_rx.await.unwrap();
+
+            // Aborting destroys the guard, whose panic is logged on the task's thread.
+            handle.abort();
+            assert!(matches!(handle.await, Err(Error::Closed)));
+        });
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert_eq!(*active.lock(), vec![1]);
+    }
+
+    /// A root destroyed on completion can still spawn work, which shutdown drains.
+    #[test]
+    fn test_root_destruction_can_spawn_work_before_shutdown() {
+        /// Ready root that spawns a task while its destructor still owns a context.
+        struct Root {
+            context: Option<Context>,
+            invoked: Arc<AtomicBool>,
+            dropped: std::sync::mpsc::Sender<()>,
+        }
+
+        impl Future for Root {
+            type Output = ();
+
+            fn poll(self: std::pin::Pin<&mut Self>, _: &mut std::task::Context<'_>) -> Poll<()> {
+                Poll::Ready(())
+            }
+        }
+
+        impl Drop for Root {
+            fn drop(&mut self) {
+                let invoked = self.invoked.clone();
+                let payload = NotifyDrop(self.dropped.clone());
+                self.context.take().unwrap().spawn(move |_| {
+                    invoked.store(true, Ordering::SeqCst);
+                    async move {
+                        let _payload = payload;
+                        futures::future::pending::<()>().await;
+                    }
+                });
+            }
+        }
+
+        for execution in [
+            Execution::Shared(false),
+            Execution::Shared(true),
+            Execution::Dedicated,
+        ] {
+            let cfg = Config::new();
+            let storage_directory = cfg.storage_directory().clone();
+            let invoked = Arc::new(AtomicBool::new(false));
+            let (dropped_tx, dropped_rx) = std::sync::mpsc::channel();
+            Runner::new(cfg).start(|context| Root {
+                context: Some(placed(context.child("root"), execution)),
+                invoked: invoked.clone(),
+                dropped: dropped_tx,
+            });
+            let _ = std::fs::remove_dir_all(storage_directory);
+
+            // The root can still spawn during disposal, and shutdown drains its child.
+            assert!(
+                invoked.load(Ordering::SeqCst),
+                "{execution:?} spawn from root destruction was rejected"
+            );
+            assert!(
+                dropped_rx.try_recv().is_ok(),
+                "{execution:?} child spawned by root destruction outlived the runner"
+            );
+        }
+    }
+
+    fn assert_join_all_releases_pending_work(release_owner: JoinRelease) {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let (started, started_rx) = oneshot::channel();
+        let (release, release_rx) = std::sync::mpsc::channel();
+        let (joining, joining_rx) = std::sync::mpsc::channel();
+        let (done, done_rx) = std::sync::mpsc::channel();
+        let (exited, exited_rx) = std::sync::mpsc::channel();
+        let (drop_release, drop_release_rx) = std::sync::mpsc::channel();
+        drop(drop_release);
+        let release_on_drop = TaskDropGate {
+            entered: release.clone(),
+            release: drop_release_rx,
+        };
+
+        let runner = std::thread::spawn(move || {
+            Runner::new(cfg).start(move |context| async move {
+                let blocked = context
+                    .child("blocked")
+                    .dedicated()
+                    .spawn(move |_| async move {
+                        started.send(()).unwrap();
+                        release_rx.recv().unwrap();
+                        exited.send(()).unwrap();
+                        Ok::<_, Error>(None::<TaskDropGate>)
+                    })
+                    .abort_on_drop();
+                let failed = Handle::ready(Ok(Err(Error::Closed))).abort_on_drop();
+                let mut guards = vec![failed, blocked];
+                if matches!(release_owner, JoinRelease::Output) {
+                    guards.insert(
+                        0,
+                        Handle::ready(Ok(Ok(Some(release_on_drop)))).abort_on_drop(),
+                    );
+                } else {
+                    let pending = async move {
+                        let _release_on_drop = release_on_drop;
+                        futures::future::pending::<Result<Option<TaskDropGate>, Error>>().await
+                    };
+                    let pending = if matches!(release_owner, JoinRelease::Task) {
+                        context.child("pending").spawn(move |_| pending)
+                    } else {
+                        Handle::from_future(async move { Ok(pending.await) })
+                    };
+                    guards.push(pending.abort_on_drop());
+                }
+
+                started_rx.await.unwrap();
+                joining.send(()).unwrap();
+                let result = AbortOnDrop::join_all::<Error>(guards).await;
+                assert!(done.send((result, exited_rx.try_recv().is_ok())).is_ok());
+            });
+        });
+
+        joining_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("blocking task did not start");
+        let early = done_rx.recv_timeout(Duration::from_secs(5));
+        let completed = early.is_ok();
+
+        // Release the blocking poll even when cancellation stalls, so the runner can shut down.
+        let _ = release.send(());
+        let (result, exited) = early.unwrap_or_else(|_| {
+            done_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("joining did not finish after releasing the blocking task")
+        });
+        runner.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert!(
+            completed,
+            "joining stalled with release owned by {release_owner:?}"
+        );
+        assert!(exited, "joining returned before the blocking task exited");
+        assert!(matches!(result, Err(Error::Closed)));
+    }
+
+    #[test]
+    fn test_join_all_aborts_all_tasks_before_waiting() {
+        assert_join_all_releases_pending_work(JoinRelease::Task);
+    }
+
+    #[test]
+    fn test_join_all_drains_completions_concurrently() {
+        assert_join_all_releases_pending_work(JoinRelease::Completion);
+    }
+
+    #[test]
+    fn test_join_all_drops_outputs_before_waiting() {
+        assert_join_all_releases_pending_work(JoinRelease::Output);
+    }
+
+    #[test]
+    fn test_runner_start_waits_for_previous_run() {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+
+        // The first run keeps its context, and with it the storage directory,
+        // until it is released.
+        let (started, first_started) = std::sync::mpsc::channel();
+        let (release, released) = futures::channel::oneshot::channel();
+        let first_cfg = cfg.clone();
+        let first = std::thread::spawn(move || {
+            Runner::new(first_cfg).start(|context| async move {
+                started.send(()).unwrap();
+                released.await.unwrap();
+                drop(context);
+            });
+        });
+        first_started.recv_timeout(Duration::from_secs(10)).unwrap();
+
+        // A second run on the same directory cannot start until the first has
+        // returned.
+        let (started, second_started) = std::sync::mpsc::channel();
+        let second = std::thread::spawn(move || {
+            Runner::new(cfg).start(|_| async move {
+                started.send(()).unwrap();
+            });
+        });
+        match second_started.recv_timeout(Duration::from_millis(200)) {
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+            other => panic!("second run started while the first held the directory: {other:?}"),
+        }
+        release.send(()).unwrap();
+        first.join().unwrap();
+        second_started
+            .recv_timeout(Duration::from_secs(10))
+            .expect("second run did not start after the first returned");
+        second.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+    }
+
+    #[test]
+    fn test_runner_owns_runtime_when_context_escapes() {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let (drop_entered_tx, drop_entered_rx) = std::sync::mpsc::channel();
+        let (drop_release_tx, drop_release_rx) = std::sync::mpsc::channel();
+        let (runner_returned_tx, runner_returned_rx) = std::sync::mpsc::channel();
+        let (context_release_tx, context_release_rx) = std::sync::mpsc::channel();
+        let runner = std::thread::spawn(move || {
+            let context = Runner::new(cfg).start(move |context| async move {
+                context.executor.runtime.spawn(async move {
+                    let _drop_gate = TaskDropGate {
+                        entered: drop_entered_tx,
+                        release: drop_release_rx,
+                    };
+                    ready_tx.send(()).unwrap();
+                    futures::future::pending::<()>().await;
+                });
+                ready_rx.await.unwrap();
+                context
+            });
+            runner_returned_tx.send(()).unwrap();
+            context_release_rx.recv().unwrap();
+            drop(context);
+        });
+
+        let returned_early = runner_returned_rx
+            .recv_timeout(Duration::from_millis(500))
+            .is_ok();
+        if returned_early {
+            drop_release_tx.send(()).unwrap();
+            context_release_tx.send(()).unwrap();
+            drop_entered_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("escaped Context did not retain the raw runtime task");
+        } else {
+            drop_entered_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("Runner did not cancel its raw runtime task");
+            drop_release_tx.send(()).unwrap();
+            runner_returned_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("Runner did not return after raw task cleanup");
+            context_release_tx.send(()).unwrap();
+        }
+        runner.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert!(
+            !returned_early,
+            "a returned Context kept the Tokio runtime alive after Runner::start"
+        );
+    }
+
+    #[test]
+    fn test_runner_returns_strategy_after_pool_work() {
+        assert!(run_with_returned_strategy(false).is_none());
+
+        let strategy = run_with_returned_strategy(true).unwrap();
+        assert_eq!(futures::executor::block_on(strategy.spawn(1, |_| 42)), 42);
+    }
+
+    #[test]
+    fn test_runner_resumes_strategy_panic_payload_after_pool_work() {
+        let cfg = Config::new();
+        let storage_directory = cfg.storage_directory().clone();
+        let (strategy_tx, strategy_rx) = std::sync::mpsc::channel();
+        let runner = std::thread::spawn(move || {
+            let result: std::thread::Result<()> =
+                std::panic::catch_unwind(AssertUnwindSafe(|| {
+                    Runner::new(cfg).start(move |context| async move {
+                        let strategy = context.strategy(NZUsize!(2));
+                        strategy.spawn(1, |_| ()).await;
+                        std::panic::panic_any(strategy);
+                    });
+                }));
+            let strategy = result
+                .expect_err("Runner::start did not resume the root panic")
+                .downcast::<Rayon>()
+                .expect("Runner::start changed the root panic payload");
+            strategy_tx.send(*strategy).unwrap();
+        });
+
+        let strategy = strategy_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("Runner::start did not resume the strategy panic payload");
+        runner.join().unwrap();
+        let _ = std::fs::remove_dir_all(storage_directory);
+        assert_eq!(futures::executor::block_on(strategy.spawn(1, |_| 42)), 42);
+    }
+
+    #[test]
+    fn test_thread_stack_size_override() {
+        let cfg = Config::new().with_thread_stack_size(4 * 1024 * 1024);
+        assert_eq!(cfg.thread_stack_size(), 4 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_process_rss_metric() {
+        let executor = Runner::default();
+        executor.start(|context| async move {
+            loop {
+                // Wait for RSS metric to be available
+                let metrics = context.encode();
+                if !metrics.contains("runtime_process_rss") {
+                    context.sleep(Duration::from_millis(100)).await;
+                    continue;
+                }
+
+                // Verify the RSS value is eventually populated (greater than 0)
+                for line in metrics.lines() {
+                    if line.starts_with("runtime_process_rss")
+                        && !line.starts_with("runtime_process_rss{")
+                    {
+                        let parts: Vec<&str> = line.split_whitespace().collect();
+                        if parts.len() >= 2 {
+                            let rss_value: i64 =
+                                parts[1].parse().expect("Failed to parse RSS value");
+                            if rss_value > 0 {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_telemetry() {
+        let executor = Runner::default();
+        executor.start(|context| async move {
+            // Define the server address
+            let address = SocketAddr::from_str("127.0.0.1:8000").unwrap();
+
+            // Configure telemetry
+            telemetry::init(
+                context.child("metrics"),
+                telemetry::Logs {
+                    level: Level::INFO,
+                    json: false,
+                },
+                Some(address),
+                None,
+            );
+
+            // Register a test metric
+            let counter: Counter<u64> = Counter::default();
+            let _registered = context.register("test_counter", "Test counter", counter.clone());
+            counter.inc();
+
+            // Helper functions to parse HTTP response
+            async fn read_line<St: Stream>(stream: &mut St) -> Result<String, Error> {
+                let mut line = Vec::new();
+                loop {
+                    let received = stream.recv(1).await?;
+                    let byte = received.coalesce().as_ref()[0];
+                    if byte == b'\n' {
+                        if line.last() == Some(&b'\r') {
+                            line.pop(); // Remove trailing \r
+                        }
+                        break;
+                    }
+                    line.push(byte);
+                }
+                String::from_utf8(line).map_err(|_| Error::ReadFailed)
+            }
+
+            async fn read_headers<St: Stream>(
+                stream: &mut St,
+            ) -> Result<HashMap<String, String>, Error> {
+                let mut headers = HashMap::new();
+                loop {
+                    let line = read_line(stream).await?;
+                    if line.is_empty() {
+                        break;
+                    }
+                    let parts: Vec<&str> = line.splitn(2, ": ").collect();
+                    if parts.len() == 2 {
+                        headers.insert(parts[0].to_string(), parts[1].to_string());
+                    }
+                }
+                Ok(headers)
+            }
+
+            async fn read_body<St: Stream>(
+                stream: &mut St,
+                content_length: usize,
+            ) -> Result<String, Error> {
+                let received = stream.recv(content_length).await?;
+                String::from_utf8(received.coalesce().into()).map_err(|_| Error::ReadFailed)
+            }
+
+            // Simulate a client connecting to the server
+            let client_handle = context.child("client").spawn(move |context| async move {
+                let (mut sink, mut stream) = loop {
+                    match context.dial(address).await {
+                        Ok((sink, stream)) => break (sink, stream),
+                        Err(e) => {
+                            // The client may be polled before the server is ready, that's alright!
+                            error!(err =?e, "failed to connect");
+                            context.sleep(Duration::from_millis(10)).await;
+                        }
+                    }
+                };
+
+                // Send a GET request to the server
+                let request = format!(
+                    "GET /metrics HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n"
+                );
+                sink.send(Bytes::from(request)).await.unwrap();
+
+                // Read and verify the HTTP status line
+                let status_line = read_line(&mut stream).await.unwrap();
+                assert_eq!(status_line, "HTTP/1.1 200 OK");
+
+                // Read and parse headers
+                let headers = read_headers(&mut stream).await.unwrap();
+                println!("Headers: {headers:?}");
+                let content_length = headers
+                    .get("content-length")
+                    .unwrap()
+                    .parse::<usize>()
+                    .unwrap();
+
+                // Read and verify the body
+                let body = read_body(&mut stream, content_length).await.unwrap();
+                assert!(body.contains("test_counter_total 1"));
+            });
+
+            // Wait for the client task to complete
+            client_handle.await.unwrap();
+        });
+    }
+
+    #[test]
+    fn test_resolver() {
+        let executor = Runner::default();
+        executor.start(|context| async move {
+            let addrs = context.resolve("localhost").await.unwrap();
+            assert!(!addrs.is_empty());
+            for addr in addrs {
+                assert!(
+                    addr == IpAddr::V4(Ipv4Addr::LOCALHOST)
+                        || addr == IpAddr::V6(Ipv6Addr::LOCALHOST)
+                );
+            }
+        });
+    }
+}

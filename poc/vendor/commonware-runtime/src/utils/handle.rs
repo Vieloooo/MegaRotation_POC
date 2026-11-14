@@ -1,0 +1,1071 @@
+use crate::{
+    Error,
+    telemetry::metrics::raw::Gauge,
+    utils::{extract_panic_message, supervision::Tree},
+};
+use commonware_utils::{
+    channel::oneshot,
+    sync::{Exclusive, Mutex, Once},
+};
+use futures::{
+    future::{Either, poll_fn, select},
+    pin_mut,
+    stream::{AbortHandle, Abortable, Aborted},
+};
+use std::{
+    any::Any,
+    cell::UnsafeCell,
+    future::Future,
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+    vec::IntoIter,
+};
+use tracing::error;
+
+/// Handle to an asynchronous result.
+///
+/// Handles returned by [`crate::Spawner::spawn`] abort the spawned task. Completion handles only
+/// stop waiting when aborted, resolving to [`Error::Aborted`]; they do not cancel the underlying
+/// work.
+pub struct Handle<T>
+where
+    T: Send + 'static,
+{
+    state: HandleState<T>,
+}
+
+/// A boxed future that completes a handle.
+type BoxedCompletion<T> = Pin<Box<dyn Future<Output = Result<T, Error>> + Send + 'static>>;
+
+/// Distinguishes handles that own spawned work from handles that only wait on completion.
+enum HandleState<T>
+where
+    T: Send + 'static,
+{
+    Task {
+        receiver: oneshot::Receiver<Result<T, Error>>,
+        abort_handle: AbortHandle,
+        metric: MetricHandle,
+    },
+    Completion {
+        future: Abortable<Completion<T>>,
+        abort_handle: AbortHandle,
+    },
+}
+
+/// Signals all aborts before dropping any handle, whose result or completion future may depend
+/// on another task in the group during destruction.
+struct HandleGroup<T>(IntoIter<AbortOnDrop<T>>)
+where
+    T: Send + 'static;
+
+impl<T: Send + 'static> HandleGroup<T> {
+    fn abort(&self) {
+        for guard in self.0.as_slice() {
+            guard.0.abort();
+        }
+    }
+}
+
+impl<T> Drop for HandleGroup<T>
+where
+    T: Send + 'static,
+{
+    fn drop(&mut self) {
+        self.abort();
+    }
+}
+
+/// Closes supervision and finishes metrics when a task exits or is discarded.
+struct TaskGuard {
+    /// Supervision subtree owned by the task.
+    tree: Arc<Tree>,
+    /// Running-task metric, finished once even if cancellation already updated it.
+    metric: MetricHandle,
+}
+
+impl Drop for TaskGuard {
+    fn drop(&mut self) {
+        self.tree.abort();
+        self.metric.finish();
+    }
+}
+
+/// Closes supervision and finishes metrics if task construction unwinds.
+///
+/// A spawn holds this guard while running the user's task factory, then
+/// disarms it by transferring the metric to the execution wrapper.
+pub(crate) struct FactoryGuard<'a> {
+    /// Supervision node closed if construction fails.
+    tree: &'a Arc<Tree>,
+    /// Metric transferred to the execution wrapper after construction succeeds.
+    metric: Option<MetricHandle>,
+}
+
+impl<'a> FactoryGuard<'a> {
+    /// Arm the guard around a task factory call.
+    pub(crate) const fn new(tree: &'a Arc<Tree>, metric: MetricHandle) -> Self {
+        Self {
+            tree,
+            metric: Some(metric),
+        }
+    }
+
+    /// Hand the metric to the execution wrapper once construction has succeeded.
+    pub(crate) fn disarm(mut self) -> MetricHandle {
+        self.metric.take().expect("factory guard disarmed twice")
+    }
+}
+
+impl Drop for FactoryGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(metric) = &self.metric {
+            metric.finish();
+            self.tree.abort();
+        }
+    }
+}
+
+/// Normalizes receiver-backed and future-backed completions behind one abortable future.
+enum Completion<T>
+where
+    T: Send + 'static,
+{
+    Receiver(oneshot::Receiver<Result<T, Error>>),
+    /// The future is polled only through exclusive access, so the handle stays `Sync`.
+    Future(Exclusive<BoxedCompletion<T>>),
+}
+
+impl<T> Unpin for Completion<T> where T: Send + 'static {}
+
+impl<T> Future for Completion<T>
+where
+    T: Send + 'static,
+{
+    type Output = Result<T, Error>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match &mut *self {
+            Self::Receiver(receiver) => Pin::new(receiver)
+                .poll(cx)
+                .map(|result| result.unwrap_or(Err(Error::Closed))),
+            Self::Future(future) => future.get_mut().as_mut().poll(cx),
+        }
+    }
+}
+
+/// Polls a task's future, catching any panic it raises.
+///
+/// The future lives in an [`UnsafeCell`], which has the same layout as `F`, so the shared
+/// reference [`Abortable`] takes to check for cancellation does not invalidate borrows the future
+/// holds into its own state. Catching panics here spares a task separate wrappers for that, each
+/// of which would add a stack slot the size of the future to every poll in unoptimized builds.
+// Miri treats creating a shared reference as a read of everything outside an `UnsafeCell`, which
+// conflicts with a suspended future's borrows of itself (rust-lang/rust#137750) until coroutines
+// are built on `UnsafePinned` (rust-lang/rust#125735).
+struct FutureCell<F>(UnsafeCell<F>);
+
+impl<F: Future> Future for FutureCell<F> {
+    type Output = std::thread::Result<F::Output>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // SAFETY: The future is structurally pinned: `FutureCell` has no `Drop` impl, is `Unpin`
+        // only when `F` is, and reaches the future only through this pinned projection.
+        let future = unsafe { self.map_unchecked_mut(|cell| cell.0.get_mut()) };
+        catch_unwind(AssertUnwindSafe(|| future.poll(cx)))?.map(Ok)
+    }
+}
+
+impl<T> Handle<T>
+where
+    T: Send + 'static,
+{
+    /// Wraps `f` as a task supervised by `tree`.
+    ///
+    /// The task's cancellation is registered on `tree` before this returns, so a closed `tree`
+    /// cancels the task before `f` can be polled.
+    #[inline(always)]
+    pub(crate) fn init<F>(
+        f: F,
+        metric: MetricHandle,
+        panicker: Panicker,
+        tree: Arc<Tree>,
+    ) -> (impl Future<Output = ()>, Self)
+    where
+        F: Future<Output = T> + Send + 'static,
+    {
+        // Initialize channels to handle result/abort
+        let (sender, receiver) = oneshot::channel();
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+
+        // Attach cancellation before the caller can publish the task.
+        tree.register(Aborter::new(abort_handle.clone(), metric.clone()));
+
+        // Install cleanup before the first poll so rejected tasks also close
+        // supervision and finish their metrics when the future is dropped.
+        let guard = TaskGuard {
+            tree,
+            metric: metric.clone(),
+        };
+
+        // Wrap the future with panic catching, abort support, and cleanup.
+        //
+        // Everything is done in a single async block (and the function is marked
+        // #[inline(always)]) so that stack usage is `size_of(F) + constant` rather than
+        // `N * size_of(F)` (which is what a combinator chain produces in debug builds).
+        let task = async move {
+            // Cancellation can destroy the user future during this poll. Close
+            // its supervision subtree even if that destruction unwinds.
+            let _guard = guard;
+
+            // Run future with panic catching and abort support
+            let result = Abortable::new(FutureCell(UnsafeCell::new(f)), abort_registration).await;
+
+            // Handle result
+            match result {
+                Ok(Ok(result)) => {
+                    let _ = sender.send(Ok(result));
+                }
+                Ok(Err(panic)) => {
+                    panicker.notify(panic);
+                    let _ = sender.send(Err(Error::Exited));
+                }
+                Err(Aborted) => {}
+            }
+        };
+
+        (
+            task,
+            Self {
+                state: HandleState::Task {
+                    receiver,
+                    abort_handle,
+                    metric,
+                },
+            },
+        )
+    }
+
+    /// Returns a handle backed by a completion receiver.
+    pub fn from_receiver(receiver: oneshot::Receiver<Result<T, Error>>) -> Self {
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        Self {
+            state: HandleState::Completion {
+                future: Abortable::new(Completion::Receiver(receiver), abort_registration),
+                abort_handle,
+            },
+        }
+    }
+
+    /// Returns a handle backed by a completion future.
+    pub fn from_future<F>(future: F) -> Self
+    where
+        F: Future<Output = Result<T, Error>> + Send + 'static,
+    {
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        Self {
+            state: HandleState::Completion {
+                future: Abortable::new(
+                    Completion::Future(Exclusive::new(Box::pin(future))),
+                    abort_registration,
+                ),
+                abort_handle,
+            },
+        }
+    }
+
+    /// Returns a handle that is already complete.
+    pub fn ready(result: Result<T, Error>) -> Self {
+        let (sender, receiver) = oneshot::channel();
+        let _ = sender.send(result);
+        Self::from_receiver(receiver)
+    }
+
+    /// Waits for the first handle to complete and aborts all handles before returning.
+    ///
+    /// Dropping the returned future also aborts every handle. Selection is biased toward handles
+    /// that appear earlier in the iterator.
+    ///
+    /// Runtime supervision already aborts a task's descendants when that task exits. This method
+    /// is intended for an owned group whose teardown boundary is the first handle completion,
+    /// independent of whether the caller exits immediately afterward.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use commonware_runtime::Handle;
+    ///
+    /// let handles = [
+    ///     Handle::ready(Ok(7)),
+    ///     Handle::from_future(futures::future::pending()),
+    /// ];
+    /// assert_eq!(Handle::select(handles).await.unwrap(), 7);
+    /// # });
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Closed`] if `handles` is empty.
+    pub fn select(
+        handles: impl IntoIterator<Item = Self>,
+    ) -> impl Future<Output = Result<T, Error>> + Send + 'static {
+        // Construct the guard before returning so dropping the future without polling still aborts
+        // every handle.
+        let mut handles = HandleGroup(
+            handles
+                .into_iter()
+                .map(Self::abort_on_drop)
+                .collect::<Vec<_>>()
+                .into_iter(),
+        );
+
+        async move {
+            if handles.0.as_slice().is_empty() {
+                return Err(Error::Closed);
+            }
+
+            poll_fn(move |cx| {
+                for guard in handles.0.as_mut_slice() {
+                    if let Poll::Ready(result) = Pin::new(&mut guard.0).poll(cx) {
+                        return Poll::Ready(result);
+                    }
+                }
+                Poll::Pending
+            })
+            .await
+        }
+    }
+
+    /// Returns a handle that resolves to [`Error::Closed`] without spawning work.
+    pub(crate) fn closed(metric: MetricHandle) -> Self {
+        // Mark the task as finished immediately so gauges remain accurate.
+        metric.finish();
+
+        // Create a receiver that will yield `Err(Error::Closed)` when awaited.
+        let (sender, receiver) = oneshot::channel();
+        drop(sender);
+
+        Self::from_receiver(receiver)
+    }
+
+    /// Abort the spawned task or stop waiting for a completion.
+    pub fn abort(&self) {
+        match &self.state {
+            HandleState::Task {
+                abort_handle,
+                metric,
+                ..
+            } => {
+                abort_handle.abort();
+
+                // We might never poll the future again after aborting it, so run the
+                // metric cleanup right away.
+                metric.finish();
+            }
+            HandleState::Completion { abort_handle, .. } => {
+                abort_handle.abort();
+            }
+        }
+    }
+
+    /// Returns a helper that aborts the task and updates metrics consistently.
+    #[cfg(test)]
+    pub(crate) fn aborter(&self) -> Option<Aborter> {
+        match &self.state {
+            HandleState::Task {
+                abort_handle,
+                metric,
+                ..
+            } => Some(Aborter::new(abort_handle.clone(), metric.clone())),
+            HandleState::Completion { .. } => None,
+        }
+    }
+
+    /// Wrap this handle so dropping the wrapper calls [`Handle::abort`].
+    pub const fn abort_on_drop(self) -> AbortOnDrop<T> {
+        AbortOnDrop(self)
+    }
+}
+
+/// Calls [`Handle::abort`] when dropped.
+///
+/// Supervision ties spawned tasks to their spawning task's lifetime, but work spawned from a plain
+/// future outlives that future's drop. Wrapping the handle (see [`Handle::abort_on_drop`]) ties the
+/// task's cancellation to the guard instead. Dropping the guard signals cancellation. Use
+/// [`AbortOnDrop::abort`] to also join the handle. Completion handles only stop waiting and
+/// do not cancel the underlying work (see [`Handle`]).
+pub struct AbortOnDrop<T: Send + 'static>(Handle<T>);
+
+impl<T: Send + 'static> AbortOnDrop<T> {
+    /// Abort and join the handle. Completion handles only stop waiting for the underlying work.
+    pub async fn abort(mut self) {
+        self.0.abort();
+        let _ = (&mut self.0).await;
+    }
+
+    /// Join the handle.
+    pub async fn join(mut self) -> Result<T, Error> {
+        // Poll the handle by reference: the guard must keep owning it so dropping this future
+        // mid-join still aborts the task.
+        (&mut self.0).await
+    }
+}
+
+impl<T, E1> AbortOnDrop<Result<T, E1>>
+where
+    T: Send + 'static,
+    E1: Send + 'static,
+{
+    /// Join `guards` in order, collecting each task's output.
+    ///
+    /// On the first failure (a task error or a failed join), abort every remaining guard, discard
+    /// collected outputs, and drain the remaining guards concurrently before surfacing the error.
+    /// Joining in order makes the surfaced failure deterministic.
+    ///
+    /// Spawned tasks are cancelled and joined. Completion handles only stop waiting for their
+    /// underlying work.
+    ///
+    /// Dropping the returned future signals every cancellation before destroying any owned
+    /// outputs or completion futures.
+    pub fn join_all<E2>(guards: Vec<Self>) -> impl Future<Output = Result<Vec<T>, E2>>
+    where
+        E2: From<E1> + From<Error>,
+    {
+        let guards = HandleGroup(guards.into_iter());
+        async move {
+            // Cancellation must drop the group before destroying collected outputs.
+            let mut joined = Vec::with_capacity(guards.0.len());
+            let mut guards = guards;
+            while let Some(guard) = guards.0.as_mut_slice().first_mut() {
+                // Error conversion may destroy resources, so signal all cancellations first.
+                let result = (&mut guard.0).await;
+                if !matches!(result, Ok(Ok(_))) {
+                    guards.abort();
+                }
+                match result
+                    .map_err(E2::from)
+                    .and_then(|result| result.map_err(E2::from))
+                {
+                    Ok(output) => joined.push(output),
+                    Err(error) => {
+                        // Release collected outputs before waiting on dependent tasks.
+                        drop(joined);
+                        drop(guards.0.next());
+                        futures::future::join_all(guards.0.by_ref().map(Self::abort)).await;
+                        return Err(error);
+                    }
+                }
+                drop(guards.0.next());
+            }
+            Ok(joined)
+        }
+    }
+}
+
+impl<T: Send + 'static> Drop for AbortOnDrop<T> {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+impl<T> Future for Handle<T>
+where
+    T: Send + 'static,
+{
+    type Output = Result<T, Error>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match &mut self.state {
+            HandleState::Task { receiver, .. } => Pin::new(receiver)
+                .poll(cx)
+                .map(|result| result.unwrap_or_else(|_| Err(Error::Closed))),
+            HandleState::Completion { future, .. } => Pin::new(future)
+                .poll(cx)
+                .map(|result| result.unwrap_or(Err(Error::Aborted))),
+        }
+    }
+}
+
+/// Tracks the metric state associated with a spawned task handle.
+#[derive(Clone)]
+pub(crate) struct MetricHandle {
+    gauge: Gauge,
+    finished: Arc<Once>,
+}
+
+impl MetricHandle {
+    /// Increments the supplied gauge and returns a handle responsible for
+    /// eventually decrementing it.
+    pub(crate) fn new(gauge: Gauge) -> Self {
+        gauge.inc();
+
+        Self {
+            gauge,
+            finished: Arc::new(Once::new()),
+        }
+    }
+
+    /// Marks the task handle as completed and decrements the gauge once.
+    ///
+    /// This method is idempotent, additional calls are ignored so completion
+    /// and abort paths can invoke it independently.
+    pub(crate) fn finish(&self) {
+        let gauge = self.gauge.clone();
+        self.finished.call_once(move || {
+            gauge.dec();
+        });
+    }
+}
+
+/// A panic emitted by a spawned task.
+pub type Panic = Box<dyn Any + Send + 'static>;
+
+/// Notifies the runtime when a spawned task panics, so it can propagate the failure.
+#[derive(Clone)]
+pub(crate) struct Panicker {
+    catch: bool,
+    sender: Arc<Mutex<Option<oneshot::Sender<Panic>>>>,
+}
+
+impl Panicker {
+    /// Creates a new [Panicker].
+    pub(crate) fn new(catch: bool) -> (Self, Panicked) {
+        let (sender, receiver) = oneshot::channel();
+        let panicker = Self {
+            catch,
+            sender: Arc::new(Mutex::new(Some(sender))),
+        };
+        let panicked = Panicked { receiver };
+        (panicker, panicked)
+    }
+
+    /// Returns whether the [Panicker] is configured to catch panics.
+    #[commonware_macros::stability(ALPHA)]
+    pub(crate) const fn catch(&self) -> bool {
+        self.catch
+    }
+
+    /// Notifies the [Panicker] that a panic has occurred.
+    pub(crate) fn notify(&self, panic: Box<dyn Any + Send + 'static>) {
+        // Log the panic
+        let err = extract_panic_message(&*panic);
+        error!(?err, "task panicked");
+
+        // If we are catching panics, just return
+        if self.catch {
+            return;
+        }
+
+        // If we've already sent a panic, ignore the new one
+        let mut sender = self.sender.lock();
+        let Some(sender) = sender.take() else {
+            return;
+        };
+
+        // Send the panic
+        let _ = sender.send(panic);
+    }
+}
+
+/// A handle that will be notified when a panic occurs.
+pub(crate) struct Panicked {
+    receiver: oneshot::Receiver<Panic>,
+}
+
+impl Panicked {
+    /// Polls a task that should be interrupted by a panic.
+    pub(crate) async fn interrupt<Fut>(self, task: Fut) -> Fut::Output
+    where
+        Fut: Future,
+    {
+        // Wait for task to complete or panic
+        let panicked = self.receiver;
+        pin_mut!(panicked);
+        pin_mut!(task);
+        match select(panicked, task).await {
+            Either::Left((panic, task)) => match panic {
+                // If there is a panic, resume the unwind
+                Ok(panic) => {
+                    resume_unwind(panic);
+                }
+                // If there can never be a panic (oneshot is closed), wait for the task to complete
+                // and return the output
+                Err(_) => task.await,
+            },
+            Either::Right((output, mut panicked)) => {
+                // A panic sent while the task completed wins over its output
+                if let Ok(panic) = panicked.try_recv() {
+                    resume_unwind(panic);
+                }
+                output
+            }
+        }
+    }
+
+    /// Take a panic sent and not yet observed.
+    #[cfg(target_os = "linux")]
+    #[commonware_macros::stability(ALPHA)]
+    pub(crate) fn try_take(&mut self) -> Option<Panic> {
+        self.receiver.try_recv().ok()
+    }
+}
+
+/// Couples an [`AbortHandle`] with its metric handle so aborted tasks clean up gauges.
+pub(crate) struct Aborter {
+    inner: AbortHandle,
+    metric: MetricHandle,
+}
+
+impl Aborter {
+    /// Creates a new [`Aborter`] for the provided abort handle and metric handle.
+    pub(crate) const fn new(inner: AbortHandle, metric: MetricHandle) -> Self {
+        Self { inner, metric }
+    }
+
+    /// Aborts the task and records completion in the metric gauge.
+    pub(crate) fn abort(self) {
+        self.inner.abort();
+
+        // We might never poll the future again after aborting it, so run the
+        // metric cleanup right away
+        self.metric.finish();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AbortOnDrop, Handle, MetricHandle, Panicker};
+    use crate::{
+        Error, Metrics as _, Runner, Spawner, Supervisor as _, deterministic,
+        telemetry::metrics::raw::Gauge,
+        utils::{extract_panic_message, reschedule, supervision::Tree},
+    };
+    use commonware_utils::{channel::oneshot, sync::Mutex};
+    use futures::{FutureExt as _, future, poll, stream::AbortHandle};
+    use rstest::rstest;
+    use std::{
+        panic::{AssertUnwindSafe, catch_unwind},
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+    };
+
+    const METRIC_PREFIX: &str = "runtime_tasks_running{";
+
+    fn running_tasks_for_label(metrics: &str, label: &str) -> Option<u64> {
+        let label_fragment = format!("name=\"{label}\"");
+        metrics.lines().find_map(|line| {
+            if line.starts_with(METRIC_PREFIX) && line.contains(&label_fragment) {
+                line.rsplit_once(' ')
+                    .and_then(|(_, value)| value.trim().parse::<u64>().ok())
+            } else {
+                None
+            }
+        })
+    }
+
+    #[test]
+    fn tasks_running_decreased_after_completion() {
+        const LABEL: &str = "tasks_running_after_completion";
+
+        let runner = deterministic::Runner::default();
+        runner.start(|context| async move {
+            let handle = context.child(LABEL).spawn(|_| async move { "done" });
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "expected tasks_running gauge to be 1 before completion: {metrics}",
+            );
+
+            let output = handle.await.expect("task failed");
+            assert_eq!(output, "done");
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(0),
+                "expected tasks_running gauge to return to 0 after completion: {metrics}",
+            );
+        });
+    }
+
+    #[test]
+    fn tasks_running_unchanged_when_handle_dropped() {
+        const LABEL: &str = "tasks_running_unchanged";
+
+        let runner = deterministic::Runner::default();
+        runner.start(|context| async move {
+            let handle = context.child(LABEL).spawn(|_| async move {
+                future::pending::<()>().await;
+            });
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "expected tasks_running gauge to be 1 before dropping handle: {metrics}",
+            );
+
+            drop(handle);
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "dropping handle should not finish metrics: {metrics}",
+            );
+        });
+    }
+
+    #[test]
+    fn tasks_running_decreased_immediately_on_abort_via_handle() {
+        const LABEL: &str = "tasks_running_abort_via_handle";
+
+        let runner = deterministic::Runner::default();
+        runner.start(|context| async move {
+            let handle = context.child(LABEL).spawn(|_| async move {
+                future::pending::<()>().await;
+            });
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "expected tasks_running gauge to be 1 before abort: {metrics}",
+            );
+
+            handle.abort();
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(0),
+                "expected tasks_running gauge to return to 0 after abort: {metrics}",
+            );
+        });
+    }
+
+    #[test]
+    fn select_aborts_remaining_tasks() {
+        const LABEL: &str = "tasks_running_select_remaining";
+
+        deterministic::Runner::default().start(|context| async move {
+            let completed = context.child("select_completed").spawn(|_| async {});
+            let pending = context.child(LABEL).spawn(|_| future::pending());
+
+            Handle::select([completed, pending])
+                .await
+                .expect("task failed");
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(0),
+                "select should abort remaining tasks: {metrics}",
+            );
+        });
+    }
+
+    #[test]
+    fn select_empty_returns_closed() {
+        deterministic::Runner::default().start(|_| async move {
+            assert!(matches!(Handle::<()>::select([]).await, Err(Error::Closed)));
+        });
+    }
+
+    #[test]
+    fn dropping_select_aborts_tasks_before_polling() {
+        const FIRST_LABEL: &str = "tasks_running_select_drop_first";
+        const SECOND_LABEL: &str = "tasks_running_select_drop_second";
+
+        deterministic::Runner::default().start(|context| async move {
+            let first = context
+                .child(FIRST_LABEL)
+                .spawn(|_| future::pending::<()>());
+            let second = context
+                .child(SECOND_LABEL)
+                .spawn(|_| future::pending::<()>());
+
+            drop(Handle::select([first, second]));
+
+            let metrics = context.encode();
+            assert_eq!(running_tasks_for_label(&metrics, FIRST_LABEL), Some(0));
+            assert_eq!(running_tasks_for_label(&metrics, SECOND_LABEL), Some(0));
+        });
+    }
+
+    #[test]
+    fn completion_handle_abort_stops_waiting() {
+        deterministic::Runner::default().start(|_| async move {
+            let (sender, receiver) = oneshot::channel();
+            let handle = Handle::from_receiver(receiver);
+
+            handle.abort();
+
+            assert!(sender.send(Ok(())).is_ok());
+            assert!(matches!(handle.await, Err(Error::Aborted)));
+        });
+    }
+
+    #[test]
+    fn abort_on_drop_cancels_pending_join() {
+        for poll_join in [false, true] {
+            deterministic::Runner::default().start(|context| async move {
+                let (held, released) = oneshot::channel::<()>();
+                let guard = context
+                    .child("guarded")
+                    .spawn(move |_| async move {
+                        let _held = held;
+                        future::pending::<()>().await;
+                    })
+                    .abort_on_drop();
+                let mut join = Box::pin(guard.join());
+                if poll_join {
+                    assert!(poll!(&mut join).is_pending());
+                }
+                drop(join);
+                assert!(released.await.is_err());
+            });
+        }
+    }
+
+    #[test]
+    fn abort_on_drop_join_all_drains_pending_task() {
+        deterministic::Runner::default().start(|context| async move {
+            let (held, released) = oneshot::channel::<()>();
+            let pending = context
+                .child("pending")
+                .spawn(move |_| async move {
+                    let _held = held;
+                    future::pending::<Result<(), Error>>().await
+                })
+                .abort_on_drop();
+            let failed = Handle::ready(Ok(Err(Error::Closed))).abort_on_drop();
+            let result = AbortOnDrop::join_all::<Error>(vec![failed, pending]).await;
+            assert!(matches!(result, Err(Error::Closed)));
+            assert!(
+                released
+                    .now_or_never()
+                    .expect("task still owns sender")
+                    .is_err()
+            );
+        });
+    }
+
+    struct AbortObservation {
+        abort_handle: AbortHandle,
+        observed: Arc<Mutex<Option<bool>>>,
+    }
+
+    impl Drop for AbortObservation {
+        fn drop(&mut self) {
+            *self.observed.lock() = Some(self.abort_handle.is_aborted());
+        }
+    }
+
+    impl From<AbortObservation> for Error {
+        fn from(_error: AbortObservation) -> Self {
+            Self::Closed
+        }
+    }
+
+    #[derive(Debug)]
+    enum JoinCleanup {
+        Unpolled,
+        CollectedOutput,
+        RemainingOutput,
+        PendingCompletion,
+        ErrorConversion,
+    }
+
+    #[rstest]
+    #[case::unpolled(JoinCleanup::Unpolled)]
+    #[case::collected_output(JoinCleanup::CollectedOutput)]
+    #[case::remaining_output(JoinCleanup::RemainingOutput)]
+    #[case::pending_completion(JoinCleanup::PendingCompletion)]
+    #[case::error_conversion(JoinCleanup::ErrorConversion)]
+    fn join_all_aborts_before_destruction(#[case] cleanup: JoinCleanup) {
+        deterministic::Runner::default().start(|context| async move {
+            let pending = context
+                .child("pending")
+                .spawn(|_| future::pending::<Result<Option<AbortObservation>, AbortObservation>>());
+            let abort_handle = pending.aborter().unwrap().inner;
+            assert!(!abort_handle.is_aborted());
+            let observed = Arc::new(Mutex::new(None));
+            let resource = AbortObservation {
+                abort_handle,
+                observed: observed.clone(),
+            };
+            let first = match cleanup {
+                JoinCleanup::PendingCompletion => Handle::from_future(async move {
+                    let _resource = resource;
+                    future::pending().await
+                }),
+                JoinCleanup::ErrorConversion => Handle::ready(Ok(Err(resource))),
+                _ => Handle::ready(Ok(Ok(Some(resource)))),
+            };
+            let mut handles = vec![first, pending];
+            if matches!(cleanup, JoinCleanup::RemainingOutput) {
+                handles.insert(0, Handle::from_future(future::pending()));
+                handles.insert(0, Handle::ready(Ok(Ok(None))));
+            }
+            let mut joining = Box::pin(AbortOnDrop::join_all::<Error>(
+                handles.into_iter().map(Handle::abort_on_drop).collect(),
+            ));
+            if matches!(cleanup, JoinCleanup::ErrorConversion) {
+                assert!(matches!(joining.await, Err(Error::Closed)));
+            } else {
+                if !matches!(cleanup, JoinCleanup::Unpolled) {
+                    assert!(poll!(&mut joining).is_pending());
+                }
+                drop(joining);
+            }
+            assert_eq!(*observed.lock(), Some(true));
+        });
+    }
+
+    #[test]
+    fn abort_on_drop_completion_leaves_producer_running() {
+        deterministic::Runner::default().start(|context| async move {
+            let (release, wait) = oneshot::channel::<()>();
+            let (sender, receiver) = oneshot::channel();
+            let mut producer = context.child("producer").spawn(move |_| async move {
+                wait.await.unwrap();
+                let _ = sender.send(Ok(()));
+            });
+
+            Handle::from_receiver(receiver)
+                .abort_on_drop()
+                .abort()
+                .await;
+            assert!(poll!(&mut producer).is_pending());
+            release.send(()).unwrap();
+            producer.await.unwrap();
+        });
+    }
+
+    #[test]
+    fn tasks_running_decreased_after_blocking_completion() {
+        const LABEL: &str = "tasks_running_after_blocking_completion";
+
+        let runner = deterministic::Runner::default();
+        runner.start(|context| async move {
+            let blocking_handle = context.child(LABEL).shared(true).spawn(|_| async move {
+                // Simulate some blocking work
+                42
+            });
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "expected tasks_running gauge to be 1 while blocking task runs: {metrics}",
+            );
+
+            let result = blocking_handle.await.expect("blocking task failed");
+            assert_eq!(result, 42);
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(0),
+                "expected tasks_running gauge to return to 0 after blocking task completes: {metrics}",
+            );
+        });
+    }
+
+    #[test]
+    fn tasks_running_decreased_immediately_on_abort_via_aborter() {
+        const LABEL: &str = "tasks_running_abort_via_aborter";
+
+        let runner = deterministic::Runner::default();
+        runner.start(|context| async move {
+            let handle = context.child(LABEL).spawn(|_| async move {
+                future::pending::<()>().await;
+            });
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(1),
+                "expected tasks_running gauge to be 1 before abort: {metrics}",
+            );
+
+            let aborter = handle.aborter().unwrap();
+            aborter.abort();
+
+            let metrics = context.encode();
+            assert_eq!(
+                running_tasks_for_label(&metrics, LABEL),
+                Some(0),
+                "expected tasks_running gauge to return to 0 after abort: {metrics}",
+            );
+        });
+    }
+
+    /// A panic published during the task's completing poll wins over its output.
+    #[test]
+    fn interrupt_observes_panic_sent_while_completing() {
+        let (panicker, panicked) = Panicker::new(false);
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            panicked
+                .interrupt(async move {
+                    panicker.notify(Box::new("late"));
+                    7
+                })
+                .now_or_never()
+        }));
+        let panic = result.expect_err("panic sent while completing was dropped");
+        assert_eq!(extract_panic_message(&*panic), "late");
+    }
+
+    /// A task whose supervisor closed before initialization is cancelled before its future can
+    /// be polled.
+    #[test]
+    fn init_registers_before_publication() {
+        // Close the supervisor, as when it aborts while the task factory runs.
+        let tree = Tree::root();
+        tree.abort();
+
+        // Initialization registers the task, which the closed supervisor cancels at once.
+        let (panicker, _panicked) = Panicker::new(false);
+        let gauge = Gauge::default();
+        let polled = Arc::new(AtomicBool::new(false));
+        let observed = polled.clone();
+        let (task, handle) = Handle::init(
+            async move { observed.store(true, Ordering::SeqCst) },
+            MetricHandle::new(gauge.clone()),
+            panicker,
+            tree,
+        );
+        assert_eq!(gauge.get(), 0);
+
+        // The first poll completes without polling the user future.
+        assert_eq!(task.now_or_never(), Some(()));
+        assert!(!polled.load(Ordering::SeqCst));
+        assert!(matches!(handle.now_or_never(), Some(Err(Error::Closed))));
+    }
+
+    /// A task can write through a borrow of its own state after suspending (checked by Miri).
+    #[commonware_macros::test_group("miri")]
+    #[test]
+    fn task_keeps_self_borrow_across_suspension() {
+        deterministic::Runner::default().start(|context| async move {
+            let handle = context.child("task").spawn(|_| async move {
+                let mut value = 0u8;
+                let borrow = &mut value;
+                *borrow += 1;
+                reschedule().await;
+                *borrow += 1;
+                value
+            });
+            assert_eq!(handle.await.unwrap(), 2);
+        });
+    }
+}

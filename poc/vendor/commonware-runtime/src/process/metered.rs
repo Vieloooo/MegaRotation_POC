@@ -1,0 +1,164 @@
+//! Process metrics collection.
+
+use crate::telemetry::metrics::{Gauge, GaugeExt, Register, raw};
+use std::{future::Future, time::Duration};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+
+/// The interval at which to update process metrics.
+const TICK_INTERVAL: Duration = Duration::from_secs(10);
+
+/// Process metrics collector.
+pub struct Metrics {
+    /// Resident set size in bytes.
+    pub rss: Gauge,
+    /// Virtual memory size in bytes.
+    pub virtual_memory: Gauge,
+
+    /// Process ID.
+    pid: sysinfo::Pid,
+    /// System information handle.
+    system: System,
+    /// Allocator statistics, present when mimalloc is the global allocator.
+    #[cfg(all(
+        feature = "mimalloc",
+        not(any(
+            commonware_stability_BETA,
+            commonware_stability_GAMMA,
+            commonware_stability_DELTA,
+            commonware_stability_EPSILON,
+            commonware_stability_RESERVED
+        ))
+    ))]
+    allocator: Option<super::allocator::mimalloc::Metrics>,
+}
+
+impl Metrics {
+    /// Initialize process metrics and register them with the given registry.
+    pub fn init(registry: &mut impl Register) -> Self {
+        Self {
+            pid: sysinfo::Pid::from_u32(std::process::id()),
+            rss: registry.register(
+                "process_rss",
+                "Resident set size of the current process",
+                raw::Gauge::default(),
+            ),
+            virtual_memory: registry.register(
+                "process_virtual_memory",
+                "Virtual memory size of the current process",
+                raw::Gauge::default(),
+            ),
+
+            system: System::new(),
+            #[cfg(all(
+                feature = "mimalloc",
+                not(any(
+                    commonware_stability_BETA,
+                    commonware_stability_GAMMA,
+                    commonware_stability_DELTA,
+                    commonware_stability_EPSILON,
+                    commonware_stability_RESERVED
+                ))
+            ))]
+            allocator: super::allocator::mimalloc::Metrics::init(registry),
+        }
+    }
+
+    /// Update all process metrics.
+    fn update(&mut self) {
+        // Refresh process information
+        self.system.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&[self.pid]),
+            false,
+            ProcessRefreshKind::nothing().with_memory(),
+        );
+
+        // If the process exists, update the metrics
+        if let Some(process) = self.system.process(self.pid) {
+            let _ = self.rss.try_set(process.memory());
+            let _ = self.virtual_memory.try_set(process.virtual_memory());
+        }
+        #[cfg(all(
+            feature = "mimalloc",
+            not(any(
+                commonware_stability_BETA,
+                commonware_stability_GAMMA,
+                commonware_stability_DELTA,
+                commonware_stability_EPSILON,
+                commonware_stability_RESERVED
+            ))
+        ))]
+        if let Some(allocator) = &mut self.allocator {
+            allocator.update();
+        }
+    }
+
+    /// Update process metrics periodically.
+    ///
+    /// This function takes a sleep function as a parameter to allow different runtimes
+    /// to provide their own implementation.
+    pub async fn collect<F, Fut>(mut self, sleep_fn: F)
+    where
+        F: Fn(Duration) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        loop {
+            self.update();
+            sleep_fn(TICK_INTERVAL).await;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process_metrics_init() {
+        let mut registry = crate::telemetry::metrics::Registry::default();
+        let mut metrics = Metrics::init(&mut registry);
+
+        // Update metrics
+        metrics.update();
+        let rss = metrics.rss.get();
+        assert!(rss > 1024 * 1024); // 1MB
+        let virt = metrics.virtual_memory.get();
+        assert!(
+            virt >= rss,
+            "Expected virtual memory ({virt}) to be >= RSS ({rss})"
+        );
+
+        // Update metrics
+        metrics.update();
+        let new_rss = metrics.rss.get();
+        assert!(new_rss > 1024 * 1024); // 1MB
+        let new_virt = metrics.virtual_memory.get();
+        assert!(
+            new_virt >= new_rss,
+            "Expected virtual memory ({new_virt}) to be >= RSS ({new_rss})"
+        );
+
+        // Because tests may be run in parallel, we can't assert anything about the value of the metrics.
+    }
+
+    /// The crate's test binary does not install mimalloc, so the allocator
+    /// family must not be registered. The `mimalloc_metrics` integration test
+    /// covers the registered case.
+    #[cfg(all(
+        feature = "mimalloc",
+        not(any(
+            commonware_stability_BETA,
+            commonware_stability_GAMMA,
+            commonware_stability_DELTA,
+            commonware_stability_EPSILON,
+            commonware_stability_RESERVED
+        ))
+    ))]
+    #[test]
+    fn test_allocator_metrics_skipped_without_mimalloc() {
+        let mut registry = crate::telemetry::metrics::Registry::default();
+        let mut metrics = Metrics::init(&mut registry);
+        assert!(metrics.allocator.is_none());
+        metrics.update();
+        assert!(!registry.encode().contains("allocator_committed_bytes"));
+    }
+}
