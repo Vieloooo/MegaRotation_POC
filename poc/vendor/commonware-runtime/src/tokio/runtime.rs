@@ -531,6 +531,87 @@ impl Context {
     }
 }
 
+/// A complete native task transferred to the controlled driver for polling and disposal.
+#[cfg(feature = "controlled-spawn")]
+pub type ControlledJob = std::pin::Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+
+#[cfg(feature = "controlled-spawn")]
+impl Context {
+    /// Register a supervised native task and transfer custody without polling it.
+    ///
+    /// The submitter must retain the job for controlled polling or disposal. It must
+    /// return without polling the job inline and must not panic.
+    pub fn spawn_controlled<F, Fut, T, S>(
+        mut self,
+        f: F,
+        failure: Arc<std::sync::atomic::AtomicBool>,
+        submit: S,
+    ) -> Handle<T>
+    where
+        F: FnOnce(Self) -> Fut + Send + 'static,
+        Fut: Future<Output = T> + Send + 'static,
+        T: Send + 'static,
+        S: FnOnce(ControlledJob),
+    {
+        use futures::FutureExt;
+        use std::sync::atomic::Ordering;
+
+        let (_, metric) = spawn_metrics!(self);
+        let parent = Arc::clone(&self.tree);
+        self.execution = Execution::default();
+        let (child, aborted) = Tree::child(&parent);
+        if aborted {
+            return Handle::closed(metric);
+        }
+        self.tree = child;
+
+        let executor = self.executor.clone();
+        let Some(task_guard) = executor.tasks.admit() else {
+            return Handle::closed(metric);
+        };
+
+        let guard = FactoryGuard::new(&parent, metric);
+        let user_failure = failure.clone();
+        let deferred = async move {
+            match AssertUnwindSafe(async move { f(self).await })
+                .catch_unwind()
+                .await
+            {
+                Ok(output) => output,
+                Err(panic) => {
+                    user_failure.store(true, Ordering::SeqCst);
+                    resume_unwind(panic);
+                }
+            }
+        };
+        let (f, handle) = Handle::init(
+            deferred,
+            guard.disarm(),
+            executor.panicker.clone(),
+            Arc::clone(&parent),
+        );
+        let panicker = executor.panicker.clone();
+        let job = async move {
+            let _task_guard = task_guard;
+            let mut f = pin!(f);
+            poll_fn(
+                |cx| match catch_unwind(AssertUnwindSafe(|| f.as_mut().poll(cx))) {
+                    Ok(result) => result,
+                    Err(panic) => {
+                        failure.store(true, Ordering::SeqCst);
+                        panicker.notify(panic);
+                        Poll::Ready(())
+                    }
+                },
+            )
+            .await;
+        };
+
+        submit(Box::pin(job));
+        handle
+    }
+}
+
 impl crate::Spawner for Context {
     fn dedicated(mut self) -> Self {
         self.execution = Execution::Dedicated;
