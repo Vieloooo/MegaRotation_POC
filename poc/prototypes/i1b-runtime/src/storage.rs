@@ -15,7 +15,7 @@ use std::{
 };
 use tokio::sync::oneshot;
 
-type NativeBlob = <NativeContext as Storage>::Blob;
+pub(crate) type NativeBlob = <NativeContext as Storage>::Blob;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct IoIdentity {
@@ -77,17 +77,26 @@ pub enum IoResult {
 }
 
 pub(crate) type Release = Box<dyn FnOnce(bool) -> bool + Send>;
-type Physical = Pin<Box<dyn Future<Output = (IoResult, Release)> + Send>>;
+type Physical = Pin<Box<dyn Future<Output = (IoResult, Release, Option<Arc<NativeBlob>>)> + Send>>;
+
+pub(crate) struct WitnessIo {
+    pub target: IoTarget,
+    pub operation: IoOperation,
+    pub submitted: Option<IoBufs>,
+    pub native: Option<Arc<NativeBlob>>,
+}
 
 pub(crate) struct IoJob {
     pub identity: IoIdentity,
     pub future: Physical,
+    pub witness: Option<WitnessIo>,
 }
 
 pub(crate) struct CompletedIo {
     pub identity: IoIdentity,
     pub result: IoResult,
     pub release: Release,
+    pub witness: Option<WitnessIo>,
 }
 
 #[derive(Default)]
@@ -102,7 +111,10 @@ impl IoJob {
         run: impl Future<Output = Result<T, Error>> + Send + 'static,
         sender: oneshot::Sender<Result<T, Error>>,
         summarize: fn(&T) -> IoResult,
+        witness: Option<WitnessIo>,
+        opened: fn(&T) -> Option<Arc<NativeBlob>>,
     ) -> Self {
+        let inspect = witness.is_some();
         let future = Box::pin(async move {
             let result = run.await;
             let summary = match &result {
@@ -111,10 +123,19 @@ impl IoJob {
                     kind: error_kind(error),
                 },
             };
+            let native = if inspect {
+                result.as_ref().ok().and_then(opened)
+            } else {
+                None
+            };
             let release: Release = Box::new(move |deliver| deliver && sender.send(result).is_ok());
-            (summary, release)
+            (summary, release, native)
         });
-        Self { identity, future }
+        Self {
+            identity,
+            future,
+            witness,
+        }
     }
 }
 
@@ -147,10 +168,41 @@ impl StorageAccess {
         work: impl FnOnce(IoIdentity) -> Pin<Box<dyn Future<Output = Result<T, Error>> + Send>>,
         summary: fn(&T) -> IoResult,
     ) -> oneshot::Receiver<Result<T, Error>> {
+        self.issue_witness(target, operation, work, summary, None, None, |_| None)
+    }
+
+    fn issue_witness<T: Send + 'static>(
+        &self,
+        mut target: IoTarget,
+        operation: IoOperation,
+        work: impl FnOnce(IoIdentity) -> Pin<Box<dyn Future<Output = Result<T, Error>> + Send>>,
+        summary: fn(&T) -> IoResult,
+        native: Option<Arc<NativeBlob>>,
+        submitted: Option<IoBufs>,
+        opened: fn(&T) -> Option<Arc<NativeBlob>>,
+    ) -> oneshot::Receiver<Result<T, Error>> {
         let shared = self.shared();
-        let identity = shared.issue_io(self.scope, target, operation);
+        let identity = shared.issue_io(self.scope, target.clone(), operation.clone());
+        if matches!(operation, IoOperation::Open { .. }) {
+            target.open_id = Some(identity.io_id);
+        }
+        let witness = shared
+            .witness_partition(&target.partition)
+            .then_some(WitnessIo {
+                target,
+                operation,
+                submitted,
+                native,
+            });
         let (sender, receiver) = oneshot::channel();
-        let job = IoJob::new(identity.clone(), work(identity), sender, summary);
+        let job = IoJob::new(
+            identity.clone(),
+            work(identity),
+            sender,
+            summary,
+            witness,
+            opened,
+        );
         shared.enqueue_io(job);
         receiver
     }
@@ -172,7 +224,7 @@ impl StorageAccess {
         };
         let access = self.clone();
         let address = target.clone();
-        let receiver = self.issue(
+        let receiver = self.issue_witness(
             target,
             operation,
             move |identity| {
@@ -207,6 +259,9 @@ impl StorageAccess {
                 len: *len,
                 version: version.get(),
             },
+            None,
+            None,
+            |(blob, _, _)| Some(blob.native.clone()),
         );
         receive(receiver).await
     }
@@ -320,6 +375,11 @@ impl Blob for ControlledBlob {
         options: WriteOptions,
     ) -> Result<(), Error> {
         let bufs = bufs.into();
+        let submitted = self
+            .access
+            .shared()
+            .witness_partition(&self.target.partition)
+            .then(|| bufs.clone());
         let op = IoOperation::Write {
             offset,
             len: bufs.len(),
@@ -328,44 +388,59 @@ impl Blob for ControlledBlob {
             dont_cache: options.contains(WriteOptions::DONT_CACHE),
         };
         let native = self.native.clone();
-        receive(self.access.issue(
+        let inspect = native.clone();
+        receive(self.access.issue_witness(
             self.target.clone(),
             op,
             move |_| Box::pin(async move { native.write_at(offset, bufs, options).await }),
             unit,
+            Some(inspect),
+            submitted,
+            |_| None,
         ))
         .await
     }
 
     async fn resize(&self, len: u64) -> Result<(), Error> {
         let native = self.native.clone();
-        receive(self.access.issue(
+        receive(self.access.issue_witness(
             self.target.clone(),
             IoOperation::Resize { len },
             move |_| Box::pin(async move { native.resize(len).await }),
             unit,
+            None,
+            None,
+            |_| None,
         ))
         .await
     }
 
     async fn sync(&self) -> Result<(), Error> {
         let native = self.native.clone();
-        receive(self.access.issue(
+        let inspect = native.clone();
+        receive(self.access.issue_witness(
             self.target.clone(),
             IoOperation::Sync { detached: false },
             move |_| Box::pin(async move { native.sync().await }),
             unit,
+            Some(inspect),
+            None,
+            |_| None,
         ))
         .await
     }
 
     async fn start_sync(&self) -> Handle<()> {
         let native = self.native.clone();
-        let receiver = self.access.issue(
+        let inspect = native.clone();
+        let receiver = self.access.issue_witness(
             self.target.clone(),
             IoOperation::Sync { detached: true },
             move |_| Box::pin(async move { native.start_sync().await.await }),
             unit,
+            Some(inspect),
+            None,
+            |_| None,
         );
         Handle::from_receiver(receiver)
     }

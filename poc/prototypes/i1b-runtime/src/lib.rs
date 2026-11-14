@@ -5,12 +5,19 @@ mod context;
 mod driver;
 mod rng;
 mod storage;
+mod witness;
+mod witness_ledger;
+mod witness_recovery;
 
 pub use clock::{ClockSample, Profile, Timer};
 pub use context::SimContext;
 pub use driver::{ControlledDriver, Event, Grant, Input, Placement, Step};
 pub use rng::{RngCheckpoint, RoleRng};
 pub use storage::{ControlledBlob, IoIdentity, IoOperation, IoResult, IoTarget};
+pub use witness::{
+    ArtifactWitness, Barrier, DecodedArtifact, EligiblePayload, NativeWire, PageEvidence,
+    PolicySeal, Submission, WitnessConfig, WitnessMember, WitnessPolicy, page_slot,
+};
 
 type Id = [u8; 32];
 type Result<T> = std::result::Result<T, Error>;
@@ -35,3 +42,11 @@ fn hash_parts(domain: &[u8], parts: &[&[u8]]) -> Id {
     }
     hash.finalize().into()
 }
+
+pub use witness_ledger::{
+    BlobSeal, LedgerEntry, LedgerIdentity, LedgerRecord, LedgerTail, RecoveryLink, WitnessFault,
+    WitnessHead, WitnessLedger,
+};
+pub use witness_recovery::{
+    RecoveryPaths, RecoveryReport, native_data, recover_witness_generation,
+};

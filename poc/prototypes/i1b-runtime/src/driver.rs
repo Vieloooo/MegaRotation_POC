@@ -5,6 +5,10 @@ use crate::{
         CompletedIo, DiskQueue, IoIdentity, IoJob, IoOperation, IoResult, IoTarget, StorageAccess,
     },
 };
+use crate::{
+    witness::{NativeWire, Submission, WitnessPolicy, WitnessRuntime},
+    witness_ledger::{LedgerEntry, LedgerRecord, WitnessFault, WitnessHead, WitnessLedger},
+};
 use commonware_runtime::{
     Handle, Supervisor as _,
     signal::Stopper,
@@ -136,6 +140,15 @@ pub enum Event {
     IoDiscarded {
         io_id: u64,
     },
+    WitnessCommitted {
+        io_id: u64,
+        sequence: u64,
+        head_hash: Id,
+    },
+    WitnessSubmitted {
+        submission: Submission,
+        wire: NativeWire,
+    },
     CleanupBoundExceeded,
     CleanupComplete,
     Ack {
@@ -202,6 +215,7 @@ pub(crate) struct Inner {
     current: Option<Grant>,
     queued_io: BTreeMap<u64, IoJob>,
     next_io: u64,
+    witness_partition: Option<String>,
     permit: Option<Permit>,
     sessions: BTreeMap<Id, Session>,
     enrolled: BTreeMap<u64, Job>,
@@ -247,7 +261,14 @@ impl Wake for Ready {
 
 pub struct ControlledDriver {
     native: Arc<Context>,
+    native_storage_root: std::path::PathBuf,
+    native_creation_layout: commonware_runtime::BlobLayout,
     disk: DiskQueue,
+    witness: Option<WitnessRuntime>,
+    evidence: Option<EvidenceIo>,
+    witness_fault: Option<(u64, WitnessFault)>,
+    witness_hold: Option<(u64, WitnessHold)>,
+    staged_submissions: BTreeMap<Id, (Submission, NativeWire)>,
     io_wall_pause: std::time::Duration,
     fail_io_release: Option<u64>,
     io_hold: Option<(u64, tokio::sync::oneshot::Receiver<()>)>,
@@ -280,8 +301,11 @@ impl ControlledDriver {
     ) -> Result<T> {
         use commonware_runtime::Runner as _;
         use futures::FutureExt as _;
+        let native_storage_root = config.storage_directory().clone();
+        let native_creation_layout = *config.storage_blob_layouts().end();
         Runner::new(config.with_catch_panics(true)).start(move |native| async move {
-            let mut driver = Self::new(native, profile)?;
+            let mut driver =
+                Self::new(native, profile, native_storage_root, native_creation_layout)?;
             let result = AssertUnwindSafe(async { controller(&mut driver).await })
                 .catch_unwind()
                 .await;
@@ -297,7 +321,12 @@ impl ControlledDriver {
         })
     }
 
-    fn new(native: Context, profile: Profile) -> Result<Self> {
+    fn new(
+        native: Context,
+        profile: Profile,
+        native_storage_root: std::path::PathBuf,
+        native_creation_layout: commonware_runtime::BlobLayout,
+    ) -> Result<Self> {
         let shared = Arc::new(Shared {
             failure: Arc::new(AtomicBool::new(false)),
             inner: Mutex::new(Inner {
@@ -305,6 +334,7 @@ impl ControlledDriver {
                 current: None,
                 queued_io: BTreeMap::new(),
                 next_io: 0,
+                witness_partition: None,
                 permit: None,
                 sessions: BTreeMap::new(),
                 enrolled: BTreeMap::new(),
@@ -319,7 +349,14 @@ impl ControlledDriver {
         });
         Ok(Self {
             native: Arc::new(native),
+            native_storage_root,
+            native_creation_layout,
             disk: DiskQueue::default(),
+            witness: None,
+            evidence: None,
+            witness_fault: None,
+            witness_hold: None,
+            staged_submissions: BTreeMap::new(),
             io_wall_pause: std::time::Duration::ZERO,
             fail_io_release: None,
             io_hold: None,
@@ -376,6 +413,92 @@ impl ControlledDriver {
         self.disk.active.as_ref().map(|job| job.identity.io_id)
     }
 
+    pub fn configure_witness(
+        &mut self,
+        policy: WitnessPolicy,
+        path: &std::path::Path,
+    ) -> Result<()> {
+        self.configure_io(self.witness.is_none())?;
+        let config = &policy.seal().config;
+        let profile = self.shared.inner.lock().unwrap().clock.profile.clone();
+        if config.run_id != profile.run_id
+            || config.config_hash != profile.config_hash
+            || config.worker != profile.node
+        {
+            return Err(Error("witness policy does not match worker profile"));
+        }
+        crate::witness::require(
+            self.native_creation_layout == commonware_runtime::BlobLayout::V1,
+            "selected witness storage must create V1 blobs",
+        )?;
+        crate::witness_recovery::validate_existing_layout(&self.native_storage_root, &policy)?;
+        let ledger = WitnessLedger::create(path, policy.clone())?;
+        self.shared.inner.lock().unwrap().witness_partition =
+            Some(policy.seal().config.partition.clone());
+        self.witness = Some(WitnessRuntime::new(policy, ledger));
+        Ok(())
+    }
+
+    pub fn witness_records(&self) -> Option<&[LedgerRecord]> {
+        self.witness
+            .as_ref()
+            .map(|witness| witness.ledger.records())
+    }
+
+    pub fn witness_head(&self) -> Option<WitnessHead> {
+        self.witness.as_ref().map(|witness| witness.ledger.head())
+    }
+
+    pub fn inject_witness_fault(&mut self, io_id: u64, fault: WitnessFault) -> Result<()> {
+        self.configure_io(io_id > 0 && self.witness_fault.is_none())?;
+        self.witness_fault = Some((io_id, fault));
+        Ok(())
+    }
+
+    pub fn hold_witness_before_persist(
+        &mut self,
+        io_id: u64,
+    ) -> Result<(
+        tokio::sync::oneshot::Receiver<()>,
+        tokio::sync::oneshot::Sender<()>,
+    )> {
+        self.configure_io(io_id > 0 && self.witness_hold.is_none())?;
+        let (entered, observe) = tokio::sync::oneshot::channel();
+        let (release, wait) = tokio::sync::oneshot::channel();
+        self.witness_hold = Some((io_id, WitnessHold { entered, wait }));
+        Ok((observe, release))
+    }
+
+    pub fn active_evidence_id(&self) -> Option<u64> {
+        self.evidence.as_ref().map(|evidence| evidence.io_id)
+    }
+
+    pub fn stage_witnessed_send(&mut self, wire: NativeWire, destinations: &[u32]) -> Result<()> {
+        self.shared.try_ordinary(None)?;
+        let witness = self
+            .witness
+            .as_ref()
+            .ok_or(Error("witness policy not configured"))?;
+        let eligible = witness
+            .ledger
+            .index
+            .payload(&wire)
+            .ok_or(Error("native payload lacks durable witness"))?;
+        crate::witness::require(
+            !destinations.is_empty()
+                && destinations
+                    .iter()
+                    .all(|dest| *dest < 5 && *dest != witness.policy.seal.config.member),
+            "invalid witnessed destinations",
+        )?;
+        for dest in destinations {
+            let submission = Submission::new(eligible.id, *dest);
+            self.staged_submissions
+                .insert(submission.id, (submission, wire.clone()));
+        }
+        Ok(())
+    }
+
     pub fn events(&self) -> Vec<Event> {
         self.shared.inner.lock().unwrap().events.clone()
     }
@@ -410,6 +533,9 @@ impl ControlledDriver {
             if self.has_io() {
                 return Err(Error("synchronous grant issued physical I/O"));
             }
+            if !self.staged_submissions.is_empty() {
+                return Err(Error("synchronous grant staged native publication"));
+            }
             self.finish_grant(grant, start)
         }));
         let result = outcome.unwrap_or(Err(Error("driver panic")));
@@ -442,8 +568,13 @@ impl ControlledDriver {
                     break;
                 }
                 self.await_io(PermitMode::IoRelease).await?;
+                if self.shared.failed() {
+                    return Err(Error("native task failure"));
+                }
+                self.await_evidence(PermitMode::IoRelease).await?;
                 self.release_io(PermitMode::IoRelease);
             }
+            self.commit_submissions().await?;
             self.finish_grant(grant, start)
         })
         .catch_unwind()
@@ -532,6 +663,11 @@ impl ControlledDriver {
             return Err(Error("native task failure"));
         }
         inner.current = None;
+        for (_, (submission, wire)) in std::mem::take(&mut self.staged_submissions) {
+            inner
+                .events
+                .push(Event::WitnessSubmitted { submission, wire });
+        }
         inner.events.push(Event::Ack { grant: grant.id });
         Ok(Step {
             grant,
@@ -542,6 +678,7 @@ impl ControlledDriver {
     fn has_io(&self) -> bool {
         self.disk.active.is_some()
             || self.disk.completed.is_some()
+            || self.evidence.is_some()
             || !self.shared.inner.lock().unwrap().queued_io.is_empty()
     }
 
@@ -576,6 +713,22 @@ impl ControlledDriver {
                 });
             }
             self.disk.active = Some(job);
+            if let Some(active) = self.disk.active.as_ref() {
+                if let (Some(witness), Some(io)) = (&self.witness, &active.witness) {
+                    if let Err(error) = witness.preflight(&active.identity, io) {
+                        let active = self.disk.active.take().expect("active selected operation");
+                        let id = active.identity.clone();
+                        let permit =
+                            self.enter_permit(id.task, id.io_id, Some(id.cid), PermitMode::Cleanup);
+                        if catch_unwind(AssertUnwindSafe(|| drop(active))).is_err() {
+                            self.shared.record_failure("selected I/O disposal panic");
+                        }
+                        self.shared.event(Event::IoDiscarded { io_id: id.io_id });
+                        drop(permit);
+                        return Poll::Ready(Err(error));
+                    }
+                }
+            }
         }
         let identity = self
             .disk
@@ -599,11 +752,22 @@ impl ControlledDriver {
         drop(permit);
         match outcome {
             Ok(Poll::Pending) => Poll::Pending,
-            Ok(Poll::Ready((result, release))) => {
+            Ok(Poll::Ready((result, release, opened))) => {
+                let mut witness = self
+                    .disk
+                    .active
+                    .as_mut()
+                    .expect("completed active operation")
+                    .witness
+                    .take();
+                if let (Some(io), Some(native)) = (&mut witness, opened) {
+                    io.native = Some(native);
+                }
                 self.disk.completed = Some(CompletedIo {
                     identity: identity.clone(),
                     result,
                     release,
+                    witness,
                 });
                 let completed = self.disk.completed.as_ref().expect("stored completion");
                 self.shared.event(Event::IoReady {
@@ -651,6 +815,130 @@ impl ControlledDriver {
         poll_fn(|cx| self.poll_io(cx, disposal_mode)).await
     }
 
+    async fn await_evidence(&mut self, mode: PermitMode) -> Result<()> {
+        if self.evidence.is_none() {
+            let Some(completed) = self.disk.completed.as_mut() else {
+                return Ok(());
+            };
+            let Some(io) = completed.witness.take() else {
+                return Ok(());
+            };
+            let witness = self
+                .witness
+                .take()
+                .ok_or(Error("selected I/O lacks witness runtime"))?;
+            let identity = completed.identity.clone();
+            let io_id = identity.io_id;
+            let result = completed.result.clone();
+            let fault = self
+                .witness_fault
+                .filter(|(id, _)| *id == io_id)
+                .map(|(_, fault)| fault);
+            let hold = self
+                .witness_hold
+                .as_ref()
+                .is_some_and(|(id, _)| *id == io_id)
+                .then(|| self.witness_hold.take().expect("witness hold").1);
+            let before = witness.ledger.records().len();
+            self.evidence = Some(EvidenceIo {
+                io_id,
+                before,
+                future: Box::pin(async move {
+                    if let Some(hold) = hold {
+                        let _ = hold.entered.send(());
+                        if hold.wait.await.is_err() {
+                            return (witness, Err(Error("witness hold abandoned")));
+                        }
+                    }
+                    witness.observe(identity, io, result, fault).await
+                }),
+            });
+        }
+        self.complete_evidence(mode).await
+    }
+
+    async fn complete_evidence(&mut self, mode: PermitMode) -> Result<()> {
+        poll_fn(|cx| {
+            let Some(evidence) = self.evidence.as_ref() else {
+                return Poll::Ready(Ok(()));
+            };
+            let io_id = evidence.io_id;
+            let before = evidence.before;
+            let permit = self.enter_permit(0, io_id, None, mode);
+            let evidence = self.evidence.as_mut().expect("owned witness future");
+            let result = catch_unwind(AssertUnwindSafe(|| evidence.future.as_mut().poll(cx)));
+            drop(permit);
+            match result {
+                Ok(Poll::Pending) => Poll::Pending,
+                Ok(Poll::Ready((witness, result))) => {
+                    let sequence = witness.ledger.records().len();
+                    let head_hash = witness.ledger.head_hash();
+                    self.witness = Some(witness);
+                    let disposal = self.drop_evidence(mode);
+                    if sequence > before {
+                        self.shared.event(Event::WitnessCommitted {
+                            io_id,
+                            sequence: sequence as u64,
+                            head_hash,
+                        });
+                    }
+                    Poll::Ready(result.and(disposal))
+                }
+                Err(_) => {
+                    let _ = self.drop_evidence(PermitMode::Cleanup);
+                    Poll::Ready(Err(Error("witness operation panic")))
+                }
+            }
+        })
+        .await
+    }
+
+    fn drop_evidence(&mut self, mode: PermitMode) -> Result<()> {
+        let permit = self.enter_permit(0, 0, None, mode);
+        let evidence = self.evidence.take();
+        let disposed = catch_unwind(AssertUnwindSafe(|| drop(evidence)))
+            .map_err(|_| Error("witness disposal panic"));
+        drop(permit);
+        disposed
+    }
+
+    async fn commit_submissions(&mut self) -> Result<()> {
+        if self.staged_submissions.is_empty() {
+            return Ok(());
+        }
+        let mut witness = self
+            .witness
+            .take()
+            .ok_or(Error("witness policy not configured"))?;
+        let entries: Vec<_> = self
+            .staged_submissions
+            .values()
+            .filter(|(submission, _)| {
+                !witness
+                    .ledger
+                    .index
+                    .submissions
+                    .contains_key(&submission.id)
+            })
+            .map(|(submission, _)| LedgerEntry::Submission(submission.clone()))
+            .collect();
+        if !entries.is_empty() {
+            let before = witness.ledger.records().len();
+            self.evidence = Some(EvidenceIo {
+                io_id: 0,
+                before,
+                future: Box::pin(async move {
+                    let result = witness.ledger.append(entries, None);
+                    (witness, result)
+                }),
+            });
+            self.complete_evidence(PermitMode::IoRelease).await?;
+        } else {
+            self.witness = Some(witness);
+        }
+        Ok(())
+    }
+
     fn release_io(&mut self, mode: PermitMode) {
         if mode != PermitMode::Cleanup && self.shared.failed() {
             return;
@@ -658,12 +946,18 @@ impl ControlledDriver {
         let Some(completed) = self.disk.completed.take() else {
             return;
         };
-        let id = &completed.identity;
+        let CompletedIo {
+            identity: id,
+            release,
+            witness,
+            ..
+        } = completed;
         let permit = self.enter_permit(id.task, id.io_id, Some(id.cid), mode);
         // Sending only marks readiness. Record the release before polling
         // any consumer. Dispose an abandoned result under this same permit.
         let result = catch_unwind(AssertUnwindSafe(|| {
-            (completed.release)(mode == PermitMode::IoRelease)
+            drop(witness);
+            release(mode == PermitMode::IoRelease)
         }));
         match result {
             Ok(delivered) if mode == PermitMode::IoRelease => {
@@ -765,9 +1059,17 @@ impl ControlledDriver {
                 .record_failure("cleanup with outstanding physical I/O");
             self.stopped = true;
             while self.has_io() {
-                if let Err(error) = self.await_io(PermitMode::Cleanup).await {
-                    self.shared.record_failure(error.0);
+                if self.evidence.is_some() {
+                    if let Err(error) = self.complete_evidence(PermitMode::Cleanup).await {
+                        self.shared.record_failure(error.0);
+                    }
+                } else if self.disk.completed.is_none() {
+                    if let Err(error) = self.await_io(PermitMode::Cleanup).await {
+                        self.shared.record_failure(error.0);
+                    }
                 }
+                // An already-retained evidence operation can complete during
+                // cleanup, while an unstarted evidence hook grants no output.
                 self.release_io(PermitMode::Cleanup);
             }
             self.drain(None);
@@ -797,6 +1099,7 @@ impl ControlledDriver {
             return;
         }
         self.shared.record_failure(reason);
+        self.staged_submissions.clear();
         // A synchronous owner must release its permit. Root can await disk
         // cleanup after a failed or abandoned async grant.
         if !self.has_active_permit() {
@@ -973,6 +1276,17 @@ impl ControlledDriver {
     }
 }
 
+struct WitnessHold {
+    entered: tokio::sync::oneshot::Sender<()>,
+    wait: tokio::sync::oneshot::Receiver<()>,
+}
+
+struct EvidenceIo {
+    io_id: u64,
+    before: usize,
+    future: std::pin::Pin<Box<dyn Future<Output = (WitnessRuntime, Result<()>)> + Send>>,
+}
+
 struct GrantCustody {
     shared: Arc<Shared>,
     grant: Grant,
@@ -1004,6 +1318,10 @@ impl Drop for PermitScope {
 }
 
 impl Shared {
+    pub fn witness_partition(&self, partition: &str) -> bool {
+        self.inner.lock().unwrap().witness_partition.as_deref() == Some(partition)
+    }
+
     pub fn issue_io(
         &self,
         scope: Option<Id>,
