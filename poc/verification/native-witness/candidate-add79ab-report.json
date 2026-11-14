@@ -1,0 +1,172 @@
+{
+  "candidate": "add79aba803de747e47c37b9d1e7a1d6a057fef4",
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--manifest-path",
+    "prototypes/i1b-runtime/Cargo.toml",
+    "--locked",
+    "--offline",
+    "--no-fail-fast",
+    "--",
+    "--test-threads=1"
+  ],
+  "cwd": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2",
+  "output": "/tmp/native-witness-independent-i_57u6cd",
+  "exit_code": 101,
+  "hashes_before": {
+    "poc/docs/contracts/task-contract-native-witness-v1.md": "26e9da2be69a5914dd13aa05141d2ad09c0b01ebb3663c5f830938a92487f86f",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/prototypes/i1b-runtime/Cargo.toml": "69015f1b25049acb5a9df5fc9a48b29f2ce8ed9458f5f9fffafdd3de0986ca56",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "0e989cd454ed17540fadc4884a0d1af84dd814ae8f283b9601465ad352428562",
+    "poc/prototypes/i1b-runtime/src/context.rs": "987c6c3c184f25d12191c471f4f5fd94618564ed4bcf1dd23ce6d49e303de95b",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "28802ebccc0cae7ef4fc74b039694f6f88dfff9174bc75d1f7e5ff64ef28494a",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "5435877c7849c83c8af4aebf28391f6f754ff9b773482aef6fd8c88e5c820bc2",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "1d4fe2fd0a52d4487ba2be1ab81f82771cc818584a8b2df6e99a7c1d68ba1e7b",
+    "poc/prototypes/i1b-runtime/src/witness.rs": "08748bcb0f2f8bf36f9b4aed73397ae37497d391aaa665b05b715d3b69d5cead",
+    "poc/prototypes/i1b-runtime/src/witness_ledger.rs": "24948af81d6fbbf94499577605e0c2aaaa3a8c673f78f98b6b2bc60d0d79f03f",
+    "poc/prototypes/i1b-runtime/src/witness_recovery.rs": "d746c441494bea2456287bc10caff08a3ea7781a1ed1e091f1a905bb30a3c06e",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/verification/native-witness/acceptance.rs": "a5daa4d32f688b23355736756db89aa6d4fa21db3fad740b65b7051c778f03cb",
+    "poc/verification/native-witness/run_acceptance.py": "6245069b2bc4b5e22c07305cc72c92ef01a8ee8b91e6adcc11e4c8774143a720"
+  },
+  "hashes_after": {
+    "poc/docs/contracts/task-contract-native-witness-v1.md": "26e9da2be69a5914dd13aa05141d2ad09c0b01ebb3663c5f830938a92487f86f",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/prototypes/i1b-runtime/Cargo.toml": "69015f1b25049acb5a9df5fc9a48b29f2ce8ed9458f5f9fffafdd3de0986ca56",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "0e989cd454ed17540fadc4884a0d1af84dd814ae8f283b9601465ad352428562",
+    "poc/prototypes/i1b-runtime/src/context.rs": "987c6c3c184f25d12191c471f4f5fd94618564ed4bcf1dd23ce6d49e303de95b",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "28802ebccc0cae7ef4fc74b039694f6f88dfff9174bc75d1f7e5ff64ef28494a",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "5435877c7849c83c8af4aebf28391f6f754ff9b773482aef6fd8c88e5c820bc2",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "1d4fe2fd0a52d4487ba2be1ab81f82771cc818584a8b2df6e99a7c1d68ba1e7b",
+    "poc/prototypes/i1b-runtime/src/witness.rs": "08748bcb0f2f8bf36f9b4aed73397ae37497d391aaa665b05b715d3b69d5cead",
+    "poc/prototypes/i1b-runtime/src/witness_ledger.rs": "24948af81d6fbbf94499577605e0c2aaaa3a8c673f78f98b6b2bc60d0d79f03f",
+    "poc/prototypes/i1b-runtime/src/witness_recovery.rs": "d746c441494bea2456287bc10caff08a3ea7781a1ed1e091f1a905bb30a3c06e",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/verification/native-witness/acceptance.rs": "a5daa4d32f688b23355736756db89aa6d4fa21db3fad740b65b7051c778f03cb",
+    "poc/verification/native-witness/run_acceptance.py": "6245069b2bc4b5e22c07305cc72c92ef01a8ee8b91e6adcc11e4c8774143a720"
+  },
+  "test_result_rows": [
+    [
+      "ok",
+      "2",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "7",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "27",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "1",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "1",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "7",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "11",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "11",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "FAILED",
+      "14",
+      "3",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "11",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "3",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ]
+  ],
+  "passed": 95,
+  "failed": 3,
+  "failed_tests": [
+    "w2_w10_rehashed_stale_durable_version_is_rejected",
+    "w4_w10_rehashed_artifact_substring_is_not_a_journal_frame",
+    "w6_w9_recovery_preserves_committed_authorization_history"
+  ],
+  "scope": "NATIVE-WITNESS fixture plus prior runtime/storage regressions; no native live engine, guarded signing, transport or full I1b claim",
+  "independent_cases": {
+    "passed": 14,
+    "failed": 3,
+    "total": 17
+  },
+  "prior_cases": {
+    "passed": 81,
+    "failed": 0
+  },
+  "binary_sha256": "4cdc45c0624b41eba7a376be609d89b4f0702f1c9cbdbed4a9421269db52f41e",
+  "format_and_diff_checks": "PASS: bootstrap fmt --manifest-path prototypes/i1b-runtime/Cargo.toml --all --check; git diff --check",
+  "status": "NOT ACCEPTED: three executable findings and one source-only failed-sync uncertainty gap"
+}

@@ -45,3 +45,7 @@ path = "../../verification/i1b-runtime/acceptance.rs"
 [[test]]
 name = "native_storage_independent"
 path = "../../verification/native-storage/acceptance.rs"
+
+[[test]]
+name = "native_witness_independent"
+path = "../../verification/native-witness/acceptance.rs"
