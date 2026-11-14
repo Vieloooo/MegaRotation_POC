@@ -10,17 +10,19 @@ Implement a bounded selected-journal witness policy, durable eligible output rec
 
 ## Frozen profile
 
-One real worker's selected voter partition, one cid, epoch1, native sections/views1–2, no pruning. Use the real five-key/PoP registry and namespaces from NATIVE-STORAGE, with explicit member-to-signer-index mapping and verifier-only policy construction. Physical page256/logical244; compressionNone; native Blob default layoutV1, application version0. Maximum selected blob data64KiB, native frame payload4096B, decoded frames1024 per blob, ledger frame16MiB. These are explicit fixture bounds, not changes to general Storage semantics.
+One real worker's selected voter partition, one cid, epoch1, native sections/views1–2, no pruning. Use the real five-key/PoP registry and PoP namespace from NATIVE-STORAGE, with explicit member-to-signer-index mapping and verifier-only policy construction. Witness fixtures use the explicitly context-bound voting namespace below; create fresh signatures under it, never reinterpret the earlier storage-only fixture signatures. Physical page256/logical244; compressionNone; native Blob default layoutV1, application version0. Maximum selected blob data64KiB, native frame payload4096B, decoded frames1024 per blob, ledger frame16MiB. These are explicit fixture bounds, not changes to general Storage semantics.
 
 The policy fixes run_id/config_hash/cid (32 bytes), worker_id/member_id u32, epoch/generation u64, selected logical partition/name set, registry and namespace hashes. Host paths, PIDs and wall pauses are diagnostics and excluded from identities. Generation is a physical recovery identity, not a new signing context. Initial policy registration is before the first grant in this slice; multi-cid dynamic registration remains a later extension.
 
 H(domain,parts) uses the existing framing: SHA256 of domain UTF-8 and each component, each preceded by u64BE byte length. Integer identity components are BE at the declared width. Hash domains:
 
 - `I1b/blob/v1`: run, config, worker(u32), generation(u64), partitionUTF8, raw name, open_id(u64).
+- `I1b/voter-namespace/v1`: run, config, cid, epoch(u64); the 32-byte result is the native Scheme voting namespace. Config binds the declared chain/genesis/program profile. This is an explicit PoC namespace choice; native per-kind signed subjects are unchanged.
+- `I1b/barrier-bytes/v1`: exact covered range bytes for range-SYNC, or exact complete image bytes for full sync. This supplies the covered-image/value hash below.
 - `I1b/native-artifact/v1`: exact canonical native Artifact bytes.
 - `I1b/native-wire/v1`: channel(u32; VOTE=1,CERTIFICATE=2), canonical native wire bytes.
 - `I1b/native-barrier/v1`: blob_id, io_id(u64), kind(u8:range1/full2), offset(u64), length(u64), covered-image/value hash.
-- `I1b/artifact-witness/v1`: run, config, cid, epoch(u64), blob_id, section(u64), logical frame offset(u64), artifact_hash, canonical sorted barrier-ID list bytes.
+- `I1b/artifact-witness/v1`: run, config, cid, epoch(u64), blob_id, section(u64), logical frame offset(u64), artifact_hash, lexicographically sorted unique 32-byte barrier IDs concatenated (no further separator).
 - `I1b/outbox-payload/v1`: run, config, cid, epoch(u64), source member(u32), channel(u32), wire_hash. This is an eligible payload, not a delivery or submission.
 - `I1b/outbox/v1`: eligible_payload_id, destination member(u32). Stable across retry and recovery; no incarnation, attempt or resend time in the identity.
 
