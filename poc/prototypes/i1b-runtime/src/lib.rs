@@ -4,11 +4,13 @@ mod clock;
 mod context;
 mod driver;
 mod rng;
+mod storage;
 
 pub use clock::{ClockSample, Profile, Timer};
 pub use context::SimContext;
 pub use driver::{ControlledDriver, Event, Grant, Input, Placement, Step};
 pub use rng::{RngCheckpoint, RoleRng};
+pub use storage::{ControlledBlob, IoIdentity, IoOperation, IoResult, IoTarget};
 
 type Id = [u8; 32];
 type Result<T> = std::result::Result<T, Error>;

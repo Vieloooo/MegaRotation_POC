@@ -2,9 +2,10 @@ use crate::{
     Id, RoleRng,
     clock::{local_time, system_time},
     driver::{Event, Placement, Shared, TaskPhase},
+    storage::{ControlledBlob, StorageAccess},
 };
 use commonware_runtime::{
-    Clock, Error, Handle, Metrics, Name, Spawner, Supervisor,
+    BlobVersion, Clock, Error, Handle, Metrics, Name, Spawner, Storage, Supervisor,
     signal::{Signal, Stopper},
     telemetry::metrics::{Metric, Registered},
     tokio::Context as NativeContext,
@@ -13,6 +14,7 @@ use rand_core::{TryCryptoRng, TryRng};
 use std::{
     convert::Infallible,
     future::{Future, pending},
+    ops::RangeInclusive,
     pin::Pin,
     sync::{Arc, Mutex, Weak},
     task::{Context, Poll},
@@ -27,6 +29,7 @@ pub struct SimContext {
     stopper: Arc<Mutex<Stopper>>,
     placement: Placement,
     scope: u64,
+    storage: StorageAccess,
 }
 
 impl SimContext {
@@ -37,6 +40,7 @@ impl SimContext {
         role: Id,
         stopper: Arc<Mutex<Stopper>>,
         scope: u64,
+        storage: StorageAccess,
     ) -> Self {
         Self {
             native,
@@ -46,6 +50,7 @@ impl SimContext {
             stopper,
             placement: Placement::Shared,
             scope,
+            storage,
         }
     }
 
@@ -70,6 +75,7 @@ impl Supervisor for SimContext {
             RoleRng::child_role(self.role, label),
             self.stopper.clone(),
             self.scope,
+            self.storage.clone(),
         )
     }
 
@@ -137,12 +143,13 @@ impl Spawner for SimContext {
             stopper,
             placement,
             scope,
+            storage,
         } = self;
         let phase = Arc::new(Mutex::new(TaskPhase::Enrolled));
         let job_phase = phase.clone();
         let handle = native.spawn_controlled(
             move |native| {
-                let context = Self::new(native, weak, cid, role, stopper, id);
+                let context = Self::new(native, weak, cid, role, stopper, id, storage);
                 let shared = context.runtime();
                 shared.ordinary(cid);
                 *job_phase.lock().unwrap() = TaskPhase::Started;
@@ -179,6 +186,27 @@ impl Spawner for SimContext {
     fn stopped(&self) -> Signal {
         self.runtime().ordinary(self.cid);
         self.stopper.lock().unwrap().stopped()
+    }
+}
+
+impl Storage for SimContext {
+    type Blob = ControlledBlob;
+
+    async fn open_versioned(
+        &self,
+        partition: &str,
+        name: &[u8],
+        versions: RangeInclusive<BlobVersion>,
+    ) -> Result<(Self::Blob, u64, BlobVersion), Error> {
+        self.storage.open(partition, name, versions).await
+    }
+
+    async fn remove(&self, partition: &str, name: Option<&[u8]>) -> Result<(), Error> {
+        self.storage.remove(partition, name).await
+    }
+
+    async fn scan(&self, partition: &str) -> Result<Vec<Vec<u8>>, Error> {
+        self.storage.scan(partition).await
     }
 }
 

@@ -1,6 +1,9 @@
 use crate::{
     ClockSample, Error, Id, Profile, Result, RngCheckpoint, RoleRng, SimContext, Timer,
     clock::NodeClock,
+    storage::{
+        CompletedIo, DiskQueue, IoIdentity, IoJob, IoOperation, IoResult, IoTarget, StorageAccess,
+    },
 };
 use commonware_runtime::{
     Handle, Supervisor as _,
@@ -10,6 +13,7 @@ use commonware_runtime::{
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
+    future::{Future, poll_fn},
     panic::{AssertUnwindSafe, catch_unwind},
     pin::pin,
     sync::{
@@ -116,6 +120,22 @@ pub enum Event {
     Failure {
         reason: &'static str,
     },
+    IoIssued {
+        identity: IoIdentity,
+        target: IoTarget,
+        operation: IoOperation,
+    },
+    IoReady {
+        io_id: u64,
+        result: IoResult,
+    },
+    IoReleased {
+        io_id: u64,
+        delivered: bool,
+    },
+    IoDiscarded {
+        io_id: u64,
+    },
     CleanupBoundExceeded,
     CleanupComplete,
     Ack {
@@ -135,8 +155,15 @@ struct Permit {
     task: u64,
     sequence: u64,
     cid: Option<Id>,
-    cleanup: bool,
+    mode: PermitMode,
     thread: ThreadId,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PermitMode {
+    Ordinary,
+    IoRelease,
+    Cleanup,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -173,6 +200,8 @@ pub(crate) struct Shared {
 pub(crate) struct Inner {
     clock: NodeClock,
     current: Option<Grant>,
+    queued_io: BTreeMap<u64, IoJob>,
+    next_io: u64,
     permit: Option<Permit>,
     sessions: BTreeMap<Id, Session>,
     enrolled: BTreeMap<u64, Job>,
@@ -217,7 +246,11 @@ impl Wake for Ready {
 }
 
 pub struct ControlledDriver {
-    native: Context,
+    native: Arc<Context>,
+    disk: DiskQueue,
+    io_wall_pause: std::time::Duration,
+    fail_io_release: Option<u64>,
+    io_hold: Option<(u64, tokio::sync::oneshot::Receiver<()>)>,
     shared: Arc<Shared>,
     jobs: BTreeMap<u64, Job>,
     sessions: BTreeMap<Id, Handle<()>>,
@@ -252,20 +285,15 @@ impl ControlledDriver {
             let result = AssertUnwindSafe(async { controller(&mut driver).await })
                 .catch_unwind()
                 .await;
-            match result {
-                Ok(Ok(value)) => {
-                    driver.shutdown()?;
-                    Ok(value)
-                }
-                Ok(Err(error)) => {
-                    driver.fail(error.0);
-                    Err(error)
-                }
-                Err(_) => {
-                    driver.fail("controller panic");
-                    Err(Error("controller panic"))
-                }
+            let result = match result {
+                Ok(result) => result,
+                Err(_) => Err(Error("controller panic")),
+            };
+            if let Err(error) = &result {
+                driver.fail(error.0);
             }
+            let cleanup = driver.shutdown_async().await;
+            result.and_then(|value| cleanup.map(|()| value))
         })
     }
 
@@ -275,6 +303,8 @@ impl ControlledDriver {
             inner: Mutex::new(Inner {
                 clock: NodeClock::new(profile)?,
                 current: None,
+                queued_io: BTreeMap::new(),
+                next_io: 0,
                 permit: None,
                 sessions: BTreeMap::new(),
                 enrolled: BTreeMap::new(),
@@ -288,7 +318,11 @@ impl ControlledDriver {
             }),
         });
         Ok(Self {
-            native,
+            native: Arc::new(native),
+            disk: DiskQueue::default(),
+            io_wall_pause: std::time::Duration::ZERO,
+            fail_io_release: None,
+            io_hold: None,
             shared,
             jobs: BTreeMap::new(),
             sessions: BTreeMap::new(),
@@ -303,6 +337,43 @@ impl ControlledDriver {
         assert_eq!(self.last_grant, 0, "limits are fixed before first grant");
         self.poll_limit = polls;
         self.cleanup_limit = disposals;
+    }
+
+    /// Inject a diagnostic wall pause before each physical operation.
+    pub fn set_io_wall_pause(&mut self, pause: std::time::Duration) -> Result<()> {
+        self.configure_io(true)?;
+        self.io_wall_pause = pause;
+        Ok(())
+    }
+
+    /// Inject a failure after this physical completion is retained and before release.
+    pub fn fail_before_io_release(&mut self, io_id: u64) -> Result<()> {
+        self.configure_io(io_id > 0 && self.fail_io_release.is_none())?;
+        self.fail_io_release = Some(io_id);
+        Ok(())
+    }
+
+    /// Hold this operation after installing the active slot and before dispatch.
+    pub fn hold_io_before_dispatch(
+        &mut self,
+        io_id: u64,
+    ) -> Result<tokio::sync::oneshot::Sender<()>> {
+        self.configure_io(io_id > 0 && self.io_hold.is_none())?;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.io_hold = Some((io_id, rx));
+        Ok(tx)
+    }
+
+    fn configure_io(&mut self, valid: bool) -> Result<()> {
+        if self.last_grant != 0 || !valid {
+            return Err(Error("invalid or late diagnostic I/O configuration"));
+        }
+        Ok(())
+    }
+
+    /// Active operation held by the driver, including while the controller is paused.
+    pub fn active_io_id(&self) -> Option<u64> {
+        self.disk.active.as_ref().map(|job| job.identity.io_id)
     }
 
     pub fn events(&self) -> Vec<Event> {
@@ -331,6 +402,61 @@ impl ControlledDriver {
         input: Input,
         action: impl FnOnce(&mut Self) -> Result<()>,
     ) -> Result<Step> {
+        self.check_grant_entry()?;
+        let outcome = catch_unwind(AssertUnwindSafe(|| {
+            let start = self.begin_grant(grant, input, action)?;
+            let mut polls = 0;
+            self.poll_ready(&mut polls)?;
+            if self.has_io() {
+                return Err(Error("synchronous grant issued physical I/O"));
+            }
+            self.finish_grant(grant, start)
+        }));
+        let result = outcome.unwrap_or(Err(Error("driver panic")));
+        if let Err(error) = &result {
+            self.fail(error.0);
+        }
+        result
+    }
+
+    /// Execute one fixed-tick grant, retaining all physical I/O custody in the driver.
+    pub async fn grant_async(
+        &mut self,
+        grant: Grant,
+        input: Input,
+        action: impl FnOnce(&mut Self) -> Result<()>,
+    ) -> Result<Step> {
+        use futures::FutureExt as _;
+        self.check_grant_entry()?;
+        let mut custody = GrantCustody {
+            shared: self.shared.clone(),
+            grant,
+            armed: true,
+        };
+        let result = AssertUnwindSafe(async {
+            let start = self.begin_grant(grant, input, action)?;
+            let mut polls = 0;
+            loop {
+                self.poll_ready(&mut polls)?;
+                if !self.has_io() {
+                    break;
+                }
+                self.await_io(PermitMode::IoRelease).await?;
+                self.release_io(PermitMode::IoRelease);
+            }
+            self.finish_grant(grant, start)
+        })
+        .catch_unwind()
+        .await
+        .unwrap_or(Err(Error("driver panic")));
+        custody.armed = false;
+        if let Err(error) = &result {
+            self.fail(error.0);
+        }
+        result
+    }
+
+    fn check_grant_entry(&mut self) -> Result<()> {
         if self.has_active_permit() {
             self.fail("nested grant");
             return Err(Error("nested grant"));
@@ -342,26 +468,15 @@ impl ControlledDriver {
             self.fail("native task failure");
             return Err(Error("native task failure"));
         }
-        let outcome = catch_unwind(AssertUnwindSafe(|| self.drive(grant, input, action)));
-        match outcome {
-            Ok(Ok(step)) => Ok(step),
-            Ok(Err(error)) => {
-                self.fail(error.0);
-                Err(error)
-            }
-            Err(_) => {
-                self.fail("driver panic");
-                Err(Error("driver panic"))
-            }
-        }
+        Ok(())
     }
 
-    fn drive(
+    fn begin_grant(
         &mut self,
         grant: Grant,
         input: Input,
         action: impl FnOnce(&mut Self) -> Result<()>,
-    ) -> Result<Step> {
+    ) -> Result<usize> {
         let (start, wake) = {
             let mut inner = self.shared.inner.lock().unwrap();
             if grant.id <= self.last_grant || grant.tick_us < inner.clock.tick_us {
@@ -378,34 +493,40 @@ impl ControlledDriver {
             inner.check_sessions();
             (start, inner.apply(input)?)
         };
+        let permit = self.enter_permit(0, 0, None, PermitMode::Ordinary);
         if let Some(waker) = wake {
-            let permit = self.enter_permit(0, 0, None, false);
             waker.wake_by_ref();
-            drop(permit);
         }
+        drop(permit);
         self.dispose_retired();
         if self.shared.failed() {
             return Err(Error("native task failure"));
         }
-        let permit = self.enter_permit(0, 0, None, false);
+        let permit = self.enter_permit(0, 0, None, PermitMode::Ordinary);
         let result = action(self);
         drop(permit);
         result?;
-        let mut polls = 0;
+        Ok(start)
+    }
+
+    fn poll_ready(&mut self, polls: &mut u64) -> Result<()> {
         loop {
             if self.shared.failed() {
                 return Err(Error("native task failure"));
             }
             self.import_jobs();
             let next = self.shared.inner.lock().unwrap().ready.pop_first();
-            let Some(id) = next else { break };
-            if polls >= self.poll_limit {
+            let Some(id) = next else { return Ok(()) };
+            if *polls >= self.poll_limit {
                 return Err(Error("logical poll limit exceeded"));
             }
-            polls += 1;
+            *polls += 1;
             self.poll_job(id)?;
             self.dispose_retired();
         }
+    }
+
+    fn finish_grant(&mut self, grant: Grant, start: usize) -> Result<Step> {
         let mut inner = self.shared.inner.lock().unwrap();
         if self.shared.failed() {
             return Err(Error("native task failure"));
@@ -416,6 +537,147 @@ impl ControlledDriver {
             grant,
             events: inner.events[start..].to_vec(),
         })
+    }
+
+    fn has_io(&self) -> bool {
+        self.disk.active.is_some()
+            || self.disk.completed.is_some()
+            || !self.shared.inner.lock().unwrap().queued_io.is_empty()
+    }
+
+    fn poll_io(&mut self, cx: &mut TaskContext<'_>, disposal_mode: PermitMode) -> Poll<Result<()>> {
+        if self.disk.completed.is_some() {
+            return Poll::Ready(Ok(()));
+        }
+        if self.disk.active.is_none() {
+            let next = self.shared.inner.lock().unwrap().queued_io.pop_first();
+            let Some((_, mut job)) = next else {
+                return Poll::Ready(Err(Error("missing physical I/O")));
+            };
+            if self
+                .io_hold
+                .as_ref()
+                .is_some_and(|(id, _)| *id == job.identity.io_id)
+            {
+                let (_, hold) = self.io_hold.take().expect("configured I/O hold");
+                let future = job.future;
+                job.future = Box::pin(async move {
+                    hold.await
+                        .expect("physical I/O hold released by the controller");
+                    future.await
+                });
+            }
+            if !self.io_wall_pause.is_zero() {
+                let pause = self.io_wall_pause;
+                let future = job.future;
+                job.future = Box::pin(async move {
+                    tokio::time::sleep(pause).await;
+                    future.await
+                });
+            }
+            self.disk.active = Some(job);
+        }
+        let identity = self
+            .disk
+            .active
+            .as_ref()
+            .expect("driver owns active operation")
+            .identity
+            .clone();
+        let permit = self.enter_permit(
+            identity.task,
+            identity.io_id,
+            Some(identity.cid),
+            disposal_mode,
+        );
+        let job = self
+            .disk
+            .active
+            .as_mut()
+            .expect("driver owns active operation");
+        let outcome = catch_unwind(AssertUnwindSafe(|| job.future.as_mut().poll(cx)));
+        drop(permit);
+        match outcome {
+            Ok(Poll::Pending) => Poll::Pending,
+            Ok(Poll::Ready((result, release))) => {
+                self.disk.completed = Some(CompletedIo {
+                    identity: identity.clone(),
+                    result,
+                    release,
+                });
+                let completed = self.disk.completed.as_ref().expect("stored completion");
+                self.shared.event(Event::IoReady {
+                    io_id: identity.io_id,
+                    result: completed.result.clone(),
+                });
+                let active = self.disk.active.take().expect("active physical operation");
+                let permit = self.enter_permit(
+                    identity.task,
+                    identity.io_id,
+                    Some(identity.cid),
+                    disposal_mode,
+                );
+                let disposed = catch_unwind(AssertUnwindSafe(|| drop(active)));
+                drop(permit);
+                if self.fail_io_release == Some(identity.io_id) {
+                    self.fail_io_release = None;
+                    self.shared
+                        .record_failure("scripted I/O failure before release");
+                }
+                if disposed.is_err() {
+                    self.shared
+                        .record_failure("physical I/O future disposal panic");
+                }
+                Poll::Ready(disposed.map_err(|_| Error("physical I/O future disposal panic")))
+            }
+            Err(_) => {
+                self.shared.record_failure("physical I/O poll panic");
+                let active = self.disk.active.take().expect("active physical operation");
+                let id = active.identity.clone();
+                let permit =
+                    self.enter_permit(id.task, id.io_id, Some(id.cid), PermitMode::Cleanup);
+                if catch_unwind(AssertUnwindSafe(|| drop(active))).is_err() {
+                    self.shared
+                        .record_failure("physical I/O future disposal panic");
+                }
+                self.shared.event(Event::IoDiscarded { io_id: id.io_id });
+                drop(permit);
+                Poll::Ready(Err(Error("physical I/O poll panic")))
+            }
+        }
+    }
+
+    async fn await_io(&mut self, disposal_mode: PermitMode) -> Result<()> {
+        poll_fn(|cx| self.poll_io(cx, disposal_mode)).await
+    }
+
+    fn release_io(&mut self, mode: PermitMode) {
+        if mode != PermitMode::Cleanup && self.shared.failed() {
+            return;
+        }
+        let Some(completed) = self.disk.completed.take() else {
+            return;
+        };
+        let id = &completed.identity;
+        let permit = self.enter_permit(id.task, id.io_id, Some(id.cid), mode);
+        // Sending only marks readiness. Record the release before polling
+        // any consumer. Dispose an abandoned result under this same permit.
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            (completed.release)(mode == PermitMode::IoRelease)
+        }));
+        match result {
+            Ok(delivered) if mode == PermitMode::IoRelease => {
+                self.shared.event(Event::IoReleased {
+                    io_id: id.io_id,
+                    delivered,
+                })
+            }
+            Ok(_) => self.shared.event(Event::IoDiscarded { io_id: id.io_id }),
+            Err(_) => self
+                .shared
+                .record_failure("physical I/O result disposal panic"),
+        }
+        drop(permit);
     }
 
     pub fn spawn_session<F, Fut>(&mut self, cid: Id, stop_local_us: i64, f: F) -> Result<()>
@@ -448,6 +710,7 @@ impl ControlledDriver {
             RoleRng::root_role(),
             stopper,
             0,
+            StorageAccess::new(self.native.clone(), Arc::downgrade(&self.shared), cid),
         );
         self.sessions.insert(cid, context.spawn(f));
         Ok(())
@@ -484,6 +747,35 @@ impl ControlledDriver {
             self.fail("shutdown inside controlled permit");
             return Err(Error("shutdown inside controlled permit"));
         }
+        if self.has_io() {
+            self.fail("synchronous shutdown with physical I/O");
+            return Err(Error("synchronous shutdown with physical I/O"));
+        }
+        self.shutdown_jobs()
+    }
+
+    /// Drain accepted physical I/O and dispose results and jobs before returning.
+    pub async fn shutdown_async(&mut self) -> Result<()> {
+        if self.has_active_permit() {
+            self.fail("shutdown inside controlled permit");
+            return Err(Error("shutdown inside controlled permit"));
+        }
+        if self.has_io() {
+            self.shared
+                .record_failure("cleanup with outstanding physical I/O");
+            self.stopped = true;
+            while self.has_io() {
+                if let Err(error) = self.await_io(PermitMode::Cleanup).await {
+                    self.shared.record_failure(error.0);
+                }
+                self.release_io(PermitMode::Cleanup);
+            }
+            self.drain(None);
+        }
+        self.shutdown_jobs()
+    }
+
+    fn shutdown_jobs(&mut self) -> Result<()> {
         if self.stopped {
             return if self.shared.failed() {
                 Err(Error("driver failed"))
@@ -505,11 +797,14 @@ impl ControlledDriver {
             return;
         }
         self.shared.record_failure(reason);
-        // The grant owner releases its permit before handling the latched
-        // failure. Reentrant control must leave the job registry in its custody.
+        // A synchronous owner must release its permit. Root can await disk
+        // cleanup after a failed or abandoned async grant.
         if !self.has_active_permit() {
-            self.stopped = true;
-            self.drain(None);
+            self.shared.inner.lock().unwrap().current = None;
+            if !self.has_io() {
+                self.stopped = true;
+                self.drain(None);
+            }
         }
     }
 
@@ -532,7 +827,7 @@ impl ControlledDriver {
             }
         };
         job.sequence = sequence;
-        let scope = self.enter_permit(id, sequence, Some(job.cid), false);
+        let scope = self.enter_permit(id, sequence, Some(job.cid), PermitMode::Ordinary);
         self.shared.event(Event::Poll {
             task: id,
             grant: scope.permit.grant,
@@ -564,7 +859,7 @@ impl ControlledDriver {
         task: u64,
         sequence: u64,
         cid: Option<Id>,
-        cleanup: bool,
+        mode: PermitMode,
     ) -> PermitScope {
         let mut inner = self.shared.inner.lock().unwrap();
         if inner.permit.is_some() {
@@ -576,7 +871,7 @@ impl ControlledDriver {
             task,
             sequence,
             cid,
-            cleanup,
+            mode,
             thread: thread::current().id(),
         };
         inner.permit = Some(permit);
@@ -591,14 +886,16 @@ impl ControlledDriver {
             let mut inner = self.shared.inner.lock().unwrap();
             inner.live.remove(&id);
             inner.ready.remove(&id);
-            if scope.permit.cleanup || *job.phase.lock().unwrap() != TaskPhase::Completed {
+            if (scope.permit.mode == PermitMode::Cleanup)
+                || *job.phase.lock().unwrap() != TaskPhase::Completed
+            {
                 inner.events.push(Event::Cancel { task: id });
             }
             inner.events.push(Event::Dispose {
                 task: id,
                 grant: scope.permit.grant,
                 sequence: scope.permit.sequence,
-                cleanup: scope.permit.cleanup,
+                cleanup: (scope.permit.mode == PermitMode::Cleanup),
             });
         }
         if catch_unwind(AssertUnwindSafe(|| drop(job))).is_err() {
@@ -646,7 +943,7 @@ impl ControlledDriver {
                 clean = false;
                 u64::MAX
             });
-            let scope = self.enter_permit(id, sequence, Some(job.cid), true);
+            let scope = self.enter_permit(id, sequence, Some(job.cid), PermitMode::Cleanup);
             self.dispose(id, job, &scope);
             drop(scope);
             self.import_jobs();
@@ -658,7 +955,7 @@ impl ControlledDriver {
             .copied()
             .collect();
         for id in session_ids {
-            let scope = self.enter_permit(0, 0, Some(id), true);
+            let scope = self.enter_permit(0, 0, Some(id), PermitMode::Cleanup);
             if let Some(handle) = self.sessions.remove(&id) {
                 if catch_unwind(AssertUnwindSafe(|| drop(handle))).is_err() {
                     self.shared.record_failure("session handle disposal unwind");
@@ -676,6 +973,26 @@ impl ControlledDriver {
     }
 }
 
+struct GrantCustody {
+    shared: Arc<Shared>,
+    grant: Grant,
+    armed: bool,
+}
+impl Drop for GrantCustody {
+    fn drop(&mut self) {
+        if self.armed {
+            let mut inner = self.shared.inner.lock().unwrap();
+            if inner.current == Some(self.grant) {
+                inner.current = None;
+                self.shared.failure.store(true, Ordering::SeqCst);
+                inner.events.push(Event::Failure {
+                    reason: "async grant abandoned",
+                });
+            }
+        }
+    }
+}
+
 struct PermitScope {
     shared: Arc<Shared>,
     permit: Permit,
@@ -687,6 +1004,59 @@ impl Drop for PermitScope {
 }
 
 impl Shared {
+    pub fn issue_io(
+        &self,
+        scope: Option<Id>,
+        mut target: IoTarget,
+        operation: IoOperation,
+    ) -> IoIdentity {
+        let issuer = self.try_ordinary(scope).and_then(|permit| {
+            permit
+                .cid
+                .map(|cid| (permit, cid))
+                .ok_or(Error("storage requires a session permit"))
+        });
+        let (permit, cid) = issuer.unwrap_or_else(|error| {
+            self.record_failure(error.0);
+            panic!("{error}");
+        });
+        let mut inner = self.inner.lock().unwrap();
+        let Some(io_id) = inner.next_io.checked_add(1) else {
+            drop(inner);
+            self.record_failure("I/O counter exhausted");
+            panic!("I/O counter exhausted");
+        };
+        inner.next_io = io_id;
+        if matches!(operation, IoOperation::Open { .. }) {
+            target.open_id = Some(io_id);
+        }
+        let profile = &inner.clock.profile;
+        let identity = IoIdentity {
+            io_id,
+            grant: permit.grant,
+            tick_us: inner.clock.tick_us,
+            run_id: profile.run_id,
+            node: profile.node,
+            incarnation: profile.incarnation,
+            cid,
+            task: permit.task,
+        };
+        inner.events.push(Event::IoIssued {
+            identity: identity.clone(),
+            target,
+            operation,
+        });
+        identity
+    }
+
+    pub fn enqueue_io(&self, job: IoJob) {
+        self.inner
+            .lock()
+            .unwrap()
+            .queued_io
+            .insert(job.identity.io_id, job);
+    }
+
     pub fn failed(&self) -> bool {
         self.failure.load(Ordering::SeqCst)
     }
@@ -706,7 +1076,7 @@ impl Shared {
             return Err(Error("permanent infrastructure failure"));
         }
         let permit = inner.permit.ok_or(Error("no controlled permit"))?;
-        if permit.cleanup || permit.thread != thread::current().id() {
+        if permit.mode != PermitMode::Ordinary || permit.thread != thread::current().id() {
             return Err(Error("ordinary operation outside controlled poll"));
         }
         if let Some(cid) = cid {
