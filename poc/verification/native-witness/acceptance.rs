@@ -553,6 +553,12 @@ fn w6_w9_recovery_preserves_committed_authorization_history() {
     )
     .unwrap();
     assert_eq!(fs::read(path.join("witness")).unwrap(), source);
+    assert!(
+        fs::read(target.join("witness"))
+            .unwrap()
+            .starts_with(&source)
+    );
+    assert_eq!(&report.records[..run.records.len()], &run.records);
     assert_eq!(
         fs::read(path.join("store").join(PART).join("0000000000000001")).unwrap(),
         raw
@@ -1224,7 +1230,27 @@ fn actual_journal(seed: u64, pause: u64) -> serde_json::Value {
     );
     let target_raw = fs::read(target.join("native").join(PART).join("0000000000000001")).unwrap();
     assert_eq!(target_raw, raw);
-    assert_eq!(count(&report.records, "witness"), expected.len());
+    let transition = report
+        .records
+        .iter()
+        .position(|record| {
+            record
+                .entries
+                .iter()
+                .any(|entry| matches!(entry, LedgerEntry::GenerationStarted(_)))
+        })
+        .unwrap();
+    assert_eq!(transition, r.records.len());
+    assert_eq!(&report.records[..transition], &r.records);
+    let source_ledger = fs::read(path.join("witness")).unwrap();
+    assert!(
+        fs::read(target.join("witness"))
+            .unwrap()
+            .starts_with(&source_ledger)
+    );
+    let new_records = &report.records[transition + 1..];
+    assert_eq!(count(new_records, "witness"), expected.len());
+    assert_eq!(count(&report.records, "witness"), 2 * expected.len());
     let old_barriers: Vec<_> = r
         .records
         .iter()
@@ -1237,8 +1263,7 @@ fn actual_journal(seed: u64, pause: u64) -> serde_json::Value {
             }
         })
         .collect();
-    let new_barriers: Vec<_> = report
-        .records
+    let new_barriers: Vec<_> = new_records
         .iter()
         .flat_map(|r| &r.entries)
         .filter_map(|e| {
@@ -1741,5 +1766,402 @@ fn w4_w10_rehashed_artifact_substring_is_not_a_journal_frame() {
     assert!(
         outcome.is_err(),
         "ledger accepted bytes inside a signed payload as a separate journal frame"
+    );
+}
+
+#[test]
+fn w2_ordinary_overwrite_restore_requires_new_coverage_and_io_ids_are_unique() {
+    for changed in [false, true] {
+        let path = place("ordinary-version");
+        let fx = fixture();
+        let a = pages(&frame(&cert_bit(true)));
+        let b = pages(&frame(&cert_bit(false)));
+        let target = a.clone();
+        let r = run(
+            &path,
+            fx.policy.clone(),
+            7,
+            0,
+            |_| {},
+            async move |d| {
+                d.grant_async(g(3), Input::None, |d| {
+                    d.spawn_session(CID, 2_000_000, move |c| async move {
+                        let (blob, _) = c.open(PART, &NAME).await.unwrap();
+                        blob.write_at(0, a.clone(), WriteOptions::default())
+                            .await
+                            .unwrap();
+                        blob.write_at(0, a[..5].to_vec(), WriteOptions::SYNC)
+                            .await
+                            .unwrap();
+                        if changed {
+                            blob.write_at(0, b, WriteOptions::default()).await.unwrap();
+                        }
+                        blob.write_at(0, a.clone(), WriteOptions::default())
+                            .await
+                            .unwrap();
+                        blob.write_at(244, a[244..].to_vec(), WriteOptions::SYNC)
+                            .await
+                            .unwrap();
+                    })
+                })
+                .await?;
+                Ok(())
+            },
+        );
+        assert!(r.ok);
+        assert_eq!(count(&r.records, "witness"), usize::from(!changed));
+        let barriers: Vec<_> = r
+            .records
+            .iter()
+            .flat_map(|r| &r.entries)
+            .filter_map(|e| {
+                if let LedgerEntry::Barrier(b) = e {
+                    Some(b.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(barriers.len(), 2);
+        if changed {
+            let forged = witness(
+                barriers[0].blob_id,
+                fx.policy.decode_section(1, &target).unwrap().remove(0),
+                barriers.iter().map(|b| b.id).collect(),
+            );
+            let mut records = r.records.clone();
+            records.push(LedgerRecord {
+                schema: 1,
+                sequence: 0,
+                previous_record_hash: [0; 32],
+                identity: records[0].identity.clone(),
+                entries: vec![LedgerEntry::Witness(forged)],
+            });
+            let mutant = path.join("stale-restored");
+            write_ledger(&mutant, &mut records);
+            let outcome = WitnessLedger::open_anchored(
+                &mutant,
+                fx.policy.clone(),
+                LedgerTail::RejectComplete,
+                r.head,
+            );
+            save(
+                &path.join("stale-restored.json"),
+                &json!({"accepted":outcome.is_ok(),"error":outcome.as_ref().err().map(ToString::to_string),"records":records}),
+            );
+            assert!(
+                outcome.is_err(),
+                "restoring old bytes without a fresh barrier must not revive old coverage"
+            );
+        }
+        let reused = barrier(barriers[0].blob_id, barriers[1].io_id, 2, 0, target);
+        let mut records = r.records.clone();
+        records.push(LedgerRecord {
+            schema: 1,
+            sequence: 0,
+            previous_record_hash: [0; 32],
+            identity: records[0].identity.clone(),
+            entries: vec![LedgerEntry::Barrier(reused)],
+        });
+        let mutant = path.join("reused-io-id");
+        write_ledger(&mutant, &mut records);
+        let outcome =
+            WitnessLedger::open_anchored(&mutant, fx.policy, LedgerTail::RejectComplete, r.head);
+        save(
+            &path.join("reused-io-id.json"),
+            &json!({"accepted":outcome.is_ok(),"error":outcome.as_ref().err().map(ToString::to_string),"records":records}),
+        );
+        assert!(
+            outcome.is_err(),
+            "unrelated operations must not reuse an I/O identity"
+        );
+    }
+}
+
+#[test]
+fn w3_sync_and_start_sync_lost_response_latch_uncertainty_until_new_generation() {
+    for detached in [false, true] {
+        let path = place("lost-sync-response");
+        let fx = fixture();
+        let first = frame(&fx.artifacts[3]);
+        let old = pages(&first);
+        let appended = pages(&[first, frame(&cert_bit(false))].concat());
+        let expected_bytes = appended.clone();
+        let handled = Arc::new(AtomicBool::new(false));
+        let marker = handled.clone();
+        let r = run(
+            &path,
+            fx.policy.clone(),
+            7,
+            0,
+            |d| d.inject_lost_sync_response(4).unwrap(),
+            async move |d| {
+                d.grant_async(g(3), Input::None, |d| {
+                    d.spawn_session(CID, 2_000_000, move |c| async move {
+                        let (blob, _) = c.open(PART, &NAME).await.unwrap();
+                        blob.write_at(0, old, WriteOptions::SYNC).await.unwrap();
+                        blob.write_at(0, appended, WriteOptions::default())
+                            .await
+                            .unwrap();
+                        let outcome = if detached {
+                            blob.start_sync().await.await
+                        } else {
+                            blob.sync().await
+                        };
+                        assert!(matches!(outcome, Err(commonware_runtime::Error::Closed)));
+                        marker.store(true, Ordering::SeqCst);
+                        drop(blob);
+                        let (reopened, len) = c.open(PART, &NAME).await.unwrap();
+                        assert_eq!(len, 256);
+                        // This real later sync must not clear the recorded uncertainty.
+                        reopened.sync().await.unwrap();
+                        assert_eq!(
+                            reopened
+                                .read_at(0, 256, ReadOptions::DONT_CACHE)
+                                .await
+                                .unwrap()
+                                .coalesce()
+                                .as_ref(),
+                            expected_bytes
+                        );
+                    })
+                })
+                .await?;
+                Ok(())
+            },
+        );
+        assert!(r.ok, "handled injected Err is not infrastructure failure");
+        assert!(handled.load(Ordering::SeqCst));
+        assert_eq!(count(&r.records, "witness"), 1);
+        assert_eq!(count(&r.records, "eligible"), 1);
+        assert_eq!(count(&r.records, "barrier"), 1);
+        assert_eq!(r.records.iter().flat_map(|r| &r.entries).filter(|e| matches!(e, LedgerEntry::Observation(IoObservation {io_id:4,change:ObservedChange::Uncertain{section:Some(1),reason}}) if reason=="sync")).count(), 1);
+        let lost = r
+            .events
+            .iter()
+            .position(|e| matches!(e, Event::IoSyncResponseLost { io_id: 4 }))
+            .unwrap();
+        let ready = r
+            .events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    Event::IoReady {
+                        io_id: 4,
+                        result: IoResult::Error { kind: "closed" }
+                    }
+                )
+            })
+            .unwrap();
+        let persisted = r
+            .events
+            .iter()
+            .position(|e| matches!(e, Event::WitnessCommitted { io_id: 4, .. }))
+            .unwrap();
+        let released = r
+            .events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    Event::IoReleased {
+                        io_id: 4,
+                        delivered: true
+                    }
+                )
+            })
+            .unwrap();
+        assert!(lost < ready && ready < persisted && persisted < released);
+        let ledger = WitnessLedger::open_anchored(
+            &path.join("witness"),
+            fx.policy.clone(),
+            LedgerTail::RejectComplete,
+            r.head,
+        )
+        .unwrap();
+        assert_eq!(ledger.records(), r.records);
+        drop(ledger);
+        let target = path.join("generation2");
+        let report = recover_witness_generation(
+            RecoveryPaths {
+                source_storage: &path.join("store"),
+                source_ledger: &path.join("witness"),
+                fresh_target: &target,
+            },
+            fx.policy,
+            fx.target,
+            r.head,
+        )
+        .unwrap();
+        let transition = report
+            .records
+            .iter()
+            .position(|record| {
+                record
+                    .entries
+                    .iter()
+                    .any(|e| matches!(e, LedgerEntry::GenerationStarted(_)))
+            })
+            .unwrap();
+        assert_eq!(&report.records[..transition], &r.records);
+        assert_eq!(count(&report.records[transition + 1..], "witness"), 2);
+        assert_eq!(count(&report.records[transition + 1..], "barrier"), 1);
+        save(
+            &path.join("diagnostic-scope.json"),
+            &json!({"fault":"root-only lost-sync-response injection after successful native full sync", "observed_os_disk_error":false,"start_sync":detached,"source_head":r.head,"recovery_head":report.new_head,"recovery_records":report.records}),
+        );
+    }
+}
+
+fn assert_pending_generation(
+    path: &Path,
+    records: &[LedgerRecord],
+    policy: WitnessPolicy,
+    floor: WitnessHead,
+    wire: &NativeWire,
+) {
+    let transition = records
+        .iter()
+        .rposition(|record| {
+            record
+                .entries
+                .iter()
+                .any(|entry| matches!(entry, LedgerEntry::GenerationStarted(_)))
+        })
+        .unwrap();
+    for (label, end) in [
+        ("just-started", transition + 1),
+        ("before-completion", records.len() - 1),
+    ] {
+        assert!(end > transition);
+        let target = path.join(label);
+        let mut partial = records[..end].to_vec();
+        let head = write_ledger(&target, &mut partial);
+        let mut ledger = WitnessLedger::open_anchored(
+            &target,
+            policy.clone(),
+            LedgerTail::RejectComplete,
+            floor,
+        )
+        .unwrap();
+        assert_eq!(ledger.head(), head);
+        assert!(
+            ledger.submit_recovered(wire, &[2]).is_err(),
+            "pending generation inherited a previous completion marker"
+        );
+        assert_eq!(ledger.head(), head);
+    }
+}
+
+#[test]
+fn w9_generation_two_and_three_keep_intrinsic_history_without_audit_snapshots() {
+    let path = place("three-generations");
+    let fx = fixture();
+    let first = make_run(&path, &fx, true);
+    assert!(first.ok);
+    let gen2 = path.join("generation2");
+    let old_bytes = fs::read(path.join("witness")).unwrap();
+    let report2 = recover_witness_generation(
+        RecoveryPaths {
+            source_storage: &path.join("store"),
+            source_ledger: &path.join("witness"),
+            fresh_target: &gen2,
+        },
+        fx.policy.clone(),
+        fx.target.clone(),
+        first.head,
+    )
+    .unwrap();
+    assert!(
+        fs::read(gen2.join("witness"))
+            .unwrap()
+            .starts_with(&old_bytes)
+    );
+    assert_eq!(&report2.records[..first.records.len()], &first.records);
+    let pending2 = path.join("pending2");
+    fs::create_dir(&pending2).unwrap();
+    assert_pending_generation(
+        &pending2,
+        &report2.records,
+        fx.target.clone(),
+        first.head,
+        &fx.wire,
+    );
+    fs::rename(gen2.join("source-snapshot"), path.join("retained-audit2")).unwrap();
+    let mut second = WitnessLedger::open_anchored(
+        &gen2.join("witness"),
+        fx.target.clone(),
+        LedgerTail::RejectComplete,
+        first.head,
+    )
+    .unwrap();
+    let before = second.head();
+    let route2 = second.submit_recovered(&fx.wire, &[2]).unwrap();
+    assert_eq!(second.head(), before);
+    let route3 = second.submit_recovered(&fx.wire, &[3]).unwrap();
+    assert_eq!(second.head().sequence, before.sequence + 1);
+    let second_head = second.head();
+    let second_records = second.records().to_vec();
+    drop(second);
+    let second_bytes = fs::read(gen2.join("witness")).unwrap();
+    let gen3 = path.join("generation3");
+    let policy3 = WitnessPolicy::new(cfg(3), &fx.members).unwrap();
+    let report3 = recover_witness_generation(
+        RecoveryPaths {
+            source_storage: &gen2.join("native"),
+            source_ledger: &gen2.join("witness"),
+            fresh_target: &gen3,
+        },
+        fx.target.clone(),
+        policy3.clone(),
+        second_head,
+    )
+    .unwrap();
+    assert!(
+        fs::read(gen3.join("witness"))
+            .unwrap()
+            .starts_with(&second_bytes)
+    );
+    assert_eq!(&report3.records[..second_records.len()], &second_records);
+    let pending3 = path.join("pending3");
+    fs::create_dir(&pending3).unwrap();
+    assert_pending_generation(
+        &pending3,
+        &report3.records,
+        policy3.clone(),
+        second_head,
+        &fx.wire,
+    );
+    fs::rename(gen3.join("source-snapshot"), path.join("retained-audit3")).unwrap();
+    // Either externally held predecessor receipt accepts the complete descendant.
+    let earlier = WitnessLedger::open_anchored(
+        &gen3.join("witness"),
+        policy3.clone(),
+        LedgerTail::RejectComplete,
+        first.head,
+    )
+    .unwrap();
+    assert_eq!(earlier.head(), report3.new_head);
+    drop(earlier);
+    let mut third = WitnessLedger::open_anchored(
+        &gen3.join("witness"),
+        policy3,
+        LedgerTail::RejectComplete,
+        second_head,
+    )
+    .unwrap();
+    let before = third.head();
+    assert_eq!(third.submit_recovered(&fx.wire, &[2]).unwrap(), route2);
+    assert_eq!(third.submit_recovered(&fx.wire, &[3]).unwrap(), route3);
+    assert_eq!(third.head(), before);
+    third.submit_recovered(&fx.wire, &[4]).unwrap();
+    assert_eq!(third.head().sequence, before.sequence + 1);
+    assert_eq!(count(third.records(), "submission"), 3);
+    assert_eq!(fs::read(path.join("witness")).unwrap(), old_bytes);
+    assert_eq!(fs::read(gen2.join("witness")).unwrap(), second_bytes);
+    save(
+        &path.join("lineage.json"),
+        &json!({"generation1":first.head,"generation2":second_head,"generation3_before_new_route":before,"generation3_after_new_route":third.head(),"records":third.records(),"audit_snapshot_paths_unavailable":[gen2.join("source-snapshot"),gen3.join("source-snapshot")]}),
     );
 }

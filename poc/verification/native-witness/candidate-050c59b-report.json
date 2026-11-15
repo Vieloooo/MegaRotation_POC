@@ -1,0 +1,175 @@
+{
+  "candidate": "050c59b9e446e0aaf295f24e3d3a15357b00c443",
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "60s",
+    "./poc/scripts/bootstrap.sh",
+    "test",
+    "--manifest-path",
+    "prototypes/i1b-runtime/Cargo.toml",
+    "--locked",
+    "--offline",
+    "--no-fail-fast",
+    "--",
+    "--test-threads=1"
+  ],
+  "cwd": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2",
+  "output": "/tmp/native-witness-independent-65l9bw76",
+  "exit_code": 0,
+  "hashes_before": {
+    "poc/docs/contracts/task-contract-native-witness-v1.md": "29676b5721d29b6bf991940b2a16612de7dc090b6f32ef79531b0a9cb95633cb",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/prototypes/i1b-runtime/Cargo.toml": "69015f1b25049acb5a9df5fc9a48b29f2ce8ed9458f5f9fffafdd3de0986ca56",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "0e989cd454ed17540fadc4884a0d1af84dd814ae8f283b9601465ad352428562",
+    "poc/prototypes/i1b-runtime/src/context.rs": "987c6c3c184f25d12191c471f4f5fd94618564ed4bcf1dd23ce6d49e303de95b",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "7fca606bbdf40b3f946b418c88b4867ac66b9940f8dc80ff92534a237664541b",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "61d6c52fb4f69c1d2c177542da170d1d8052052013b412b998c6c49121452b6d",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "8fcc7d7d86d497e897eed2b27009961c14541f898fa02b4fc5e3f70ace30d3bd",
+    "poc/prototypes/i1b-runtime/src/witness.rs": "8da996f8cdc64a72326f9a308d268cbf373e44cddb5b3338f5df7304f5e9f8c2",
+    "poc/prototypes/i1b-runtime/src/witness_ledger.rs": "87bfda4127f5d16f5f10194de651990c6b67a32396127aaf5322080c55e0a7c8",
+    "poc/prototypes/i1b-runtime/src/witness_recovery.rs": "6401255e7962299892c2f40287424b6967f373c138a1959c952b18312283d4fb",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/verification/native-witness/acceptance.rs": "e1640b62bb12883eebecca915e2dc4ef05ec3bdb67d3203716285ae89c37cf37",
+    "poc/verification/native-witness/run_acceptance.py": "6245069b2bc4b5e22c07305cc72c92ef01a8ee8b91e6adcc11e4c8774143a720"
+  },
+  "hashes_after": {
+    "poc/docs/contracts/task-contract-native-witness-v1.md": "29676b5721d29b6bf991940b2a16612de7dc090b6f32ef79531b0a9cb95633cb",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "dae3a3a7e9123ed17c705a0690b004c5af10f10ac9c06610203688592bbc33ca",
+    "poc/prototypes/i1b-runtime/Cargo.toml": "69015f1b25049acb5a9df5fc9a48b29f2ce8ed9458f5f9fffafdd3de0986ca56",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "0e989cd454ed17540fadc4884a0d1af84dd814ae8f283b9601465ad352428562",
+    "poc/prototypes/i1b-runtime/src/context.rs": "987c6c3c184f25d12191c471f4f5fd94618564ed4bcf1dd23ce6d49e303de95b",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "7fca606bbdf40b3f946b418c88b4867ac66b9940f8dc80ff92534a237664541b",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "61d6c52fb4f69c1d2c177542da170d1d8052052013b412b998c6c49121452b6d",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "8fcc7d7d86d497e897eed2b27009961c14541f898fa02b4fc5e3f70ace30d3bd",
+    "poc/prototypes/i1b-runtime/src/witness.rs": "8da996f8cdc64a72326f9a308d268cbf373e44cddb5b3338f5df7304f5e9f8c2",
+    "poc/prototypes/i1b-runtime/src/witness_ledger.rs": "87bfda4127f5d16f5f10194de651990c6b67a32396127aaf5322080c55e0a7c8",
+    "poc/prototypes/i1b-runtime/src/witness_recovery.rs": "6401255e7962299892c2f40287424b6967f373c138a1959c952b18312283d4fb",
+    "poc/vendor/commonware-runtime/src/tokio/runtime.rs": "319e8f9bdb4698e48a7a045a338298c2f37691fcf36d65819b783ec222386db7",
+    "poc/verification/native-witness/acceptance.rs": "e1640b62bb12883eebecca915e2dc4ef05ec3bdb67d3203716285ae89c37cf37",
+    "poc/verification/native-witness/run_acceptance.py": "6245069b2bc4b5e22c07305cc72c92ef01a8ee8b91e6adcc11e4c8774143a720"
+  },
+  "test_result_rows": [
+    [
+      "ok",
+      "2",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "7",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "27",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "1",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "1",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "7",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "11",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "12",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "20",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "11",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "3",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "ok",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ]
+  ],
+  "passed": 102,
+  "failed": 0,
+  "failed_tests": [],
+  "scope": "NATIVE-WITNESS fixture plus prior runtime/storage regressions; no native live engine, guarded signing, transport or full I1b claim",
+  "independent_cases": {
+    "passed": 20,
+    "failed": 0,
+    "total": 20
+  },
+  "prior_cases": {
+    "passed": 82,
+    "failed": 0
+  },
+  "binary_sha256": "08668908b9faead02b35d938d00c53f8890a3abdfbacd5ade7464d76524e9d8d",
+  "format_and_diff_checks": "PASS: bootstrap fmt --manifest-path prototypes/i1b-runtime/Cargo.toml --all --check; git diff --check",
+  "status": "ACCEPTED for bounded NATIVE-WITNESS v1 + precision amendment2; integrated rerun required; full I1b remains incomplete",
+  "closed_findings": [
+    "superseded durable byte versions",
+    "non-boundary substring witness",
+    "recovery authorization continuity",
+    "selected Sync/start_sync Err uncertainty (tagged lost-response injection)"
+  ],
+  "fault_injection_limit": "The Sync/start_sync Error branch is exercised by a tagged root-only lost-response injection AFTER a successful native full sync. No physical OS disk failure is claimed."
+}
