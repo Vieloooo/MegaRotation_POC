@@ -1,6 +1,12 @@
 # 功能02：时钟与通信准备记录
 
-日期：2026-11-15。状态：**PREPARATION，waiting-dependency=01**。本记录与 [合同 v1](contracts/task-contract-sim-communication-v1.md) 只交付来源推导、接口草案和独立验收准备。未启动 Builder/Tester，未修改运行时代码/proto/types/manifest，未运行 Rust build 或重型测试。功能02与整体 I1 均未宣称完成。
+日期：2026-11-15。当前状态：**KERNEL CONTRACT REVIEW；native-integration-waiting-dependency=01**。原准备材料保存于 `125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10`；下方“环境、基线与角色”至旧准备结论记录首轮事实，不冒称当前仍受whole-feature门禁。[dependency-plan-v2](commander/dependency-plan-v2.md) 已于 `0a951c4` 冻结并正常合并为本worktree `c647098`，授权独立生产kernel先实现，完整02/I1验收范围不变。
+
+当前新增交付为 [kernel合同](contracts/task-contract-sim-transport-kernel-v1.md) 与 [API v1](sim-transport-api-v1.md)。Docer本轮只修四份文档；Verifier同时只读独立推导；lead冻结并提交接口版本后，交棒Verifier保存预期，再由一个Builder实现新 `poc/crates/sim-transport/` 独立workspace/lock。native/I1a/根manifest/types/proto仍禁改。组件通过不计完整功能accepted，不启动额外用户chat。
+
+资源状态更新（lead交接）：`.build` 已安全链接至02专属数据盘目录，776MB公开Cargo registry已复制，Rust1.95版本已核对；当前root/home约13GB、数据盘约1.4TB。`.build` 是生成资源链接，由现有common `.git/info/exclude` 忽略，不纳入Git（该exclude非本chat修改）。所有重型命令仍全宿主flock串行，CARGO_BUILD_JOBS=2。Docer未构建、未执行源码或提交。
+
+当前决议：Q3/Q4纯运输算法与组件持久确认API由本kernel合同选定，等待lead冻结；真实fsync/root floors/恢复签名gate仍属01，公共registry/cid/ReplayPosition属03，reader prefix/日志顺序属06，L1业务属09。上述边界不阻塞独立kernel。当前无需要总协调先行裁决才能写kernel的新增实质阻塞项。
 
 ## 环境、基线与角色
 

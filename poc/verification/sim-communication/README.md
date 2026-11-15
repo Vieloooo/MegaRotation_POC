@@ -1,5 +1,7 @@
 # 功能 02：独立验收准备
 
+后续分层依赖授权的独立组件准备见 [kernel-v1](kernel-v1/README.md)。此页及原64向量保留完整集成范围；kernel里程碑不替代这些gate。
+
 日期：2026-11-15。状态：**PREPARATION ONLY；waiting-dependency=01**。这里没有功能 02 的运行时通过结果，没有实现候选，没有仿真。
 
 基线为 `ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`；worktree 为 `/home/jy/.codex/worktrees/0b8e/megaroation_poc`；分支为 `codex/poc-sim-communication`。Verifier 使用实际启动的 `bft_verifier` 命名角色；主协调读取本轮 turn context 后确认模型/effort 为 `gpt-6-astra` / `xhigh`。

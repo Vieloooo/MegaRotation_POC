@@ -1,8 +1,8 @@
 # SIM-COMMUNICATION v1 — 全局虚拟时钟与仿真通信准备合同
 
-日期：2026-11-15。阶段：**PREPARATION；waiting-dependency=01**。本版冻结已有来源的不可降低规则和独立验收范围；新 wire/API、编码、适配路径与持久化布局均为待审查提案。获得总协调接受的 01 集成 SHA、01/03 接口决议并由本功能 lead 冻结实现附件前，不得启动 Builder、改运行时代码或运行功能验收。本文件不是功能完成或测试通过证据。
+日期：2026-11-15。阶段：**KERNEL CONTRACT REVIEW；native-integration-waiting-dependency=01**。[分层依赖 v2](../commander/dependency-plan-v2.md) 已解除整个02实现必须等待01完成的门禁。独立 `poc/crates/sim-transport/` 可在 [kernel合同](task-contract-sim-transport-kernel-v1.md) 和 [API v1](../sim-transport-api-v1.md) 经lead冻结、独立预期先行后实现。native/root/RPC真实接线仍等待01准确提交与文件移交；公共身份/域对象消费03。本文保留完整功能硬规则和原验收，不是功能完成或测试通过证据。
 
-准备基线：`ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`，其中代码基线为 `36eff1c76d5c4df5d0790133c0e14719c0c73ebd`。后续实现必须在包含已接受 01 的单一集成 revision 上进行；本准备 SHA 不替代它。
+原准备基线：`ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`，其中代码基线为 `36eff1c76d5c4df5d0790133c0e14719c0c73ebd`；准备提交为 `125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10`。本阶段在正常合并授权提交 `0a951c4` 的本worktree revision `c647098` 上冻结独立组件。只有后续native接线/完整功能验收必须包含获接受的01准确集成SHA。
 
 ## 1. 规则来源与冻结层级
 
@@ -24,15 +24,15 @@ P0 固定三地区、每区五个等权身份，正常 quorum 为四个不同合
 
 **F：** 本任务把可配置时钟、endpoint、链路与可靠结果运输接到真实 native 路径。保留 I1a、Fresh 及 01 恢复 gate。15 个 replica 地址可配置、注册、按 cid 交付是本任务验收；04 负责 15 个真实复制节点上的 slot-aware Session Program。报告必须分别列实际 OS PID、注册 endpoint、活动 native engine 数量及各 channel 的真实覆盖，不能用 15 个静态地址冒充 15 个已运行引擎。
 
-本阶段只允许 Docer 写本文件和 [preparation](../sim-communication-preparation.md)，Verifier 写 `poc/verification/sim-communication/`。一个 writer 写入时另一角色只读；无源码、proto、types、manifest、lockfile 或 commander 登记改动。
+首轮准备仅写文档/独立静态输入，已保存于 `125d8cf`。当前Docer独占本文件、preparation及新kernel合同/API文档；随后Verifier保存独立kernel预期。lead冻结后一个Builder只写新 `poc/crates/sim-transport/`，该目录使用独立workspace及自己的Cargo.lock；不修改已有native/I1a、根manifest/lock、types、proto或commander。一个writer写入时其他角色只读。
 
-以下均为 **P：后续路径提案，不是当前写入授权**。
+新独立crate的写入范围以kernel合同为准；以下既有native集成路径仍为 **P：后续路径提案，不是当前写入授权**。本节原提议在native目录新增运输模块已由独立crate方案替代；未来直接接入该生产组件，不复制第二套实现。
 
 | 路径/责任 | 未来所有者与边界 |
 | --- | --- |
 | `poc/prototypes/i1b-runtime/src/{native_hub,native_config,native_network}.rs` | 01 验收交出后由 02 单一 Builder 拥有；注册、路由、配置、native transport 接线。 |
 | 同目录 `driver.rs` | 仅 route/transport 接口由 02 在 01 交出后修改；恢复、I/O custody、终止与签名 gate 保持 01 合同。共享同文件必须串行移交。 |
-| 同目录拟新增 `sim_endpoint.rs`、`sim_transport.rs`、`reliable_outbox.rs` | 分别承载 endpoint 映射、确定性队列、outbox/inbox plain records；是否提取为 crate 由 lead 决定。 |
+| `poc/crates/sim-transport/` | 当前获授权的独立生产kernel；精确API、算法和组件gate见新合同，独立workspace/lock由02拥有。 |
 | `poc/crates/sim-hub/src/`、`poc/crates/sim-runtime/src/` | 只复用已验收调度/队列语义；若要抽取共同逻辑，另列精确文件交总协调批准，不能顺带重构 I1a。 |
 | `poc/proto/native.proto`、native `native_wire_support.rs` | 02 lead 集成新 transport profile；字段号、版本、hash 向量须实现前冻结。I1a `i1.proto` 与 Fresh 编码保留。 |
 | `poc/crates/types/` | 03 独占公共域对象、registry/config、Descriptor/cid、ReplayPosition 的 canonical 编码；02 引用，不再造一份。 |
@@ -168,7 +168,7 @@ exact duplicate Ack 幂等且不重新投递；altered duplicate、wrong event/w
 
 **F（S1 §2/§7/§10/§11）：** Publisher/Espresso、L1、DA、治理与独立 reader 使用同一受控交付接口，各 actor 独立状态/故障/inbox。实际 Anvil、Espresso 与业务验证由后继模块负责，02 不制造已经 finalized 的事实。公共来源产生、finalize、网络到达、reader 验证/消费的位置分别记录。
 
-**P：** 提供 `RegisterEndpoint`、`GrantInput`、`CommitEffects`、`Arm/CancelTimer`、`EnqueueReliable`、`Poll/DeliverReaderPrefix` 的语义接口，准确 Rust trait/proto 等待 Q1/Q2。`ReaderSubscription(reader_id,source_id,cursor,codec_ref)` 的 cursor 使用 03/09 公共 `ReplayPosition`，不从最大收到 height 猜成前缀。
+**P（更新）：** 02提供受控grant/ClockView/opaque Delivery与可靠保管组件的精确类型，见API v1；不提供公共 `Poll/DeliverReaderPrefix` 业务实现。06拥有公共日志/reader prefix顺序，公共ReplayPosition等canonical对象由03收口。09拥有L1 position/finalized映射。02只按独立Reader endpoint交付opaque bytes，不能从最大收到height猜前缀。
 
 不同 reader 只获得各自实际交付且连续可验证的前缀。A 已收到 position 5 不授予 B 任何输入；B 先收到 5 而缺 4 时保留 gap/pending，不能对协议暴露包含缺口的 finalized prefix。读者自己的 receipt/cursor 跨 restart 保留，重复不跳位置。相同公共 position 的消费可以比较；不同 position 不能直接判链分歧。L1 block/tx/log 与 Espresso q/θ 不互换为本地 tick。
 
@@ -209,9 +209,9 @@ admin 故障动作包含作用 endpoint、虚拟位置与命名 checkpoint；pro
 | --- | --- | --- |
 | Q1 | 01 接受 SHA、route/driver 文件移交、root receipt/effect扩展、RecoveredAck/外部floor、outbox/inbox持久化故障域、terminal历史运输权限 | 继承01 root custody；hub只调度，durable义务属source/receiver；hub crash recovery不默认纳入。由01/总协调确认。 |
 | Q2 | 03 registry/config_ref、pid/member/signer、Descriptor/cid/context、ReplayPosition canonical格式；新运输schema/hash/channel enum | 03独占域对象；02仅外层transport编码；明确 public config_ref 与 transport_config_hash 的组合关系，避免循环hash。 |
-| Q3 | endpoint规则优先级、seeded jitter算法、reorder语义、online端点、queue和byte drain预算 | 先冻结完整展开表/独立字节向量与整数例子；Fresh旧profile保持原样。 |
-| Q4 | 消费方是否需要额外逻辑FIFO、ACK receipt认证/回收、容量/backpressure、业务交付义务、GC和retry参数 | 默认仅transport attempts FIFO与durable dedup；reader独立prefix gate；保守有限run不prune；不可ACK后丢义务。 |
+| Q3 | 纯运输算法 | 由kernel合同/API v1选定具体匹配、jitter/tie、FIFO/故障、容量与payload-byte drain；lead冻结后无需等待01。Fresh旧profile不变。 |
+| Q4 | 可靠组件与真实持久接线分层 | kernel冻结outbox/inbox/ACK状态、可信adapter确认、容量/保留/重试；真实root custody/ACK认证仍Q1。无额外端到端逻辑FIFO，reader业务prefix归06。 |
 | Q5 | 15 endpoint与真实native活动覆盖如何分场景、service/reader fixture入口、04/06/09消费接口 | 至少真实native四channel闭环及15地址/多cid对照；逐项报告真实PID/engine，04才作15节点slot-aware结论。 |
 | Q6 | 精确新文件、模块声明/manifest所有者、01回归命令与预算 | 总协调统一公共路径；在同一集成SHA冻结再实现。 |
 
-准备完成后由 lead 保存文档与独立输入 SHA；功能保持开放并标 `waiting-dependency=01`。获得决议后补充实现附件、重核来源/路径并冻结合同，随后才按 Builder → Verifier → Tester 执行。
+原准备SHA及完整SC-01–18保留。当前先冻结独立kernel合同/API和独立输入，按Builder→Verifier→Tester完成组件里程碑；组件PASS不计功能accepted。native接线保持 `native-integration-waiting-dependency=01`，未来在真实集成SHA运行完整原矩阵。03/06/09未交付的业务canonical对象保持opaque，不阻塞纯运输算法。

@@ -1,0 +1,906 @@
+{
+  "schema": 1,
+  "stage": "INDEPENDENT_EXPECTED_BEFORE_BUILDER",
+  "runtime_candidate_sha": null,
+  "execution": "NOT_RUN",
+  "sources": [
+    "source-first.md",
+    "expectations.md",
+    "../../../docs/contracts/task-contract-sim-transport-kernel-v1.md",
+    "../../../docs/sim-transport-api-v1.md"
+  ],
+  "vectors": [
+    {
+      "id": "KV01",
+      "gate": "K-01",
+      "pre": {
+        "numeric_id": 0
+      },
+      "trigger": "construct Replica/Service/Reader endpoints",
+      "expected": {
+        "distinct": 3,
+        "hash_encodings_hex": [
+          "0100000000",
+          "0200000000",
+          "0300000000"
+        ]
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV02",
+      "gate": "K-01",
+      "pre": {
+        "golden_message": "golden-vectors.json/message"
+      },
+      "trigger": "change attempt/current wrapper incarnation only",
+      "expected": {
+        "logical_id_hex": "7423e6af569d272d5d2a80634d61b4a84e615a8d5e95ce2c7e32771702206b73",
+        "original_payload": "616263",
+        "origin_unchanged": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV03",
+      "gate": "K-01",
+      "pre": {
+        "valid_registered_route": true
+      },
+      "trigger": [
+        "wrong run/config",
+        "wrong current binding",
+        "permission denied",
+        "wrong context",
+        "bad payload hash",
+        "future origin"
+      ],
+      "expected": {
+        "reject": true,
+        "unchanged_snapshot": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV04",
+      "gate": "K-01",
+      "pre": {
+        "payload_limit": 65536
+      },
+      "trigger": [
+        65535,
+        65536,
+        65537
+      ],
+      "expected": {
+        "payload_guard_accepts": [
+          true,
+          true,
+          false
+        ],
+        "native_semantic_validity_claim": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV05",
+      "gate": "K-02",
+      "pre": {
+        "config": "golden normalized config"
+      },
+      "trigger": "reverse declaration order then normalize",
+      "expected": {
+        "canonical_equal": true,
+        "config_hash_hex": "c71654ba27624d989e8ac44469b5b055c061980eecf693f67bfb30424359438c"
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV06",
+      "gate": "K-02",
+      "pre": {
+        "matching_specificities": [
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            1
+          ]
+        ]
+      },
+      "trigger": "select maximum lexicographic profile",
+      "expected": {
+        "winner": [
+          1,
+          0,
+          0
+        ],
+        "same_top_priority_error": "AmbiguousProfile",
+        "no_match_error": "MissingProfile"
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV07",
+      "gate": "K-02",
+      "pre": {
+        "golden_message": true,
+        "jitter_max_us": 1000,
+        "seeds": [
+          7,
+          42,
+          99
+        ]
+      },
+      "trigger": "compute jitter independent of OS/config declaration order",
+      "expected": {
+        "attempt1_us": [
+          4,
+          996,
+          436
+        ],
+        "attempt4_us": [
+          301,
+          48,
+          856
+        ]
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV08",
+      "gate": "K-02",
+      "pre": {
+        "fifo": true,
+        "raw_due_us": [
+          1020,
+          1002
+        ],
+        "packet_seq": [
+          1,
+          2
+        ]
+      },
+      "trigger": "Drain at eligible ticks",
+      "expected": {
+        "delivery_order": [
+          1,
+          2
+        ],
+        "second_not_before_first": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV09",
+      "gate": "K-02",
+      "pre": {
+        "independent_links": 3,
+        "same_eligible_us": 1020,
+        "packet_seq": [
+          1,
+          2,
+          3
+        ]
+      },
+      "trigger": "global candidate tie order",
+      "expected": {
+        "seed7": [
+          3,
+          2,
+          1
+        ],
+        "seed42": [
+          2,
+          3,
+          1
+        ],
+        "seed99": [
+          2,
+          3,
+          1
+        ]
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV10",
+      "gate": "K-02",
+      "pre": {
+        "order": "Unordered",
+        "raw_due_us": [
+          1020,
+          1002
+        ],
+        "packet_seq": [
+          1,
+          2
+        ]
+      },
+      "trigger": "Drain",
+      "expected": {
+        "delivery_order": [
+          2,
+          1
+        ],
+        "normal_fifo_claim": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV11",
+      "gate": "K-02",
+      "pre": {
+        "offline_us": [
+          [
+            1010,
+            1030
+          ]
+        ]
+      },
+      "trigger": [
+        1009,
+        1010,
+        1029,
+        1030
+      ],
+      "expected": {
+        "online": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "hold_raw_due1020_eligible": 1030
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV12",
+      "gate": "K-02",
+      "pre": {
+        "raw_due_us": 1020
+      },
+      "trigger": [
+        "immediate Fault",
+        "Send offline Drop",
+        "overflow after raw calculation",
+        "Drain offline",
+        "Drain stale destination"
+      ],
+      "expected": {
+        "raw_due_options": [
+          null,
+          null,
+          1020,
+          1020,
+          1020
+        ],
+        "first_two_only_copy_index": 0
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV13",
+      "gate": "K-02",
+      "pre": {
+        "rate_bytes_per_second": 1000000,
+        "payload_len": 3,
+        "raw_due_us": 1020
+      },
+      "trigger": "late first Drain at1100; backlog same link",
+      "expected": {
+        "first_delivered_us": 1100,
+        "next_release_us": 1103,
+        "zero_payload_pacing_us": 1,
+        "free_catchup_burst": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV14",
+      "gate": "K-02",
+      "pre": {
+        "capacity": 1,
+        "duplicate_delay_us": 0
+      },
+      "trigger": "Send one logical message",
+      "expected": {
+        "copy_indices": [
+          0,
+          1
+        ],
+        "packet_seq": [
+          1,
+          2
+        ],
+        "queued": 1,
+        "duplicate_drop_reason": "LinkCapacity",
+        "logical_messages": 1
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV15",
+      "gate": "K-02",
+      "pre": {
+        "capacity": 2
+      },
+      "trigger": "batch three otherwise-valid messages",
+      "expected": {
+        "queued": 2,
+        "dropped": 1,
+        "drop_is_successful_plan": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV16",
+      "gate": "K-02",
+      "pre": {
+        "isolated_cases": [
+          {
+            "saturated": "queued_copies",
+            "value": 1024,
+            "other_limits_nonbinding": true
+          },
+          {
+            "saturated": "queued_payload_bytes",
+            "value": 4194304,
+            "other_limits_nonbinding": true
+          },
+          {
+            "saturated": "tracked_messages",
+            "value": 8192,
+            "other_limits_nonbinding": true
+          }
+        ]
+      },
+      "trigger": "boundary additions isolated per limit",
+      "expected": {
+        "queue_addition": "Dropped GlobalCapacity",
+        "payload_addition": "Dropped PayloadBudget",
+        "new_tracked_id": "ResourceLimit with whole plan unchanged",
+        "history_eviction": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV17",
+      "gate": "K-02",
+      "pre": {
+        "send_tick_us": 18446744073709551615,
+        "latency_us": 1
+      },
+      "trigger": "Send with no immediate drop fault",
+      "expected": {
+        "error": "ArithmeticOverflow",
+        "unchanged_snapshot": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV18",
+      "gate": "K-02",
+      "pre": {
+        "queued_destination_incarnation": 1
+      },
+      "trigger": "Rebind destination1->2 then Drain old copy",
+      "expected": {
+        "drop_reason": "StaleBinding",
+        "old_wrapper_rewritten": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV19",
+      "gate": "K-03",
+      "pre": {
+        "revision": 0
+      },
+      "trigger": "plan valid batch without commit",
+      "expected": {
+        "revision": 0,
+        "snapshot_unchanged": true,
+        "external_events": 0
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV20",
+      "gate": "K-03",
+      "pre": {
+        "revision": 0,
+        "empty_queue": true
+      },
+      "trigger": "valid Send then malformed Send in same plan",
+      "expected": {
+        "plan_error": true,
+        "queue_entries": 0,
+        "packet_counter_consumed": 0,
+        "attempts_consumed": 0
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV21",
+      "gate": "K-03",
+      "pre": {
+        "two_plans_same_base_revision": 0
+      },
+      "trigger": "commit first then second",
+      "expected": {
+        "first_revision": 1,
+        "second_error": "StalePlan",
+        "second_mutations": 0
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV22",
+      "gate": "K-03",
+      "pre": {
+        "same_config_and_revision": true
+      },
+      "trigger": [
+        "commit plan from another new Kernel",
+        "commit original plan on cloned Kernel",
+        "commit original plan on snapshot-restored Kernel"
+      ],
+      "expected": {
+        "errors": [
+          "CrossInstance",
+          "CrossInstance",
+          "CrossInstance"
+        ],
+        "mutations": 0,
+        "private_token_in_snapshot": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV23",
+      "gate": "K-03",
+      "pre": {
+        "revision": 0
+      },
+      "trigger": "No-op commit",
+      "expected": {
+        "revision": 1,
+        "events": [],
+        "old_plan_stale": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV24",
+      "gate": "K-03",
+      "pre": {
+        "canonical_snapshot": true
+      },
+      "trigger": [
+        "whitespace-only valid JSON mutation",
+        "unknown field",
+        "duplicate packet_seq",
+        "packet_seq>=next_packet_seq",
+        "wrong config",
+        "oversized snapshot"
+      ],
+      "expected": {
+        "all_rejected": true,
+        "whitespace_error": "NonCanonical",
+        "history_reachability_proved": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV25",
+      "gate": "K-03",
+      "pre": {
+        "commands_limit": 4096,
+        "events_limit": 8192,
+        "snapshot_plus_events_bytes_limit": 33554432
+      },
+      "trigger": "exceed each limit separately",
+      "expected": {
+        "error": "ResourceLimit",
+        "unchanged_snapshot": true,
+        "budget_checked_while_accumulating": true
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV26",
+      "gate": "K-04",
+      "pre": {
+        "golden_records": [
+          "enqueue",
+          "attempt",
+          "receive",
+          "delete"
+        ]
+      },
+      "trigger": "compare exact action/record/transition/hash bytes",
+      "expected": {
+        "reference_file": "golden-vectors.json",
+        "implementation_used_as_expected": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV27",
+      "gate": "K-04",
+      "pre": {
+        "pending_plan": true
+      },
+      "trigger": [
+        "no receipt",
+        "wrong owner",
+        "wrong base_revision",
+        "wrong transition_id",
+        "wrong candidate_record_hash",
+        "zero storage_receipt"
+      ],
+      "expected": {
+        "release_count": 0,
+        "revision_unchanged": true,
+        "wrong_receipt_error": "InvalidReceipt",
+        "receipt_verifies_fsync": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV28",
+      "gate": "K-04",
+      "pre": {
+        "new_enqueue": true
+      },
+      "trigger": "confirm Enqueue then prepare Attempt then confirm Attempt",
+      "expected": {
+        "after_enqueue_releases": [
+          "Enqueued"
+        ],
+        "before_attempt_confirmation_network_sends": 0,
+        "after_attempt_confirmation_network_sends": 1
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV29",
+      "gate": "K-04",
+      "pre": {
+        "new_receiver_message": true
+      },
+      "trigger": "prepare Receive then confirm",
+      "expected": {
+        "before_confirmation_inbox_inserts": 0,
+        "before_confirmation_receive_acks": 0,
+        "after_releases": [
+          "InboxAvailable",
+          "ReceiveAck"
+        ],
+        "after_logical_inserts": 1
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV30",
+      "gate": "K-04",
+      "pre": {
+        "original_first_tick_us": 1020000,
+        "original_first_local_us": 1021000
+      },
+      "trigger": "same-message duplicate Receive at1050000",
+      "expected": {
+        "releases": [
+          "ReceiveAck"
+        ],
+        "first_tick_us": 1020000,
+        "first_local_us": 1021000,
+        "logical_insert_count": 1
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV31",
+      "gate": "K-04",
+      "pre": {
+        "active_outbox": true,
+        "valid_ack": true
+      },
+      "trigger": "prepare Acknowledge but do not confirm, then confirm",
+      "expected": {
+        "before_confirm_active": true,
+        "after_confirm_active": false,
+        "after_tombstone_retained": true,
+        "payload_retained_after_ack": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV32",
+      "gate": "K-04",
+      "pre": {
+        "existing_outbox_or_tombstone": true
+      },
+      "trigger": [
+        "identical duplicate Enqueue",
+        "matching tombstone Acknowledge"
+      ],
+      "expected": {
+        "release_counts": [
+          0,
+          0
+        ],
+        "successful_confirmation_revision_increments": [
+          1,
+          1
+        ],
+        "tombstone_reinserted": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV33",
+      "gate": "K-04",
+      "pre": {
+        "record_and_receipt_persisted": true
+      },
+      "trigger": "restore before outputs reached root",
+      "expected": {
+        "same_transition_id": true,
+        "same_release_index_order": true,
+        "automatic_claim_outputs_already_released": false,
+        "root_dedup_owner": "01"
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV34",
+      "gate": "K-04",
+      "pre": {
+        "plan_persisted": true,
+        "intervening_mutation": true
+      },
+      "trigger": "confirm stale plan",
+      "expected": {
+        "error": "StalePlan",
+        "durable_obligation_revoked": false,
+        "adapter_action": "fail closed and recover retained record/receipt through01"
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV35",
+      "gate": "K-04",
+      "pre": {
+        "retry_due_us": 1020000,
+        "last_attempt": 1
+      },
+      "trigger": "restore; Attempt at1019999 then1020000",
+      "expected": {
+        "first_error": "RetryNotDue",
+        "second_attempt": 2,
+        "next_due_us": 1040000,
+        "restore_resets_due": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV36",
+      "gate": "K-04",
+      "pre": {
+        "history_bounds_include": [
+          "outbox tombstones",
+          "consumed inbox"
+        ]
+      },
+      "trigger": "fill finite retention limits then new ID",
+      "expected": {
+        "error": "ResourceLimit",
+        "silent_gc": false,
+        "existing_message_removed": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV37",
+      "gate": "K-05",
+      "pre": {
+        "request_tick_us": 1000000,
+        "as_of_us": 1000250,
+        "delivery_us": 1010250,
+        "epsilon_us": [
+          1000,
+          -1000
+        ]
+      },
+      "trigger": "install then view at delivery",
+      "expected": {
+        "locals_us": [
+          1011250,
+          1009250
+        ],
+        "pairwise_difference_us": 2000,
+        "rpc_age_us": 10000
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV38",
+      "gate": "K-05",
+      "pre": {
+        "accepted_sequence": 2,
+        "outstanding_requests": [
+          1,
+          2
+        ]
+      },
+      "trigger": "invalid seq100 then valid seq3",
+      "expected": {
+        "accepted_sequence_after_each": [
+          2,
+          3
+        ],
+        "invalid_consumes_request": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV39",
+      "gate": "K-05",
+      "pre": {
+        "accepted_sequence": 3,
+        "outstanding_requests": [
+          1,
+          2
+        ]
+      },
+      "trigger": "valid seq5 then valid older seq4",
+      "expected": {
+        "accepted_sequence_after_each": [
+          5,
+          5
+        ],
+        "second_error": "StaleSample",
+        "lease_after_second_regresses": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV40",
+      "gate": "K-05",
+      "pre": {
+        "outstanding_requests": 64,
+        "request_counter": 64
+      },
+      "trigger": "request65",
+      "expected": {
+        "error": "ResourceLimit",
+        "request_counter": 64
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV41",
+      "gate": "K-05",
+      "pre": {
+        "incarnation": 1,
+        "last_successful_delivery_us": 1050000,
+        "accepted_sequence": 3
+      },
+      "trigger": "rebind1->2; fresh request; install at1049999 then1050000 with otherwise valid samples",
+      "expected": {
+        "sample_cleared": true,
+        "delivery_watermark_us": 1050000,
+        "old_install_rejected": true,
+        "equal_delivery_allowed": true,
+        "old_cid_restart_authorized": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV42",
+      "gate": "K-05",
+      "pre": {
+        "epsilon_us": 1000
+      },
+      "trigger": "convert deadlines -2000 and1025000",
+      "expected": {
+        "reference_ticks_us": [
+          0,
+          1024000
+        ],
+        "now_plus_duration_used": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV43",
+      "gate": "K-05",
+      "pre": {
+        "lease_end_us": 1100000
+      },
+      "trigger": "view at1099999,1100000,1100001",
+      "expected": {
+        "view_valid": [
+          true,
+          false,
+          false
+        ],
+        "expired_error": "LeaseExpired",
+        "view_renews_lease": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV44",
+      "gate": "K-06",
+      "pre": {
+        "reader_A_items": [],
+        "reader_B_items": []
+      },
+      "trigger": "same GrantConsumer fixture receives opaque item only atA",
+      "expected": {
+        "A_count": 1,
+        "B_count": 0,
+        "public_prefix_inferred": false,
+        "consumer_admin_effect_variants": 0
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV45",
+      "gate": "K-07",
+      "pre": {
+        "seeds": [
+          7,
+          42,
+          99
+        ],
+        "config_orders": [
+          "forward",
+          "reverse"
+        ],
+        "wall_pause_ms": [
+          0,
+          2
+        ]
+      },
+      "trigger": "12 pure component runs",
+      "expected": {
+        "runs": 12,
+        "within_seed_full_trace_equal": true,
+        "active_native_engines": 0,
+        "actual_worker_start_order_test": false
+      },
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "KV46",
+      "gate": "K-07",
+      "pre": {
+        "record_mutations": [
+          "wrong local invariant",
+          "wrong receipt binding",
+          "wrong release reference"
+        ]
+      },
+      "trigger": "independent reject checks",
+      "expected": {
+        "all_detectable_mutants_rejected": true,
+        "trusted_history_or_fsync_proof_claim": false
+      },
+      "execution": "NOT_RUN"
+    }
+  ]
+}

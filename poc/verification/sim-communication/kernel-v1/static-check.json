@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "scope": "static preparation consistency only",
+  "baseline_sha": "c64709871827128aae974343bc28bdafb9f89486",
+  "runtime_candidate_sha": null,
+  "runtime_tests": "not_run",
+  "build": "not_run",
+  "simulation": "not_run",
+  "active_native_engines": 0,
+  "vector_count": 46,
+  "kernel_gates": 7,
+  "full_sc_gates_mapped": 18,
+  "golden_jitter_count": 6,
+  "golden_tie_count": 9,
+  "golden_custody_records": 4,
+  "local_links_checked": 14,
+  "checked_file_sha256": {
+    "poc/verification/sim-communication/kernel-v1/README.md": "1c2f9f3f1f3f9de1eb4880a56eec1deef66681bb009e5202c29d423a37a53808",
+    "poc/verification/sim-communication/kernel-v1/coverage.md": "e61dac1ad4723dbc253ab4b4d3b5f935145cf31389978a747bee47dd58039c7b",
+    "poc/verification/sim-communication/kernel-v1/expectations.md": "b82766d9f8f195bd344ca56802034e9b447178248d24c53b254a7f3800066f71",
+    "poc/verification/sim-communication/kernel-v1/golden-vectors.json": "7f81675362f4a5bc8c5fd2efc3f90876b49b09c2b0d10d1aaa1b0e42231d8498",
+    "poc/verification/sim-communication/kernel-v1/source-first.md": "c70b444c2c42b58c1a635fad8300cec81e74325ddd3aa16940316464c1cb59fa",
+    "poc/verification/sim-communication/kernel-v1/vectors.json": "5a0030325f9a859110da097f471599c607b85320b7f975c6b6ab29205a5fc814"
+  },
+  "limitations": [
+    "No Builder source inspected",
+    "No Rust harness/build yet",
+    "Structured mock receipt does not verify real fsync/authentication/history",
+    "Lead clarification text awaits synchronized freeze; source and algorithm expectations are recorded",
+    "Full SC/native/01/Clock RPC integration remains open"
+  ],
+  "commands": [
+    {
+      "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+      "command": "python3 - <<'PY'\nimport collections, hashlib, json, re, subprocess\nfrom pathlib import Path\nroot=Path('/home/jy/.codex/worktrees/0b8e/megaroation_poc')\nbase=root/'poc/verification/sim-communication/kernel-v1'\ng=json.loads((base/'golden-vectors.json').read_text())\nv=json.loads((base/'vectors.json').read_text())\ndef H(domain,*parts):\n    raw=domain.encode(); material=len(raw).to_bytes(8,'big')+raw\n    for part in parts: material+=len(part).to_bytes(8,'big')+part\n    return hashlib.sha256(material).digest()\ndef C(x): return json.dumps(x,separators=(',',':'),ensure_ascii=False).encode()\ndef E(x): return bytes([{'replica':1,'service':2,'reader':3}[x['kind']]])+x['value'].to_bytes(4,'big')\nm=g['message']; o=m['origin']\nph=H('SIMT/payload/v1',bytes(m['payload']))\nassert ph.hex()==g['payload_hash']['hex']=='a486d65d31be102f081390036c0c8436009c0ede7ff4dcdf879d75b2e8af1bda'\nmid=H('SIMT/message/v1',bytes(m['run']),bytes(m['config']),E(m['source']),E(m['destination']),m['channel'].to_bytes(2,'big'),b'\\1'+bytes(m['context']),bytes(m['codec']),o['step_id'].to_bytes(8,'big'),o['effect_index'].to_bytes(4,'big'),o['sent_tick_us'].to_bytes(8,'big'),o['source_incarnation'].to_bytes(8,'big'),ph)\nassert mid.hex()==g['message_id']['hex']=='7423e6af569d272d5d2a80634d61b4a84e615a8d5e95ce2c7e32771702206b73'\nassert list(mid)==m['logical_id']\nassert C(g['normalized_transport_config']).decode()==g['normalized_config_canonical_utf8']\nassert H('SIMT/config/v1',C(g['normalized_transport_config'])).hex()==g['kernel_config_hash']['hex']=='c71654ba27624d989e8ac44469b5b055c061980eecf693f67bfb30424359438c'\nassert H('SIMT/rate/v1',b'fixed-rate-one-v1').hex()==g['rate_profile']['hex']\nfor j in g['jitter']:\n    h=H('SIMT/jitter/v1',j['seed'].to_bytes(8,'big'),E(m['source']),E(m['destination']),m['channel'].to_bytes(2,'big'),mid,j['attempt'].to_bytes(4,'big'))\n    assert h.hex()==j['digest_hex'] and int.from_bytes(h[:8],'big')==j['word_u64']\n    assert j['word_u64']%(j['jitter_max_us']+1)==j['jitter_us']\nassert [x['jitter_us'] for x in g['jitter'] if x['attempt']==1]==[4,996,436]\nassert [x['jitter_us'] for x in g['jitter'] if x['attempt']==4]==[301,48,856]\nfor t in g['packet_ties']:\n    assert H('SIMT/tie/v1',t['seed'].to_bytes(8,'big'),t['packet_seq'].to_bytes(8,'big')).hex()==t['digest_hex']\nfor seed,order in g['tie_packet_seq_order'].items():\n    assert order==[x['packet_seq'] for x in sorted((x for x in g['packet_ties'] if x['seed']==int(seed)),key=lambda x:x['digest_hex'])]\nfor name,row in g['custody_records'].items():\n    r=row['record']; assert C(r).decode()==row['record_canonical_utf8']\n    assert C(r['action']).decode()==row['action_canonical_utf8']\n    tid=H('SIMT/custody-transition/v1',bytes(m['run']),bytes(m['config']),E(r['owner']),r['base_revision'].to_bytes(8,'big'),C(r['action']))\n    assert tid.hex()==row['transition_id_hex'] and list(tid)==r['transition_id']\n    assert H('SIMT/custody-record/v1',C(r)).hex()==row['record_hash_hex']\n    assert len(C(r))==row['record_len_bytes']\n    assert r['candidate']['revision']==r['base_revision']+1\n    assert r['candidate']['kernel_config_hash']==g['kernel_config_hash']['bytes']\nassert len(v['vectors'])==46 and len({x['id'] for x in v['vectors']})==46\nassert all(x['execution']=='NOT_RUN' for x in v['vectors'])\nassert set(x['gate'] for x in v['vectors'])=={'K-%02d'%i for i in range(1,8)}\nassert g['runtime_candidate_sha'] is None and v['runtime_candidate_sha'] is None\ncoverage=(base/'coverage.md').read_text()\nassert all('SC-%02d'%i in coverage for i in range(1,19))\nfiles=sorted(p for p in base.iterdir() if p.name!='static-check.json')\nlinks=0\nfor p in files:\n    if p.suffix=='.json': json.loads(p.read_text())\n    if p.suffix=='.md':\n        text=p.read_text()\n        assert all(line.rstrip()==line for line in text.splitlines())\n        for target in re.findall(r'\\[[^\\]]*\\]\\(([^)]+)\\)',text):\n            if '://' in target or target.startswith('#'): continue\n            assert (p.parent/target.split('#',1)[0]).resolve().exists(),(p,target)\n            links+=1\nbaseline=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()\nassert baseline=='c64709871827128aae974343bc28bdafb9f89486'\nsubprocess.run(['git','diff','--check'],cwd=root,check=True)\nstatus=subprocess.check_output(['git','status','--porcelain','--untracked-files=all'],cwd=root,text=True).splitlines()\nallowed=('poc/verification/sim-communication/kernel-v1/','poc/verification/sim-communication/README.md','poc/docs/contracts/task-contract-sim-communication-v1.md','poc/docs/sim-communication-preparation.md','poc/docs/contracts/task-contract-sim-transport-kernel-v1.md','poc/docs/sim-transport-api-v1.md')\nassert all(x[3:].startswith(allowed) for x in status),status\nprint(json.dumps({'status':'PASS','scope':'static preparation consistency only','baseline_sha':baseline,'runtime_candidate_sha':None,'runtime_tests':'not_run','build':'not_run','simulation':'not_run','active_native_engines':0,'vector_count':46,'kernel_gates':7,'full_sc_gates_mapped':18,'golden_jitter_count':6,'golden_tie_count':9,'golden_custody_records':4,'local_links_checked':links,'checked_file_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'limitations':['No Builder source inspected','No Rust harness/build yet','Structured mock receipt does not verify real fsync/authentication/history','Lead clarification text awaits synchronized freeze; source and algorithm expectations are recorded','Full SC/native/01/Clock RPC integration remains open']},ensure_ascii=False,indent=2))\n\nPY",
+      "exit_code": 0
+    }
+  ]
+}
