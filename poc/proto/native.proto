@@ -1,0 +1,102 @@
+syntax = "proto3";
+package rotation.native.v1;
+service NativeRun {
+  rpc Register(RegisterRequest) returns (RegisterReply);
+  rpc Run(stream WorkerFrame) returns (stream HubFrame);
+}
+message Binding {
+  uint32 schema_version = 1; bytes run_id = 2; bytes config_hash = 3;
+  uint32 worker_id = 4; uint32 member_id = 5; uint64 incarnation = 6;
+}
+message RegisterRequest {
+  Binding binding = 1; bytes registry_hash = 2; bytes namespace_hash = 3;
+  string profile = 4;
+}
+message RegisterReply { Binding binding = 1; bytes clock_domain = 2; }
+message WorkerFrame { oneof frame { RegisterRequest hello = 1; Ack ack = 2; } }
+message HubFrame { oneof frame { Grant grant = 1; Shutdown shutdown = 2; } }
+message Shutdown { string reason = 1; }
+message Grant {
+  Binding binding = 1; uint64 logical_step_id = 2; uint64 event_id = 3;
+  uint64 tick_us = 4; uint64 causal_wave = 5; bytes tie_rank = 6;
+  Input input = 7; bytes grant_hash = 8;
+}
+message Input {
+  oneof kind {
+    Empty request_sample = 1; ClockSample sample = 2;
+    StartEngine start = 3; Empty drive_ready = 4;
+    Envelope deliver = 5; Timer timer_fired = 6;
+    Work work_completed = 7; Cid close = 8;
+    Empty flush_archive = 9;
+  }
+}
+message Empty {}
+message Cid { bytes cid = 1; }
+message StartEngine {
+  bytes cid = 1; uint64 epoch = 2; bytes genesis_digest = 3;
+  bytes registry_hash = 4; bytes namespace_hash = 5;
+  bytes native_config_hash = 6; bytes app_fixture_hash = 7;
+  uint64 height_limit = 8; sint64 local_stop_us = 9;
+}
+message ClockSample {
+  bytes run_id = 1; uint32 worker_id = 2; uint64 incarnation = 3;
+  bytes clock_domain = 4; bytes rate_profile = 5; uint64 request_id = 6;
+  uint64 sequence = 7; uint64 as_of_tick_us = 8;
+  sint64 node_time_at_as_of_us = 9; uint64 uncertainty_us = 10;
+  uint64 lease_end_tick_us = 11;
+}
+message Timer { uint64 id = 1; bytes cid = 2; sint64 local_deadline_us = 3; }
+enum WorkKind { WORK_UNSPECIFIED = 0; PROPOSE = 1; VERIFY = 2; CERTIFY = 3; }
+message Work { bytes operation_id = 1; bytes cid = 2; WorkKind kind = 3; uint64 duration_us = 4; }
+message ClockRequest { uint64 request_id = 1; }
+message Receipt { uint64 sequence = 1; bytes hash = 2; }
+enum Channel { CHANNEL_UNSPECIFIED = 0; VOTE = 1; CERTIFICATE = 2; RESOLVER = 3; BODY = 4; }
+message LocalWitness { repeated bytes witness_ids = 1; bytes authorization_id = 2; Receipt receipt = 3; }
+message ResolverProvenance { uint64 request_id = 1; bytes source_record_id = 2; }
+message BodyProvenance { bytes content_id = 1; uint64 request_id = 2; }
+message ScriptedProvenance { bytes transcript_id = 1; bytes entry_id = 2; }
+message Envelope {
+  bytes run_id = 1; bytes cid = 2; uint64 epoch = 3;
+  uint32 src_member_id = 4; uint32 dst_member_id = 5;
+  Channel channel = 6; bytes message_id = 7;
+  bytes payload_hash = 8; bytes payload_bytes = 9;
+  uint32 attempt = 10; bool priority = 11;
+  oneof provenance {
+    LocalWitness local_witness = 12;
+    ResolverProvenance resolver = 13;
+    BodyProvenance body = 14;
+    ScriptedProvenance scripted = 15;
+  }
+}
+message BodyPacket { oneof kind { BodyPush push = 1; BodyRequest request = 2; BodyReply reply = 3; } }
+message BodyPush { bytes cid = 1; bytes block_bytes = 2; }
+message BodyRequest { uint64 request_id = 1; bytes cid = 2; bytes wanted_digest = 3; }
+message BodyReply { uint64 request_id = 1; bytes cid = 2; bytes block_bytes = 3; }
+enum SignKind { SIGN_UNSPECIFIED = 0; NOTARIZE = 1; NULLIFY = 2; FINALIZE = 3; }
+enum SignAction { ACTION_UNSPECIFIED = 0; CREATED = 1; CACHE_HIT = 2; DENIED = 3; }
+message SignAudit {
+  bytes cid = 1; uint64 epoch = 2; uint64 view = 3; SignKind kind = 4;
+  SignAction action = 5; bytes subject_bytes = 6; bytes attestation_bytes = 7;
+  uint32 signer_index = 8; uint64 grant_id = 9; uint64 task_id = 10;
+  uint64 tick_us = 11; sint64 local_time_us = 12;
+  uint64 sample_sequence = 13; uint64 lease_end_tick_us = 14;
+  sint64 local_stop_us = 15; string reason = 16;
+}
+message ProofObserved { bytes cid = 1; uint64 epoch = 2; uint64 view = 3; bytes payload_digest = 4; bytes finalization_bytes = 5; }
+message Delivered { bytes cid = 1; uint64 height = 2; bytes digest = 3; bytes parent_digest = 4; bytes block_bytes = 5; }
+message Lifecycle { bytes cid = 1; string event = 2; string reason = 3; }
+message Effect {
+  oneof kind {
+    ClockRequest clock_request = 1; Timer timer_arm = 2; Timer timer_cancel = 3;
+    Work work = 4; Envelope send = 5; SignAudit sign = 6;
+    ProofObserved proof = 7; Delivered delivered = 8; Lifecycle lifecycle = 9;
+  }
+}
+enum AckStatus { STATUS_UNSPECIFIED = 0; QUIESCENT = 1; REJECTED = 2; INFRASTRUCTURE_FAILURE = 3; }
+message Ack {
+  Binding binding = 1; uint64 logical_step_id = 2; uint64 event_id = 3;
+  bytes grant_hash = 4; AckStatus status = 5; repeated Effect effects = 6;
+  bytes runtime_events_json = 7; bytes application_events_json = 8;
+  Receipt witness_receipt = 9; uint64 durable_step_sequence = 10;
+  bytes durable_step_hash = 11; bytes logical_ack_hash = 12;
+}

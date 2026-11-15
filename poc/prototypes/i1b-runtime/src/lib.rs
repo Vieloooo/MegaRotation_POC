@@ -50,3 +50,10 @@ pub use witness_ledger::{
 pub use witness_recovery::{
     RecoveryPaths, RecoveryReport, native_data, recover_witness_generation,
 };
+
+/// Versioned native-process transport; the original I1a wire remains unchanged.
+pub mod native_wire {
+    tonic::include_proto!("rotation.native.v1");
+}
+
+pub mod native_wire_support;
