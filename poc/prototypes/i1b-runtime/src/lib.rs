@@ -44,8 +44,8 @@ fn hash_parts(domain: &[u8], parts: &[&[u8]]) -> Id {
 }
 
 pub use witness_ledger::{
-    BlobSeal, LedgerEntry, LedgerIdentity, LedgerRecord, LedgerTail, RecoveryLink, WitnessFault,
-    WitnessHead, WitnessLedger,
+    BlobSeal, IoObservation, LedgerEntry, LedgerIdentity, LedgerRecord, LedgerTail, ObservedChange,
+    RecoveryLink, WitnessFault, WitnessHead, WitnessLedger,
 };
 pub use witness_recovery::{
     RecoveryPaths, RecoveryReport, native_data, recover_witness_generation,
