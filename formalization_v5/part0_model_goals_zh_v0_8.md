@@ -1,1 +1,0 @@
-../formalization_v6/part0_model_goals_zh_v0_8.md

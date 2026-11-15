@@ -1,1 +1,0 @@
-../formalization_v3/sync_hotstuff_rr_part3_staking_changes_zh.md

@@ -139,3 +139,37 @@ The complete locked offline prototype suite passed 129 tests after the fix,
 including the Fresh golden root-step hash. The bounded worker still opens this
 snapshot without authorizing an interrupted transaction. Process-level
 authorization and reconciliation of an outstanding grant belong to R11.
+
+## Workspace recheck on 2026-11-15
+
+The clean implementation revision `0f013e224c81308574b886e0fc28318dcbb97c0a`
+passed the locked offline native suite (129 tests), including both independent
+pending-head regressions, and the locked build of `native-hub` and `native-worker`.
+The default I1a bootstrap passed 20 tests and skipped 11 tests marked ignored
+(10 loopback controls and their child entry point). The native formatting check
+initially flagged two independent recovery-test files. Applying `rustfmt` to
+those files yielded a clean format check and another 129 passing native tests.
+The native executable and Commonware patch hashes stayed the same.
+
+The seed 7 `recover-pending-verify` loopback run completed at the
+`AFTER_ACK_PENDING_VERIFY` boundary. Root, auxiliary, and witness floor
+sequences were 4, 33, and 1. Worker 1 crashed at virtual tick 1,025,500 µs
+and a different PID resumed at incarnation 2 and storage generation 2. The
+54-row trace shows the same Verify work binding before the crash and after
+reconnection, and the original local certification deadline of 1,419,500 µs
+was rearmed. The scenario completed at virtual tick 1,046,000 µs with delivery
+counts `[0, 0]`. The live worker and resumed worker exited 0. The run took
+1.140 s of local wall time.
+
+The resolved scenario, virtual trace and binary frame stream matched the
+prior seed 7 run byte for byte. The trace SHA-256 was
+`97e3d7e1d8035d68b9673f94ef2853936e6cd825fd64008192ff954b6c419568`.
+This recheck covers one seed, normal start order and 0 ms wall pause. The
+independent R1 process review and the broader R1–R18 acceptance remain open.
+The restricted sandbox rejected the initial loopback bind. The same binary
+completed in a separate loopback-enabled invocation.
+
+Local evidence includes [commands](../artifacts/verification/native-recovery/workspace-review-0f013e2-xhVX0r/commands.txt),
+[locked test output after formatting](../artifacts/verification/native-recovery/workspace-review-0f013e2-xhVX0r/native-tests-after.log),
+[binary and patch hashes](../artifacts/verification/native-recovery/workspace-review-0f013e2-xhVX0r/hashes.txt),
+and the [loopback command, trace anchors and comparison](../artifacts/verification/native-recovery/workspace-review-0f013e2-xhVX0r/r1-recheck.json).

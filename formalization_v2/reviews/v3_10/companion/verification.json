@@ -1,9 +1,0 @@
-{
-  "file": "sync_hotstuff_rr_part2_rotation_v3_10_zh.md",
-  "sha256": "b7182eaa5eeaf568c2a1f022b09483d4f671335dcf1e5c9634f624add715eed3",
-  "frozen_model_bytes": 9080,
-  "frozen_model_sha256": "db9f1d7de0a6c9896b436f476fef2bc37148ec4684118ed793523f8930f6b4c0",
-  "local_links_checked": 21,
-  "missing_links": [],
-  "scope": "Chinese consistency companion; English snapshot is the formal review source; review-status wording updated after reports"
-}
