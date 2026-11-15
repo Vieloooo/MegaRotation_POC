@@ -413,6 +413,11 @@ impl<S: Scheme<D>, D: Digest> Verifier<S, D> {
         }
     }
 
+    #[cfg(feature = "native-recovery")]
+    pub(super) const fn has_authoritative_proposal(&self) -> bool {
+        matches!(self.proposal, ProposalState::Certificate(_))
+    }
+
     /// Records that a certificate of `kind` exists, dropping its buffered votes.
     pub(super) fn record_certificate(&mut self, kind: Kind) {
         match kind {

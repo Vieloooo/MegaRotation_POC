@@ -385,6 +385,7 @@ async fn fake_worker(mode: &str, endpoint: &str, launch: &str, original: &str) -
         registry_hash: bytes(&c["base"], "registry_hash")?,
         namespace_hash: bytes(c, "namespace")?,
         profile: "native-engine-fresh-v1".into(),
+        recovery: None,
     };
     let mut client = NativeRunClient::connect(endpoint.to_owned())
         .await
@@ -517,6 +518,7 @@ async fn fake_worker(mode: &str, endpoint: &str, launch: &str, original: &str) -
             durable_step_sequence: sequence,
             durable_step_hash: vec![0; 32],
             logical_ack_hash: vec![],
+            recovery_receipt: None,
         };
         if sequence == 1 && matches!(mode, "frame-exact" | "frame-over") {
             let target = 1048576 + usize::from(mode == "frame-over");

@@ -13,7 +13,7 @@ use commonware_codec::Encode as _;
 use commonware_consensus::{
     Automaton, CertifiableAutomaton, Relay, Reporter,
     simplex::{
-        Plan,
+        Plan, recovery as recovery_hooks,
         types::{Activity, Certificate, Context},
     },
     types::Round,
@@ -22,7 +22,7 @@ use commonware_cryptography::{ed25519::PublicKey, sha256::Digest};
 use commonware_p2p::Recipients;
 use commonware_runtime::{Blob, ReadOptions, Spawner, Storage, Supervisor, WriteOptions};
 use prost::Message;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{Arc, Mutex},
@@ -86,6 +86,11 @@ pub(crate) enum AppAudit {
         body_parent: Option<Id>,
         native_parent_view: Option<u64>,
     },
+    WorkReconnected {
+        binding: WorkBinding,
+        reconnect_generation: u64,
+        original_due_tick_us: Option<u64>,
+    },
     WorkCompleted {
         binding: WorkBinding,
         completed_tick_us: u64,
@@ -120,23 +125,45 @@ pub(crate) enum AppAudit {
     },
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct WorkBinding {
-    work: Work,
-    member: u32,
-    epoch: u64,
-    view: u64,
-    parent_view: u64,
-    parent_digest: Id,
-    requested_payload: Id,
-    request_generation: u64,
-    request_tick_us: u64,
+    pub(crate) work: Work,
+    pub(crate) member: u32,
+    pub(crate) epoch: u64,
+    pub(crate) view: u64,
+    pub(crate) parent_view: u64,
+    pub(crate) parent_digest: Id,
+    pub(crate) requested_payload: Id,
+    pub(crate) request_generation: u64,
+    pub(crate) request_tick_us: u64,
+}
+impl WorkBinding {
+    fn identity(&self, cid: Id) -> Id {
+        hash_parts(
+            b"I1b/fresh-work/v1",
+            &[
+                &cid,
+                &self.member.to_be_bytes(),
+                &(self.work.kind as u32).to_be_bytes(),
+                &self.epoch.to_be_bytes(),
+                &self.view.to_be_bytes(),
+                &self.parent_view.to_be_bytes(),
+                &self.parent_digest,
+                &self.requested_payload,
+                &self.request_generation.to_be_bytes(),
+            ],
+        )
+    }
 }
 struct Pending {
     binding: WorkBinding,
     target: Target,
     complete: oneshot::Sender<Option<Block>>,
     due: Option<u64>,
+    recovery_claim: Option<(
+        Arc<dyn recovery_hooks::RecoveryStore>,
+        recovery_hooks::RecordToken,
+    )>,
 }
 #[derive(Clone)]
 enum Target {
@@ -188,6 +215,43 @@ impl Archive {
             effects: vec![],
         }
     }
+    pub(crate) fn live_recovered_work(&self, id: Id) -> bool {
+        self.pending
+            .get(&id)
+            .is_some_and(|pending| !pending.complete.is_closed())
+    }
+
+    pub(crate) fn empty_archive_frontier(&self) -> Result<u64> {
+        if !self.blocks.is_empty()
+            || !self.durable.is_empty()
+            || !self.proof.is_empty()
+            || !self.native_parents.is_empty()
+            || !self.requests.is_empty()
+            || !self.sent_requests.is_empty()
+            || self.delivered != self.config.genesis
+            || self.height != 0
+            || self.pending.len() > 1
+            || self.pending.values().any(|p| {
+                p.due.is_some()
+                    || p.binding.work.kind != WorkKind::Verify as i32
+                    || p.complete.is_closed()
+            })
+        {
+            return Err(Error(
+                "bounded pending Verify cut cannot omit live archive history",
+            ));
+        }
+        Ok(self.work_generation)
+    }
+
+    pub(crate) fn restore_work_frontier(&mut self, generation: u64) -> Result<()> {
+        if self.active || self.work_generation != 0 || !self.pending.is_empty() {
+            return Err(Error("native archive work frontier already installed"));
+        }
+        self.work_generation = generation;
+        Ok(())
+    }
+
     fn availability(&self, target: &Target) -> Availability {
         match target {
             Target::Build { parent, .. } => {
@@ -240,7 +304,7 @@ impl Archive {
         round: Round,
         target: Target,
         complete: oneshot::Sender<Option<Block>>,
-    ) {
+    ) -> WorkBinding {
         let zero = [0; 32];
         let (parent_view, parent_digest, requested_payload) = match target {
             Target::Build { parent, view } => (view, parent, zero),
@@ -257,27 +321,13 @@ impl Archive {
             .expect("native request generation overflow");
         let epoch = round.epoch().get();
         let view = round.view().get();
-        let operation = hash_parts(
-            b"I1b/fresh-work/v1",
-            &[
-                &self.config.cid,
-                &member.to_be_bytes(),
-                &(kind as u32).to_be_bytes(),
-                &epoch.to_be_bytes(),
-                &view.to_be_bytes(),
-                &parent_view.to_be_bytes(),
-                &parent_digest,
-                &requested_payload,
-                &self.work_generation.to_be_bytes(),
-            ],
-        );
         let work = Work {
-            operation_id: operation.to_vec(),
+            operation_id: vec![],
             cid: self.config.cid.to_vec(),
             kind: kind as i32,
             duration_us: self.config.base.work_us,
         };
-        let binding = WorkBinding {
+        let mut binding = WorkBinding {
             work,
             member,
             epoch,
@@ -288,6 +338,8 @@ impl Archive {
             request_generation: self.work_generation,
             request_tick_us: self.tick,
         };
+        let operation = binding.identity(self.config.cid);
+        binding.work.operation_id = operation.to_vec();
         assert!(
             self.pending
                 .insert(
@@ -296,14 +348,18 @@ impl Archive {
                         binding: binding.clone(),
                         target,
                         complete,
-                        due: None
+                        due: None,
+                        recovery_claim: None,
                     }
                 )
                 .is_none(),
             "duplicate live fixture request"
         );
-        self.events.push(AppAudit::WorkPending { binding });
+        self.events.push(AppAudit::WorkPending {
+            binding: binding.clone(),
+        });
         self.start_ready();
+        binding
     }
     fn discarded(&mut self, p: Pending, reason: &'static str) {
         self.events.push(AppAudit::WorkDiscarded {
@@ -332,6 +388,15 @@ impl Archive {
                     .checked_add(self.config.base.work_us)
                     .expect("native work deadline overflow");
                 p.due = Some(due);
+                if let Some((store, claim)) = &p.recovery_claim {
+                    store
+                        .stage(recovery_hooks::RecoveryRecord::WorkScheduled {
+                            claim: *claim,
+                            start_tick_us: self.tick,
+                            due_tick_us: due,
+                        })
+                        .expect("record native helper work schedule");
+                }
                 let native_parent_view = body_digest
                     .and_then(|digest| self.native_parents.get(&(p.binding.view, digest)).copied());
                 self.events.push(AppAudit::WorkStarted {
@@ -542,6 +607,7 @@ pub(crate) struct App {
     context: Arc<SimContext>,
     pub archive: Arc<Mutex<Archive>>,
     pub network: Network,
+    recovery: Option<Arc<dyn recovery_hooks::RecoveryStore>>,
 }
 
 impl App {
@@ -550,34 +616,174 @@ impl App {
             context: Arc::new(context),
             archive,
             network,
+            recovery: None,
         }
+    }
+    pub fn with_recovery(mut self, store: Option<Arc<dyn recovery_hooks::RecoveryStore>>) -> Self {
+        self.recovery = store;
+        self
     }
     fn start<T: Send + 'static>(
         &self,
         kind: WorkKind,
         round: Round,
         target: Target,
-        mut send: oneshot::Sender<T>,
+        native_context: Option<Vec<u8>>,
+        send: oneshot::Sender<T>,
         result: impl FnOnce(Option<Block>) -> Option<T> + Send + 'static,
+        encode_outcome: impl Fn(&T) -> recovery_hooks::Outcome + Send + 'static,
     ) {
         let (complete, wait) = oneshot::channel();
+        let mut archive = self.archive.lock().unwrap();
+        let binding = archive.queue(self.network.factory.member, kind, round, target, complete);
+        let recovery = if let Some(store) = &self.recovery {
+            let operation_id: Id = binding
+                .work
+                .operation_id
+                .as_slice()
+                .try_into()
+                .expect("native WorkBinding operation ID");
+            let pending = archive
+                .pending
+                .get(&operation_id)
+                .expect("application owns callback producer");
+            let missing_dependencies = match archive.availability(&pending.target) {
+                Availability::Pending(missing) => vec![missing.to_vec()],
+                _ => vec![],
+            };
+            let (op_kind, parent_view, parent_digest, payload) = match &pending.target {
+                Target::Build { parent, view } => (
+                    recovery_hooks::OperationKind::Propose,
+                    Some(*view),
+                    Some(parent.to_vec()),
+                    None,
+                ),
+                Target::Verify {
+                    digest,
+                    parent,
+                    view,
+                } => (
+                    recovery_hooks::OperationKind::Verify,
+                    Some(*view),
+                    Some(parent.to_vec()),
+                    Some(digest.to_vec()),
+                ),
+                Target::Certify { digest } => (
+                    recovery_hooks::OperationKind::Certify,
+                    None,
+                    None,
+                    Some(digest.to_vec()),
+                ),
+            };
+            let callback = recovery_hooks::CallbackBinding {
+                claim: recovery_hooks::CallbackClaim {
+                    kind: op_kind,
+                    epoch: binding.epoch,
+                    view: binding.view,
+                    context: native_context,
+                    parent_view,
+                    parent_digest,
+                    payload,
+                },
+                operation_id,
+                original_work_binding: serde_json::to_vec(&binding)
+                    .expect("encode native application callback identity"),
+                missing_dependencies,
+                original_start_tick_us: pending.due.map(|_| archive.tick),
+                original_due_tick_us: pending.due,
+            };
+            // The normal application has now allocated its real producer and
+            // WorkBinding. Bind that exact dispatch before returning the receiver.
+            drop(archive);
+            let token = store
+                .bind_callback(callback)
+                .expect("bind actual native application callback");
+            self.archive
+                .lock()
+                .unwrap()
+                .pending
+                .get_mut(&operation_id)
+                .expect("bound callback retains original producer")
+                .recovery_claim = Some((store.clone(), token));
+            Some((store.clone(), token))
+        } else {
+            drop(archive);
+            None
+        };
+        self.spawn_completion(kind, send, wait, recovery, result, encode_outcome);
+    }
+    fn spawn_completion<T: Send + 'static>(
+        &self,
+        kind: WorkKind,
+        mut send: oneshot::Sender<T>,
+        wait: oneshot::Receiver<Option<Block>>,
+        recovery: Option<(
+            Arc<dyn recovery_hooks::RecoveryStore>,
+            recovery_hooks::RecordToken,
+        )>,
+        result: impl FnOnce(Option<Block>) -> Option<T> + Send + 'static,
+        encode_outcome: impl Fn(&T) -> recovery_hooks::Outcome + Send + 'static,
+    ) {
         let app = self.clone();
-        self.archive.lock().unwrap().queue(
-            self.network.factory.member,
-            kind,
-            round,
-            target,
-            complete,
-        );
         drop(self.context.child("work").spawn(move |context| async move {
             let value =
                 tokio::select! {biased; _=send.closed()=>return,value=wait=>value.ok().flatten()};
+            use recovery_hooks::RecoveryRecord as R;
+            let mut evidence = Vec::new();
+            if let Some((store, claim)) = &recovery {
+                evidence.push(
+                    store
+                        .stage(R::WorkReady {
+                            claim: *claim,
+                            block_bytes: value.as_ref().map(|block| block.bytes.clone()),
+                        })
+                        .expect("stage actual helper result"),
+                );
+            }
             if let Some(value) = &value {
-                if matches!(kind, WorkKind::Propose | WorkKind::Certify) {
+                if let Some((store, claim)) = &recovery {
+                    let token = store
+                        .stage(R::BodyPersisting { claim: *claim })
+                        .expect("stage recovery body persistence");
+                    store
+                        .flush(token)
+                        .await
+                        .expect("durably record persistence intent");
+                    app.persist(&context, value).await;
+                    evidence.push(
+                        store
+                            .stage(R::BodyDurable {
+                                claim: *claim,
+                                digest: value.digest,
+                                block_bytes: value.bytes.clone(),
+                            })
+                            .expect("record actual persisted body"),
+                    );
+                } else if matches!(kind, WorkKind::Propose | WorkKind::Certify) {
                     app.persist(&context, value).await;
                 }
             }
-            if let Some(value) = result(value) {
+            let value = result(value);
+            if let Some((store, claim)) = &recovery {
+                if send.is_closed() {
+                    return;
+                }
+                let outcome = value
+                    .as_ref()
+                    .map_or(recovery_hooks::Outcome::ResponseClosed, encode_outcome);
+                let token = store
+                    .stage(R::Offer {
+                        claim: *claim,
+                        outcome,
+                        evidence,
+                    })
+                    .expect("stage exact native callback response");
+                store
+                    .flush(token)
+                    .await
+                    .expect("sync native callback outcome before resolving sender");
+            }
+            if let Some(value) = value {
                 let _ = send.send(value);
             }
         }));
@@ -631,8 +837,10 @@ impl Automaton for App {
                 parent: context.parent.1.0,
                 view: context.parent.0.get(),
             },
+            self.recovery.as_ref().map(|_| context.encode().to_vec()),
             send,
             |block| block.map(|b| Digest(b.digest)),
+            |digest| recovery_hooks::Outcome::Digest(digest.0.to_vec()),
         );
         receive
     }
@@ -646,8 +854,10 @@ impl Automaton for App {
                 parent: context.parent.1.0,
                 view: context.parent.0.get(),
             },
+            self.recovery.as_ref().map(|_| context.encode().to_vec()),
             send,
             |block| Some(block.is_some()),
+            |valid| recovery_hooks::Outcome::Bool(*valid),
         );
         receive
     }
@@ -660,8 +870,10 @@ impl CertifiableAutomaton for App {
             WorkKind::Certify,
             round,
             Target::Certify { digest: payload.0 },
+            None,
             send,
             |block| Some(block.is_some()),
+            |valid| recovery_hooks::Outcome::Bool(*valid),
         );
         receive
     }
@@ -739,5 +951,109 @@ impl Reporter for App {
             self.archive.lock().unwrap().proof(cert);
         }
         Feedback::Ok
+    }
+}
+
+impl recovery_hooks::RecoveryReconnector<Digest, PublicKey> for App {
+    fn reconnect<'a>(
+        &'a self,
+        request: recovery_hooks::ReconnectRequest<Digest, PublicKey>,
+    ) -> futures::future::BoxFuture<
+        'a,
+        std::result::Result<recovery_hooks::Reconnected<Digest>, recovery_hooks::RecoveryError>,
+    > {
+        Box::pin(async move {
+            use recovery_hooks::{HelperPhase, OperationKind, OperationPhase, RecoveryError};
+            let op = request.operation;
+            if op.kind != OperationKind::Verify
+                || op.phase != OperationPhase::Claimed
+                || op.helper_phase != HelperPhase::WaitInput
+                || op.original_start_tick_us.is_some()
+                || op.original_due_tick_us.is_some()
+                || op.reconnect_generation.checked_add(1) != Some(request.reconnect_generation)
+            {
+                return Err(RecoveryError(
+                    "unsupported pending operation for Verify reconnection",
+                ));
+            }
+            let context = request
+                .context
+                .ok_or(RecoveryError("pending Verify has no native context"))?;
+            let original: WorkBinding = serde_json::from_slice(&op.original_work_binding)
+                .map_err(|_| RecoveryError("malformed original WorkBinding"))?;
+            let encoded = serde_json::to_vec(&original)
+                .map_err(|_| RecoveryError("encode original WorkBinding"))?;
+            let target = Target::Verify {
+                digest: original.requested_payload,
+                parent: original.parent_digest,
+                view: original.parent_view,
+            };
+            let (complete, wait) = oneshot::channel();
+            let (send, receive) = oneshot::channel();
+            let store = self.recovery.clone().ok_or(RecoveryError(
+                "reconnect requires the shared operation store",
+            ))?;
+            let mut archive = self.archive.lock().unwrap();
+            let config = &archive.config;
+            if encoded != op.original_work_binding
+                || original.work.operation_id != op.operation_id
+                || original.identity(config.cid) != op.operation_id
+                || original.work.cid != config.cid
+                || original.work.duration_us != config.base.work_us
+                || original.work.kind != WorkKind::Verify as i32
+                || original.member != self.network.factory.member
+                || original.epoch != context.round.epoch().get()
+                || original.view != context.round.view().get()
+                || original.parent_view != context.parent.0.get()
+                || original.parent_digest != context.parent.1.0
+                || op.canonical_native_context_bytes.as_deref() != Some(context.encode().as_ref())
+                || op.requested_payload.as_deref() != Some(&original.requested_payload)
+                || request.round != context.round
+                || !(1..=archive.work_generation).contains(&original.request_generation)
+                || original.request_tick_us > archive.tick
+                || archive.pending.len() >= 64
+                || archive.pending.contains_key(&op.operation_id)
+            {
+                return Err(RecoveryError(
+                    "restored application callback disagrees with native binding",
+                ));
+            }
+            let Availability::Pending(missing) = archive.availability(&target) else {
+                return Err(RecoveryError(
+                    "pending Verify dependencies incompatible with retained archive",
+                ));
+            };
+            if op.missing_dependencies != [missing.to_vec()] {
+                return Err(RecoveryError(
+                    "pending Verify changed its original missing dependency",
+                ));
+            }
+            let recovery = (store, op.claimed_sequence);
+            archive.pending.insert(
+                op.operation_id,
+                Pending {
+                    binding: original.clone(),
+                    target,
+                    complete,
+                    due: None,
+                    recovery_claim: Some(recovery.clone()),
+                },
+            );
+            archive.events.push(AppAudit::WorkReconnected {
+                binding: original,
+                reconnect_generation: request.reconnect_generation,
+                original_due_tick_us: None,
+            });
+            drop(archive);
+            self.spawn_completion(
+                WorkKind::Verify,
+                send,
+                wait,
+                Some(recovery),
+                |block| Some(block.is_some()),
+                |value| recovery_hooks::Outcome::Bool(*value),
+            );
+            Ok(recovery_hooks::Reconnected::Verify(receive))
+        })
     }
 }

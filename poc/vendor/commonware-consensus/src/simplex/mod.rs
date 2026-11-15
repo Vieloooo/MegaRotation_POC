@@ -687,6 +687,8 @@
 //! consensus certificate for every ancestor view.
 
 pub mod elector;
+#[cfg(feature = "native-recovery")]
+pub mod recovery;
 pub mod scheme;
 pub mod types;
 

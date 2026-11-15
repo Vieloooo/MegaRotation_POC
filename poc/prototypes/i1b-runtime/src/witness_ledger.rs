@@ -835,6 +835,7 @@ impl WitnessLedger {
 pub(crate) struct LedgerSnapshot {
     pub head_hash: Id,
     pub index: Records,
+    pub records: Vec<LedgerRecord>,
 }
 
 pub(crate) fn snapshot(
@@ -862,6 +863,7 @@ pub(crate) fn snapshot(
     Ok(LedgerSnapshot {
         head_hash: head.hash,
         index: scan.index,
+        records: scan.records,
     })
 }
 

@@ -1,3 +1,8 @@
+#[cfg(feature = "native-recovery")]
+use crate::simplex::{recovery as rec, types::Proposal};
+#[cfg(feature = "native-recovery")]
+use commonware_codec::{DecodeExt as _, Encode as _};
+
 use super::{
     Config, Mailbox,
     ingress::Message,
@@ -141,7 +146,21 @@ type PendingProposal<D, P> = Option<Request<ProposalRequest<D, P>, ProposalState
 /// The verification request in flight for the current or an optimistic future view, if any.
 type PendingVerification = Option<Request<Rnd, oneshot::Receiver<bool>>>;
 
+#[cfg(feature = "native-recovery")]
+enum ReplayedOutput<S: Scheme<D>, D: Digest> {
+    Report(Activity<S, D>),
+    Updated(Certificate<S, D>),
+    Certified(Notarization<S, D>, bool),
+}
+
 /// Actor responsible for driving participation in the consensus protocol.
+#[cfg(feature = "native-recovery")]
+struct VerifyClaim {
+    token: rec::RecordToken,
+    proposal: Vec<u8>,
+    parent_digest: Vec<u8>,
+}
+
 pub struct Actor<
     E: Clock + CryptoRng + Spawner + Storage + Metrics,
     S: Scheme<D>,
@@ -153,6 +172,12 @@ pub struct Actor<
     F: Reporter<Activity = Activity<S, D>>,
 > {
     context: ContextCell<E>,
+    #[cfg(feature = "native-recovery")]
+    recovery: Option<rec::RecoveryOptions<D, S::PublicKey>>,
+    #[cfg(feature = "native-recovery")]
+    verify_claim: Option<VerifyClaim>,
+    #[cfg(feature = "native-recovery")]
+    native_positions: Vec<rec::JournalPosition>,
     state: State<E, S, L, D>,
     blocker: B,
     automaton: A,
@@ -240,6 +265,12 @@ impl<
         (
             Self {
                 context: ContextCell::new(context),
+                #[cfg(feature = "native-recovery")]
+                recovery: None,
+                #[cfg(feature = "native-recovery")]
+                verify_claim: None,
+                #[cfg(feature = "native-recovery")]
+                native_positions: Vec::new(),
                 state,
                 blocker: cfg.blocker,
                 automaton: cfg.automaton,
@@ -267,6 +298,154 @@ impl<
             },
             mailbox,
         )
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(crate) fn enable_recovery(&mut self, options: rec::RecoveryOptions<D, S::PublicKey>) {
+        self.state
+            .enable_recovery_timing(options.session_not_before);
+        self.recovery = Some(options);
+    }
+
+    #[cfg(feature = "native-recovery")]
+    async fn recovery_prepare(&mut self, prospective_artifact: Option<Vec<u8>>) {
+        let Some(options) = &self.recovery else {
+            return;
+        };
+        let timing = self.state.recovery_timing().expect("capture native timing");
+        let claim = self.verify_claim.as_ref();
+        options
+            .store
+            .stage(rec::RecoveryRecord::ActorPhase(rec::ActorPhase {
+                pending_proposal_operation: None,
+                pending_proposal_context: None,
+                proposal_phase: rec::ProposalPhase::None,
+                pending_verify_operation: claim.map(|claim| claim.token),
+                verifying_proposal_bytes: claim.map(|claim| claim.proposal.clone()),
+                verifying_parent_digest: claim.map(|claim| claim.parent_digest.clone()),
+                outstanding_certify_operations: Vec::new(),
+                committed_relay_refs: Vec::new(),
+            }))
+            .expect("stage native Verify phase");
+        options
+            .store
+            .stage(rec::RecoveryRecord::Timing(timing))
+            .expect("stage native timing");
+        let token = options
+            .store
+            .stage(rec::RecoveryRecord::Preparation {
+                positions: self.native_positions.clone(),
+                prospective_artifact,
+            })
+            .expect("stage native recovery preparation");
+        options
+            .store
+            .flush(token)
+            .await
+            .expect("persist native recovery preparation");
+    }
+
+    #[cfg(feature = "native-recovery")]
+    async fn reconnect_verification(
+        &mut self,
+        bundle: &rec::RecoveryBundle,
+    ) -> PendingVerification {
+        for fact in &bundle.proposals {
+            let proposal =
+                Proposal::<D>::decode(commonware_codec::Copying(&fact.native_proposal_bytes))
+                    .expect("decode recovered native proposal");
+            assert_eq!(
+                proposal.encode().as_ref(),
+                fact.native_proposal_bytes,
+                "noncanonical recovered proposal"
+            );
+            assert!(
+                self.state.admits_vote(proposal.view()),
+                "recovered proposal outside native viewport"
+            );
+            self.state.set_proposal(proposal.view(), &proposal);
+        }
+        let Some(phase) = &bundle.actor_phase else {
+            assert!(
+                bundle.operations.is_empty(),
+                "native recovery lacks callback phases"
+            );
+            return None;
+        };
+        assert!(
+            phase.pending_proposal_operation.is_none()
+                && phase.outstanding_certify_operations.is_empty(),
+            "native proposal/certify reconnection not established"
+        );
+        let Some(claim) = phase.pending_verify_operation else {
+            return None;
+        };
+        let op = bundle
+            .operations
+            .iter()
+            .find(|op| op.claimed_sequence == claim)
+            .expect("pending native Verify operation record");
+        assert!(matches!(
+            op.phase,
+            rec::OperationPhase::Claimed | rec::OperationPhase::Offered
+        ));
+        assert_eq!(op.kind, rec::OperationKind::Verify);
+        let Verify::Ready(context, proposal) = self.state.try_verify() else {
+            panic!("native replay could not claim verified pending proposal");
+        };
+        assert_eq!(op.epoch, context.round.epoch().get());
+        assert_eq!(op.view, context.round.view().get());
+        assert_eq!(op.parent_view, Some(context.parent.0.get()));
+        assert_eq!(
+            op.parent_digest.as_deref(),
+            Some(context.parent.1.encode().as_ref())
+        );
+        assert_eq!(
+            op.requested_payload.as_deref(),
+            Some(proposal.payload.encode().as_ref())
+        );
+        assert_eq!(
+            phase.verifying_proposal_bytes.as_deref(),
+            Some(proposal.encode().as_ref())
+        );
+        assert_eq!(
+            phase.verifying_parent_digest.as_deref(),
+            op.parent_digest.as_deref()
+        );
+        let round = context.round;
+        let reconnect = rec::ReconnectRequest {
+            context: Some(context),
+            round,
+            operation: op.clone(),
+            reconnect_generation: op
+                .reconnect_generation
+                .checked_add(1)
+                .expect("native reconnect generation overflow"),
+        };
+        let rec::Reconnected::Verify(receiver) = self
+            .recovery
+            .as_ref()
+            .expect("native recovery hooks")
+            .reconnector
+            .reconnect(reconnect)
+            .await
+            .expect("reconnect pending native Verify")
+        else {
+            panic!("native Verify reconnection lacked expected typed receiver");
+        };
+        self.verify_claim = Some(VerifyClaim {
+            token: claim,
+            proposal: proposal.encode().to_vec(),
+            parent_digest: op
+                .parent_digest
+                .clone()
+                .expect("restored Verify parent digest"),
+        });
+        let span = info_span!(
+            "simplex.voter.verify.reconnect",
+            view = round.view().traced()
+        );
+        Some(Request(round, span, receiver))
     }
 
     /// Returns the wall-clock seconds since we proposed in `view` (or entered
@@ -321,11 +500,27 @@ impl<
     async fn append_journal(mut self, artifact: Artifact<S, D>) -> Self {
         if self.journal.is_some() {
             let view = artifact.view();
-            rebind(&mut self.journal, |journal| {
+            #[cfg(feature = "native-recovery")]
+            let prospective = self.recovery.as_ref().map(|_| artifact.encode().to_vec());
+            #[cfg(feature = "native-recovery")]
+            if prospective.is_some() {
+                self.recovery_prepare(prospective.clone()).await;
+            }
+            let (_offset, _) = rebind(&mut self.journal, |journal| {
                 journal.append(view.get(), &artifact)
             })
             .await
             .expect("unable to append to journal");
+            #[cfg(feature = "native-recovery")]
+            if let Some(frame_bytes) = prospective {
+                self.native_positions.push(rec::JournalPosition {
+                    section: view.get(),
+                    offset: _offset,
+                    frame_bytes,
+                });
+                self.native_positions
+                    .sort_by_key(|position| (position.section, position.offset));
+            }
             match self.dirty_section {
                 Some(dirty) => assert_eq!(
                     dirty, view,
@@ -431,11 +626,45 @@ impl<
             .inc();
     }
 
+    #[cfg(feature = "native-recovery")]
+    async fn recovery_claim_callback(
+        &mut self,
+        claim: rec::CallbackClaim,
+    ) -> Option<rec::RecordToken> {
+        let hooks = self.recovery.as_ref()?;
+        let token = hooks
+            .store
+            .stage(rec::RecoveryRecord::Claim(claim))
+            .expect("stage exact callback dispatch");
+        hooks
+            .store
+            .flush(token)
+            .await
+            .expect("persist native callback claim before dispatch");
+        Some(token)
+    }
+
     /// Attempt to propose a new block.
     async fn try_propose(&mut self) -> PendingProposal<D, S::PublicKey> {
         // Check if we are ready to propose
         let request = self.state.try_propose()?;
         let context = request.context().clone();
+
+        #[cfg(feature = "native-recovery")]
+        self.recovery_claim_callback(rec::CallbackClaim {
+            kind: if request.is_handoff() {
+                rec::OperationKind::Prepare
+            } else {
+                rec::OperationKind::Propose
+            },
+            epoch: context.round.epoch().get(),
+            view: context.round.view().get(),
+            context: Some(context.encode().to_vec()),
+            parent_view: Some(context.parent.0.get()),
+            parent_digest: Some(context.parent.1.encode().to_vec()),
+            payload: None,
+        })
+        .await;
 
         // Request proposal from application
         let span = info_span!(
@@ -482,6 +711,37 @@ impl<
             }
             Verify::Wait => return None,
         };
+
+        #[cfg(feature = "native-recovery")]
+        if let Some(options) = &self.recovery {
+            assert!(
+                self.verify_claim.is_none(),
+                "duplicated native Verify claim"
+            );
+            let parent_digest = context.parent.1.encode().to_vec();
+            let token = options
+                .store
+                .stage(rec::RecoveryRecord::Claim(rec::CallbackClaim {
+                    kind: rec::OperationKind::Verify,
+                    epoch: context.round.epoch().get(),
+                    view: context.round.view().get(),
+                    context: Some(context.encode().to_vec()),
+                    parent_view: Some(context.parent.0.get()),
+                    parent_digest: Some(parent_digest.clone()),
+                    payload: Some(proposal.payload.encode().to_vec()),
+                }))
+                .expect("stage exact native Verify dispatch");
+            options
+                .store
+                .flush(token)
+                .await
+                .expect("persist native Verify claim before dispatch");
+            self.verify_claim = Some(VerifyClaim {
+                token,
+                proposal: proposal.encode().to_vec(),
+                parent_digest,
+            });
+        }
 
         // Request verification
         let span = info_span!(
@@ -531,6 +791,20 @@ impl<
             .as_ref()
             .is_some_and(|request| request.view() < current_view)
         {
+            #[cfg(feature = "native-recovery")]
+            if let Some(options) = &self.recovery {
+                let claim = self
+                    .verify_claim
+                    .take()
+                    .expect("cancel without native Verify claim");
+                options
+                    .store
+                    .stage(rec::RecoveryRecord::Cancel {
+                        claim: claim.token,
+                        reason: "VIEW_EXIT",
+                    })
+                    .expect("stage native Verify cancellation");
+            }
             *pending_verify = None;
         }
 
@@ -896,6 +1170,27 @@ impl<
                 }
                 (self, Some(view))
             }
+            #[cfg(feature = "native-recovery")]
+            Message::RecoverableProposal {
+                proposal, origin, ..
+            } => {
+                let view = proposal.view();
+                if !self.state.admits_vote(view) || !self.state.set_proposal(view, &proposal) {
+                    return (self, None);
+                }
+                let hooks = self
+                    .recovery
+                    .as_ref()
+                    .expect("opt-in proposal requires recovery hooks");
+                hooks
+                    .store
+                    .stage(rec::RecoveryRecord::ProposalSelected {
+                        native_proposal_bytes: proposal.encode().to_vec(),
+                        origin,
+                    })
+                    .expect("stage native selected proposal");
+                (self, Some(view))
+            }
             Message::Verified { certificate, .. } => {
                 // Certificates can come from future views (they advance our view)
                 let view = certificate.view();
@@ -1108,13 +1403,23 @@ impl<
         // Replayed artifacts become in-memory state, so journal pages need not
         // remain in the OS page cache.
         let replayed;
+        #[cfg(feature = "native-recovery")]
+        let mut replay_outputs = Vec::new();
         (self, replayed) = async {
             let mut replay = journal
                 .replay(0, 0, self.replay_buffer, ReadOptions::DONT_CACHE)
                 .await
                 .expect("unable to replay journal");
             while let Some(artifact) = replay.next().await {
-                let (_, _, _, artifact) = artifact.expect("unable to replay journal");
+                let (_section, _offset, _, artifact) = artifact.expect("unable to replay journal");
+                #[cfg(feature = "native-recovery")]
+                if self.recovery.is_some() {
+                    self.native_positions.push(rec::JournalPosition {
+                        section: _section,
+                        offset: _offset,
+                        frame_bytes: artifact.encode().to_vec(),
+                    });
+                }
 
                 // A journaled finalization at or above the floor already anchors later restarts
                 // there, so the configured floor need not be journaled.
@@ -1136,10 +1441,25 @@ impl<
                 self.state.replay(&artifact);
                 match artifact {
                     Artifact::Notarize(notarize) => {
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs
+                                .push(ReplayedOutput::Report(Activity::Notarize(notarize)));
+                            continue;
+                        }
                         self.reporter.report(Activity::Notarize(notarize));
                     }
                     Artifact::Notarization(notarization) => {
                         (self, _) = self.handle_notarization(notarization.clone()).await;
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs.push(ReplayedOutput::Updated(
+                                Certificate::Notarization(notarization.clone()),
+                            ));
+                            replay_outputs
+                                .push(ReplayedOutput::Report(Activity::Notarization(notarization)));
+                            continue;
+                        }
                         resolver.updated(Certificate::Notarization(notarization.clone()));
                         self.reporter.report(Activity::Notarization(notarization));
                     }
@@ -1150,24 +1470,65 @@ impl<
                         let Some(notarization) = notarization else {
                             continue;
                         };
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs
+                                .push(ReplayedOutput::Certified(notarization.clone(), success));
+                            if success {
+                                replay_outputs.push(ReplayedOutput::Report(
+                                    Activity::Certification(notarization),
+                                ));
+                            }
+                            continue;
+                        }
                         resolver.certified(notarization.clone(), success);
                         if success {
                             self.reporter.report(Activity::Certification(notarization));
                         }
                     }
                     Artifact::Nullify(nullify) => {
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs.push(ReplayedOutput::Report(Activity::Nullify(nullify)));
+                            continue;
+                        }
                         self.reporter.report(Activity::Nullify(nullify));
                     }
                     Artifact::Nullification(nullification) => {
                         (self, _) = self.handle_nullification(nullification.clone()).await;
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs.push(ReplayedOutput::Updated(
+                                Certificate::Nullification(nullification.clone()),
+                            ));
+                            replay_outputs.push(ReplayedOutput::Report(Activity::Nullification(
+                                nullification,
+                            )));
+                            continue;
+                        }
                         resolver.updated(Certificate::Nullification(nullification.clone()));
                         self.reporter.report(Activity::Nullification(nullification));
                     }
                     Artifact::Finalize(finalize) => {
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs
+                                .push(ReplayedOutput::Report(Activity::Finalize(finalize)));
+                            continue;
+                        }
                         self.reporter.report(Activity::Finalize(finalize));
                     }
                     Artifact::Finalization(finalization) => {
                         (self, _) = self.handle_finalization(finalization.clone()).await;
+                        #[cfg(feature = "native-recovery")]
+                        if self.recovery.is_some() {
+                            replay_outputs.push(ReplayedOutput::Updated(
+                                Certificate::Finalization(finalization.clone()),
+                            ));
+                            replay_outputs
+                                .push(ReplayedOutput::Report(Activity::Finalization(finalization)));
+                            continue;
+                        }
                         resolver.updated(Certificate::Finalization(finalization.clone()));
                         self.reporter.report(Activity::Finalization(finalization));
                     }
@@ -1186,6 +1547,53 @@ impl<
         .instrument(info_span!(parent: &start_span, "simplex.voter.replay", epoch = epoch.traced()))
         .await;
         self.journal = Some(replayed);
+
+        let mut pending_verify: PendingVerification = None;
+        #[cfg(feature = "native-recovery")]
+        if let Some(options) = &self.recovery {
+            let store = options.store.clone();
+            let startup = options.startup.clone();
+            let bundle = store
+                .load(rec::RecoveryLoad {
+                    actor: rec::ActorId::Voter,
+                    epoch: epoch.get(),
+                    native_boundary: self.native_positions.clone(),
+                })
+                .await
+                .expect("load compatible native recovery");
+            if let Some(timing) = &bundle.timing {
+                pending_verify = self.reconnect_verification(&bundle).await;
+                self.state
+                    .restore_recovery_timing(timing)
+                    .expect("restore original native timeout state");
+            }
+            let restored = self
+                .state
+                .recovery_timing()
+                .expect("snapshot native recovery readiness");
+            startup
+                .ready(
+                    rec::ActorId::Voter,
+                    bundle.cut,
+                    restored.native_state_projection_hash,
+                )
+                .expect("register voter readiness");
+            startup
+                .released()
+                .await
+                .expect("release native voter recovery startup");
+            for output in replay_outputs {
+                match output {
+                    ReplayedOutput::Report(activity) => {
+                        self.reporter.report(activity);
+                    }
+                    ReplayedOutput::Updated(certificate) => resolver.updated(certificate),
+                    ReplayedOutput::Certified(notarization, success) => {
+                        resolver.certified(notarization, success)
+                    }
+                }
+            }
+        }
 
         // Every recovered certificate has been forwarded, so the resolver can
         // start background repair above the recovered floor.
@@ -1226,7 +1634,7 @@ impl<
 
         // Process messages
         let mut pending_propose: PendingProposal<D, S::PublicKey> = None;
-        let mut pending_verify: PendingVerification = None;
+
         let mut certify_pool = AbortablePool::default();
         select_loop! {
             self.context,
@@ -1262,6 +1670,14 @@ impl<
                         view = view.traced()
                     );
                     #[allow(clippy::async_yields_async)]
+                    #[cfg(feature = "native-recovery")]
+                    self.recovery_claim_callback(rec::CallbackClaim{
+                        kind: rec::OperationKind::Certify,
+                        epoch: round.epoch().get(),
+                        view: round.view().get(),
+                        context: None, parent_view: None, parent_digest: None,
+                        payload: Some(proposal.payload.encode().to_vec()),
+                    }).await;
                     let receiver = async { self.automaton.certify(round, proposal.payload).await }
                         .instrument(span.clone())
                         .await;
@@ -1303,6 +1719,8 @@ impl<
 
                 // Wait for a timeout to fire or for a message to arrive
                 let (deadline, reason) = self.state.next_timeout();
+                #[cfg(feature = "native-recovery")]
+                self.recovery_prepare(None).await;
                 let start = self.state.current_view();
                 let mut nullify = None;
                 let mut certification = None;
@@ -1379,8 +1797,22 @@ impl<
                 // Clear verify waiter
                 pending_verify = None;
 
+                #[cfg(feature = "native-recovery")]
+                let recovery_outcome = self.recovery.as_ref().map(|_| {
+                    let outcome = match &verified {
+                        Ok(value) => rec::Outcome::Bool(*value),
+                        Err(_) => rec::Outcome::ResponseClosed,
+                    };
+                    (outcome, !self.state.verification_is_stale(round.view()))
+                });
                 // Process the automaton's response
                 view = span.in_scope(|| self.process_verified(round, verified));
+                #[cfg(feature = "native-recovery")]
+                if let (Some(options), Some((outcome, applied))) = (&self.recovery, recovery_outcome) {
+                    let claim = self.verify_claim.take().expect("consume without native Verify claim");
+                    options.store.stage(rec::RecoveryRecord::Consume {claim: claim.token, outcome, applied})
+                        .expect("stage native Verify response consumption");
+                }
             },
             // Aborted futures are expected when old views are pruned
             Ok((round, span, certified)) = certify_wait else continue => {
@@ -1452,6 +1884,8 @@ impl<
                     // This runs even if there is nothing to broadcast (e.g. a
                     // certification result was recorded) so every artifact is
                     // durable by the end of the iteration that appended it.
+                    #[cfg(feature = "native-recovery")]
+                    self.recovery_prepare(None).await;
                     self = self.sync_journal().await;
 
                     // Broadcast everything we built (and report it to the application).

@@ -145,6 +145,28 @@ impl<
         }
     }
 
+    /// Construct an opted-in voter with controlled recovery and startup hooks.
+    #[cfg(feature = "native-recovery")]
+    pub fn new_with_recovery(
+        context: E,
+        cfg: Config<S, L, B, D, A, R, F, T>,
+        recovery: super::recovery::RecoveryOptions<D, S::PublicKey>,
+    ) -> Self {
+        assert!(
+            matches!(cfg.floor, super::config::Floor::Genesis(_)),
+            "native recovery requires a Genesis floor"
+        );
+        let mut engine = Self::new(context, cfg);
+        let actor = super::recovery::ActorRecovery {
+            store: recovery.store.clone(),
+            startup: recovery.startup.clone(),
+        };
+        engine.batcher.enable_recovery(actor.clone());
+        engine.resolver.enable_recovery(actor);
+        engine.voter.enable_recovery(recovery);
+        engine
+    }
+
     /// Start the `simplex` consensus engine.
     ///
     /// This will also rebuild the state of the engine from provided `Journal`.

@@ -565,6 +565,184 @@ impl<S: Scheme, D: Digest> Round<S, D> {
         Some(retry)
     }
 
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn arm_recovery_retry(&mut self, now: SystemTime, interval: Duration) {
+        if let Decision::Nullify { retry } = &mut self.decision {
+            retry.get_or_insert_with(|| {
+                now.checked_add(interval)
+                    .expect("native retry deadline overflow")
+            });
+        }
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn recovery_timing(
+        &self,
+        interval: Duration,
+    ) -> Result<crate::simplex::recovery::RoundTiming, crate::simplex::recovery::RecoveryError>
+    {
+        use crate::simplex::recovery::{DecisionPhase, RecoveryError, RoundTiming, micros};
+        let (decision, leader, certification, latch, retry) = match self.decision {
+            Decision::Pending {
+                leader,
+                certification,
+                latch,
+            } => (DecisionPhase::Pending, leader, certification, latch, None),
+            Decision::Nullify { retry } => (DecisionPhase::Nullify, None, None, None, retry),
+            Decision::Finalize => (DecisionPhase::Finalize, None, None, None, None),
+        };
+        let arm = retry
+            .map(|deadline| {
+                deadline
+                    .checked_sub(interval)
+                    .ok_or(RecoveryError("native retry anchor overflow"))
+            })
+            .transpose()?;
+        Ok(RoundTiming {
+            view: self.round.view().get(),
+            entered_at_local_us: self.entered_at.map(micros).transpose()?,
+            proposed_at_local_us: self.proposed_at.map(micros).transpose()?,
+            comparison_decision_phase: decision,
+            leader_deadline_local_us: leader.map(micros).transpose()?,
+            certification_deadline_local_us: certification.map(micros).transpose()?,
+            latch_time_local_us: latch.map(|(time, _)| micros(time)).transpose()?,
+            latch_reason: latch.map(|(_, reason)| reason.as_str()),
+            latch_cause_ref: None,
+            retry_deadline_local_us: retry.map(micros).transpose()?,
+            retry_arm_local_us: arm.map(micros).transpose()?,
+            stall_deadline_local_us: self.stall_deadline.map(micros).transpose()?,
+        })
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn restore_recovery_timing(
+        &mut self,
+        snapshot: &crate::simplex::recovery::RoundTiming,
+        interval: Duration,
+    ) -> Result<(), crate::simplex::recovery::RecoveryError> {
+        use crate::simplex::recovery::{DecisionPhase, RecoveryError, system_time};
+        if snapshot.view != self.round.view().get() || snapshot.stall_deadline_local_us.is_some() {
+            return Err(RecoveryError("native recovery timing round mismatch"));
+        }
+        match (&mut self.decision, snapshot.comparison_decision_phase) {
+            (
+                Decision::Pending {
+                    leader,
+                    certification,
+                    latch,
+                },
+                DecisionPhase::Pending,
+            ) => {
+                *leader = snapshot
+                    .leader_deadline_local_us
+                    .map(system_time)
+                    .transpose()?;
+                *certification = snapshot
+                    .certification_deadline_local_us
+                    .map(system_time)
+                    .transpose()?;
+                *latch = match (snapshot.latch_time_local_us, snapshot.latch_reason) {
+                    (None, None) => None,
+                    (Some(time), Some(reason)) => {
+                        let reason = [
+                            TimeoutReason::Retry,
+                            TimeoutReason::Inactivity,
+                            TimeoutReason::LeaderNullify,
+                            TimeoutReason::LeaderTimeout,
+                            TimeoutReason::CertificationTimeout,
+                            TimeoutReason::StallTimeout,
+                            TimeoutReason::MissingProposal,
+                            TimeoutReason::IgnoredProposal,
+                            TimeoutReason::InvalidProposal,
+                            TimeoutReason::FailedCertification,
+                        ]
+                        .into_iter()
+                        .find(|candidate| candidate.as_str() == reason)
+                        .ok_or(RecoveryError("unknown recovered latch reason"))?;
+                        Some((system_time(time)?, reason))
+                    }
+                    _ => return Err(RecoveryError("incomplete native recovery timeout latch")),
+                };
+            }
+            (Decision::Nullify { retry }, DecisionPhase::Nullify) => {
+                let deadline = system_time(
+                    snapshot
+                        .retry_deadline_local_us
+                        .ok_or(RecoveryError("missing native retry deadline"))?,
+                )?;
+                let anchor = system_time(
+                    snapshot
+                        .retry_arm_local_us
+                        .ok_or(RecoveryError("missing native retry arm"))?,
+                )?;
+                if anchor.checked_add(interval) != Some(deadline) {
+                    return Err(RecoveryError("native retry interval mismatch"));
+                }
+                *retry = Some(deadline);
+            }
+            (Decision::Finalize, DecisionPhase::Finalize) => {}
+            _ => {
+                return Err(RecoveryError(
+                    "native replay decision disagrees with timing snapshot",
+                ));
+            }
+        }
+        self.entered_at = snapshot.entered_at_local_us.map(system_time).transpose()?;
+        self.proposed_at = snapshot.proposed_at_local_us.map(system_time).transpose()?;
+        Ok(())
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn recovery_projection(&self, json: &mut String) {
+        use commonware_codec::Encode as _;
+        use std::fmt::Write as _;
+        fn bytes(json: &mut String, value: Option<bytes::Bytes>) {
+            if let Some(value) = value {
+                json.push('"');
+                for b in value {
+                    write!(json, "{b:02x}").expect("memory formatting");
+                }
+                json.push('"');
+            } else {
+                json.push_str("null");
+            }
+        }
+        let proposal_status = match self.proposal.status() {
+            ProposalStatus::None => "NONE",
+            ProposalStatus::Unverified => "UNVERIFIED",
+            ProposalStatus::Verified => "VERIFIED",
+            ProposalStatus::Equivocated => "EQUIVOCATED",
+        };
+        let decision = match self.decision {
+            Decision::Pending { .. } => "PENDING",
+            Decision::Nullify { .. } => "NULLIFY",
+            Decision::Finalize => "FINALIZE",
+        };
+        let certify = match self.certify {
+            CertifyState::Ready => "READY",
+            CertifyState::Outstanding(_) => "OUTSTANDING",
+            CertifyState::Certified(true) => "CERTIFIED_TRUE",
+            CertifyState::Certified(false) => "CERTIFIED_FALSE",
+            CertifyState::Aborted => "ABORTED",
+        };
+        write!(json, "\"status\":\"{proposal_status}\",\"proposal\":").expect("memory formatting");
+        bytes(json, self.proposal.proposal().map(|p| p.encode()));
+        json.push_str(",\"verifying\":");
+        bytes(json, self.verifying.as_ref().map(|(p, _)| p.encode()));
+        json.push_str(",\"verifying_parent\":");
+        bytes(json, self.verifying.as_ref().map(|(_, p)| p.encode()));
+        write!(
+            json,
+            ",\"decision\":\"{decision}\",\"certification\":\"{certify}\",\"notarization\":"
+        )
+        .expect("memory formatting");
+        bytes(json, self.notarization.as_ref().map(|p| p.encode()));
+        json.push_str(",\"nullification\":");
+        bytes(json, self.nullification.as_ref().map(|p| p.encode()));
+        json.push_str(",\"finalization\":");
+        bytes(json, self.finalization.as_ref().map(|p| p.encode()));
+    }
+
     /// Returns the next round-local timeout and its reason.
     pub fn next_timeout(
         &mut self,

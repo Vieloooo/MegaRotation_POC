@@ -267,6 +267,140 @@ pub fn recover_witness_generation(
     })
 }
 
+/// Recover the explicit absent-partition case without manufacturing native
+/// storage evidence. The source is read-only, even with an uncommitted tail.
+pub(crate) fn recover_empty_witness_generation(
+    paths: RecoveryPaths<'_>,
+    source: WitnessPolicy,
+    target: WitnessPolicy,
+    empty: &crate::native_recovery::AuthorizedEmptyBoundary,
+) -> Result<RecoveryReport> {
+    let old = source.seal().config.clone();
+    let mut required = source.seal().clone();
+    required.config.generation = old
+        .generation
+        .checked_add(1)
+        .ok_or(Error("witness generation overflow"))?;
+    require(
+        old.generation == empty.generation() && *target.seal() == required,
+        "empty recovery changes witness policy or generation",
+    )?;
+    require(
+        io(fs::symlink_metadata(paths.source_storage))?
+            .file_type()
+            .is_dir(),
+        "missing original native storage root",
+    )?;
+    require(
+        io(fs::symlink_metadata(paths.source_ledger))?
+            .file_type()
+            .is_file(),
+        "missing original witness ledger",
+    )?;
+    let old_root = io(paths.source_storage.canonicalize())?;
+    let source_file = io(paths.source_ledger.canonicalize())?;
+    require(
+        fs::symlink_metadata(old_root.join(&old.partition))
+            .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound),
+        "source voter partition is not absent",
+    )?;
+
+    let old_snapshot = snapshot(&source_file, &source, empty.witness())?;
+    let observed_head = WitnessHead {
+        sequence: u64::try_from(old_snapshot.records.len())
+            .map_err(|_| Error("empty witness history bound"))?,
+        hash: old_snapshot.head_hash,
+    };
+    require(
+        old_snapshot
+            .records
+            .iter()
+            .flat_map(|record| &record.entries)
+            .all(|entry| match entry {
+                LedgerEntry::Policy(_) => true,
+                LedgerEntry::GenerationStarted(link) | LedgerEntry::Recovery(link) => {
+                    link.source_files.is_empty()
+                }
+                _ => false,
+            }),
+        "empty recovery would drop protected witness history",
+    )?;
+
+    let parent = paths
+        .fresh_target
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let target_parent = io(parent.canonicalize())?;
+    let target_path = target_parent.join(
+        paths
+            .fresh_target
+            .file_name()
+            .ok_or(Error("invalid empty recovery target"))?,
+    );
+    require(
+        !target_path.starts_with(&old_root)
+            && !source_file.starts_with(&target_path)
+            && fs::symlink_metadata(&target_path)
+                .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound),
+        "empty recovery target must be separate and absent",
+    )?;
+
+    io(fs::create_dir(&target_path))?;
+    let audit = target_path.join("source-snapshot");
+    io(fs::create_dir(&audit))?;
+    let copied_ledger = audit.join("witness");
+    copy_regular(&source_file, &copied_ledger)?;
+    let head_bytes = bounded_read(&side(&source_file, ".head"), 88)?;
+    save(&audit.join("witness.head"), &head_bytes)?;
+    #[derive(serde::Serialize)]
+    struct Absence<'a> {
+        partition: &'a str,
+        source_files: [String; 0],
+        absent: bool,
+        cut_hash: String,
+    }
+    let absence = serde_json::to_vec(&Absence {
+        partition: &old.partition,
+        source_files: [],
+        absent: true,
+        cut_hash: crate::native_recovery_ledger::hex(&empty.cut()),
+    })
+    .map_err(|_| Error("encode empty native source audit"))?;
+    save(&audit.join("absence.json"), &absence)?;
+    io(io(File::open(&audit))?.sync_all())?;
+
+    let ledger_path = target_path.join("witness");
+    copy_regular(&copied_ledger, &ledger_path)?;
+    save(&side(&ledger_path, ".head"), &head_bytes)?;
+    io(fs::create_dir(target_path.join("native")))?;
+    io(io(File::open(&target_path))?.sync_all())?;
+    io(io(File::open(&target_parent))?.sync_all())?;
+
+    let mut ledger = WitnessLedger::open_anchored(
+        &ledger_path,
+        source,
+        crate::LedgerTail::RejectComplete,
+        observed_head,
+    )?;
+    require(
+        ledger.head() == observed_head,
+        "witness source changed after empty history validation",
+    )?;
+    let link = RecoveryLink {
+        old_generation: old.generation,
+        old_head_hash: observed_head.hash,
+        source_files: vec![],
+    };
+    ledger.begin_recovery(target, link.clone())?;
+    ledger.append(vec![LedgerEntry::Recovery(link.clone())], None)?;
+    Ok(RecoveryReport {
+        new_head: ledger.head(),
+        source: link,
+        records: ledger.records().to_vec(),
+    })
+}
+
 pub(crate) fn validate_existing_layout(root: &Path, policy: &WitnessPolicy) -> Result<()> {
     let partition = root.join(&policy.seal().config.partition);
     match fs::symlink_metadata(&partition) {

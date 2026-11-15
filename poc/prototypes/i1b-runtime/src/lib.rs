@@ -8,6 +8,8 @@ mod native_config;
 mod native_elector;
 pub mod native_hub;
 mod native_network;
+mod native_recovery;
+mod native_recovery_ledger;
 pub mod native_replica;
 mod native_scheme;
 mod native_step_journal;

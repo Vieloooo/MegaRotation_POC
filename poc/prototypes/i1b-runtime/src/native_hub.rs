@@ -57,8 +57,22 @@ enum Incoming {
 struct Service {
     expected: Arc<Resolved>,
     registration: Arc<Mutex<[u8; 2]>>,
+    resumed: Arc<Mutex<Option<RegisterRequest>>>,
     broker: mpsc::Sender<Incoming>,
 }
+impl Service {
+    fn matches_registration(&self, node: u32, value: &RegisterRequest) -> bool {
+        if node > 1 {
+            return false;
+        }
+        let resumed = self.resumed.lock().unwrap();
+        if node == 1 && resumed.is_some() {
+            return resumed.as_ref() == Some(value);
+        }
+        self.expected.registration(node) == *value
+    }
+}
+
 #[tonic::async_trait]
 impl NativeRun for Service {
     async fn register(
@@ -71,7 +85,7 @@ impl NativeRun for Service {
             .as_ref()
             .map(|b| b.worker_id)
             .ok_or_else(|| Status::invalid_argument("binding"))?;
-        if node > 1 || registration != self.expected.registration(node) {
+        if !self.matches_registration(node, &registration) {
             return Err(Status::invalid_argument("identity"));
         }
         let mut state = self.registration.lock().unwrap();
@@ -101,7 +115,7 @@ impl NativeRun for Service {
             .as_ref()
             .map(|b| b.worker_id)
             .ok_or_else(|| Status::invalid_argument("binding"))?;
-        if node > 1 || self.expected.registration(node) != hello {
+        if !self.matches_registration(node, &hello) {
             return Err(Status::invalid_argument("invalid stream identity"));
         }
         {
@@ -194,6 +208,8 @@ type Route = (u32, u32, i32);
 #[derive(Clone, Default)]
 struct Worker {
     tx: Option<Output>,
+    incarnation: u64,
+    expected_recovery_cut: Option<Id>,
     started: bool,
     closed: bool,
     accepted_lease: Option<u64>,
@@ -417,6 +433,9 @@ impl Hub {
                     }
                 }
             }
+            if self.config.base.recovery.is_some() && self.pending_verify_anchor().is_some() {
+                return Ok(());
+            }
             if self.config.base.scenario == "healthy"
                 && self
                     .workers
@@ -533,6 +552,42 @@ impl Hub {
         Ok(())
     }
 
+    fn pending_verify_anchor(&self) -> Option<(u64, Ack)> {
+        self.accepted_acks
+            .iter()
+            .rev()
+            .find_map(|((node, _), ack)| {
+                if *node != 1
+                    || ack.recovery_receipt.is_none()
+                    || ack.effects.iter().any(|eff| {
+                        matches!(
+                            eff.kind,
+                            Some(effect::Kind::Sign(_) | effect::Kind::Work(_))
+                        )
+                    })
+                {
+                    return None;
+                }
+                let data: Value = serde_json::from_slice(&ack.application_events_json).ok()?;
+                if !data["work"].as_array()?.iter().any(|event| {
+                    event["event"] == "work_pending"
+                        && event["binding"]["work"]["kind"] == WorkKind::Verify as i32
+                }) {
+                    return None;
+                }
+                let trace: Value = serde_json::from_slice(&ack.runtime_events_json).ok()?;
+                let tick = trace
+                    .as_array()?
+                    .iter()
+                    .find(|event| event["kind"] == "grant")?["tick_us"]
+                    .as_u64()?;
+                Some((tick, ack.clone()))
+            })
+    }
+    fn key_at(&mut self, tick: u64) -> Result<Key> {
+        event_key(self.config.base.seed, &mut self.next_event, None, tick)
+    }
+
     fn duplicate(&mut self, node: u32, ack: &Ack) -> Result<()> {
         self.check_duplicate(node, ack)?;
         self.raw(
@@ -556,8 +611,10 @@ impl Hub {
             .next_step
             .checked_add(1)
             .ok_or_else(|| error("native step counter exhausted"))?;
+        let mut binding = self.config.binding(node);
+        binding.incarnation = self.workers[idx].incarnation.max(1);
         let mut grant = Grant {
-            binding: Some(self.config.binding(node)),
+            binding: Some(binding),
             logical_step_id: self.next_step,
             event_id: key.event_id,
             tick_us: key.tick_us,
@@ -616,7 +673,22 @@ impl Hub {
     ) -> Result<()> {
         let worker = &self.workers[node as usize];
         ensure(
-            ack.binding == grant.binding
+            (if self
+                .config
+                .base
+                .recovery
+                .as_ref()
+                .is_some_and(|r| r.target_worker == node)
+            {
+                ack.recovery_receipt.as_ref().is_some_and(|r| {
+                    r.cut_hash.len() == 32
+                        && r.auxiliary
+                            .as_ref()
+                            .is_some_and(|p| p.sequence > 0 && p.hash.len() == 32)
+                })
+            } else {
+                ack.recovery_receipt.is_none()
+            }) && ack.binding == grant.binding
                 && ack.logical_step_id == grant.logical_step_id
                 && ack.event_id == key.event_id
                 && ack.grant_hash == grant.grant_hash
@@ -635,6 +707,61 @@ impl Hub {
         )?;
         let _: Value = serde_json::from_slice(&ack.runtime_events_json)?;
         let _: Value = serde_json::from_slice(&ack.application_events_json)?;
+        let ready = ack
+            .effects
+            .iter()
+            .filter_map(|effect| match &effect.kind {
+                Some(effect::Kind::RecoveryReady(ready)) => Some(ready),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let ready_grant = node == 1
+            && worker.incarnation == 2
+            && worker.expected_recovery_cut.is_some()
+            && matches!(input.kind, Some(input::Kind::DriveReady(_)));
+        ensure(
+            ready.len() == usize::from(ready_grant),
+            "missing or unexpected recovery readiness",
+        )?;
+        if let Some(ready) = ready.first() {
+            let expected = worker
+                .expected_recovery_cut
+                .expect("ready grant requires prior cut");
+            let tags = [
+                "VOTER",
+                "BATCHER",
+                "RESOLVER",
+                "APPLICATION",
+                "ARCHIVE",
+                "DRIVER",
+            ];
+            ensure(
+                self.config.base.recovery.is_some()
+                    && ready.cid == self.config.cid
+                    && ready.cut_hash == expected
+                    && !ready.terminal
+                    && ready
+                        .actors
+                        .iter()
+                        .map(|actor| actor.actor.as_str())
+                        .eq(tags)
+                    && ready.actors.iter().all(|actor| {
+                        actor.state_hash.len() == 32
+                            && actor.state_hash.iter().any(|byte| *byte != 0)
+                    })
+                    && ready.witness_receipt == ack.witness_receipt
+                    && ready.auxiliary_receipt.as_ref().is_some_and(|start| {
+                        start.hash.len() == 32
+                            && start.sequence > 0
+                            && ack
+                                .recovery_receipt
+                                .as_ref()
+                                .and_then(|cut| cut.auxiliary.as_ref())
+                                .is_some_and(|cut| start.sequence < cut.sequence)
+                    }),
+                "invalid recovery readiness effect",
+            )?;
+        }
         let mut planned = AckPlan {
             worker: worker.clone(),
             timers: self.timers.clone(),
@@ -964,12 +1091,13 @@ pub async fn run_hub(args: &[String]) -> Result<()> {
     let service = Service {
         expected: resolved.clone(),
         registration: Arc::default(),
+        resumed: Arc::default(),
         broker,
     };
     let server = tokio::spawn(
         Server::builder()
             .add_service(
-                NativeRunServer::new(service)
+                NativeRunServer::new(service.clone())
                     .max_decoding_message_size(wire::MAX_FRAME)
                     .max_encoding_message_size(wire::MAX_FRAME),
             )
@@ -998,12 +1126,17 @@ pub async fn run_hub(args: &[String]) -> Result<()> {
             secret: keys[member as usize].encode().to_vec(),
             work_dir: dir,
             wall_pause_ms: options.pause,
+            recovery: resolved
+                .base
+                .recovery
+                .as_ref()
+                .filter(|r| r.target_worker == member)
+                .map(|_| settings::RecoveryLaunch::Initial),
         };
         let worker = spawn_worker(&request, &endpoint)?;
         process.push(json!({"worker":member,"pid":worker.0.id(),"start_wall_elapsed_us":start.elapsed().as_micros()}));
         children.push((member, worker));
     }
-    drop(keys);
     let mut hub = Hub {
         config: resolved.clone(),
         scripts,
@@ -1022,6 +1155,21 @@ pub async fn run_hub(args: &[String]) -> Result<()> {
         frames: BufWriter::new(File::create(root.join("frames.bin"))?),
     };
     let mut result = hub.run().await;
+    if result.is_ok() && resolved.base.recovery.is_some() {
+        result = resume_pending_verify(
+            &mut hub,
+            &service,
+            &root,
+            &endpoint,
+            options.pause,
+            keys[1].encode().to_vec(),
+            &mut children,
+            &mut process,
+            start,
+        )
+        .await;
+    }
+    drop(keys);
     if result.is_ok() {
         for (node, child) in &mut children {
             if let Some(sender) = hub.workers[*node as usize].tx.as_ref() {
@@ -1060,7 +1208,7 @@ pub async fn run_hub(args: &[String]) -> Result<()> {
     let heights = hub.workers.iter().map(|w| w.height).collect::<Vec<_>>();
     serde_json::to_writer_pretty(
         File::create(root.join("manifest.json"))?,
-        &json!({"gate":settings::PROFILE,"scenario":resolved.base.scenario,"seed":resolved.base.seed,
+        &json!({"gate":resolved.base.profile,"scenario":resolved.base.scenario,"seed":resolved.base.seed,
         "delivered_heights":heights,"outcome":if result.is_ok(){"COMPLETED"}else{"INFRASTRUCTURE_FAILURE"},"error":result.as_ref().err().map(ToString::to_string),"commands":args}),
     )?;
     serde_json::to_writer_pretty(
@@ -1069,6 +1217,231 @@ pub async fn run_hub(args: &[String]) -> Result<()> {
     )?;
     server.abort();
     result
+}
+
+async fn resume_pending_verify(
+    hub: &mut Hub,
+    service: &Service,
+    root: &std::path::Path,
+    endpoint: &str,
+    pause: u64,
+    secret: Vec<u8>,
+    children: &mut [(u32, ChildGuard)],
+    process: &mut Vec<Value>,
+    wall_start: Instant,
+) -> Result<()> {
+    let (tick, ack) = hub
+        .pending_verify_anchor()
+        .ok_or_else(|| error("R1 bounded run did not reach committed pending Verify"))?;
+    let config = hub.config.clone();
+    let schedule = config
+        .base
+        .recovery
+        .as_ref()
+        .ok_or_else(|| error("missing recovery schedule"))?;
+    let recovery_tick = tick
+        .checked_add(schedule.downtime_us)
+        .ok_or_else(|| error("recovery tick overflow"))?;
+    let target = schedule.target_worker;
+    let old_timer = hub
+        .timers
+        .iter()
+        .filter(|((node, _), _)| *node == target)
+        .map(|(_, timer)| timer.clone())
+        .collect::<Vec<_>>();
+    ensure(
+        old_timer.len() == 1,
+        "bounded pending Verify requires one live native timer",
+    )?;
+    ensure(
+        hub.workers[1]
+            .accepted_lease
+            .is_some_and(|lease| recovery_tick < lease),
+        "bounded recovery cannot occur after original lease",
+    )?;
+    let receipt = ack
+        .recovery_receipt
+        .as_ref()
+        .ok_or_else(|| error("missing committed recovery receipt"))?;
+    let floor = TrustedRecoveryFloor {
+        run_id: config.run_id.to_vec(),
+        config_hash: config.config_hash.to_vec(),
+        worker_id: target,
+        cid: config.cid.to_vec(),
+        epoch: config.base.epoch,
+        root_receipt: Some(Receipt {
+            sequence: ack.durable_step_sequence,
+            hash: ack.durable_step_hash.clone(),
+        }),
+        auxiliary_receipt: receipt.auxiliary.clone(),
+        cut_hash: receipt.cut_hash.clone(),
+        witness_receipt: ack.witness_receipt.clone(),
+    };
+    let old = children
+        .iter_mut()
+        .find(|(node, _)| *node == target)
+        .ok_or_else(|| error("missing designated recovery child"))?;
+    hub.record(
+        "RecoveryCrash",
+        None,
+        json!({"worker":target,"incarnation":1,"tick_us":tick,
+        "boundary":schedule.boundary,"recovery_tick_us":recovery_tick,"floor":floor}),
+    )?;
+    old.1.0.kill()?;
+    let status = old.1.0.wait()?;
+    ensure(
+        !status.success(),
+        "designated crash did not terminate worker",
+    )?;
+    process.push(json!({"worker":target,"incarnation":1,"pid":old.1.0.id(),"exit_code":status.code(),"expected_crash":true}));
+    let deadline = tokio::time::Instant::now() + WATCHDOG;
+    loop {
+        match tokio::time::timeout_at(deadline, hub.bus.recv()).await? {
+            Some(Incoming::Lost(node, _)) if node == target => break,
+            Some(Incoming::Ack(node, ack)) => hub.duplicate(node, &ack)?,
+            _ => {
+                return Err(error(
+                    "unexpected control traffic while retiring old native stream",
+                ));
+            }
+        }
+    }
+    hub.workers[1].tx = None;
+    hub.workers[1].incarnation = 2;
+    hub.workers[1].expected_recovery_cut = Some(floor.cut_hash.as_slice().try_into()?);
+    hub.workers[1].accepted_lease = None;
+    let mut cancelled = Vec::new();
+    hub.events.retain(|key, event| {
+        let owned = match event {
+            Event::Grant(node, _)
+            | Event::ClockService(node, _)
+            | Event::Timer(node, _)
+            | Event::Lease(node, _) => *node == target,
+            Event::Route(_) => false,
+        };
+        if owned {
+            cancelled.push(key.event_id);
+        }
+        !owned
+    });
+    hub.timers.retain(|(node, _), _| *node != target);
+    hub.record(
+        "RecoveryPhysicalObligationsCancelled",
+        None,
+        json!({
+            "worker":target,"old_incarnation":1,"event_ids":cancelled,"timers":old_timer,
+        }),
+    )?;
+    let registration = config.resumed_registration(target, 1, 2, floor.clone())?;
+    *service.resumed.lock().unwrap() = Some(registration.clone());
+    service.registration.lock().unwrap()[1] = 0;
+    let dir = root.join("worker-1-i2");
+    fs::create_dir(&dir)?;
+    let next = spawn_worker(
+        &Launch {
+            resolved: (*config).clone(),
+            member: target,
+            secret,
+            work_dir: dir.clone(),
+            wall_pause_ms: pause,
+            recovery: Some(settings::RecoveryLaunch::Resume {
+                source: root.join("worker-1"),
+                fresh_target: dir.join("generation-2"),
+                floor: floor.clone(),
+                old_incarnation: 1,
+                storage_generation: 1,
+                recovery_tick_us: recovery_tick,
+            }),
+        },
+        endpoint,
+    )?;
+    process.push(json!({"worker":target,"incarnation":2,"pid":next.0.id(),"start_wall_elapsed_us":wall_start.elapsed().as_micros()}));
+    old.1 = next;
+    hub.await_registration().await?;
+    hub.record("RecoveryRegistered", None, json!(registration))?;
+    let clock_request = hub.key_at(recovery_tick)?;
+    hub.grant(
+        &clock_request,
+        target,
+        make(input::Kind::RequestSample(Empty {})),
+    )
+    .await?;
+    let wanted = hub.workers[1].last_request;
+    let clock_service = hub
+        .events
+        .iter()
+        .find_map(|(key, event)| {
+            matches!(event,Event::ClockService(node,request) if *node==target&&*request==wanted)
+                .then(|| key.clone())
+        })
+        .ok_or_else(|| error("new worker did not issue fresh calibration request"))?;
+    hub.events.remove(&clock_service);
+    let sequence = hub.workers[1]
+        .clock_sequence
+        .checked_add(1)
+        .ok_or_else(|| error("clock sequence exhausted"))?;
+    hub.workers[1].clock_sequence = sequence;
+    let sample = ClockSample {
+        run_id: config.run_id.to_vec(),
+        worker_id: target,
+        incarnation: 2,
+        clock_domain: config.profile(target).clock_domain().to_vec(),
+        rate_profile: crate::Profile::rate_profile().to_vec(),
+        request_id: wanted,
+        sequence,
+        as_of_tick_us: clock_service.tick_us,
+        node_time_at_as_of_us: i64::try_from(clock_service.tick_us)? + config.base.epsilon[1],
+        uncertainty_us: config.base.epsilon[1].unsigned_abs(),
+        lease_end_tick_us: clock_service.tick_us + config.base.lease,
+    };
+    hub.record("ClockServiceSample", Some(&clock_service), json!(&sample))?;
+    let calibrated = hub.key_at(clock_service.tick_us + config.base.clock_transit)?;
+    hub.grant(&calibrated, target, make(input::Kind::Sample(sample)))
+        .await?;
+    let recover = hub.key_at(calibrated.tick_us)?;
+    hub.grant(
+        &recover,
+        target,
+        make(input::Kind::Recover(RecoverEngine {
+            floor: Some(floor.clone()),
+            engine: Some(config.start()),
+            old_incarnation: 1,
+            old_generation: 1,
+            new_generation: 2,
+            outstanding_grant_hash: vec![],
+            recovery_profile_hash: config.config_hash.to_vec(),
+        })),
+    )
+    .await?;
+    let release = hub.key_at(calibrated.tick_us)?;
+    hub.grant(&release, target, make(input::Kind::DriveReady(Empty {})))
+        .await?;
+    let ack = hub
+        .accepted_acks
+        .get(&(target, hub.next_step))
+        .ok_or_else(|| error("missing ready root step"))?;
+    ensure(
+        ack.effects.iter().any(|effect| {
+            matches!(&effect.kind,Some(effect::Kind::RecoveryReady(ready))
+        if ready.cut_hash==floor.cut_hash)
+        }),
+        "restored worker lacks matching durable readiness",
+    )?;
+    ensure(
+        ack.effects.iter().any(|effect| {
+            matches!(&effect.kind,Some(effect::Kind::TimerArm(timer))
+        if timer.local_deadline_us==old_timer[0].local_deadline_us&&timer.id!=old_timer[0].id)
+        }),
+        "restored native certification timer changed deadline",
+    )?;
+    hub.record(
+        "RecoveryPendingVerifyComplete",
+        Some(&release),
+        json!({
+            "worker":target,"old_incarnation":1,"new_incarnation":2,"cut_hash":floor.cut_hash,
+            "certificate_deadline_us":old_timer[0].local_deadline_us,
+        }),
+    )
 }
 
 fn event_key(seed: u64, counter: &mut u64, parent: Option<&Key>, tick: u64) -> Result<Key> {
@@ -1388,6 +1761,10 @@ impl AckPlan {
                 self.worker.height = delivered.height;
                 self.worker.delivered_tip = Some(block.digest);
                 self.worker.first_delivery.get_or_insert(key.tick_us);
+            }
+            effect::Kind::RecoveryReady(_) if config.base.recovery.is_some() && node == 1 => {}
+            effect::Kind::RecoveryReady(_) | effect::Kind::RecoveryCut(_) => {
+                return Err(error("unexpected native recovery effects"));
             }
             effect::Kind::Lifecycle(lifecycle) => {
                 ensure(

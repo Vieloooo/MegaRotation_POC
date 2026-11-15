@@ -41,6 +41,8 @@ pub struct Actor<
     T: Strategy,
 > {
     context: ContextCell<E>,
+    #[cfg(feature = "native-recovery")]
+    recovery: Option<crate::simplex::recovery::ActorRecovery>,
     scheme: S,
     blocker: Option<B>,
     strategy: T,
@@ -66,11 +68,18 @@ impl<
     T: Strategy,
 > Actor<E, S, B, D, T>
 {
+    #[cfg(feature = "native-recovery")]
+    pub(crate) fn enable_recovery(&mut self, recovery: crate::simplex::recovery::ActorRecovery) {
+        self.recovery = Some(recovery);
+    }
+
     pub fn new(context: E, cfg: Config<S, B, T>) -> (Self, Mailbox<S, D>) {
         let (sender, receiver) = mailbox::new(context.child("mailbox"), cfg.mailbox_size);
         (
             Self {
                 context: ContextCell::new(context),
+                #[cfg(feature = "native-recovery")]
+                recovery: None,
                 scheme: cfg.scheme,
                 blocker: Some(cfg.blocker),
                 strategy: cfg.strategy,
@@ -103,6 +112,18 @@ impl<
         sender: impl Sender<PublicKey = S::PublicKey>,
         receiver: impl Receiver<PublicKey = S::PublicKey>,
     ) {
+        #[cfg(feature = "native-recovery")]
+        if let Some(recovery) = &self.recovery {
+            recovery
+                .wait(
+                    crate::simplex::recovery::ActorId::Resolver,
+                    self.epoch.get(),
+                    format!("{{\"actor\":\"RESOLVER\",\"epoch\":{},\"participants\":{},\"mailbox_capacity\":{}}}",
+                        self.epoch.get(),self.scheme.participants().len(),self.mailbox_size.get()).as_bytes(),
+                )
+                .await;
+        }
+
         let participants = self.scheme.participants().clone();
         let me = self
             .scheme

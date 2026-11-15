@@ -1,4 +1,6 @@
 use super::{Config, Mailbox, Message, Round, verifier::Batch};
+#[cfg(feature = "native-recovery")]
+use crate::simplex::{recovery as rec, types::Attributable as _};
 use crate::{
     Epochable, Relay, Reporter, Viewable,
     simplex::{
@@ -58,6 +60,8 @@ where
     T: Strategy,
 {
     context: ContextCell<E>,
+    #[cfg(feature = "native-recovery")]
+    recovery: Option<crate::simplex::recovery::ActorRecovery>,
 
     scheme: Arc<S>,
 
@@ -105,6 +109,11 @@ where
     Rl: Relay<Digest = D, PublicKey = S::PublicKey, Plan = Plan<S::PublicKey>>,
     T: Strategy,
 {
+    #[cfg(feature = "native-recovery")]
+    pub(crate) fn enable_recovery(&mut self, recovery: crate::simplex::recovery::ActorRecovery) {
+        self.recovery = Some(recovery);
+    }
+
     pub fn new(context: E, cfg: Config<S, B, Re, Rl, T>) -> (Self, Mailbox<S, D>) {
         let scheme = Arc::new(cfg.scheme);
         let participants = scheme.participants();
@@ -142,6 +151,8 @@ where
         (
             Self {
                 context: ContextCell::new(context),
+                #[cfg(feature = "native-recovery")]
+                recovery: None,
 
                 last_activity: vec![None; participants.len()],
                 required_active,
@@ -329,6 +340,23 @@ where
         }
     }
 
+    #[cfg(feature = "native-recovery")]
+    fn recovery_ingress_signature(
+        &self,
+        input_ref: Option<rec::InputRef>,
+        signature_state: rec::SignatureState,
+    ) {
+        if let (Some(hooks), Some(input_ref)) = (&self.recovery, input_ref) {
+            hooks
+                .store
+                .stage(rec::RecoveryRecord::IngressSignature {
+                    input_ref,
+                    signature_state,
+                })
+                .expect("record native ingress signature result");
+        }
+    }
+
     /// Attempts to construct certificates from ready votes for `view` and forwards
     /// them to the voter.
     async fn process_view(
@@ -399,6 +427,35 @@ where
         vote_receiver: impl Receiver<PublicKey = S::PublicKey>,
         certificate_receiver: impl Receiver<PublicKey = S::PublicKey>,
     ) {
+        #[cfg(feature = "native-recovery")]
+        if let Some(recovery) = &self.recovery {
+            recovery
+                .wait(
+                    rec::ActorId::Batcher,
+                    self.epoch.get(),
+                    format!(
+                        "{{\"actor\":\"BATCHER\",\"epoch\":{},\"floor\":{},\"participants\":{}}}",
+                        self.epoch.get(),
+                        self.floor.get(),
+                        self.scheme.participants().len(),
+                    )
+                    .as_bytes(),
+                )
+                .await;
+        }
+
+        #[cfg(feature = "native-recovery")]
+        let (vote_receiver, vote_stamp) = rec::IngressCapture::new(
+            vote_receiver,
+            self.recovery.as_ref().map(|hooks| hooks.store.clone()),
+            1,
+        );
+        #[cfg(feature = "native-recovery")]
+        let (certificate_receiver, certificate_stamp) = rec::IngressCapture::new(
+            certificate_receiver,
+            self.recovery.as_ref().map(|hooks| hooks.store.clone()),
+            2,
+        );
         // Wrap channels
         let mut vote_receiver: WrappedReceiver<_, Vote<S, D>> =
             WrappedReceiver::new((), vote_receiver);
@@ -551,6 +608,8 @@ where
             },
             // Handle certificates from the network
             Ok((sender, message)) = certificate_receiver.recv() else break => {
+                #[cfg(feature = "native-recovery")]
+                let input_ref = certificate_stamp.lock().unwrap().take();
                 // If there is a decoding error, block
                 let Ok(message) = message else {
                     commonware_p2p::block!(self.blocker, sender, "decoding error");
@@ -602,13 +661,21 @@ where
 
                 // Verify the certificate.
                 if !message.verify(self.context.as_mut(), self.scheme.as_ref(), &self.strategy) {
+                    #[cfg(feature = "native-recovery")]
+                    self.recovery_ingress_signature(input_ref, rec::SignatureState::Rejected);
                     commonware_p2p::block!(self.blocker, sender, %view, %kind, "invalid certificate");
                     continue;
                 }
 
                 // Store and forward to voter, revisiting the round when the
                 // certificate may have unlocked already-buffered votes.
+                #[cfg(feature = "native-recovery")]
+                self.recovery_ingress_signature(input_ref, rec::SignatureState::Verified);
                 let round = self.round_for_view(&current, &mut work, view);
+                #[cfg(feature = "native-recovery")]
+                if let Some(input_ref) = input_ref {
+                    round.record_certificate_ingress(&message, input_ref);
+                }
                 if round.record_certificate(&message) {
                     dirty_views.push(view);
                 }
@@ -616,6 +683,8 @@ where
             },
             // Handle votes from the network
             Ok((sender, message)) = vote_receiver.recv() else break => {
+                #[cfg(feature = "native-recovery")]
+                let input_ref = vote_stamp.lock().unwrap().take();
                 // If there is a decoding error, block
                 let Ok(message) = message else {
                     commonware_p2p::block!(self.blocker, sender, "decoding error");
@@ -648,7 +717,16 @@ where
 
                 // Add the vote to the verifier
                 let round = self.round_for_view(&current, &mut work, view);
+                #[cfg(feature = "native-recovery")]
+                let notarize_signer = match &message {
+                    Vote::Notarize(notarize) if input_ref.is_some() => Some(notarize.signer()),
+                    _ => None,
+                };
                 if round.add_network(sender.clone(), message) {
+                    #[cfg(feature = "native-recovery")]
+                    if let (Some(input_ref), Some(signer)) = (input_ref, notarize_signer) {
+                        round.record_notarize_ingress(signer, input_ref);
+                    }
                     self.added.inc();
 
                     // Update per-peer latest vote metric (only if higher than current)
@@ -701,6 +779,17 @@ where
                     if let Some(signer) = signer
                         && let Some(proposal) = round.try_forward_proposal(signer)
                     {
+                        #[cfg(feature = "native-recovery")]
+                        if let Some(origin) = round.selected_ingress(&proposal) {
+                            round.span().in_scope(|| voter.recoverable_proposal(proposal, origin));
+                        } else {
+                            // A locally assembled certificate has no raw envelope.
+                            // Its proposal is reconstituted by native journal replay.
+                            assert!(self.recovery.is_none() || round.has_authoritative_proposal(),
+                                "selected optimistic proposal has no exact ingress");
+                            round.span().in_scope(|| voter.proposal(proposal));
+                        }
+                        #[cfg(not(feature = "native-recovery"))]
                         round.span().in_scope(|| voter.proposal(proposal));
                     }
 

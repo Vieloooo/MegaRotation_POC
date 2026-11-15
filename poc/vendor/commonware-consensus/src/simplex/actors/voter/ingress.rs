@@ -21,6 +21,13 @@ pub enum Message<S: Scheme, D: Digest> {
         /// The leader's proposal.
         proposal: Proposal<D>,
     },
+    /// Leader proposal with exact ingress provenance in opt-in recovery mode.
+    #[cfg(feature = "native-recovery")]
+    RecoverableProposal {
+        span: Span,
+        proposal: Proposal<D>,
+        origin: crate::simplex::recovery::ProposalOrigin,
+    },
     /// Signal that the current view should timeout (if not already).
     Timeout {
         /// The span carried with this message.
@@ -40,10 +47,21 @@ pub enum Message<S: Scheme, D: Digest> {
 }
 
 impl<S: Scheme, D: Digest> Message<S, D> {
+    fn proposal_view(&self) -> Option<View> {
+        match self {
+            Self::Proposal { proposal, .. } => Some(proposal.view()),
+            #[cfg(feature = "native-recovery")]
+            Self::RecoverableProposal { proposal, .. } => Some(proposal.view()),
+            _ => None,
+        }
+    }
+
     /// Returns the message view used for pruning and deduplication.
     pub(crate) fn view(&self) -> View {
         match self {
             Self::Proposal { proposal, .. } => proposal.view(),
+            #[cfg(feature = "native-recovery")]
+            Self::RecoverableProposal { proposal, .. } => proposal.view(),
             Self::Timeout { round, .. } => round.view(),
             Self::Verified { certificate, .. } => certificate.view(),
         }
@@ -55,6 +73,8 @@ impl<S: Scheme, D: Digest> Message<S, D> {
             Self::Proposal { span, .. }
             | Self::Timeout { span, .. }
             | Self::Verified { span, .. } => span,
+            #[cfg(feature = "native-recovery")]
+            Self::RecoverableProposal { span, .. } => span,
         }
     }
 
@@ -62,6 +82,8 @@ impl<S: Scheme, D: Digest> Message<S, D> {
     pub(crate) const fn name(&self) -> &'static str {
         match self {
             Self::Proposal { .. } => "proposal",
+            #[cfg(feature = "native-recovery")]
+            Self::RecoverableProposal { .. } => "proposal",
             Self::Timeout { .. } => "timeout",
             Self::Verified { .. } => "verified",
         }
@@ -173,16 +195,6 @@ impl<S: Scheme, D: Digest> Policy for Message<S, D> {
             .iter()
             .any(|old_message| match (&message, old_message) {
                 (
-                    Self::Proposal {
-                        proposal: new_proposal,
-                        ..
-                    },
-                    Self::Proposal {
-                        proposal: old_proposal,
-                        ..
-                    },
-                ) => new_proposal.view() == old_proposal.view(),
-                (
                     Self::Verified {
                         certificate: new_certificate,
                         ..
@@ -200,7 +212,9 @@ impl<S: Scheme, D: Digest> Policy for Message<S, D> {
                                 | (Certificate::Finalization(_), Certificate::Finalization(_))
                         )
                 }
-                _ => false,
+                _ => message
+                    .proposal_view()
+                    .is_some_and(|view| old_message.proposal_view() == Some(view)),
             })
         {
             return;
@@ -229,6 +243,23 @@ impl<S: Scheme, D: Digest> Mailbox<S, D> {
                 view = proposal.view().traced()
             ),
             proposal,
+        });
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(crate) fn recoverable_proposal(
+        &mut self,
+        proposal: Proposal<D>,
+        origin: crate::simplex::recovery::ProposalOrigin,
+    ) {
+        let _ = self.sender.enqueue(Message::RecoverableProposal {
+            span: info_span!(
+                "simplex.voter.mailbox.proposal",
+                epoch = proposal.epoch().traced(),
+                view = proposal.view().traced()
+            ),
+            proposal,
+            origin,
         });
     }
 

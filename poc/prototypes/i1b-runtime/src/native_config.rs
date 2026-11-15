@@ -24,6 +24,7 @@ pub(crate) const START: u64 = 1_000_000;
 pub(crate) const STOP: i64 = 1_800_000;
 pub(crate) const CUTOFF: u64 = 1_900_000;
 pub(crate) const PROFILE: &str = "native-engine-fresh-v1";
+pub(crate) const RECOVERY_PROFILE: &str = "native-recovery-v1";
 pub(crate) const WORK_US: u64 = 5_000;
 pub(crate) const LINK_US: u64 = 20_000;
 pub(crate) const REFRESH_US: u64 = 20_000;
@@ -39,6 +40,13 @@ pub(crate) struct PublicMember {
     pub bls_key: Vec<u8>,
     pub pop: Vec<u8>,
     pub signer_index: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct RecoverySchedule {
+    pub target_worker: u32,
+    pub boundary: String,
+    pub downtime_us: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -83,6 +91,8 @@ pub(crate) struct BaseProfile {
     pub startup_skew: u64,
     pub stress_tick: Option<u64>,
     pub stress_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<RecoverySchedule>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -105,6 +115,22 @@ pub(crate) struct Launch {
     pub secret: Vec<u8>,
     pub work_dir: PathBuf,
     pub wall_pause_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<RecoveryLaunch>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "SCREAMING_SNAKE_CASE")]
+pub(crate) enum RecoveryLaunch {
+    Initial,
+    Resume {
+        source: PathBuf,
+        fresh_target: PathBuf,
+        floor: TrustedRecoveryFloor,
+        old_incarnation: u64,
+        storage_generation: u64,
+        recovery_tick_us: u64,
+    },
 }
 
 fn err(_: impl std::fmt::Debug) -> Error {
@@ -119,6 +145,7 @@ impl Resolved {
         let (height_limit, scripted, body_hold_until, close_on_work, lose_clock_after) =
             match scenario {
                 "healthy" => (2, true, None, None, None),
+                "recover-pending-verify" => (1, false, Some(1_250_000), None, None),
                 "two-real-alone" => (2, false, None, None, None),
                 "proof-before-body" => (1, true, Some(1_250_000), None, None),
                 "close-propose" => (1, true, None, Some(WorkKind::Propose as i32), None),
@@ -162,7 +189,12 @@ impl Resolved {
         }
         let registry_hash = registry_hash(&members);
         let base = BaseProfile {
-            profile: PROFILE.into(),
+            profile: if scenario == "recover-pending-verify" {
+                RECOVERY_PROFILE
+            } else {
+                PROFILE
+            }
+            .into(),
             package: env!("CARGO_PKG_VERSION").into(),
             commonware: "2026.10.0+controlled-spawn-v1".into(),
             scenario: scenario.into(),
@@ -206,6 +238,11 @@ impl Resolved {
             } else {
                 0
             },
+            recovery: (scenario == "recover-pending-verify").then_some(RecoverySchedule {
+                target_worker: 1,
+                boundary: "AFTER_ACK_PENDING_VERIFY".into(),
+                downtime_us: 20_000,
+            }),
         };
         Ok((Self::derive(base, members)?, secrets))
     }
@@ -252,7 +289,19 @@ impl Resolved {
 
     pub fn validate(&self) -> Result<()> {
         // Verify the public configuration without constructing any signing key.
-        if self.base.profile != PROFILE
+        let configured_recovery = self.base.scenario == "recover-pending-verify";
+        if self.base.profile
+            != if configured_recovery {
+                RECOVERY_PROFILE
+            } else {
+                PROFILE
+            }
+            || self
+                .base
+                .recovery
+                .as_ref()
+                .map(|r| (r.target_worker, r.boundary.as_str(), r.downtime_us))
+                != configured_recovery.then_some((1, "AFTER_ACK_PENDING_VERIFY", 20_000))
             || ![7, 42, 99].contains(&self.base.seed)
             || self.members.iter().map(|member| member.member).ne(0..5)
             || registry_hash(&self.members) != self.base.registry_hash
@@ -360,9 +409,51 @@ impl Resolved {
             binding: Some(self.binding(node)),
             registry_hash: self.base.registry_hash.to_vec(),
             namespace_hash: self.namespace.to_vec(),
-            profile: PROFILE.into(),
+            profile: self.base.profile.clone(),
+            recovery: None,
         }
     }
+    pub fn resumed_registration(
+        &self,
+        node: u32,
+        old_incarnation: u64,
+        generation: u64,
+        floor: TrustedRecoveryFloor,
+    ) -> Result<RegisterRequest> {
+        let mut value = self.registration(node);
+        if node != 1
+            || generation
+                != old_incarnation
+                    .checked_add(1)
+                    .ok_or(Error("incarnation overflow"))?
+        {
+            return Err(Error("unexpected resumed recovery worker"));
+        }
+        value.binding.as_mut().unwrap().incarnation = generation;
+        let manifest = floor
+            .witness_receipt
+            .as_ref()
+            .ok_or(Error("recovery manifest has no witness"))?;
+        value.recovery = Some(RecoveryRegistration {
+            floor: Some(floor.clone()),
+            old_incarnation,
+            storage_generation: generation,
+            terminal: false,
+            validated_source_manifest_hash: hash_parts(
+                b"I1b/recovery-state/v1",
+                &[
+                    b"EMPTY_NATIVE_BOUNDARY",
+                    &old_incarnation.to_be_bytes(),
+                    &floor.cut_hash,
+                    &manifest.sequence.to_be_bytes(),
+                    &manifest.hash,
+                ],
+            )
+            .to_vec(),
+        });
+        Ok(value)
+    }
+
     pub fn start(&self) -> StartEngine {
         StartEngine {
             cid: self.cid.to_vec(),

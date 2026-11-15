@@ -1,0 +1,1928 @@
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -32,6 +32,8 @@
+ development = ["commonware-consensus"]
+ 
+ [features]
++# Local opt-in recovery metadata hooks; ordinary Engine::new remains unchanged.
++native-recovery = []
+ arbitrary = [
+     "commonware-codec/arbitrary",
+     "commonware-coding/arbitrary",
+diff --git a/src/simplex/actors/batcher/actor.rs b/src/simplex/actors/batcher/actor.rs
+--- a/src/simplex/actors/batcher/actor.rs
++++ b/src/simplex/actors/batcher/actor.rs
+@@ -1,4 +1,6 @@
+ use super::{Config, Mailbox, Message, Round, verifier::Batch};
++#[cfg(feature = "native-recovery")]
++use crate::simplex::{recovery as rec, types::Attributable as _};
+ use crate::{
+     Epochable, Relay, Reporter, Viewable,
+     simplex::{
+@@ -58,6 +60,8 @@
+     T: Strategy,
+ {
+     context: ContextCell<E>,
++    #[cfg(feature = "native-recovery")]
++    recovery: Option<crate::simplex::recovery::ActorRecovery>,
+ 
+     scheme: Arc<S>,
+ 
+@@ -105,6 +109,11 @@
+     Rl: Relay<Digest = D, PublicKey = S::PublicKey, Plan = Plan<S::PublicKey>>,
+     T: Strategy,
+ {
++    #[cfg(feature = "native-recovery")]
++    pub(crate) fn enable_recovery(&mut self, recovery: crate::simplex::recovery::ActorRecovery) {
++        self.recovery = Some(recovery);
++    }
++
+     pub fn new(context: E, cfg: Config<S, B, Re, Rl, T>) -> (Self, Mailbox<S, D>) {
+         let scheme = Arc::new(cfg.scheme);
+         let participants = scheme.participants();
+@@ -142,6 +151,8 @@
+         (
+             Self {
+                 context: ContextCell::new(context),
++                #[cfg(feature = "native-recovery")]
++                recovery: None,
+ 
+                 last_activity: vec![None; participants.len()],
+                 required_active,
+@@ -326,6 +337,23 @@
+ 
+         if view == current.view || self.lookahead.in_admission_window(current.view, view) {
+             round.set_leader(leader);
++        }
++    }
++
++    #[cfg(feature = "native-recovery")]
++    fn recovery_ingress_signature(
++        &self,
++        input_ref: Option<rec::InputRef>,
++        signature_state: rec::SignatureState,
++    ) {
++        if let (Some(hooks), Some(input_ref)) = (&self.recovery, input_ref) {
++            hooks
++                .store
++                .stage(rec::RecoveryRecord::IngressSignature {
++                    input_ref,
++                    signature_state,
++                })
++                .expect("record native ingress signature result");
+         }
+     }
+ 
+@@ -399,6 +427,35 @@
+         vote_receiver: impl Receiver<PublicKey = S::PublicKey>,
+         certificate_receiver: impl Receiver<PublicKey = S::PublicKey>,
+     ) {
++        #[cfg(feature = "native-recovery")]
++        if let Some(recovery) = &self.recovery {
++            recovery
++                .wait(
++                    rec::ActorId::Batcher,
++                    self.epoch.get(),
++                    format!(
++                        "{{\"actor\":\"BATCHER\",\"epoch\":{},\"floor\":{},\"participants\":{}}}",
++                        self.epoch.get(),
++                        self.floor.get(),
++                        self.scheme.participants().len(),
++                    )
++                    .as_bytes(),
++                )
++                .await;
++        }
++
++        #[cfg(feature = "native-recovery")]
++        let (vote_receiver, vote_stamp) = rec::IngressCapture::new(
++            vote_receiver,
++            self.recovery.as_ref().map(|hooks| hooks.store.clone()),
++            1,
++        );
++        #[cfg(feature = "native-recovery")]
++        let (certificate_receiver, certificate_stamp) = rec::IngressCapture::new(
++            certificate_receiver,
++            self.recovery.as_ref().map(|hooks| hooks.store.clone()),
++            2,
++        );
+         // Wrap channels
+         let mut vote_receiver: WrappedReceiver<_, Vote<S, D>> =
+             WrappedReceiver::new((), vote_receiver);
+@@ -551,6 +608,8 @@
+             },
+             // Handle certificates from the network
+             Ok((sender, message)) = certificate_receiver.recv() else break => {
++                #[cfg(feature = "native-recovery")]
++                let input_ref = certificate_stamp.lock().unwrap().take();
+                 // If there is a decoding error, block
+                 let Ok(message) = message else {
+                     commonware_p2p::block!(self.blocker, sender, "decoding error");
+@@ -602,13 +661,21 @@
+ 
+                 // Verify the certificate.
+                 if !message.verify(self.context.as_mut(), self.scheme.as_ref(), &self.strategy) {
++                    #[cfg(feature = "native-recovery")]
++                    self.recovery_ingress_signature(input_ref, rec::SignatureState::Rejected);
+                     commonware_p2p::block!(self.blocker, sender, %view, %kind, "invalid certificate");
+                     continue;
+                 }
+ 
+                 // Store and forward to voter, revisiting the round when the
+                 // certificate may have unlocked already-buffered votes.
++                #[cfg(feature = "native-recovery")]
++                self.recovery_ingress_signature(input_ref, rec::SignatureState::Verified);
+                 let round = self.round_for_view(&current, &mut work, view);
++                #[cfg(feature = "native-recovery")]
++                if let Some(input_ref) = input_ref {
++                    round.record_certificate_ingress(&message, input_ref);
++                }
+                 if round.record_certificate(&message) {
+                     dirty_views.push(view);
+                 }
+@@ -616,6 +683,8 @@
+             },
+             // Handle votes from the network
+             Ok((sender, message)) = vote_receiver.recv() else break => {
++                #[cfg(feature = "native-recovery")]
++                let input_ref = vote_stamp.lock().unwrap().take();
+                 // If there is a decoding error, block
+                 let Ok(message) = message else {
+                     commonware_p2p::block!(self.blocker, sender, "decoding error");
+@@ -648,7 +717,16 @@
+ 
+                 // Add the vote to the verifier
+                 let round = self.round_for_view(&current, &mut work, view);
++                #[cfg(feature = "native-recovery")]
++                let notarize_signer = match &message {
++                    Vote::Notarize(notarize) if input_ref.is_some() => Some(notarize.signer()),
++                    _ => None,
++                };
+                 if round.add_network(sender.clone(), message) {
++                    #[cfg(feature = "native-recovery")]
++                    if let (Some(input_ref), Some(signer)) = (input_ref, notarize_signer) {
++                        round.record_notarize_ingress(signer, input_ref);
++                    }
+                     self.added.inc();
+ 
+                     // Update per-peer latest vote metric (only if higher than current)
+@@ -701,6 +779,17 @@
+                     if let Some(signer) = signer
+                         && let Some(proposal) = round.try_forward_proposal(signer)
+                     {
++                        #[cfg(feature = "native-recovery")]
++                        if let Some(origin) = round.selected_ingress(&proposal) {
++                            round.span().in_scope(|| voter.recoverable_proposal(proposal, origin));
++                        } else {
++                            // A locally assembled certificate has no raw envelope.
++                            // Its proposal is reconstituted by native journal replay.
++                            assert!(self.recovery.is_none() || round.has_authoritative_proposal(),
++                                "selected optimistic proposal has no exact ingress");
++                            round.span().in_scope(|| voter.proposal(proposal));
++                        }
++                        #[cfg(not(feature = "native-recovery"))]
+                         round.span().in_scope(|| voter.proposal(proposal));
+                     }
+ 
+diff --git a/src/simplex/actors/batcher/round.rs b/src/simplex/actors/batcher/round.rs
+--- a/src/simplex/actors/batcher/round.rs
++++ b/src/simplex/actors/batcher/round.rs
+@@ -3,6 +3,8 @@
+     verifier::{Batch, ProposalState},
+     votes::{ObservedVote, Outcome, VoteTracker},
+ };
++#[cfg(feature = "native-recovery")]
++use crate::simplex::recovery as rec;
+ use crate::{
+     Reporter,
+     simplex::{
+@@ -46,6 +48,10 @@
+ 
+     /// Whether we've already sent the selected proposal to the voter.
+     proposal_sent: bool,
++    #[cfg(feature = "native-recovery")]
++    notarize_ingress: std::collections::BTreeMap<Participant, rec::InputRef>,
++    #[cfg(feature = "native-recovery")]
++    certificate_ingress: Option<(Proposal<D>, rec::InputRef)>,
+ 
+     /// Root span of the view, shared with the voter's round.
+     ///
+@@ -97,6 +103,10 @@
+             verifier: Verifier::new(round, scheme, quorum),
+             votes,
+             proposal_sent: false,
++            #[cfg(feature = "native-recovery")]
++            notarize_ingress: std::collections::BTreeMap::new(),
++            #[cfg(feature = "native-recovery")]
++            certificate_ingress: None,
+             span: ViewSpan::new(),
+         }
+     }
+@@ -366,6 +376,59 @@
+         // uncertified leader vote from the tracker.
+         self.verifier
+             .set_leader(leader, self.votes.notarize(leader));
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn record_notarize_ingress(
++        &mut self,
++        signer: Participant,
++        input_ref: rec::InputRef,
++    ) {
++        assert!(
++            self.notarize_ingress.insert(signer, input_ref).is_none(),
++            "replaced first admitted vote ingress"
++        );
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn record_certificate_ingress(
++        &mut self,
++        certificate: &Certificate<S, D>,
++        input_ref: rec::InputRef,
++    ) {
++        let proposal = match certificate {
++            Certificate::Notarization(v) => &v.proposal,
++            Certificate::Finalization(v) => &v.proposal,
++            Certificate::Nullification(_) => return,
++        };
++        if !self.verifier.has_authoritative_proposal() {
++            self.certificate_ingress = Some((proposal.clone(), input_ref));
++        }
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) const fn has_authoritative_proposal(&self) -> bool {
++        self.verifier.has_authoritative_proposal()
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn selected_ingress(&self, proposal: &Proposal<D>) -> Option<rec::ProposalOrigin> {
++        if self.has_authoritative_proposal() {
++            let (selected, input_ref) = self.certificate_ingress.as_ref()?;
++            return (selected == proposal).then_some(rec::ProposalOrigin {
++                input_ref: *input_ref,
++                signature_state: rec::SignatureState::Verified,
++            });
++        }
++        let leader = self.verifier.leader()?;
++        let vote = self.votes.notarize(leader)?;
++        if &vote.proposal != proposal {
++            return None;
++        }
++        Some(rec::ProposalOrigin {
++            input_ref: *self.notarize_ingress.get(&leader)?,
++            signature_state: rec::SignatureState::Pending,
++        })
+     }
+ 
+     /// Returns the proposal to forward to the voter, marking it sent (at most
+diff --git a/src/simplex/actors/batcher/verifier.rs b/src/simplex/actors/batcher/verifier.rs
+--- a/src/simplex/actors/batcher/verifier.rs
++++ b/src/simplex/actors/batcher/verifier.rs
+@@ -413,6 +413,11 @@
+         }
+     }
+ 
++    #[cfg(feature = "native-recovery")]
++    pub(super) const fn has_authoritative_proposal(&self) -> bool {
++        matches!(self.proposal, ProposalState::Certificate(_))
++    }
++
+     /// Records that a certificate of `kind` exists, dropping its buffered votes.
+     pub(super) fn record_certificate(&mut self, kind: Kind) {
+         match kind {
+diff --git a/src/simplex/actors/resolver/actor.rs b/src/simplex/actors/resolver/actor.rs
+--- a/src/simplex/actors/resolver/actor.rs
++++ b/src/simplex/actors/resolver/actor.rs
+@@ -41,6 +41,8 @@
+     T: Strategy,
+ > {
+     context: ContextCell<E>,
++    #[cfg(feature = "native-recovery")]
++    recovery: Option<crate::simplex::recovery::ActorRecovery>,
+     scheme: S,
+     blocker: Option<B>,
+     strategy: T,
+@@ -66,11 +68,18 @@
+     T: Strategy,
+ > Actor<E, S, B, D, T>
+ {
++    #[cfg(feature = "native-recovery")]
++    pub(crate) fn enable_recovery(&mut self, recovery: crate::simplex::recovery::ActorRecovery) {
++        self.recovery = Some(recovery);
++    }
++
+     pub fn new(context: E, cfg: Config<S, B, T>) -> (Self, Mailbox<S, D>) {
+         let (sender, receiver) = mailbox::new(context.child("mailbox"), cfg.mailbox_size);
+         (
+             Self {
+                 context: ContextCell::new(context),
++                #[cfg(feature = "native-recovery")]
++                recovery: None,
+                 scheme: cfg.scheme,
+                 blocker: Some(cfg.blocker),
+                 strategy: cfg.strategy,
+@@ -103,6 +112,18 @@
+         sender: impl Sender<PublicKey = S::PublicKey>,
+         receiver: impl Receiver<PublicKey = S::PublicKey>,
+     ) {
++        #[cfg(feature = "native-recovery")]
++        if let Some(recovery) = &self.recovery {
++            recovery
++                .wait(
++                    crate::simplex::recovery::ActorId::Resolver,
++                    self.epoch.get(),
++                    format!("{{\"actor\":\"RESOLVER\",\"epoch\":{},\"participants\":{},\"mailbox_capacity\":{}}}",
++                        self.epoch.get(),self.scheme.participants().len(),self.mailbox_size.get()).as_bytes(),
++                )
++                .await;
++        }
++
+         let participants = self.scheme.participants().clone();
+         let me = self
+             .scheme
+diff --git a/src/simplex/actors/voter/actor.rs b/src/simplex/actors/voter/actor.rs
+--- a/src/simplex/actors/voter/actor.rs
++++ b/src/simplex/actors/voter/actor.rs
+@@ -1,3 +1,8 @@
++#[cfg(feature = "native-recovery")]
++use crate::simplex::{recovery as rec, types::Proposal};
++#[cfg(feature = "native-recovery")]
++use commonware_codec::{DecodeExt as _, Encode as _};
++
+ use super::{
+     Config, Mailbox,
+     ingress::Message,
+@@ -141,7 +146,21 @@
+ /// The verification request in flight for the current or an optimistic future view, if any.
+ type PendingVerification = Option<Request<Rnd, oneshot::Receiver<bool>>>;
+ 
++#[cfg(feature = "native-recovery")]
++enum ReplayedOutput<S: Scheme<D>, D: Digest> {
++    Report(Activity<S, D>),
++    Updated(Certificate<S, D>),
++    Certified(Notarization<S, D>, bool),
++}
++
+ /// Actor responsible for driving participation in the consensus protocol.
++#[cfg(feature = "native-recovery")]
++struct VerifyClaim {
++    token: rec::RecordToken,
++    proposal: Vec<u8>,
++    parent_digest: Vec<u8>,
++}
++
+ pub struct Actor<
+     E: Clock + CryptoRng + Spawner + Storage + Metrics,
+     S: Scheme<D>,
+@@ -153,6 +172,12 @@
+     F: Reporter<Activity = Activity<S, D>>,
+ > {
+     context: ContextCell<E>,
++    #[cfg(feature = "native-recovery")]
++    recovery: Option<rec::RecoveryOptions<D, S::PublicKey>>,
++    #[cfg(feature = "native-recovery")]
++    verify_claim: Option<VerifyClaim>,
++    #[cfg(feature = "native-recovery")]
++    native_positions: Vec<rec::JournalPosition>,
+     state: State<E, S, L, D>,
+     blocker: B,
+     automaton: A,
+@@ -240,6 +265,12 @@
+         (
+             Self {
+                 context: ContextCell::new(context),
++                #[cfg(feature = "native-recovery")]
++                recovery: None,
++                #[cfg(feature = "native-recovery")]
++                verify_claim: None,
++                #[cfg(feature = "native-recovery")]
++                native_positions: Vec::new(),
+                 state,
+                 blocker: cfg.blocker,
+                 automaton: cfg.automaton,
+@@ -267,6 +298,154 @@
+             },
+             mailbox,
+         )
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(crate) fn enable_recovery(&mut self, options: rec::RecoveryOptions<D, S::PublicKey>) {
++        self.state
++            .enable_recovery_timing(options.session_not_before);
++        self.recovery = Some(options);
++    }
++
++    #[cfg(feature = "native-recovery")]
++    async fn recovery_prepare(&mut self, prospective_artifact: Option<Vec<u8>>) {
++        let Some(options) = &self.recovery else {
++            return;
++        };
++        let timing = self.state.recovery_timing().expect("capture native timing");
++        let claim = self.verify_claim.as_ref();
++        options
++            .store
++            .stage(rec::RecoveryRecord::ActorPhase(rec::ActorPhase {
++                pending_proposal_operation: None,
++                pending_proposal_context: None,
++                proposal_phase: rec::ProposalPhase::None,
++                pending_verify_operation: claim.map(|claim| claim.token),
++                verifying_proposal_bytes: claim.map(|claim| claim.proposal.clone()),
++                verifying_parent_digest: claim.map(|claim| claim.parent_digest.clone()),
++                outstanding_certify_operations: Vec::new(),
++                committed_relay_refs: Vec::new(),
++            }))
++            .expect("stage native Verify phase");
++        options
++            .store
++            .stage(rec::RecoveryRecord::Timing(timing))
++            .expect("stage native timing");
++        let token = options
++            .store
++            .stage(rec::RecoveryRecord::Preparation {
++                positions: self.native_positions.clone(),
++                prospective_artifact,
++            })
++            .expect("stage native recovery preparation");
++        options
++            .store
++            .flush(token)
++            .await
++            .expect("persist native recovery preparation");
++    }
++
++    #[cfg(feature = "native-recovery")]
++    async fn reconnect_verification(
++        &mut self,
++        bundle: &rec::RecoveryBundle,
++    ) -> PendingVerification {
++        for fact in &bundle.proposals {
++            let proposal =
++                Proposal::<D>::decode(commonware_codec::Copying(&fact.native_proposal_bytes))
++                    .expect("decode recovered native proposal");
++            assert_eq!(
++                proposal.encode().as_ref(),
++                fact.native_proposal_bytes,
++                "noncanonical recovered proposal"
++            );
++            assert!(
++                self.state.admits_vote(proposal.view()),
++                "recovered proposal outside native viewport"
++            );
++            self.state.set_proposal(proposal.view(), &proposal);
++        }
++        let Some(phase) = &bundle.actor_phase else {
++            assert!(
++                bundle.operations.is_empty(),
++                "native recovery lacks callback phases"
++            );
++            return None;
++        };
++        assert!(
++            phase.pending_proposal_operation.is_none()
++                && phase.outstanding_certify_operations.is_empty(),
++            "native proposal/certify reconnection not established"
++        );
++        let Some(claim) = phase.pending_verify_operation else {
++            return None;
++        };
++        let op = bundle
++            .operations
++            .iter()
++            .find(|op| op.claimed_sequence == claim)
++            .expect("pending native Verify operation record");
++        assert!(matches!(
++            op.phase,
++            rec::OperationPhase::Claimed | rec::OperationPhase::Offered
++        ));
++        assert_eq!(op.kind, rec::OperationKind::Verify);
++        let Verify::Ready(context, proposal) = self.state.try_verify() else {
++            panic!("native replay could not claim verified pending proposal");
++        };
++        assert_eq!(op.epoch, context.round.epoch().get());
++        assert_eq!(op.view, context.round.view().get());
++        assert_eq!(op.parent_view, Some(context.parent.0.get()));
++        assert_eq!(
++            op.parent_digest.as_deref(),
++            Some(context.parent.1.encode().as_ref())
++        );
++        assert_eq!(
++            op.requested_payload.as_deref(),
++            Some(proposal.payload.encode().as_ref())
++        );
++        assert_eq!(
++            phase.verifying_proposal_bytes.as_deref(),
++            Some(proposal.encode().as_ref())
++        );
++        assert_eq!(
++            phase.verifying_parent_digest.as_deref(),
++            op.parent_digest.as_deref()
++        );
++        let round = context.round;
++        let reconnect = rec::ReconnectRequest {
++            context: Some(context),
++            round,
++            operation: op.clone(),
++            reconnect_generation: op
++                .reconnect_generation
++                .checked_add(1)
++                .expect("native reconnect generation overflow"),
++        };
++        let rec::Reconnected::Verify(receiver) = self
++            .recovery
++            .as_ref()
++            .expect("native recovery hooks")
++            .reconnector
++            .reconnect(reconnect)
++            .await
++            .expect("reconnect pending native Verify")
++        else {
++            panic!("native Verify reconnection lacked expected typed receiver");
++        };
++        self.verify_claim = Some(VerifyClaim {
++            token: claim,
++            proposal: proposal.encode().to_vec(),
++            parent_digest: op
++                .parent_digest
++                .clone()
++                .expect("restored Verify parent digest"),
++        });
++        let span = info_span!(
++            "simplex.voter.verify.reconnect",
++            view = round.view().traced()
++        );
++        Some(Request(round, span, receiver))
+     }
+ 
+     /// Returns the wall-clock seconds since we proposed in `view` (or entered
+@@ -321,11 +500,27 @@
+     async fn append_journal(mut self, artifact: Artifact<S, D>) -> Self {
+         if self.journal.is_some() {
+             let view = artifact.view();
+-            rebind(&mut self.journal, |journal| {
++            #[cfg(feature = "native-recovery")]
++            let prospective = self.recovery.as_ref().map(|_| artifact.encode().to_vec());
++            #[cfg(feature = "native-recovery")]
++            if prospective.is_some() {
++                self.recovery_prepare(prospective.clone()).await;
++            }
++            let (_offset, _) = rebind(&mut self.journal, |journal| {
+                 journal.append(view.get(), &artifact)
+             })
+             .await
+             .expect("unable to append to journal");
++            #[cfg(feature = "native-recovery")]
++            if let Some(frame_bytes) = prospective {
++                self.native_positions.push(rec::JournalPosition {
++                    section: view.get(),
++                    offset: _offset,
++                    frame_bytes,
++                });
++                self.native_positions
++                    .sort_by_key(|position| (position.section, position.offset));
++            }
+             match self.dirty_section {
+                 Some(dirty) => assert_eq!(
+                     dirty, view,
+@@ -431,11 +626,45 @@
+             .inc();
+     }
+ 
++    #[cfg(feature = "native-recovery")]
++    async fn recovery_claim_callback(
++        &mut self,
++        claim: rec::CallbackClaim,
++    ) -> Option<rec::RecordToken> {
++        let hooks = self.recovery.as_ref()?;
++        let token = hooks
++            .store
++            .stage(rec::RecoveryRecord::Claim(claim))
++            .expect("stage exact callback dispatch");
++        hooks
++            .store
++            .flush(token)
++            .await
++            .expect("persist native callback claim before dispatch");
++        Some(token)
++    }
++
+     /// Attempt to propose a new block.
+     async fn try_propose(&mut self) -> PendingProposal<D, S::PublicKey> {
+         // Check if we are ready to propose
+         let request = self.state.try_propose()?;
+         let context = request.context().clone();
++
++        #[cfg(feature = "native-recovery")]
++        self.recovery_claim_callback(rec::CallbackClaim {
++            kind: if request.is_handoff() {
++                rec::OperationKind::Prepare
++            } else {
++                rec::OperationKind::Propose
++            },
++            epoch: context.round.epoch().get(),
++            view: context.round.view().get(),
++            context: Some(context.encode().to_vec()),
++            parent_view: Some(context.parent.0.get()),
++            parent_digest: Some(context.parent.1.encode().to_vec()),
++            payload: None,
++        })
++        .await;
+ 
+         // Request proposal from application
+         let span = info_span!(
+@@ -482,6 +711,37 @@
+             }
+             Verify::Wait => return None,
+         };
++
++        #[cfg(feature = "native-recovery")]
++        if let Some(options) = &self.recovery {
++            assert!(
++                self.verify_claim.is_none(),
++                "duplicated native Verify claim"
++            );
++            let parent_digest = context.parent.1.encode().to_vec();
++            let token = options
++                .store
++                .stage(rec::RecoveryRecord::Claim(rec::CallbackClaim {
++                    kind: rec::OperationKind::Verify,
++                    epoch: context.round.epoch().get(),
++                    view: context.round.view().get(),
++                    context: Some(context.encode().to_vec()),
++                    parent_view: Some(context.parent.0.get()),
++                    parent_digest: Some(parent_digest.clone()),
++                    payload: Some(proposal.payload.encode().to_vec()),
++                }))
++                .expect("stage exact native Verify dispatch");
++            options
++                .store
++                .flush(token)
++                .await
++                .expect("persist native Verify claim before dispatch");
++            self.verify_claim = Some(VerifyClaim {
++                token,
++                proposal: proposal.encode().to_vec(),
++                parent_digest,
++            });
++        }
+ 
+         // Request verification
+         let span = info_span!(
+@@ -531,6 +791,20 @@
+             .as_ref()
+             .is_some_and(|request| request.view() < current_view)
+         {
++            #[cfg(feature = "native-recovery")]
++            if let Some(options) = &self.recovery {
++                let claim = self
++                    .verify_claim
++                    .take()
++                    .expect("cancel without native Verify claim");
++                options
++                    .store
++                    .stage(rec::RecoveryRecord::Cancel {
++                        claim: claim.token,
++                        reason: "VIEW_EXIT",
++                    })
++                    .expect("stage native Verify cancellation");
++            }
+             *pending_verify = None;
+         }
+ 
+@@ -894,6 +1168,27 @@
+                 if !self.state.set_proposal(view, &proposal) {
+                     return (self, None);
+                 }
++                (self, Some(view))
++            }
++            #[cfg(feature = "native-recovery")]
++            Message::RecoverableProposal {
++                proposal, origin, ..
++            } => {
++                let view = proposal.view();
++                if !self.state.admits_vote(view) || !self.state.set_proposal(view, &proposal) {
++                    return (self, None);
++                }
++                let hooks = self
++                    .recovery
++                    .as_ref()
++                    .expect("opt-in proposal requires recovery hooks");
++                hooks
++                    .store
++                    .stage(rec::RecoveryRecord::ProposalSelected {
++                        native_proposal_bytes: proposal.encode().to_vec(),
++                        origin,
++                    })
++                    .expect("stage native selected proposal");
+                 (self, Some(view))
+             }
+             Message::Verified { certificate, .. } => {
+@@ -1108,13 +1403,23 @@
+         // Replayed artifacts become in-memory state, so journal pages need not
+         // remain in the OS page cache.
+         let replayed;
++        #[cfg(feature = "native-recovery")]
++        let mut replay_outputs = Vec::new();
+         (self, replayed) = async {
+             let mut replay = journal
+                 .replay(0, 0, self.replay_buffer, ReadOptions::DONT_CACHE)
+                 .await
+                 .expect("unable to replay journal");
+             while let Some(artifact) = replay.next().await {
+-                let (_, _, _, artifact) = artifact.expect("unable to replay journal");
++                let (_section, _offset, _, artifact) = artifact.expect("unable to replay journal");
++                #[cfg(feature = "native-recovery")]
++                if self.recovery.is_some() {
++                    self.native_positions.push(rec::JournalPosition {
++                        section: _section,
++                        offset: _offset,
++                        frame_bytes: artifact.encode().to_vec(),
++                    });
++                }
+ 
+                 // A journaled finalization at or above the floor already anchors later restarts
+                 // there, so the configured floor need not be journaled.
+@@ -1136,10 +1441,25 @@
+                 self.state.replay(&artifact);
+                 match artifact {
+                     Artifact::Notarize(notarize) => {
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs
++                                .push(ReplayedOutput::Report(Activity::Notarize(notarize)));
++                            continue;
++                        }
+                         self.reporter.report(Activity::Notarize(notarize));
+                     }
+                     Artifact::Notarization(notarization) => {
+                         (self, _) = self.handle_notarization(notarization.clone()).await;
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs.push(ReplayedOutput::Updated(
++                                Certificate::Notarization(notarization.clone()),
++                            ));
++                            replay_outputs
++                                .push(ReplayedOutput::Report(Activity::Notarization(notarization)));
++                            continue;
++                        }
+                         resolver.updated(Certificate::Notarization(notarization.clone()));
+                         self.reporter.report(Activity::Notarization(notarization));
+                     }
+@@ -1150,24 +1470,65 @@
+                         let Some(notarization) = notarization else {
+                             continue;
+                         };
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs
++                                .push(ReplayedOutput::Certified(notarization.clone(), success));
++                            if success {
++                                replay_outputs.push(ReplayedOutput::Report(
++                                    Activity::Certification(notarization),
++                                ));
++                            }
++                            continue;
++                        }
+                         resolver.certified(notarization.clone(), success);
+                         if success {
+                             self.reporter.report(Activity::Certification(notarization));
+                         }
+                     }
+                     Artifact::Nullify(nullify) => {
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs.push(ReplayedOutput::Report(Activity::Nullify(nullify)));
++                            continue;
++                        }
+                         self.reporter.report(Activity::Nullify(nullify));
+                     }
+                     Artifact::Nullification(nullification) => {
+                         (self, _) = self.handle_nullification(nullification.clone()).await;
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs.push(ReplayedOutput::Updated(
++                                Certificate::Nullification(nullification.clone()),
++                            ));
++                            replay_outputs.push(ReplayedOutput::Report(Activity::Nullification(
++                                nullification,
++                            )));
++                            continue;
++                        }
+                         resolver.updated(Certificate::Nullification(nullification.clone()));
+                         self.reporter.report(Activity::Nullification(nullification));
+                     }
+                     Artifact::Finalize(finalize) => {
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs
++                                .push(ReplayedOutput::Report(Activity::Finalize(finalize)));
++                            continue;
++                        }
+                         self.reporter.report(Activity::Finalize(finalize));
+                     }
+                     Artifact::Finalization(finalization) => {
+                         (self, _) = self.handle_finalization(finalization.clone()).await;
++                        #[cfg(feature = "native-recovery")]
++                        if self.recovery.is_some() {
++                            replay_outputs.push(ReplayedOutput::Updated(
++                                Certificate::Finalization(finalization.clone()),
++                            ));
++                            replay_outputs
++                                .push(ReplayedOutput::Report(Activity::Finalization(finalization)));
++                            continue;
++                        }
+                         resolver.updated(Certificate::Finalization(finalization.clone()));
+                         self.reporter.report(Activity::Finalization(finalization));
+                     }
+@@ -1186,6 +1547,53 @@
+         .instrument(info_span!(parent: &start_span, "simplex.voter.replay", epoch = epoch.traced()))
+         .await;
+         self.journal = Some(replayed);
++
++        let mut pending_verify: PendingVerification = None;
++        #[cfg(feature = "native-recovery")]
++        if let Some(options) = &self.recovery {
++            let store = options.store.clone();
++            let startup = options.startup.clone();
++            let bundle = store
++                .load(rec::RecoveryLoad {
++                    actor: rec::ActorId::Voter,
++                    epoch: epoch.get(),
++                    native_boundary: self.native_positions.clone(),
++                })
++                .await
++                .expect("load compatible native recovery");
++            if let Some(timing) = &bundle.timing {
++                pending_verify = self.reconnect_verification(&bundle).await;
++                self.state
++                    .restore_recovery_timing(timing)
++                    .expect("restore original native timeout state");
++            }
++            let restored = self
++                .state
++                .recovery_timing()
++                .expect("snapshot native recovery readiness");
++            startup
++                .ready(
++                    rec::ActorId::Voter,
++                    bundle.cut,
++                    restored.native_state_projection_hash,
++                )
++                .expect("register voter readiness");
++            startup
++                .released()
++                .await
++                .expect("release native voter recovery startup");
++            for output in replay_outputs {
++                match output {
++                    ReplayedOutput::Report(activity) => {
++                        self.reporter.report(activity);
++                    }
++                    ReplayedOutput::Updated(certificate) => resolver.updated(certificate),
++                    ReplayedOutput::Certified(notarization, success) => {
++                        resolver.certified(notarization, success)
++                    }
++                }
++            }
++        }
+ 
+         // Every recovered certificate has been forwarded, so the resolver can
+         // start background repair above the recovered floor.
+@@ -1226,7 +1634,7 @@
+ 
+         // Process messages
+         let mut pending_propose: PendingProposal<D, S::PublicKey> = None;
+-        let mut pending_verify: PendingVerification = None;
++
+         let mut certify_pool = AbortablePool::default();
+         select_loop! {
+             self.context,
+@@ -1262,6 +1670,14 @@
+                         view = view.traced()
+                     );
+                     #[allow(clippy::async_yields_async)]
++                    #[cfg(feature = "native-recovery")]
++                    self.recovery_claim_callback(rec::CallbackClaim{
++                        kind: rec::OperationKind::Certify,
++                        epoch: round.epoch().get(),
++                        view: round.view().get(),
++                        context: None, parent_view: None, parent_digest: None,
++                        payload: Some(proposal.payload.encode().to_vec()),
++                    }).await;
+                     let receiver = async { self.automaton.certify(round, proposal.payload).await }
+                         .instrument(span.clone())
+                         .await;
+@@ -1303,6 +1719,8 @@
+ 
+                 // Wait for a timeout to fire or for a message to arrive
+                 let (deadline, reason) = self.state.next_timeout();
++                #[cfg(feature = "native-recovery")]
++                self.recovery_prepare(None).await;
+                 let start = self.state.current_view();
+                 let mut nullify = None;
+                 let mut certification = None;
+@@ -1379,8 +1797,22 @@
+                 // Clear verify waiter
+                 pending_verify = None;
+ 
++                #[cfg(feature = "native-recovery")]
++                let recovery_outcome = self.recovery.as_ref().map(|_| {
++                    let outcome = match &verified {
++                        Ok(value) => rec::Outcome::Bool(*value),
++                        Err(_) => rec::Outcome::ResponseClosed,
++                    };
++                    (outcome, !self.state.verification_is_stale(round.view()))
++                });
+                 // Process the automaton's response
+                 view = span.in_scope(|| self.process_verified(round, verified));
++                #[cfg(feature = "native-recovery")]
++                if let (Some(options), Some((outcome, applied))) = (&self.recovery, recovery_outcome) {
++                    let claim = self.verify_claim.take().expect("consume without native Verify claim");
++                    options.store.stage(rec::RecoveryRecord::Consume {claim: claim.token, outcome, applied})
++                        .expect("stage native Verify response consumption");
++                }
+             },
+             // Aborted futures are expected when old views are pruned
+             Ok((round, span, certified)) = certify_wait else continue => {
+@@ -1452,6 +1884,8 @@
+                     // This runs even if there is nothing to broadcast (e.g. a
+                     // certification result was recorded) so every artifact is
+                     // durable by the end of the iteration that appended it.
++                    #[cfg(feature = "native-recovery")]
++                    self.recovery_prepare(None).await;
+                     self = self.sync_journal().await;
+ 
+                     // Broadcast everything we built (and report it to the application).
+diff --git a/src/simplex/actors/voter/ingress.rs b/src/simplex/actors/voter/ingress.rs
+--- a/src/simplex/actors/voter/ingress.rs
++++ b/src/simplex/actors/voter/ingress.rs
+@@ -20,6 +20,13 @@
+         span: Span,
+         /// The leader's proposal.
+         proposal: Proposal<D>,
++    },
++    /// Leader proposal with exact ingress provenance in opt-in recovery mode.
++    #[cfg(feature = "native-recovery")]
++    RecoverableProposal {
++        span: Span,
++        proposal: Proposal<D>,
++        origin: crate::simplex::recovery::ProposalOrigin,
+     },
+     /// Signal that the current view should timeout (if not already).
+     Timeout {
+@@ -40,10 +47,21 @@
+ }
+ 
+ impl<S: Scheme, D: Digest> Message<S, D> {
++    fn proposal_view(&self) -> Option<View> {
++        match self {
++            Self::Proposal { proposal, .. } => Some(proposal.view()),
++            #[cfg(feature = "native-recovery")]
++            Self::RecoverableProposal { proposal, .. } => Some(proposal.view()),
++            _ => None,
++        }
++    }
++
+     /// Returns the message view used for pruning and deduplication.
+     pub(crate) fn view(&self) -> View {
+         match self {
+             Self::Proposal { proposal, .. } => proposal.view(),
++            #[cfg(feature = "native-recovery")]
++            Self::RecoverableProposal { proposal, .. } => proposal.view(),
+             Self::Timeout { round, .. } => round.view(),
+             Self::Verified { certificate, .. } => certificate.view(),
+         }
+@@ -55,6 +73,8 @@
+             Self::Proposal { span, .. }
+             | Self::Timeout { span, .. }
+             | Self::Verified { span, .. } => span,
++            #[cfg(feature = "native-recovery")]
++            Self::RecoverableProposal { span, .. } => span,
+         }
+     }
+ 
+@@ -62,6 +82,8 @@
+     pub(crate) const fn name(&self) -> &'static str {
+         match self {
+             Self::Proposal { .. } => "proposal",
++            #[cfg(feature = "native-recovery")]
++            Self::RecoverableProposal { .. } => "proposal",
+             Self::Timeout { .. } => "timeout",
+             Self::Verified { .. } => "verified",
+         }
+@@ -173,16 +195,6 @@
+             .iter()
+             .any(|old_message| match (&message, old_message) {
+                 (
+-                    Self::Proposal {
+-                        proposal: new_proposal,
+-                        ..
+-                    },
+-                    Self::Proposal {
+-                        proposal: old_proposal,
+-                        ..
+-                    },
+-                ) => new_proposal.view() == old_proposal.view(),
+-                (
+                     Self::Verified {
+                         certificate: new_certificate,
+                         ..
+@@ -200,7 +212,9 @@
+                                 | (Certificate::Finalization(_), Certificate::Finalization(_))
+                         )
+                 }
+-                _ => false,
++                _ => message
++                    .proposal_view()
++                    .is_some_and(|view| old_message.proposal_view() == Some(view)),
+             })
+         {
+             return;
+@@ -229,6 +243,23 @@
+                 view = proposal.view().traced()
+             ),
+             proposal,
++        });
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(crate) fn recoverable_proposal(
++        &mut self,
++        proposal: Proposal<D>,
++        origin: crate::simplex::recovery::ProposalOrigin,
++    ) {
++        let _ = self.sender.enqueue(Message::RecoverableProposal {
++            span: info_span!(
++                "simplex.voter.mailbox.proposal",
++                epoch = proposal.epoch().traced(),
++                view = proposal.view().traced()
++            ),
++            proposal,
++            origin,
+         });
+     }
+ 
+diff --git a/src/simplex/actors/voter/round.rs b/src/simplex/actors/voter/round.rs
+--- a/src/simplex/actors/voter/round.rs
++++ b/src/simplex/actors/voter/round.rs
+@@ -565,6 +565,184 @@
+         Some(retry)
+     }
+ 
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn arm_recovery_retry(&mut self, now: SystemTime, interval: Duration) {
++        if let Decision::Nullify { retry } = &mut self.decision {
++            retry.get_or_insert_with(|| {
++                now.checked_add(interval)
++                    .expect("native retry deadline overflow")
++            });
++        }
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn recovery_timing(
++        &self,
++        interval: Duration,
++    ) -> Result<crate::simplex::recovery::RoundTiming, crate::simplex::recovery::RecoveryError>
++    {
++        use crate::simplex::recovery::{DecisionPhase, RecoveryError, RoundTiming, micros};
++        let (decision, leader, certification, latch, retry) = match self.decision {
++            Decision::Pending {
++                leader,
++                certification,
++                latch,
++            } => (DecisionPhase::Pending, leader, certification, latch, None),
++            Decision::Nullify { retry } => (DecisionPhase::Nullify, None, None, None, retry),
++            Decision::Finalize => (DecisionPhase::Finalize, None, None, None, None),
++        };
++        let arm = retry
++            .map(|deadline| {
++                deadline
++                    .checked_sub(interval)
++                    .ok_or(RecoveryError("native retry anchor overflow"))
++            })
++            .transpose()?;
++        Ok(RoundTiming {
++            view: self.round.view().get(),
++            entered_at_local_us: self.entered_at.map(micros).transpose()?,
++            proposed_at_local_us: self.proposed_at.map(micros).transpose()?,
++            comparison_decision_phase: decision,
++            leader_deadline_local_us: leader.map(micros).transpose()?,
++            certification_deadline_local_us: certification.map(micros).transpose()?,
++            latch_time_local_us: latch.map(|(time, _)| micros(time)).transpose()?,
++            latch_reason: latch.map(|(_, reason)| reason.as_str()),
++            latch_cause_ref: None,
++            retry_deadline_local_us: retry.map(micros).transpose()?,
++            retry_arm_local_us: arm.map(micros).transpose()?,
++            stall_deadline_local_us: self.stall_deadline.map(micros).transpose()?,
++        })
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn restore_recovery_timing(
++        &mut self,
++        snapshot: &crate::simplex::recovery::RoundTiming,
++        interval: Duration,
++    ) -> Result<(), crate::simplex::recovery::RecoveryError> {
++        use crate::simplex::recovery::{DecisionPhase, RecoveryError, system_time};
++        if snapshot.view != self.round.view().get() || snapshot.stall_deadline_local_us.is_some() {
++            return Err(RecoveryError("native recovery timing round mismatch"));
++        }
++        match (&mut self.decision, snapshot.comparison_decision_phase) {
++            (
++                Decision::Pending {
++                    leader,
++                    certification,
++                    latch,
++                },
++                DecisionPhase::Pending,
++            ) => {
++                *leader = snapshot
++                    .leader_deadline_local_us
++                    .map(system_time)
++                    .transpose()?;
++                *certification = snapshot
++                    .certification_deadline_local_us
++                    .map(system_time)
++                    .transpose()?;
++                *latch = match (snapshot.latch_time_local_us, snapshot.latch_reason) {
++                    (None, None) => None,
++                    (Some(time), Some(reason)) => {
++                        let reason = [
++                            TimeoutReason::Retry,
++                            TimeoutReason::Inactivity,
++                            TimeoutReason::LeaderNullify,
++                            TimeoutReason::LeaderTimeout,
++                            TimeoutReason::CertificationTimeout,
++                            TimeoutReason::StallTimeout,
++                            TimeoutReason::MissingProposal,
++                            TimeoutReason::IgnoredProposal,
++                            TimeoutReason::InvalidProposal,
++                            TimeoutReason::FailedCertification,
++                        ]
++                        .into_iter()
++                        .find(|candidate| candidate.as_str() == reason)
++                        .ok_or(RecoveryError("unknown recovered latch reason"))?;
++                        Some((system_time(time)?, reason))
++                    }
++                    _ => return Err(RecoveryError("incomplete native recovery timeout latch")),
++                };
++            }
++            (Decision::Nullify { retry }, DecisionPhase::Nullify) => {
++                let deadline = system_time(
++                    snapshot
++                        .retry_deadline_local_us
++                        .ok_or(RecoveryError("missing native retry deadline"))?,
++                )?;
++                let anchor = system_time(
++                    snapshot
++                        .retry_arm_local_us
++                        .ok_or(RecoveryError("missing native retry arm"))?,
++                )?;
++                if anchor.checked_add(interval) != Some(deadline) {
++                    return Err(RecoveryError("native retry interval mismatch"));
++                }
++                *retry = Some(deadline);
++            }
++            (Decision::Finalize, DecisionPhase::Finalize) => {}
++            _ => {
++                return Err(RecoveryError(
++                    "native replay decision disagrees with timing snapshot",
++                ));
++            }
++        }
++        self.entered_at = snapshot.entered_at_local_us.map(system_time).transpose()?;
++        self.proposed_at = snapshot.proposed_at_local_us.map(system_time).transpose()?;
++        Ok(())
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn recovery_projection(&self, json: &mut String) {
++        use commonware_codec::Encode as _;
++        use std::fmt::Write as _;
++        fn bytes(json: &mut String, value: Option<bytes::Bytes>) {
++            if let Some(value) = value {
++                json.push('"');
++                for b in value {
++                    write!(json, "{b:02x}").expect("memory formatting");
++                }
++                json.push('"');
++            } else {
++                json.push_str("null");
++            }
++        }
++        let proposal_status = match self.proposal.status() {
++            ProposalStatus::None => "NONE",
++            ProposalStatus::Unverified => "UNVERIFIED",
++            ProposalStatus::Verified => "VERIFIED",
++            ProposalStatus::Equivocated => "EQUIVOCATED",
++        };
++        let decision = match self.decision {
++            Decision::Pending { .. } => "PENDING",
++            Decision::Nullify { .. } => "NULLIFY",
++            Decision::Finalize => "FINALIZE",
++        };
++        let certify = match self.certify {
++            CertifyState::Ready => "READY",
++            CertifyState::Outstanding(_) => "OUTSTANDING",
++            CertifyState::Certified(true) => "CERTIFIED_TRUE",
++            CertifyState::Certified(false) => "CERTIFIED_FALSE",
++            CertifyState::Aborted => "ABORTED",
++        };
++        write!(json, "\"status\":\"{proposal_status}\",\"proposal\":").expect("memory formatting");
++        bytes(json, self.proposal.proposal().map(|p| p.encode()));
++        json.push_str(",\"verifying\":");
++        bytes(json, self.verifying.as_ref().map(|(p, _)| p.encode()));
++        json.push_str(",\"verifying_parent\":");
++        bytes(json, self.verifying.as_ref().map(|(_, p)| p.encode()));
++        write!(
++            json,
++            ",\"decision\":\"{decision}\",\"certification\":\"{certify}\",\"notarization\":"
++        )
++        .expect("memory formatting");
++        bytes(json, self.notarization.as_ref().map(|p| p.encode()));
++        json.push_str(",\"nullification\":");
++        bytes(json, self.nullification.as_ref().map(|p| p.encode()));
++        json.push_str(",\"finalization\":");
++        bytes(json, self.finalization.as_ref().map(|p| p.encode()));
++    }
++
+     /// Returns the next round-local timeout and its reason.
+     pub fn next_timeout(
+         &mut self,
+diff --git a/src/simplex/actors/voter/state.rs b/src/simplex/actors/voter/state.rs
+--- a/src/simplex/actors/voter/state.rs
++++ b/src/simplex/actors/voter/state.rs
+@@ -168,6 +168,8 @@
+     leader_timeout: Duration,
+     certification_timeout: Duration,
+     timeout_retry: Duration,
++    #[cfg(feature = "native-recovery")]
++    recovery_floor: Option<Option<std::time::SystemTime>>,
+     skip_budget: u64,
+     view: View,
+     last_finalized: View,
+@@ -272,6 +274,8 @@
+             leader_timeout: cfg.leader_timeout,
+             certification_timeout: cfg.certification_timeout,
+             timeout_retry: cfg.timeout_retry,
++            #[cfg(feature = "native-recovery")]
++            recovery_floor: None,
+             skip_budget: cfg.skip_budget,
+             view: GENESIS_VIEW,
+             last_finalized: GENESIS_VIEW,
+@@ -372,6 +376,93 @@
+         self.scheme.me().is_some_and(|m| m.signer() == Some(idx))
+     }
+ 
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn enable_recovery_timing(&mut self, floor: Option<std::time::SystemTime>) {
++        assert!(
++            self.elector.terms().stall_timeout().is_none(),
++            "native recovery supports rotating terms without stall"
++        );
++        assert!(
++            self.elector.terms().length().get() == 1,
++            "native recovery supports one-view terms"
++        );
++        self.recovery_floor = Some(floor);
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn recovery_timing(
++        &self,
++    ) -> Result<crate::simplex::recovery::TimingSnapshot, crate::simplex::recovery::RecoveryError>
++    {
++        use crate::simplex::recovery::TimingSnapshot;
++        Ok(TimingSnapshot {
++            current_view: self.view.get(),
++            last_finalized_view: self.last_finalized.get(),
++            stall_anchor: self.stall_anchor.get(),
++            native_state_projection_hash: self.recovery_projection_hash(),
++            rounds: self
++                .views
++                .values()
++                .map(|round| round.recovery_timing(self.timeout_retry))
++                .collect::<Result<Vec<_>, _>>()?,
++        })
++    }
++
++    #[cfg(feature = "native-recovery")]
++    pub(super) fn restore_recovery_timing(
++        &mut self,
++        snapshot: &crate::simplex::recovery::TimingSnapshot,
++    ) -> Result<(), crate::simplex::recovery::RecoveryError> {
++        use crate::simplex::recovery::RecoveryError;
++        if snapshot.current_view != self.view.get()
++            || snapshot.last_finalized_view != self.last_finalized.get()
++            || snapshot.native_state_projection_hash != self.recovery_projection_hash()
++            || snapshot.rounds.len() != self.views.len()
++            || !snapshot
++                .rounds
++                .iter()
++                .map(|round| round.view)
++                .eq(self.views.keys().map(|view| view.get()))
++        {
++            return Err(RecoveryError(
++                "native reconstructed state does not match recovery timing",
++            ));
++        }
++        for (round, timing) in self.views.values_mut().zip(&snapshot.rounds) {
++            round.restore_recovery_timing(timing, self.timeout_retry)?;
++        }
++        self.stall_anchor = View::new(snapshot.stall_anchor);
++        Ok(())
++    }
++
++    #[cfg(feature = "native-recovery")]
++    fn recovery_projection_hash(&self) -> [u8; 32] {
++        use commonware_cryptography::{Hasher as _, Sha256};
++        use std::fmt::Write as _;
++        let mut json = format!(
++            "{{\"current_view\":{},\"last_finalized_view\":{},\"rounds\":[",
++            self.view.get(),
++            self.last_finalized.get()
++        );
++        for (index, (view, round)) in self.views.iter().enumerate() {
++            if index > 0 {
++                json.push(',');
++            }
++            write!(&mut json, "{{\"view\":{},", view.get()).expect("in-memory format");
++            round.recovery_projection(&mut json);
++            json.push('}');
++        }
++        json.push_str("]}");
++        let domain = b"I1b/recovery-state/v1";
++        Sha256::hash(&[
++            &(domain.len() as u64).to_be_bytes(),
++            domain,
++            &(json.len() as u64).to_be_bytes(),
++            json.as_bytes(),
++        ])
++        .0
++    }
++
+     /// Advances the view.
+     fn enter_view(&mut self, view: View) -> bool {
+         if view <= self.view {
+@@ -379,8 +470,15 @@
+         }
+ 
+         let now = self.context.current();
+-        let leader_deadline = now + self.leader_timeout;
+-        let certification_deadline = now + self.certification_timeout;
++        #[cfg(feature = "native-recovery")]
++        let base = self
++            .recovery_floor
++            .flatten()
++            .map_or(now, |floor| now.max(floor));
++        #[cfg(not(feature = "native-recovery"))]
++        let base = now;
++        let leader_deadline = base + self.leader_timeout;
++        let certification_deadline = base + self.certification_timeout;
+         let stall_deadline = self
+             .elector
+             .terms()
+@@ -552,6 +650,14 @@
+             (round.construct_nullify()?, round.leader().cloned())
+         };
+         let nullify = Nullify::sign::<D>(&self.scheme, Rnd::new(self.epoch, view))?;
++        #[cfg(feature = "native-recovery")]
++        if self.recovery_floor.is_some() {
++            let now = self.context.current();
++            self.views
++                .get_mut(&view)
++                .expect("current nullify round")
++                .arm_recovery_retry(now, self.timeout_retry);
++        }
+         self.nullify_views.insert(view);
+         if !is_retry && let Some(leader) = leader {
+             self.timeouts
+@@ -1259,7 +1365,7 @@
+     /// equivocating leader, whom the voter blocks. Each Byzantine leader can
+     /// cause this delay at most once. Later views skip that leader at the leader
+     /// timeout.
+-    fn verification_is_stale(&mut self, view: View) -> bool {
++    pub(super) fn verification_is_stale(&mut self, view: View) -> bool {
+         if self.verification_matches(view) {
+             return false;
+         }
+diff --git a/src/simplex/engine.rs b/src/simplex/engine.rs
+--- a/src/simplex/engine.rs
++++ b/src/simplex/engine.rs
+@@ -145,6 +145,28 @@
+         }
+     }
+ 
++    /// Construct an opted-in voter with controlled recovery and startup hooks.
++    #[cfg(feature = "native-recovery")]
++    pub fn new_with_recovery(
++        context: E,
++        cfg: Config<S, L, B, D, A, R, F, T>,
++        recovery: super::recovery::RecoveryOptions<D, S::PublicKey>,
++    ) -> Self {
++        assert!(
++            matches!(cfg.floor, super::config::Floor::Genesis(_)),
++            "native recovery requires a Genesis floor"
++        );
++        let mut engine = Self::new(context, cfg);
++        let actor = super::recovery::ActorRecovery {
++            store: recovery.store.clone(),
++            startup: recovery.startup.clone(),
++        };
++        engine.batcher.enable_recovery(actor.clone());
++        engine.resolver.enable_recovery(actor);
++        engine.voter.enable_recovery(recovery);
++        engine
++    }
++
+     /// Start the `simplex` consensus engine.
+     ///
+     /// This will also rebuild the state of the engine from provided `Journal`.
+diff --git a/src/simplex/mod.rs b/src/simplex/mod.rs
+--- a/src/simplex/mod.rs
++++ b/src/simplex/mod.rs
+@@ -687,6 +687,8 @@
+ //! consensus certificate for every ancestor view.
+ 
+ pub mod elector;
++#[cfg(feature = "native-recovery")]
++pub mod recovery;
+ pub mod scheme;
+ pub mod types;
+ 
+diff --git a/src/simplex/recovery.rs b/src/simplex/recovery.rs
+new file mode 100644
+--- /dev/null
++++ b/src/simplex/recovery.rs
+@@ -0,0 +1,466 @@
++//! Opt-in recovery records. These types describe state transitions and live
++//! callback ownership without serializing native tasks or channel internals.
++use crate::{Handoff, simplex::types::Context, types::Round};
++use commonware_cryptography::{Digest, PublicKey};
++use commonware_utils::channel::oneshot;
++use futures::future::BoxFuture;
++use std::{
++    sync::Arc,
++    time::{Duration, SystemTime, UNIX_EPOCH},
++};
++
++pub type InputRef = [u8; 32];
++pub type CutRef = [u8; 32];
++pub type RecordToken = u64;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
++pub enum ActorId {
++    Voter,
++    Batcher,
++    Resolver,
++    Application,
++    Archive,
++    Driver,
++}
++
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct RecoveryReceipt {
++    pub sequence: u64,
++    pub hash: [u8; 32],
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RecoveryError(pub &'static str);
++impl std::fmt::Display for RecoveryError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        f.write_str(self.0)
++    }
++}
++impl std::error::Error for RecoveryError {}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum SignatureState {
++    NotApplicable,
++    Pending,
++    Verified,
++    Rejected,
++}
++/// Opaque input carried from the raw receive to native proposal selection.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct ProposalOrigin {
++    pub input_ref: InputRef,
++    pub signature_state: SignatureState,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum OperationKind {
++    Prepare,
++    Propose,
++    Verify,
++    Certify,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum OperationPhase {
++    Claimed,
++    Offered,
++    Consumed,
++    Cancelled,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum HelperPhase {
++    WaitInput,
++    WorkScheduled,
++    WorkReady,
++    BodyPersisting,
++    ReadyToOffer,
++    Retired,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum ProposalPhase {
++    None,
++    Preparing,
++    Proposing,
++    Waiting,
++    Closed,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum DecisionPhase {
++    Pending,
++    Nullify,
++    Finalize,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum Outcome {
++    Digest(Vec<u8>),
++    Bool(bool),
++    HandoffWait,
++    ResponseClosed,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ProposalFact {
++    pub fact_sequence: u64,
++    pub native_proposal_bytes: Vec<u8>,
++    pub selected_input_ref: InputRef,
++    pub selection_sequence: u64,
++    pub first_receive_input_ref: InputRef,
++    pub original_receive_tick_us: u64,
++    pub original_receive_local_us: Option<i64>,
++    pub transport_binding_verified: bool,
++    pub decoded: bool,
++    pub elected_leader_checked: bool,
++    pub signature_state: SignatureState,
++    pub verifying_parent_digest: Option<Vec<u8>>,
++    pub application_result_ref: Option<RecordToken>,
++    pub observed_slot_status: &'static str,
++    pub conflicting_input_refs: Vec<InputRef>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct OperationRecord {
++    pub operation_id: [u8; 32],
++    pub original_work_binding: Vec<u8>,
++    pub kind: OperationKind,
++    pub canonical_native_context_bytes: Option<Vec<u8>>,
++    pub epoch: u64,
++    pub view: u64,
++    pub parent_view: Option<u64>,
++    pub parent_digest: Option<Vec<u8>>,
++    pub requested_payload: Option<Vec<u8>>,
++    pub phase: OperationPhase,
++    pub helper_phase: HelperPhase,
++    pub claimed_sequence: u64,
++    pub original_start_tick_us: Option<u64>,
++    pub original_due_tick_us: Option<u64>,
++    pub missing_dependencies: Vec<Vec<u8>>,
++    pub offered_outcome: Option<Outcome>,
++    pub outcome_evidence_refs: Vec<RecordToken>,
++    pub offered_sequence: Option<u64>,
++    pub consumed_sequence: Option<u64>,
++    pub cancelled_sequence: Option<u64>,
++    pub cancellation_reason: Option<&'static str>,
++    pub reconnect_generation: u64,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ActorPhase {
++    pub pending_proposal_operation: Option<RecordToken>,
++    pub pending_proposal_context: Option<Vec<u8>>,
++    pub proposal_phase: ProposalPhase,
++    pub pending_verify_operation: Option<RecordToken>,
++    pub verifying_proposal_bytes: Option<Vec<u8>>,
++    pub verifying_parent_digest: Option<Vec<u8>>,
++    pub outstanding_certify_operations: Vec<RecordToken>,
++    pub committed_relay_refs: Vec<RecordToken>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RoundTiming {
++    pub view: u64,
++    pub entered_at_local_us: Option<i64>,
++    pub proposed_at_local_us: Option<i64>,
++    pub comparison_decision_phase: DecisionPhase,
++    pub leader_deadline_local_us: Option<i64>,
++    pub certification_deadline_local_us: Option<i64>,
++    pub latch_time_local_us: Option<i64>,
++    pub latch_reason: Option<&'static str>,
++    pub latch_cause_ref: Option<InputRef>,
++    pub retry_deadline_local_us: Option<i64>,
++    pub retry_arm_local_us: Option<i64>,
++    pub stall_deadline_local_us: Option<i64>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct TimingSnapshot {
++    pub current_view: u64,
++    pub last_finalized_view: u64,
++    pub stall_anchor: u64,
++    pub native_state_projection_hash: [u8; 32],
++    pub rounds: Vec<RoundTiming>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct JournalPosition {
++    pub section: u64,
++    pub offset: u64,
++    pub frame_bytes: Vec<u8>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct CallbackClaim {
++    pub kind: OperationKind,
++    pub epoch: u64,
++    pub view: u64,
++    pub context: Option<Vec<u8>>,
++    pub parent_view: Option<u64>,
++    pub parent_digest: Option<Vec<u8>>,
++    pub payload: Option<Vec<u8>>,
++}
++
++/// Exact result of the real application dispatch following a native claim.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct CallbackBinding {
++    pub claim: CallbackClaim,
++    pub operation_id: [u8; 32],
++    pub original_work_binding: Vec<u8>,
++    pub missing_dependencies: Vec<Vec<u8>>,
++    pub original_start_tick_us: Option<u64>,
++    pub original_due_tick_us: Option<u64>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum RecoveryRecord {
++    ProposalSelected {
++        native_proposal_bytes: Vec<u8>,
++        origin: ProposalOrigin,
++    },
++    IngressSignature {
++        input_ref: InputRef,
++        signature_state: SignatureState,
++    },
++    Claim(CallbackClaim),
++    WorkScheduled {
++        claim: RecordToken,
++        start_tick_us: u64,
++        due_tick_us: u64,
++    },
++    WorkReady {
++        claim: RecordToken,
++        block_bytes: Option<Vec<u8>>,
++    },
++    BodyPersisting {
++        claim: RecordToken,
++    },
++    BodyDurable {
++        claim: RecordToken,
++        digest: [u8; 32],
++        block_bytes: Vec<u8>,
++    },
++    Offer {
++        claim: RecordToken,
++        outcome: Outcome,
++        evidence: Vec<RecordToken>,
++    },
++    Consume {
++        claim: RecordToken,
++        outcome: Outcome,
++        applied: bool,
++    },
++    Cancel {
++        claim: RecordToken,
++        reason: &'static str,
++    },
++    ActorPhase(ActorPhase),
++    Timing(TimingSnapshot),
++    Preparation {
++        positions: Vec<JournalPosition>,
++        prospective_artifact: Option<Vec<u8>>,
++    },
++    ResolverStarted,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RecoveryLoad {
++    pub actor: ActorId,
++    pub epoch: u64,
++    pub native_boundary: Vec<JournalPosition>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RecoveryBundle {
++    pub cut: CutRef,
++    pub timing: Option<TimingSnapshot>,
++    pub proposals: Vec<ProposalFact>,
++    pub operations: Vec<OperationRecord>,
++    pub actor_phase: Option<ActorPhase>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RecoveryCut {
++    pub cut_hash: CutRef,
++    pub canonical_bytes: Vec<u8>,
++}
++
++pub struct RecoveryOptions<D: Digest, P: PublicKey> {
++    pub store: Arc<dyn RecoveryStore>,
++    pub reconnector: Arc<dyn RecoveryReconnector<D, P>>,
++    pub startup: Arc<dyn RecoveryStartup>,
++    pub session_not_before: Option<SystemTime>,
++}
++
++pub trait RecoveryStore: Send + Sync + 'static {
++    fn stage(&self, record: RecoveryRecord) -> Result<RecordToken, RecoveryError>;
++    fn bind_callback(&self, binding: CallbackBinding) -> Result<RecordToken, RecoveryError>;
++    fn flush<'a>(
++        &'a self,
++        through: RecordToken,
++    ) -> BoxFuture<'a, Result<RecoveryReceipt, RecoveryError>>;
++    fn load<'a>(
++        &'a self,
++        request: RecoveryLoad,
++    ) -> BoxFuture<'a, Result<RecoveryBundle, RecoveryError>>;
++    fn checkpoint<'a>(
++        &'a self,
++        cut: RecoveryCut,
++    ) -> BoxFuture<'a, Result<RecoveryReceipt, RecoveryError>>;
++    fn claim_ingress(
++        &self,
++        actor: ActorId,
++        channel: u32,
++        source_key: Vec<u8>,
++        exact_bytes: Vec<u8>,
++    ) -> Result<InputRef, RecoveryError>;
++}
++
++#[derive(Clone)]
++pub struct ReconnectRequest<D: Digest, P: PublicKey> {
++    pub context: Option<Context<D, P>>,
++    pub round: Round,
++    pub operation: OperationRecord,
++    pub reconnect_generation: u64,
++}
++
++pub enum Reconnected<D: Digest> {
++    Prepare(oneshot::Receiver<Handoff<D>>),
++    Propose(oneshot::Receiver<D>),
++    Verify(oneshot::Receiver<bool>),
++    Certify(oneshot::Receiver<bool>),
++    Waiting,
++    Closed,
++    Cancelled,
++}
++
++pub trait RecoveryReconnector<D: Digest, P: PublicKey>: Send + Sync + 'static {
++    fn reconnect<'a>(
++        &'a self,
++        request: ReconnectRequest<D, P>,
++    ) -> BoxFuture<'a, Result<Reconnected<D>, RecoveryError>>;
++}
++
++pub trait RecoveryStartup: Send + Sync + 'static {
++    fn ready(&self, actor: ActorId, cut: CutRef, state_hash: [u8; 32])
++    -> Result<(), RecoveryError>;
++    fn released<'a>(&'a self) -> BoxFuture<'a, Result<(), RecoveryError>>;
++}
++
++#[derive(Clone)]
++pub(crate) struct ActorRecovery {
++    pub store: Arc<dyn RecoveryStore>,
++    pub startup: Arc<dyn RecoveryStartup>,
++}
++impl ActorRecovery {
++    pub(crate) async fn wait(&self, actor: ActorId, epoch: u64, projection: &[u8]) {
++        let restored = self
++            .store
++            .load(RecoveryLoad {
++                actor,
++                epoch,
++                native_boundary: Vec::new(),
++            })
++            .await
++            .expect("load actor recovery cut");
++        use commonware_cryptography::{Hasher as _, Sha256};
++        let domain = b"I1b/recovery-state/v1";
++        let hash = Sha256::hash(&[
++            &(domain.len() as u64).to_be_bytes(),
++            domain,
++            &(projection.len() as u64).to_be_bytes(),
++            projection,
++        ])
++        .0;
++        self.startup
++            .ready(actor, restored.cut, hash)
++            .expect("record recovery readiness");
++        self.startup
++            .released()
++            .await
++            .expect("native recovery startup");
++    }
++}
++
++pub(crate) fn micros(time: SystemTime) -> Result<i64, RecoveryError> {
++    let (positive, duration) = match time.duration_since(UNIX_EPOCH) {
++        Ok(duration) => (true, duration),
++        Err(error) => (false, error.duration()),
++    };
++    if duration.subsec_nanos() % 1000 != 0 {
++        return Err(RecoveryError(
++            "native recovery time is not an exact microsecond",
++        ));
++    }
++    let value = i128::try_from(duration.as_micros())
++        .map_err(|_| RecoveryError("native timestamp overflow"))?;
++    i64::try_from(if positive { value } else { -value })
++        .map_err(|_| RecoveryError("native timestamp overflow"))
++}
++
++pub(crate) fn system_time(value: i64) -> Result<SystemTime, RecoveryError> {
++    let delta = Duration::from_micros(value.unsigned_abs());
++    if value >= 0 {
++        UNIX_EPOCH.checked_add(delta)
++    } else {
++        UNIX_EPOCH.checked_sub(delta)
++    }
++    .ok_or(RecoveryError("native timestamp overflow"))
++}
++
++/// Carry the received canonical bytes before the typed codec consumes them.
++/// The controller ties the next raw channel receive to its write-ahead input.
++pub(crate) struct IngressCapture<R> {
++    receiver: R,
++    store: Option<Arc<dyn RecoveryStore>>,
++    channel: u32,
++    stamp: Arc<std::sync::Mutex<Option<InputRef>>>,
++}
++impl<R> IngressCapture<R> {
++    pub(crate) fn new(
++        receiver: R,
++        store: Option<Arc<dyn RecoveryStore>>,
++        channel: u32,
++    ) -> (Self, Arc<std::sync::Mutex<Option<InputRef>>>) {
++        let stamp = Arc::new(std::sync::Mutex::new(None));
++        (
++            Self {
++                receiver,
++                store,
++                channel,
++                stamp: stamp.clone(),
++            },
++            stamp,
++        )
++    }
++}
++impl<R: std::fmt::Debug> std::fmt::Debug for IngressCapture<R> {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        f.debug_struct("IngressCapture")
++            .field("receiver", &self.receiver)
++            .field("channel", &self.channel)
++            .finish()
++    }
++}
++impl<R: commonware_p2p::Receiver> commonware_p2p::Receiver for IngressCapture<R> {
++    type PublicKey = R::PublicKey;
++    type Error = R::Error;
++    async fn recv(&mut self) -> Result<commonware_p2p::Message<Self::PublicKey>, Self::Error> {
++        use commonware_codec::Encode as _;
++        let (key, raw) = self.receiver.recv().await?;
++        if let Some(store) = &self.store {
++            let id = store
++                .claim_ingress(
++                    ActorId::Batcher,
++                    self.channel,
++                    key.encode().to_vec(),
++                    raw.as_ref().to_vec(),
++                )
++                .expect("claim exact granted native ingress");
++            assert!(
++                self.stamp.lock().unwrap().replace(id).is_none(),
++                "unconsumed native ingress reference"
++            );
++        }
++        Ok((key, raw))
++    }
++    fn capacity(&self) -> std::num::NonZeroUsize {
++        self.receiver.capacity()
++    }
++}

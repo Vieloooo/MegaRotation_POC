@@ -237,6 +237,18 @@ impl Network {
             audit,
         })
     }
+    pub(crate) fn empty_network_frontier(&self) -> Result<()> {
+        if !self.factory.counters.lock().unwrap().is_empty()
+            || !self.blocked.lock().unwrap().peers.is_empty()
+            || !self.quotas.lock().unwrap().is_empty()
+        {
+            return Err(Error(
+                "bounded pending Verify cut cannot omit network history",
+            ));
+        }
+        Ok(())
+    }
+
     pub fn members(&self) -> &[PublicKey; 5] {
         &self.members
     }
@@ -335,7 +347,8 @@ impl Network {
     fn resolve_provenance(&self, data: &[u8]) -> Result<ResolverProvenance> {
         let mut input = Copying(data);
         let id = u64::read(&mut input).map_err(|_| Error("malformed resolver id"))?;
-        match u8::read(&mut input).map_err(|_| Error("malformed resolver operation"))? {
+        let operation = u8::read(&mut input).map_err(|_| Error("malformed resolver operation"))?;
+        match operation {
             0 => {
                 let _ = u64::read(&mut input).map_err(|_| Error("malformed resolver key"))?;
             }
@@ -349,6 +362,10 @@ impl Network {
         }
         if input.has_remaining() {
             return Err(Error("extra resolver packet bytes"));
+        }
+        if operation == 0 && id == u64::MAX && self.factory.config.base.recovery.is_some() {
+            self.scope.fail("native resolver request id exhausted");
+            return Err(Error("native resolver request id exhausted"));
         }
         Ok(ResolverProvenance {
             request_id: id,
@@ -510,7 +527,12 @@ impl Blocker for Network {
     }
 }
 
-pub(crate) struct NativeRx(mpsc::Receiver<Message<PublicKey>>);
+pub(crate) struct ReceivedIngress {
+    message: Message<PublicKey>,
+    recovery: Option<(Arc<crate::native_recovery::ActorStore>, u32, u32, Id)>,
+}
+
+pub(crate) struct NativeRx(mpsc::Receiver<ReceivedIngress>);
 impl std::fmt::Debug for NativeRx {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("NativeRx")
@@ -520,13 +542,26 @@ impl Receiver for NativeRx {
     type Error = Error;
     type PublicKey = PublicKey;
     async fn recv(&mut self) -> Result<Message<PublicKey>> {
-        self.0.recv().await.ok_or(Error("native ingress closed"))
+        use commonware_codec::Encode as _;
+        let received = self.0.recv().await.ok_or(Error("native ingress closed"))?;
+        if let Some((store, channel, source, reference)) = received.recovery {
+            store
+                .consumed(
+                    channel,
+                    source,
+                    received.message.0.encode().to_vec(),
+                    received.message.1.as_ref().to_vec(),
+                    reference,
+                )
+                .expect("consume exact durable native ingress");
+        }
+        Ok(received.message)
     }
     fn capacity(&self) -> NonZeroUsize {
         NonZeroUsize::new(CAPACITY).unwrap()
     }
 }
-pub(crate) type Ingress = mpsc::Sender<Message<PublicKey>>;
+pub(crate) type Ingress = mpsc::Sender<ReceivedIngress>;
 pub(crate) fn channels() -> ([Ingress; 3], [NativeRx; 3]) {
     let [(a, aa), (b, bb), (c, cc)] = std::array::from_fn(|_| mpsc::channel(CAPACITY));
     ([a, b, c], [NativeRx(aa), NativeRx(bb), NativeRx(cc)])
@@ -536,16 +571,21 @@ pub(crate) fn submit_input(
     envelope: &Envelope,
     ingress: &[Ingress; 3],
     keys: &[PublicKey; 5],
+    recovery: Option<(Arc<crate::native_recovery::ActorStore>, Id)>,
 ) -> bool {
     let index = (channel as usize)
         .checked_sub(1)
         .expect("nonempty native channel");
     ingress.get(index).is_some_and(|ingress| {
         ingress
-            .try_send((
-                keys[envelope.src_member_id as usize].clone(),
-                IoBuf::from(envelope.payload_bytes.clone()),
-            ))
+            .try_send(ReceivedIngress {
+                message: (
+                    keys[envelope.src_member_id as usize].clone(),
+                    IoBuf::from(envelope.payload_bytes.clone()),
+                ),
+                recovery: recovery
+                    .map(|(store, id)| (store, channel as u32, envelope.src_member_id, id)),
+            })
             .is_ok()
     })
 }

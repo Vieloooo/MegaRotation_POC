@@ -168,6 +168,8 @@ pub struct State<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D:
     leader_timeout: Duration,
     certification_timeout: Duration,
     timeout_retry: Duration,
+    #[cfg(feature = "native-recovery")]
+    recovery_floor: Option<Option<std::time::SystemTime>>,
     skip_budget: u64,
     view: View,
     last_finalized: View,
@@ -272,6 +274,8 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
             leader_timeout: cfg.leader_timeout,
             certification_timeout: cfg.certification_timeout,
             timeout_retry: cfg.timeout_retry,
+            #[cfg(feature = "native-recovery")]
+            recovery_floor: None,
             skip_budget: cfg.skip_budget,
             view: GENESIS_VIEW,
             last_finalized: GENESIS_VIEW,
@@ -372,6 +376,93 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
         self.scheme.me().is_some_and(|m| m.signer() == Some(idx))
     }
 
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn enable_recovery_timing(&mut self, floor: Option<std::time::SystemTime>) {
+        assert!(
+            self.elector.terms().stall_timeout().is_none(),
+            "native recovery supports rotating terms without stall"
+        );
+        assert!(
+            self.elector.terms().length().get() == 1,
+            "native recovery supports one-view terms"
+        );
+        self.recovery_floor = Some(floor);
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn recovery_timing(
+        &self,
+    ) -> Result<crate::simplex::recovery::TimingSnapshot, crate::simplex::recovery::RecoveryError>
+    {
+        use crate::simplex::recovery::TimingSnapshot;
+        Ok(TimingSnapshot {
+            current_view: self.view.get(),
+            last_finalized_view: self.last_finalized.get(),
+            stall_anchor: self.stall_anchor.get(),
+            native_state_projection_hash: self.recovery_projection_hash(),
+            rounds: self
+                .views
+                .values()
+                .map(|round| round.recovery_timing(self.timeout_retry))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn restore_recovery_timing(
+        &mut self,
+        snapshot: &crate::simplex::recovery::TimingSnapshot,
+    ) -> Result<(), crate::simplex::recovery::RecoveryError> {
+        use crate::simplex::recovery::RecoveryError;
+        if snapshot.current_view != self.view.get()
+            || snapshot.last_finalized_view != self.last_finalized.get()
+            || snapshot.native_state_projection_hash != self.recovery_projection_hash()
+            || snapshot.rounds.len() != self.views.len()
+            || !snapshot
+                .rounds
+                .iter()
+                .map(|round| round.view)
+                .eq(self.views.keys().map(|view| view.get()))
+        {
+            return Err(RecoveryError(
+                "native reconstructed state does not match recovery timing",
+            ));
+        }
+        for (round, timing) in self.views.values_mut().zip(&snapshot.rounds) {
+            round.restore_recovery_timing(timing, self.timeout_retry)?;
+        }
+        self.stall_anchor = View::new(snapshot.stall_anchor);
+        Ok(())
+    }
+
+    #[cfg(feature = "native-recovery")]
+    fn recovery_projection_hash(&self) -> [u8; 32] {
+        use commonware_cryptography::{Hasher as _, Sha256};
+        use std::fmt::Write as _;
+        let mut json = format!(
+            "{{\"current_view\":{},\"last_finalized_view\":{},\"rounds\":[",
+            self.view.get(),
+            self.last_finalized.get()
+        );
+        for (index, (view, round)) in self.views.iter().enumerate() {
+            if index > 0 {
+                json.push(',');
+            }
+            write!(&mut json, "{{\"view\":{},", view.get()).expect("in-memory format");
+            round.recovery_projection(&mut json);
+            json.push('}');
+        }
+        json.push_str("]}");
+        let domain = b"I1b/recovery-state/v1";
+        Sha256::hash(&[
+            &(domain.len() as u64).to_be_bytes(),
+            domain,
+            &(json.len() as u64).to_be_bytes(),
+            json.as_bytes(),
+        ])
+        .0
+    }
+
     /// Advances the view.
     fn enter_view(&mut self, view: View) -> bool {
         if view <= self.view {
@@ -379,8 +470,15 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
         }
 
         let now = self.context.current();
-        let leader_deadline = now + self.leader_timeout;
-        let certification_deadline = now + self.certification_timeout;
+        #[cfg(feature = "native-recovery")]
+        let base = self
+            .recovery_floor
+            .flatten()
+            .map_or(now, |floor| now.max(floor));
+        #[cfg(not(feature = "native-recovery"))]
+        let base = now;
+        let leader_deadline = base + self.leader_timeout;
+        let certification_deadline = base + self.certification_timeout;
         let stall_deadline = self
             .elector
             .terms()
@@ -552,6 +650,14 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
             (round.construct_nullify()?, round.leader().cloned())
         };
         let nullify = Nullify::sign::<D>(&self.scheme, Rnd::new(self.epoch, view))?;
+        #[cfg(feature = "native-recovery")]
+        if self.recovery_floor.is_some() {
+            let now = self.context.current();
+            self.views
+                .get_mut(&view)
+                .expect("current nullify round")
+                .arm_recovery_retry(now, self.timeout_retry);
+        }
         self.nullify_views.insert(view);
         if !is_retry && let Some(leader) = leader {
             self.timeouts
@@ -1259,7 +1365,7 @@ impl<E: Clock + CryptoRng + Metrics, S: Scheme<D>, L: Elector<S>, D: Digest> Sta
     /// equivocating leader, whom the voter blocks. Each Byzantine leader can
     /// cause this delay at most once. Later views skip that leader at the leader
     /// timeout.
-    fn verification_is_stale(&mut self, view: View) -> bool {
+    pub(super) fn verification_is_stale(&mut self, view: View) -> bool {
         if self.verification_matches(view) {
             return false;
         }

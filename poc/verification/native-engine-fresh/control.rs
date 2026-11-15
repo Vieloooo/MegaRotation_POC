@@ -179,6 +179,7 @@ pub async fn run(mode: &str, worker: &str, template: &str, out: &str) -> R<()> {
         registry_hash: data(&c["base"], "registry_hash"),
         namespace_hash: data(&c, "namespace"),
         profile: "native-engine-fresh-v1".into(),
+        recovery: None,
     };
     let (bus, mut rx) = mpsc::channel(8);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;

@@ -212,6 +212,34 @@ impl Authority {
             .map_or_else(ClockAudit::default, |s| s.snapshot_clock(self.cid))
     }
 
+    pub fn fail(&self, reason: &'static str) {
+        self.shared
+            .upgrade()
+            .expect("native task owner")
+            .record_failure(reason);
+    }
+
+    /// Stage non-recursive recovery ledger I/O into the same physical custody
+    /// used by native storage. The result resumes protocol work only in an
+    /// ordinary poll following the release permit.
+    pub(crate) fn submit_auxiliary<T: Send + 'static>(
+        &self,
+        write: impl FnOnce() -> Result<T> + Send + 'static,
+    ) -> Result<
+        tokio::sync::oneshot::Receiver<std::result::Result<Result<T>, commonware_runtime::Error>>,
+    > {
+        let shared = self
+            .shared
+            .upgrade()
+            .ok_or(Error("native recovery authority closed"))?;
+        let identity = shared.issue_io(
+            Some(self.cid),
+            auxiliary_target(),
+            IoOperation::Sync { detached: false },
+        );
+        Ok(shared.enqueue_auxiliary(identity, write))
+    }
+
     pub fn stage_route(&self, wire: NativeWire, dest: u32) -> Result<()> {
         let shared = self
             .shared
@@ -531,6 +559,38 @@ impl ControlledDriver {
         Ok(())
     }
 
+    pub(crate) fn configure_recovered_witness(
+        &mut self,
+        policy: WitnessPolicy,
+        path: &std::path::Path,
+        head: WitnessHead,
+    ) -> Result<()> {
+        self.configure_io(self.witness.is_none())?;
+        let cfg = &policy.seal().config;
+        let profile = self.shared.inner.lock().unwrap().clock.profile.clone();
+        if cfg.run_id != profile.run_id
+            || cfg.config_hash != profile.config_hash
+            || cfg.worker != profile.node
+            || cfg.generation != profile.incarnation
+            || self.native_creation_layout != commonware_runtime::BlobLayout::V1
+        {
+            return Err(Error("recovered witness policy does not match new worker"));
+        }
+        crate::witness_recovery::validate_existing_layout(&self.native_storage_root, &policy)?;
+        let ledger = WitnessLedger::open_anchored(
+            path,
+            policy.clone(),
+            crate::LedgerTail::RejectComplete,
+            head,
+        )?;
+        if ledger.head() != head {
+            return Err(Error("unexpected recovered witness descendants"));
+        }
+        self.shared.inner.lock().unwrap().witness_partition = Some(cfg.partition.clone());
+        self.witness = Some(WitnessRuntime::new(policy, ledger));
+        Ok(())
+    }
+
     pub fn witness_records(&self) -> Option<&[LedgerRecord]> {
         self.witness
             .as_ref()
@@ -743,6 +803,118 @@ impl ControlledDriver {
             self.fail(error.0);
         }
         result
+    }
+
+    pub(crate) fn recovery_local_at(&self, tick: u64) -> Option<i64> {
+        self.shared.inner.lock().unwrap().clock.projected_at(tick)
+    }
+
+    pub(crate) fn recovery_authority(&self, cid: Id) -> Authority {
+        Authority {
+            shared: Arc::downgrade(&self.shared),
+            cid,
+            role: "native-recovery".into(),
+        }
+    }
+
+    pub(crate) fn install_recovered_clock(
+        &mut self,
+        checkpoint: &crate::clock::ClockCheckpoint,
+        recovery_tick: u64,
+        original_stop_us: i64,
+    ) -> Result<()> {
+        if self.last_grant != 0
+            || self.has_active_permit()
+            || self.has_io()
+            || self.stopped
+            || self.shared.failed()
+        {
+            return Err(Error("recovery clock must be installed before grants"));
+        }
+        self.shared.inner.lock().unwrap().clock.restore_recovery(
+            checkpoint,
+            recovery_tick,
+            original_stop_us,
+        )
+    }
+
+    pub(crate) fn recovery_clock_checkpoint(
+        &self,
+        cid: Id,
+    ) -> Result<crate::clock::ClockCheckpoint> {
+        if self.has_active_permit() || self.has_io() || self.shared.failed() {
+            return Err(Error("recovery clock checkpoint outside root quiescence"));
+        }
+        let inner = self.shared.inner.lock().unwrap();
+        Ok(inner.clock.recovery_checkpoint(
+            inner
+                .sessions
+                .get(&cid)
+                .is_some_and(|session| session.retired),
+        ))
+    }
+
+    /// Pre-exposure WAL or post-quiescence cut persistence. No grant/tick or
+    /// protocol permit is advanced during the administrative I/O itself.
+    pub(crate) async fn persist_root_auxiliary<T: Send + 'static>(
+        &mut self,
+        grant: Grant,
+        cid: Id,
+        write: impl FnOnce() -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        self.check_grant_entry()?;
+        if grant.id == 0 || grant.id < self.last_grant || self.has_io() {
+            return Err(Error("invalid root auxiliary grant"));
+        }
+        let identity = {
+            let mut inner = self.shared.inner.lock().unwrap();
+            if inner.current.is_some() || grant.tick_us < inner.clock.tick_us {
+                return Err(Error("root auxiliary write overlaps controlled work"));
+            }
+            let id = inner
+                .next_io
+                .checked_add(1)
+                .ok_or(Error("auxiliary I/O counter exhausted"))?;
+            inner.next_io = id;
+            let p = &inner.clock.profile;
+            let identity = IoIdentity {
+                io_id: id,
+                grant: grant.id,
+                tick_us: grant.tick_us,
+                run_id: p.run_id,
+                node: p.node,
+                incarnation: p.incarnation,
+                cid,
+                task: 0,
+            };
+            inner.events.push(Event::IoIssued {
+                identity: identity.clone(),
+                target: auxiliary_target(),
+                operation: IoOperation::Sync { detached: false },
+            });
+            identity
+        };
+        let wait = self.shared.enqueue_auxiliary(identity, write);
+        let mut custody = AuxiliaryCustody {
+            shared: self.shared.clone(),
+            armed: true,
+        };
+        let outcome = async {
+            self.await_io(PermitMode::IoRelease).await?;
+            if self.shared.failed() {
+                return Err(Error("native auxiliary persistence failed"));
+            }
+            self.release_io(PermitMode::IoRelease);
+            wait.await
+                .map_err(|_| Error("native auxiliary result lost"))?
+                .map_err(|_| Error("native auxiliary physical operation failed"))?
+        }
+        .await;
+        custody.armed = false;
+        if let Err(error) = &outcome {
+            self.fail(error.0);
+        }
+        outcome
     }
 
     fn check_grant_entry(&mut self) -> Result<()> {
@@ -1196,6 +1368,54 @@ impl ControlledDriver {
         Ok(())
     }
 
+    pub(crate) fn recovery_timers(&self, cid: Id) -> Result<(u64, Vec<Timer>)> {
+        if self.has_active_permit() || self.has_io() || self.shared.failed() {
+            return Err(Error("timer checkpoint requires root quiescence"));
+        }
+        let inner = self.shared.inner.lock().unwrap();
+        if inner
+            .timers
+            .values()
+            .any(|wait| wait.timer.cid == cid && wait.fired)
+        {
+            return Err(Error("unconsumed fired timer at recovery cut"));
+        }
+        let timers = inner
+            .timers
+            .values()
+            .filter(|wait| wait.timer.cid == cid)
+            .map(|wait| wait.timer.clone())
+            .collect();
+        Ok((inner.next_timer, timers))
+    }
+
+    pub(crate) fn restore_timer_frontier(&mut self, last: u64) -> Result<()> {
+        if self.has_active_permit() || self.last_grant != 0 || self.has_io() || self.shared.failed()
+        {
+            return Err(Error("restore timers before any new grant"));
+        }
+        let mut inner = self.shared.inner.lock().unwrap();
+        if inner.next_timer != 0 || !inner.timers.is_empty() {
+            return Err(Error("runtime timer frontier already installed"));
+        }
+        inner.next_timer = last;
+        Ok(())
+    }
+
+    pub(crate) fn capture_role_rngs(&self, cid: Id) -> Result<Vec<(Id, RngCheckpoint)>> {
+        if self.has_active_permit() || self.has_io() || self.shared.failed() {
+            return Err(Error(
+                "native recovery RNG checkpoint requires root quiescence",
+            ));
+        }
+        let inner = self.shared.inner.lock().unwrap();
+        Ok(inner
+            .rngs
+            .iter()
+            .filter_map(|(&(owner, role), rng)| (owner == cid).then_some((role, rng.checkpoint())))
+            .collect())
+    }
+
     pub fn rng_checkpoint(&self, cid: Id, role: Id) -> Result<RngCheckpoint> {
         self.shared.try_ordinary(None)?;
         let mut inner = self.shared.inner.lock().unwrap();
@@ -1474,6 +1694,26 @@ struct EvidenceIo {
     future: std::pin::Pin<Box<dyn Future<Output = (WitnessRuntime, Result<()>)> + Send>>,
 }
 
+fn auxiliary_target() -> IoTarget {
+    IoTarget {
+        partition: "native-aux".into(),
+        name: None,
+        open_id: None,
+    }
+}
+
+struct AuxiliaryCustody {
+    shared: Arc<Shared>,
+    armed: bool,
+}
+impl Drop for AuxiliaryCustody {
+    fn drop(&mut self) {
+        if self.armed {
+            self.shared.record_failure("root auxiliary wait abandoned");
+        }
+    }
+}
+
 struct GrantCustody {
     shared: Arc<Shared>,
     grant: Grant,
@@ -1552,6 +1792,33 @@ impl Shared {
             operation,
         });
         identity
+    }
+
+    fn enqueue_auxiliary<T: Send + 'static>(
+        &self,
+        identity: IoIdentity,
+        write: impl FnOnce() -> Result<T> + Send + 'static,
+    ) -> tokio::sync::oneshot::Receiver<std::result::Result<Result<T>, commonware_runtime::Error>>
+    {
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let job = IoJob::new(
+            identity,
+            async move { Ok(write()) },
+            sender,
+            |result| {
+                if result.is_ok() {
+                    IoResult::Ok
+                } else {
+                    IoResult::Error {
+                        kind: "native_recovery",
+                    }
+                }
+            },
+            None,
+            |_| None,
+        );
+        self.enqueue_io(job);
+        receiver
     }
 
     pub fn enqueue_io(&self, job: IoJob) {

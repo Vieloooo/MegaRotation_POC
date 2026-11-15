@@ -3,6 +3,8 @@ use super::{
     verifier::{Batch, ProposalState},
     votes::{ObservedVote, Outcome, VoteTracker},
 };
+#[cfg(feature = "native-recovery")]
+use crate::simplex::recovery as rec;
 use crate::{
     Reporter,
     simplex::{
@@ -46,6 +48,10 @@ pub struct Round<
 
     /// Whether we've already sent the selected proposal to the voter.
     proposal_sent: bool,
+    #[cfg(feature = "native-recovery")]
+    notarize_ingress: std::collections::BTreeMap<Participant, rec::InputRef>,
+    #[cfg(feature = "native-recovery")]
+    certificate_ingress: Option<(Proposal<D>, rec::InputRef)>,
 
     /// Root span of the view, shared with the voter's round.
     ///
@@ -97,6 +103,10 @@ impl<
             verifier: Verifier::new(round, scheme, quorum),
             votes,
             proposal_sent: false,
+            #[cfg(feature = "native-recovery")]
+            notarize_ingress: std::collections::BTreeMap::new(),
+            #[cfg(feature = "native-recovery")]
+            certificate_ingress: None,
             span: ViewSpan::new(),
         }
     }
@@ -366,6 +376,59 @@ impl<
         // uncertified leader vote from the tracker.
         self.verifier
             .set_leader(leader, self.votes.notarize(leader));
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn record_notarize_ingress(
+        &mut self,
+        signer: Participant,
+        input_ref: rec::InputRef,
+    ) {
+        assert!(
+            self.notarize_ingress.insert(signer, input_ref).is_none(),
+            "replaced first admitted vote ingress"
+        );
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn record_certificate_ingress(
+        &mut self,
+        certificate: &Certificate<S, D>,
+        input_ref: rec::InputRef,
+    ) {
+        let proposal = match certificate {
+            Certificate::Notarization(v) => &v.proposal,
+            Certificate::Finalization(v) => &v.proposal,
+            Certificate::Nullification(_) => return,
+        };
+        if !self.verifier.has_authoritative_proposal() {
+            self.certificate_ingress = Some((proposal.clone(), input_ref));
+        }
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) const fn has_authoritative_proposal(&self) -> bool {
+        self.verifier.has_authoritative_proposal()
+    }
+
+    #[cfg(feature = "native-recovery")]
+    pub(super) fn selected_ingress(&self, proposal: &Proposal<D>) -> Option<rec::ProposalOrigin> {
+        if self.has_authoritative_proposal() {
+            let (selected, input_ref) = self.certificate_ingress.as_ref()?;
+            return (selected == proposal).then_some(rec::ProposalOrigin {
+                input_ref: *input_ref,
+                signature_state: rec::SignatureState::Verified,
+            });
+        }
+        let leader = self.verifier.leader()?;
+        let vote = self.votes.notarize(leader)?;
+        if &vote.proposal != proposal {
+            return None;
+        }
+        Some(rec::ProposalOrigin {
+            input_ref: *self.notarize_ingress.get(&leader)?,
+            signature_state: rec::SignatureState::Pending,
+        })
     }
 
     /// Returns the proposal to forward to the voter, marking it sent (at most
