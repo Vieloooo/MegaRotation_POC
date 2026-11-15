@@ -151,6 +151,8 @@ normalize排序：endpoints按Endpoint，channels/permits按ChannelId，contexts
 
 每plan commands≤4096、events≤8192，candidate snapshot与完整events canonical数组字节数之和≤32MiB；超界ResourceLimit，不改变原kernel，事件累积时即检查预算。effect_index是全部输出从0连续的ordinal。immediate Fault或Send时offline Drop只分配copy0并输出一条raw_due=None的Dropped，不生成duplicate；其他overflow、Drain offline与StaleBinding均保留Some(raw_due)。Unordered的tie使用同一SIMT/tie/v1 packet tie。初始send_ordinal=0、next_release_us=0、revision=0、next_packet_seq=1。
 
+Hold模式late Drain时还须检查实际step.tick是否在线：原eligible在线但当前tick处于后续offline区间时继续hold，next_wakeup对max(last_committed_tick,eligible)再次应用online调整。origin.step_id仅源端root坐标，不与Route StepStamp.logical_step_id比较；只要求step_id≥1、sent_tick≤当前tick、origin.source_incarnation≤Envelope.source_incarnation。上述是v1接线澄清，不改变消息hash或公开字段。
+
 ## 3. ReliableMailbox
 
 ```rust
@@ -220,6 +222,8 @@ Mailbox不推进全局时间，action.now/received_tick由controller给出；per
 可靠记录只接受ChannelSpec为Reliable、相应发送/接收权限与context合法。Receive新ID的两个release顺序固定为InboxAvailable、ReceiveAck；duplicate相同message只ReceiveAck。Enqueue/ACK遇到tombstone保持已确认状态，零新的业务发送；不同header同ID拒绝。MarkConsumed只改consumed，无release；再次MarkConsumed幂等。pending_inbox按logical_id排序，通知可以重放，库只保证一次插入，不声称任意业务副作用一次。
 
 duplicate identical Enqueue与matching tombstone ACK均零release；合法confirm仍revision+1，Enqueue仍遵守last_action_tick。初始last_action_tick_us=0。
+
+active outbox的Acknowledge须last_attempt>0且last_envelope存在，否则InvalidReceipt；authenticated_receiver须匹配ACK当前binding，并且receiver_incarnation≥last_envelope.destination_incarnation，允许receiver恢复后的更高incarnation。matching tombstone ACK仍按基础header/auth检查后零release幂等，不能因last_envelope已清除而拒绝。trusted adapter仍负责实际认证与当前registry绑定。
 
 confirm核对私有instance、base revision、receipt全部绑定；不先安装state再检查receipt。record中release intent是Enqueued、SendEnvelope、AckFor、InboxAvailable、Acknowledged、Rebound；AckFor只含logical_id。confirm/restore按record内模板和**同一receipt**生成ReceiveAck，custody_transition_id=该record.transition_id，storage_receipt=外部receipt值；message/header/receiver incarnation均来自candidate，不接受caller另填。stable release身份为 `(transition_id,release_index)`，01 adapter必须去重其root提交。
 

@@ -52,6 +52,8 @@ copy入队前分别检查link/global条数与payload预算，超界只DropNewest
 
 每plan最多4096 commands、8192 events，candidate snapshot canonical bytes加完整events canonical数组bytes最多32MiB；超过任一界返回ResourceLimit且原kernel不变，累积events时即检查预算。immediate Fault或Send当时offline Drop只分配原copy0并输出一条Dropped，raw_due=None，不生成duplicate；已计算raw_due之后的overflow、Drain offline及StaleBinding均为Some(raw_due)。RouteEvent.effect_index为该plan全部输出从0连续的ordinal，checked u32，不是command编号。初始send_ordinal、next_release_us、revision均为0，next_packet_seq为1。
 
+Lead接线澄清（实现前已交Builder/Verifier）：Hold的late Drain若实际step.tick进入后续offline区间，即使原raw_due在线也不得交付；next_wakeup对max(last_committed_tick,candidate eligible)再次应用online调整，不能同tick空转。origin.step_id是源端root坐标，不与kernel.logical_step_id比较；仍要求origin.step_id≥1、origin.sent_tick≤当前tick及origin.source_incarnation≤当前source wrapper incarnation。
+
 ## 5. ReliableMailbox与adapter持久确认
 
 每个逻辑Endpoint一个mailbox，独立于route队列。MailboxConfig从同TransportConfig提取owner/权限；默认retry_interval20,000us（>0），无指数backoff/GC。只接Reliable channels；新native raw-vote保留责任不在此组件。
@@ -74,6 +76,8 @@ transition ID=`H("SIMT/custody-transition/v1",[run,config,owner,base_revision-u6
 Inbox每个logical ID只插入一次。`InboxAvailable`是可恢复任务通知，不是原生proof/完整body/G/Inbox/D验收；重复数据或恢复重发ACK不产生第二个logical insert。消费者按stable ID幂等处理pending项，业务exactly-once需其状态与MarkConsumed原子持久。ACK仅在receiver确认持久保管后释放，sender删除也需自己的确认；没有ACK-of-ACK。历史context记录不因新的live context或ClockUnsafe自动删，真实终止/签名权限仍由01/04/05守卫。
 
 重复相同Enqueue以及matching tombstone ACK均零release；合法confirm仍推进revision，Enqueue仍检查last_action_tick。Mailbox初始last_action_tick_us=0。ClockTracker跨rebind保留最后成功install的delivery时刻水位，具体snapshot约束见API；不能借清校准绕过时间倒退检查。
+
+active outbox的ACK必须对应至少一次已确认Attempt（last_attempt>0且last_envelope存在），否则InvalidReceipt且零变更；receiver_incarnation不得低于last_envelope.destination_incarnation，但允许更高的已认证receiver恢复绑定。matching tombstone ACK仍在基础header/auth检查后幂等零release，不要求已清除的last_envelope。实际认证与current registration由adapter负责。
 
 ## 6. Snapshot、Clock和服务边界
 
