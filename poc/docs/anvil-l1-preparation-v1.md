@@ -1,5 +1,7 @@
 # 功能09 准备与接口交接 v1
 
+后续独立组件阶段已完成，候选与同SHA验收见[组件交付记录](anvil-l1-component-delivery-v1.md)。本文保留准备阶段的来源与权限记录；完整09仍等待真实接线。
+
 2026-11-15。Docer角色为命名 `bft_spec`（GPT-6 Astra/xhigh）；本报告只记录来源推导和合同准备，尚无实现/测试PASS。主chat Astra/ultra由总协调运行时记录核验（lead提供），不是Docer自行查询结果。
 
 工作区 `/home/jy/.codex/worktrees/65ef/megaroation_poc`，分支 `codex/poc-anvil-l1`；初始 `ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`，合入授权文档政策后基线 `0a951c482a9712678ab9de34765b781b9c3c9f42`。Regional BFT只读源 `/mnt/reth/jy/megaroation_poc/regional_BFT_sim`，固定 `691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6`，Commonware `2026.10.0`，未改子模块。

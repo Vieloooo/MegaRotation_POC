@@ -1,0 +1,42 @@
+{
+  "scope": "independent command/RPC separation and actual lost-mine-response replay",
+  "runs": [
+    {
+      "pauseMs": 300,
+      "status": "PASS",
+      "commands": 195,
+      "mineRpcCount": 7,
+      "lostCompletedMineCommand": [
+        152
+      ],
+      "reconciledWithoutMutation": [
+        152
+      ],
+      "cachedReplayNoRpc": [
+        5
+      ],
+      "readyReaderQueries": 8,
+      "finalReferenceUs": 16000000,
+      "finalPrefix": 7
+    },
+    {
+      "pauseMs": 650,
+      "status": "PASS",
+      "commands": 195,
+      "mineRpcCount": 7,
+      "lostCompletedMineCommand": [
+        152
+      ],
+      "reconciledWithoutMutation": [
+        152
+      ],
+      "cachedReplayNoRpc": [
+        5
+      ],
+      "readyReaderQueries": 8,
+      "finalReferenceUs": 16000000,
+      "finalPrefix": 7
+    }
+  ],
+  "status": "PASS"
+}

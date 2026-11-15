@@ -1,5 +1,7 @@
 # Independent ANVIL-L1-ABI-v1 acceptance preparation
 
+Subsequent candidate `87daee8e9e77bbe27c337383d873a5eaf4a694ba` passed the bounded A01–A17 component review and same-revision Tester matrix. See [delivery](../../docs/anvil-l1-component-delivery-v1.md), [independent review](reports/verification-87daee8.md), [Tester report](reports/simulation-87daee8.md), and [machine manifest](reports/simulation-87daee8-manifest.json). Complete feature09 remains INCONCLUSIVE (A18/A19). The source-first preparation below retains its original scope.
+
 These files were derived from protocol sources and the feature09 contract before reading Builder implementation. They are interface expectations, not a declaration of Solidity, Anvil, controlled runtime, GFR or Derivation acceptance.
 
 - `source-expectations.md`: original source-first transitions and boundaries. Its pending decisions are subsequently resolved by the contract and `contract-review.md`.
