@@ -1,0 +1,16 @@
+[package]
+name = "poc-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+poc-types.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[[test]]
+name = "mock_plan_core_independent"
+path = "../../verification/mock-plan-execution/implementation-v1/core_acceptance.rs"
