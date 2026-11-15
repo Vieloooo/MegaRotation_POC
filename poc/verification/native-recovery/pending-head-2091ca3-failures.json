@@ -1,0 +1,44 @@
+{
+  "production_candidate": "2091ca33646ec5d63190b1b0f7a65e76ea9b88bd",
+  "command": "timeout --kill-after=5s 60s ./poc/scripts/bootstrap.sh test --manifest-path prototypes/i1b-runtime/Cargo.toml --test native_recovery_independent --locked --offline acceptance:: -- --test-threads=1 --nocapture",
+  "exit_code": 101,
+  "passed": 0,
+  "failed": 2,
+  "scope": "actual production source leaves, isolated Rust integration module; minimal configuration projection only, no engine/recovery semantic claim",
+  "source_hashes": {
+    "poc/prototypes/i1b-runtime/src/native_recovery_ledger.rs": "fd7f324ab1a48a2a6960014a61a4c2a069eb691ecc0266cb0b85e38d37760517",
+    "poc/prototypes/i1b-runtime/src/native_step_journal.rs": "a0c0749e7ecbb1fe9a8104a6a2ec07ad04b6586b6df2f0c854d785e5280883f6"
+  },
+  "cases": [
+    {
+      "error": "Error(\"native recovery filesystem operation failed\")",
+      "expected": "authorized descendant promoted despite valid crash-left pending head",
+      "leaf": "auxiliary",
+      "minimum_sequence": 1,
+      "next_sequence": 2,
+      "opened": false,
+      "artifact": "/tmp/native-recovery-independent-104-aux-pending-0",
+      "files_sha256": {
+        "native-aux.head": "c416c1aef96c70bc32f656e5233cd1be065533fce25d569d5cb2095d5d47ce00",
+        "result.json": "dde7727b3a24fbe20e63aed9b97780a4de5ce59e71381c3ed7bb19e97f33a51c",
+        "native-aux": "73a82e617d299ad8e9da2f281f6fe46c8a3c0c13966713ce2070478f7b45b54c",
+        "native-aux.head.pending": "9570bf882ea1114051ff8f7bbae1879cb6a839a5b975903f402ca09c5063dce5"
+      }
+    },
+    {
+      "error": "Error(\"native root step filesystem error\")",
+      "expected": "authorized descendant promoted despite valid crash-left pending head",
+      "leaf": "root-step",
+      "minimum_sequence": 1,
+      "next_sequence": 2,
+      "opened": false,
+      "artifact": "/tmp/native-recovery-independent-104-root-pending-0",
+      "files_sha256": {
+        "root-step.head.pending": "8686ed189fdb5daa981ca1835f8235166949dd7b5e72401907122958aee8488f",
+        "result.json": "55f143fa513e4c9ab7098787a45ba4d239fb9bcc176d76ce5437254c78fb9369",
+        "root-step": "4f2ba7579dbe17f3a161052ccf4e26472215b4ff2237f7619cbe682bc250e611",
+        "root-step.head": "001a3cc5adc8b65f903337575703f836d34fea6b9cae137ff4e0c8330b4d81d1"
+      }
+    }
+  ]
+}
