@@ -16,7 +16,7 @@
   "jobs": [
     {
       "feature": "01",
-      "status": "running",
+      "status": "active",
       "phase_authorized": "full-feature",
       "thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
       "candidate_sha": null,
@@ -32,7 +32,7 @@
     },
     {
       "feature": "02",
-      "status": "ready-to-resume",
+      "status": "active",
       "phase_authorized": "freeze-and-implement-isolated-transport-component",
       "waits_for": {
         "native_integration": [
@@ -45,7 +45,7 @@
       "client_thread_id": "client-new-thread:86e0247d-309e-4ff4-b20d-24ec50ed91a0",
       "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
       "actual_turn_configuration": {
-        "turn_id": "01a1df9d-eef9-7652-be99-3b80befc9cbb",
+        "turn_id": "01a1dfd0-ee35-7f33-987d-f08941e10a19",
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
@@ -55,7 +55,7 @@
     },
     {
       "feature": "03",
-      "status": "ready-to-resume",
+      "status": "active",
       "phase_authorized": "freeze-contract-and-implement-feature-03",
       "waits_for": [],
       "thread_id": "01a1df9e-37c7-7a92-ae94-9b195a61c2f7",
@@ -63,7 +63,7 @@
       "client_thread_id": "client-new-thread:7dd2fe87-3a90-42d0-a1c5-90084059ca3c",
       "worktree": "/home/jy/.codex/worktrees/1c43/megaroation_poc",
       "actual_turn_configuration": {
-        "turn_id": "01a1df9e-3df7-7203-9e87-77b9b3b68262",
+        "turn_id": "01a1dfd0-e16f-7ba0-81f3-4264f4fd7402",
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1c43/megaroation_poc"
@@ -73,19 +73,35 @@
     },
     {
       "feature": "06",
-      "status": "queued",
+      "status": "active",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
-      "thread_id": null,
+      "thread_id": "01a1dfd1-e222-7373-a4cf-1b0bb0f0e780",
       "candidate_sha": null,
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06"
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06",
+      "worktree": "/home/jy/.codex/worktrees/1fe1/megaroation_poc",
+      "client_thread_id": "client-new-thread:ca1fa83a-e652-4d87-84af-a11bb8d0bebb",
+      "actual_turn_configuration": {
+        "turn_id": "01a1dfd1-e7a6-7191-aafb-31527a5cce90",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1fe1/megaroation_poc"
+      }
     },
     {
       "feature": "09",
-      "status": "queued",
+      "status": "active",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
-      "thread_id": null,
+      "thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
       "candidate_sha": null,
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09"
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09",
+      "worktree": "/home/jy/.codex/worktrees/65ef/megaroation_poc",
+      "client_thread_id": "client-new-thread:d6bc7704-13ab-493a-8a66-e8087e48f967",
+      "actual_turn_configuration": {
+        "turn_id": "01a1dfd2-46a9-7653-bbe5-bac657d8be7b",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/65ef/megaroation_poc"
+      }
     }
   ],
   "remaining_features": [
@@ -102,9 +118,10 @@
     "16"
   ],
   "merge_batches": [],
-  "dispatch_note": "User increased active jobs to five. Independent dependency review confirms 01/02/03/06/09: remove 03->01 whole-feature gate, allow isolated 02 kernel and 06/09 components; preserve real-integration and full acceptance gates.",
+  "dispatch_note": "Five active chats confirmed: 01 continues recovery; 02 resumed isolated transport; 03 resumed independent implementation; 06/09 created for public-log and L1/contract components. Whole-feature acceptance remains unchanged.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
-  "accepted_features_per_merge": 3
+  "accepted_features_per_merge": 3,
+  "policy_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42"
 }
