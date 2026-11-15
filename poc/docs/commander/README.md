@@ -10,6 +10,8 @@
 - 顺序为 Docer 合同 → Verifier 独立期望 → Builder → Verifier 审查/复查 → Tester。每个源码路径只有一个 writer；独立期望先于候选实现审查。功能主 chat 负责自己任务的接口冻结和专属集成，跨任务接口变更交总协调决定。
 - 依赖未验收时只能做获分配的合同和独立期望。准备完成不计为功能完成。总协调核验上游 SHA 和证据后，向下游发出实现基线；不要求上游提前单独合入 main，因此三功能一批的规则不会造成依赖死锁。
 - 所有 Rust build、重型测试和仿真在同一宿主通过 `flock /tmp/megaroation-poc-heavy.lock <command...>` 串行。默认 `CARGO_BUILD_JOBS=2`。若需多条命令，锁覆盖整个脚本；不嵌套加同一把锁。各 worktree 使用自己的 target、run 目录和实际 PID，不清理其他任务的进程。
+- 首次派发的实际宿主为已连接的 `xuelab_jump`，项目 `ccb826e2-d47a-4623-9b20-2632ac96d8e3`；同路径的 `xuelab_direct` 当时不可连接。三个功能 chat 的实际 turn_context 已确认 `gpt-6-astra` / `ultra`。
+- 磁盘核对时 `/home` 与 `/tmp` 所在根分区剩余 11 GB，源 checkout 的 target 已有 13 GB，数据盘 `/mnt/reth` 剩余约 1.5 TB。任务将 worktree 的 `.build` 指向 `/mnt/reth/jy/megaroation_poc/.build/commander-jobs/<编号>`，保留并安全迁移已有内容。每项的 cargo、target 和大型原始 artifacts 各自独立，避免在根分区编译。只复用公开依赖缓存，不复制凭证。
 
 ## 状态与完成定义
 
@@ -34,3 +36,5 @@
 后续按实际依赖动态派发。可行的批次顺序是 `01/02/03` → `04/06/09` → `05/07/16` → `08/10/11` → `12/13/14` → `15`。同批内部仍遵守实现基线依赖，14 可在 08 之后提前准备。合同预备、组件子项或 failed/inconclusive 场景不占用“已完成三个功能”的计数。
 
 当前派发、候选与批次状态见 [state.json](state.json)。
+
+合并时使用[批次合并启动模板](merge-job-template-zh.md)，填入准确旧 main、候选提交和检查范围。

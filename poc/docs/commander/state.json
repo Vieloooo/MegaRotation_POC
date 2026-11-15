@@ -27,7 +27,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/5efa/megaroation_poc"
-      }
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01"
     },
     {
       "feature": "02",
@@ -45,7 +46,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
-      }
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02"
     },
     {
       "feature": "03",
@@ -63,7 +65,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1c43/megaroation_poc"
-      }
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/03"
     }
   ],
   "remaining_features": [
@@ -83,5 +86,6 @@
   ],
   "merge_batches": [],
   "dispatch_note": "All three feature chats started successfully on connected xuelab_jump with explicit Astra/ultra; worktrees all started at ada48a5. 02/03 are contract-only pending accepted 01.",
-  "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c"
+  "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
+  "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained."
 }
