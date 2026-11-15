@@ -1,6 +1,12 @@
 # 功能 03 准备交付：Mock Plan、公共对象与轻量执行
 
-日期：2026-11-15。状态：**PREPARATION-FROZEN（由功能03主协调审阅确认）；IMPLEMENTATION-BLOCKED；waiting-dependency=01；功能未完成**。
+日期：2026-11-15。当前状态：**IMPLEMENTATION-AUTHORIZED；M1接口先行；功能未完成**。
+
+[dependency-plan-v2](commander/dependency-plan-v2.md)已正常合入，明确删除03等待整个01验收的统一门禁。现按[实现合同v2](contracts/task-contract-mock-plan-execution-v2.md)和[公共接口v1/M1](contracts/mock-plan-public-interface-v1.md)推进：M1先独立冻结bytes/期望并发布接口SHA，M2各模块合同与独立预期先行后编码。旧[准备合同v1](contracts/task-contract-mock-plan-execution-v1.md)、LE proposal和原始准备expected作为历史保留；它们的 `waiting-dependency=01` / `IMPLEMENTATION-BLOCKED` 已被新授权覆盖，不再阻止03独立组件实施。实际runtime/证书/ABI接线仍由各自任务验收。
+
+M1接口提交 `0e72dc247de22afdc8d6681713b3d15f4aa05262` 已在相同SHA通过7项独立测试，状态为 **M1 INTERFACE PASS，可供02/06/09消费**。它包含 `poc_types::domain`、[冻结接口](contracts/mock-plan-public-interface-v1.md)与对应独立向量；[正式独立复核](../verification/mock-plan-execution/implementation-v1/m1-review-0e72dc2.md)记录准确命令与范围。原始run manifest位于 `/mnt/reth/jy/megaroation_poc/.build/commander-jobs/03/artifacts/verification/m1/0e72dc247de22afdc8d6681713b3d15f4aa05262/run-manifest.json`。M1通过只释放消费者接口，不计完整03验收；M2公共类型、registry/PoP、执行与L1 fixture按新合同推进。
+
+下文是原准备交付的历史记录，保留当时的范围和证据；“本阶段未启动Builder/Tester”等描述只指准备提交，不是当前实施授权限制。
 
 ## 工作环境与授权
 
@@ -42,7 +48,7 @@ Verifier的 [MPX-PREP-LE64-SHA256-v0](../verification/mock-plan-execution/propos
 
 来源语义向量覆盖schedule、window、乱序映射、同高异anchor、实际parent、状态转账/过滤、gap padding、metadata/DEP、重复纯求值、reader前缀及缺control覆盖。真实BLS/PoP与证书的3/4 quorum、错域/subject、production gateway、真实15-worker和Anvil均未执行；结构向量只能列出应有拒绝，不能称密码学通过。Verifier的[复现与结果报告](../verification/mock-plan-execution/README.md)和[独立checker](../verification/mock-plan-execution/check_vectors.py)给出实际运行命令、计数与摘要；最终准备SHA由主协调提交后在交付回复记录，避免在被提交内容内自引用自身SHA。
 
-## 后续启动条件与限制
+## 原准备阶段启动条件与限制（已被新依赖计划覆盖）
 
 总协调须先提供01已验收且同SHA完成复核/仿真的依赖提交，再批准02/03公共接口与合同D项。然后修订为完整实现合同、固定独立expected并授权单Builder；候选提交后独立Verifier复核，同一候选再交Tester。当前不启动这两个角色。
 
