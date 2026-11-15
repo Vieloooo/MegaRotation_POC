@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "date": "2026-11-15",
+  "scope": "Foundry setup smoke, not simulated L1 finalized-prefix or protocol evidence",
+  "toolchain": {
+    "provenance": "Observed existing host binaries copied and content-pinned; release provenance not independently authenticated.",
+    "tools": [
+      {
+        "tool": "forge",
+        "source": "/home/jy/.foundry/bin/forge",
+        "task_copy": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/forge",
+        "sha256": "bced57e0ad861bf45cee877cefc39347342205da60d38b238956eeb732a7f115",
+        "version": "forge Version: 1.0.0-stable\nCommit SHA: e144b82070619b6e10485c38734b4d4d45aebe04\nBuild Timestamp: 2025-02-13T20:03:31.026474817Z (1739477011)\nBuild Profile: maxperf"
+      },
+      {
+        "tool": "anvil",
+        "source": "/home/jy/.foundry/bin/anvil",
+        "task_copy": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/anvil",
+        "sha256": "839d5ed3c99ce527bbb0d68c91839b8d1fddb5e8e94fe5d716747b7b89bfea5f",
+        "version": "anvil Version: 1.0.0-stable\nCommit SHA: e144b82070619b6e10485c38734b4d4d45aebe04\nBuild Timestamp: 2025-02-13T20:03:31.026474817Z (1739477011)\nBuild Profile: maxperf"
+      },
+      {
+        "tool": "cast",
+        "source": "/home/jy/.foundry/bin/cast",
+        "task_copy": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/cast",
+        "sha256": "2d902a06e36ea4d59dc2a68699d094a99c9cad2f2485c60dbb5bbb05bad6a31c",
+        "version": "cast Version: 1.0.0-stable\nCommit SHA: e144b82070619b6e10485c38734b4d4d45aebe04\nBuild Timestamp: 2025-02-13T20:03:31.026474817Z (1739477011)\nBuild Profile: maxperf"
+      },
+      {
+        "tool": "solc",
+        "source": "/usr/local/bin/solc",
+        "task_copy": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/solc",
+        "sha256": "0479d44fdf9c501c25337fdc540419f1593b884a87b47f023da4f1c700fda782",
+        "version": "solc, the solidity compiler commandline interface\nVersion: 0.8.20+commit.a1b79de6.Linux.g++"
+      }
+    ]
+  },
+  "compile_command": [
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/forge",
+    "build",
+    "--root",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/poc/artifacts/setup/foundry-1.0.0-2026-11-15",
+    "--use",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/solc",
+    "--offline",
+    "--threads",
+    "1",
+    "--no-auto-detect",
+    "--evm-version",
+    "shanghai"
+  ],
+  "artifact_dir": "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/poc/artifacts/setup/foundry-1.0.0-2026-11-15",
+  "result": {
+    "scope": "Foundry setup smoke, not simulated L1 finalized-prefix or protocol evidence",
+    "child_pid": 2909699,
+    "endpoint": "http://127.0.0.1:55165",
+    "command": [
+      "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/tools/foundry-1.0.0/anvil",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "55165",
+      "--no-mining",
+      "--no-cors",
+      "--quiet",
+      "--accounts",
+      "1",
+      "--threads",
+      "1",
+      "--hardfork",
+      "shanghai",
+      "--timestamp",
+      "1700000000",
+      "--chain-id",
+      "31377",
+      "--gas-limit",
+      "30000000",
+      "--disable-default-create2-deployer"
+    ],
+    "assertions": [
+      "isolated chain ID",
+      "genesis block 0",
+      "explicit genesis timestamp",
+      "deployment remains pending without mining",
+      "wall pause does not create block",
+      "real EVM deployment succeeded",
+      "first explicit block timestamp",
+      "initial contract state is zero",
+      "state transaction waits for manual mine",
+      "state transaction succeeded",
+      "second explicit block timestamp",
+      "real EVM state updated to nine"
+    ],
+    "status": "PASS",
+    "contract": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "local_wall_seconds": 0.37943068612366915,
+    "child_exit_code": 0,
+    "child_cleaned_up": true
+  },
+  "evidence_sha256": {
+    "toolchain.json": "8750c4a5b121d5443466bae7f8c501687272287400022a046dccb31c9469472a",
+    "compile-command.json": "ec80a5d586f7d83656ceec0c9d63c9ded88186be12b0067b08404d975a4422c2",
+    "compile.log": "cba79447ad1697cd3e4765c7ecc628cfdf24455c43f629df58c943d7cf8fc53d",
+    "src/SetupCounter.sol": "bb2b9538948ad9cd398e0d6c506602272a90a7da7cb6beb0bb5ba694b983ee71",
+    "foundry.toml": "6470f9d45a27ee75c9b0ea2c6d22a1ed2bfaea7eac133cdcfd2caf4a06a3c553",
+    "anvil-command.json": "0312e2551b7374a900477bd2f7985a36a375ca55508ad7ac2293e7211deddd3b",
+    "rpc-trace.json": "ce1c0553b71e48dae7e8c0867bd1d43b96c7d2441a1dd3b1c18db69ce9cbad97",
+    "report.json": "5a73045b57166cfe5190cb7d094f37771ed8ec6d29756d90d0a8cccb6f9840d4"
+  }
+}
