@@ -2,6 +2,8 @@
 
 日期：2026-11-15。本记录是接口与实施范围交接，不是组件PASS或完整06 accepted。合同为[task-contract-publisher-espresso-v1](contracts/task-contract-publisher-espresso-v1.md)。
 
+后续进展：2026-11-16已完成本次授权的组件实现、独立复核和同SHA矩阵，见[组件交付](publisher-espresso-component-handoff-v1.md)。本文保留冻结前准备记录；完整06仍待接线验收。
+
 - 实际worktree：`/home/jy/.codex/worktrees/1fe1/megaroation_poc`；分支`codex/poc-publisher-espresso`。初始clean detached `ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`，正常fast-forward到政策提交`0a951c482a9712678ab9de34765b781b9c3c9f42`；没有reset源checkout。
 - `.build`最初不存在，lead建立指向`/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06`的symlink，无旧数据迁移。cargo/target/artifacts均本任务独占。lead实际preflight记录root剩13G、data约1.5T。
 - Rust `1.95.0 (59807616e)`、cargo `1.95.0 (f2d3ce0bd)`。全部Rust build/重型test/simulation使用`flock /tmp/megaroation-poc-heavy.lock`、`CARGO_BUILD_JOBS=2`，不嵌套锁。
