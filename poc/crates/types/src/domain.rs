@@ -5,6 +5,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+mod objects;
+pub use objects::*;
+
 const VERSION: u16 = 1;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
