@@ -1,0 +1,29 @@
+[
+  {
+    "status": "PASS",
+    "case": "native-proof-negatives",
+    "seed": 7,
+    "rows": 968,
+    "metrics": {
+      "acks": 243,
+      "clock_reads": 591,
+      "work_started": 5,
+      "work_completed": 5,
+      "created": 6,
+      "sends": 137,
+      "network_deliveries": 137,
+      "scripted_sends": 12,
+      "injections": 1,
+      "input_rejections": 1,
+      "proofs": 2,
+      "delivered": 2,
+      "cache_hits": 10
+    },
+    "delivered": [
+      1,
+      1
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/native-proof-negatives",
+    "logical_trace_sha256": "02f08d1ce11e6a3d8ddc867a84af3ab4cd5c0ac0c49c61a8848d0e3b80580e41"
+  }
+]

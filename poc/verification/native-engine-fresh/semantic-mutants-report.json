@@ -1,0 +1,110 @@
+{
+  "artifact": "/tmp/native-fresh-semantic-mutants-r0a5z2qj",
+  "candidate": "6686a009e0eeea261026dac807742efed76b17c6",
+  "results": [
+    {
+      "name": "expired-sign",
+      "status": "PASS",
+      "expected_rule": "sign lease/stop/cid guard",
+      "error": "row 11 AckCommitted: sign lease/stop/cid guard",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "uncreated-cache",
+      "status": "PASS",
+      "expected_rule": "cache hit exact prior attestation",
+      "error": "row 11 AckCommitted: cache hit exact prior attestation",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "false-witness",
+      "status": "PASS",
+      "expected_rule": "exact committed witness reference",
+      "error": "row 11 AckCommitted: exact committed witness reference",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "scripted-worker",
+      "status": "PASS",
+      "expected_rule": "worker output origin",
+      "error": "row 11 AckCommitted: worker output origin",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "early-work",
+      "status": "PASS",
+      "expected_rule": "registered timely live WorkCompleted",
+      "error": "row 11 AckCommitted: registered timely live WorkCompleted",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "proof-without-body",
+      "status": "PASS",
+      "expected_rule": "delivery requires privately available body prefix",
+      "error": "row 200 AckCommitted: delivery requires privately available body prefix",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "wrong-work-parent",
+      "status": "PASS",
+      "expected_rule": "native callback parent view/context",
+      "error": "row 9 AckCommitted: native callback parent view/context",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    },
+    {
+      "name": "wrong-proposer",
+      "status": "PASS",
+      "expected_rule": "native proposer/elector binding",
+      "error": "row 9 AckCommitted: native proposer/elector binding",
+      "hashes_recomputed": [
+        "Grant",
+        "logical Ack",
+        "all subsequent root record frames and committed-head checksum",
+        "complete raw protobuf frame stream"
+      ],
+      "native_signatures_unchanged": true
+    }
+  ]
+}

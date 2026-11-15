@@ -1,0 +1,59 @@
+{
+  "candidate": "6686a009e0eeea261026dac807742efed76b17c6",
+  "binary_hashes": {
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/native-hub": "0a78e18b8bff6de4db34c4c122326aed6d259c3e07dae11d053d4874d5b4386e",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/native-worker": "f53dfab1f581af3b968cfe678c2825f67790f9709af789930ca4caca960a3dc9",
+    "/mnt/reth/jy/regional_BFT_sim/poc/sequencer_rotation_v2/.build/target/debug/native-engine-verifier": "c7310cfe4e48d1a8e14c3d3de982b61bbfafd4c2115ecdc6a1770dc627c5acdf"
+  },
+  "artifact": "/tmp/native-fresh-socket-controls-o41jcg9d",
+  "results": [
+    {
+      "mode": "payload-exact",
+      "status": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "counts": {
+        "AckCommitted": 195,
+        "AckDuplicate": 0,
+        "ClockRequestTransit": 91,
+        "NetworkAdmitted": 25
+      },
+      "error": "",
+      "command": [
+        "/tmp/native-fresh-socket-controls-o41jcg9d/bin/native-hub",
+        "--scenario",
+        "two-real-alone",
+        "--seed",
+        "7",
+        "--output",
+        "/tmp/native-fresh-socket-controls-o41jcg9d/payload-exact/run"
+      ],
+      "artifact": "/tmp/native-fresh-socket-controls-o41jcg9d/payload-exact",
+      "scope": "worker0 is adversarial verifier stub, worker1 execs the real native binary; transport/commit-control only"
+    },
+    {
+      "mode": "payload-over",
+      "status": "PASS",
+      "exit_code": 1,
+      "timed_out": false,
+      "counts": {
+        "AckCommitted": 0,
+        "AckDuplicate": 0,
+        "ClockRequestTransit": 0,
+        "NetworkAdmitted": 0
+      },
+      "error": "invalid native envelope context or digest",
+      "command": [
+        "/tmp/native-fresh-socket-controls-o41jcg9d/bin/native-hub",
+        "--scenario",
+        "two-real-alone",
+        "--seed",
+        "7",
+        "--output",
+        "/tmp/native-fresh-socket-controls-o41jcg9d/payload-over/run"
+      ],
+      "artifact": "/tmp/native-fresh-socket-controls-o41jcg9d/payload-over",
+      "scope": "worker0 is adversarial verifier stub, worker1 execs the real native binary; transport/commit-control only"
+    }
+  ]
+}

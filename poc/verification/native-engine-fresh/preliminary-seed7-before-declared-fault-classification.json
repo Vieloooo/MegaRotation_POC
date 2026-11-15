@@ -1,0 +1,251 @@
+[
+  {
+    "status": "PASS",
+    "case": "close-certify",
+    "seed": 7,
+    "rows": 818,
+    "metrics": {
+      "acks": 223,
+      "clock_reads": 427,
+      "work_started": 4,
+      "work_completed": 3,
+      "created": 4,
+      "sends": 84,
+      "network_deliveries": 84,
+      "scripted_sends": 12,
+      "work_discarded": 2,
+      "proofs": 2,
+      "delivered": 2,
+      "cache_hits": 5
+    },
+    "delivered": [
+      1,
+      1
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/close-certify",
+    "logical_trace_sha256": "ac93a4d5d500d7302dfde3f4393fa54cca50859085ede94c2844876f040e0d7e"
+  },
+  {
+    "status": "PASS",
+    "case": "close-propose",
+    "seed": 7,
+    "rows": 625,
+    "metrics": {
+      "acks": 196,
+      "clock_reads": 260,
+      "work_started": 1,
+      "work_discarded": 2,
+      "created": 1,
+      "sends": 24,
+      "network_deliveries": 24,
+      "cache_hits": 5
+    },
+    "delivered": [
+      0,
+      0
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/close-propose",
+    "logical_trace_sha256": "fac86718df85613d35793539c807598db46fecc07481be69c1767ae5b9a22b78"
+  },
+  {
+    "status": "PASS",
+    "case": "close-verify",
+    "seed": 7,
+    "rows": 794,
+    "metrics": {
+      "acks": 220,
+      "clock_reads": 388,
+      "work_started": 3,
+      "work_completed": 2,
+      "created": 3,
+      "sends": 76,
+      "network_deliveries": 76,
+      "scripted_sends": 12,
+      "work_discarded": 2,
+      "proofs": 2,
+      "delivered": 2,
+      "cache_hits": 5
+    },
+    "delivered": [
+      1,
+      1
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/close-verify",
+    "logical_trace_sha256": "070484c490b365897646f4ad0894cbd085a9b99406517368008073ec7a9ed09b"
+  },
+  {
+    "status": "PASS",
+    "case": "healthy",
+    "seed": 7,
+    "rows": 393,
+    "metrics": {
+      "acks": 78,
+      "clock_reads": 362,
+      "work_started": 8,
+      "work_completed": 8,
+      "created": 8,
+      "sends": 96,
+      "network_deliveries": 88,
+      "scripted_sends": 24,
+      "proofs": 4,
+      "delivered": 4
+    },
+    "delivered": [
+      2,
+      2
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/healthy",
+    "logical_trace_sha256": "fd8c5347b64c2d848c8a4201dfdeac290ae3d2ae8b4810ecaafaf5e3ac706994"
+  },
+  {
+    "status": "PASS",
+    "case": "lease-loss",
+    "seed": 7,
+    "rows": 803,
+    "metrics": {
+      "acks": 150,
+      "clock_reads": 434,
+      "work_started": 8,
+      "work_completed": 8,
+      "created": 8,
+      "sends": 96,
+      "network_deliveries": 96,
+      "scripted_sends": 24,
+      "proofs": 4,
+      "delivered": 4
+    },
+    "delivered": [
+      2,
+      2
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/lease-loss",
+    "logical_trace_sha256": "e27a595e9887393ad59d63e1ca672e37b62a9e8f10ac58f1f813bc5e6437c695"
+  },
+  {
+    "status": "FAIL",
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/native-proof-negatives",
+    "error": "row 150 NetworkAdmitted: native envelope signature/quorum"
+  },
+  {
+    "status": "PASS",
+    "case": "proof-before-body",
+    "seed": 7,
+    "rows": 1092,
+    "metrics": {
+      "acks": 260,
+      "clock_reads": 699,
+      "work_started": 3,
+      "work_completed": 3,
+      "created": 4,
+      "sends": 183,
+      "network_deliveries": 183,
+      "scripted_sends": 12,
+      "proofs": 2,
+      "delivered": 2,
+      "work_discarded": 2,
+      "cache_hits": 10
+    },
+    "delivered": [
+      1,
+      1
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/proof-before-body",
+    "logical_trace_sha256": "55c8e14bcf2108a0418788f8fc346ce7b8424285e21341e390b28cf03ddc0326"
+  },
+  {
+    "status": "PASS",
+    "case": "quota",
+    "seed": 7,
+    "rows": 970,
+    "metrics": {
+      "acks": 267,
+      "clock_reads": 529,
+      "work_started": 2,
+      "work_completed": 2,
+      "created": 4,
+      "sends": 108,
+      "rate_limited": 1,
+      "queue_overflow": 1,
+      "network_deliveries": 107,
+      "cache_hits": 6
+    },
+    "delivered": [
+      0,
+      0
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/quota",
+    "logical_trace_sha256": "a0907f183b70bb4a2c750e7c9e57dc78a88f4cf5ad3fca9a22bcd2d4ee5ac44d"
+  },
+  {
+    "status": "PASS",
+    "case": "router-overflow",
+    "seed": 7,
+    "rows": 971,
+    "metrics": {
+      "acks": 267,
+      "clock_reads": 408,
+      "work_started": 2,
+      "work_completed": 2,
+      "created": 4,
+      "sends": 109,
+      "queue_overflow": 2,
+      "network_deliveries": 107,
+      "cache_hits": 6
+    },
+    "delivered": [
+      0,
+      0
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/router-overflow",
+    "logical_trace_sha256": "a02a6090fbcef092ec6fbdb040c89492a96bfc4f364eee48c589921f2db964d8"
+  },
+  {
+    "status": "PASS",
+    "case": "two-real-alone",
+    "seed": 7,
+    "rows": 715,
+    "metrics": {
+      "acks": 203,
+      "clock_reads": 335,
+      "work_started": 2,
+      "work_completed": 2,
+      "created": 4,
+      "sends": 44,
+      "network_deliveries": 44,
+      "cache_hits": 6
+    },
+    "delivered": [
+      0,
+      0
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/two-real-alone",
+    "logical_trace_sha256": "9e72284c43c40d737b8f843130890118ccd48ba7b08a75ddd6efe3291a001c55"
+  },
+  {
+    "status": "PASS",
+    "case": "wrong-context",
+    "seed": 7,
+    "rows": 966,
+    "metrics": {
+      "acks": 243,
+      "clock_reads": 591,
+      "work_started": 5,
+      "work_completed": 5,
+      "created": 6,
+      "sends": 136,
+      "network_deliveries": 136,
+      "scripted_sends": 12,
+      "injections": 1,
+      "input_rejections": 1,
+      "proofs": 2,
+      "delivered": 2,
+      "cache_hits": 10
+    },
+    "delivered": [
+      1,
+      1
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/wrong-context",
+    "logical_trace_sha256": "a79364137660161242670918f80d7e8927c17314e01bba8d8000a4c028e246ce"
+  }
+]

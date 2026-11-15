@@ -1,0 +1,97 @@
+{
+  "candidate": "6686a009e0eeea261026dac807742efed76b17c6",
+  "status": "ACCEPTED for frozen NATIVE-ENGINE/FRESH profiles and stated coverage bounds; integrated/formal matrix remains next",
+  "rust_tests": {
+    "passed": 111,
+    "prior": 106,
+    "independent": 5
+  },
+  "raw_runs": {
+    "passed": 21,
+    "rows": 14655,
+    "metrics": {
+      "acks": 3755,
+      "clock_reads": 8509,
+      "work_started": 93,
+      "work_completed": 90,
+      "created": 112,
+      "sends": 1793,
+      "network_deliveries": 1742,
+      "scripted_sends": 228,
+      "work_discarded": 8,
+      "proofs": 38,
+      "delivered": 38,
+      "cache_hits": 93,
+      "injections": 2,
+      "input_rejections": 2,
+      "rate_limited": 1,
+      "queue_overflow": 3
+    }
+  },
+  "pair_count": 6,
+  "semantic_mutants": 8,
+  "socket_controls": {
+    "initial_six": "PASS after raw duplicate-Ack label recheck",
+    "boundary_three": "PASS actual worker and durable journal recheck",
+    "payload_two": "PASS: exact64KiB decoded by actual worker;64KiB+1 atomically rejected"
+  },
+  "main_verification_artifact": "/tmp/native-fresh-independent-final-bcssj08p",
+  "semantic_mutant_artifact": "/tmp/native-fresh-semantic-mutants-r0a5z2qj",
+  "transport_artifact": "/tmp/native-fresh-socket-controls-f9u3ceyw",
+  "completion_boundary_artifact": "/tmp/native-fresh-completion-boundaries-o3uig2my",
+  "production_source_hashes": {
+    "poc/proto/native.proto": "b8a1d4fdb4c2e69758600830bcd226b3828bd2372c184a8df430c1c55a95e759",
+    "poc/prototypes/i1b-runtime/Cargo.lock": "1e9fc6c8527d646eeb00f232c70d20effc9d8f0d39895bd6f9e239fea61f27d2",
+    "poc/prototypes/i1b-runtime/src/bin/native-hub.rs": "5f9e27f8a2881578e8c0e2c33a6135b74d2e692fcfd3bcc3a186200348516992",
+    "poc/prototypes/i1b-runtime/src/bin/native-worker.rs": "440db664090afbedc730dd3c69b4fc215339d5ef782ead22570dc69da57baa40",
+    "poc/prototypes/i1b-runtime/src/clock.rs": "2f9c657a985f89738e04376911ed508f3c052449258b5211052805e6cbb61ff1",
+    "poc/prototypes/i1b-runtime/src/context.rs": "ce21c72239376ad6c13981eedad109cc2034f65c5c85484029415d4ee24b0ae7",
+    "poc/prototypes/i1b-runtime/src/driver.rs": "dc0edf598a97099d2b52226994c0dd83d81987c78e7301d7251ee2bdd2420a95",
+    "poc/prototypes/i1b-runtime/src/lib.rs": "9f2f6929bbacdaecf05a6917b656649c7653cdd1f9c17c1f8a9f7f366029e702",
+    "poc/prototypes/i1b-runtime/src/native_application.rs": "58c5c2f7080d9892a5c44bd25f616df1e6349b7840d3bebc106eafba400f4fcf",
+    "poc/prototypes/i1b-runtime/src/native_config.rs": "2ea6ed8bc2ae91aa5a12e8762e3d7b82cb0405f94497c1a475531e5b47b858d5",
+    "poc/prototypes/i1b-runtime/src/native_elector.rs": "4313429c444167305a94daec19502a69062e02f8e2c8e1024e485ce4a262c27c",
+    "poc/prototypes/i1b-runtime/src/native_hub.rs": "4f9cadf4a8dc7b5a56931ac20b76c51964c1980ac94a6df2861fd81cef35566a",
+    "poc/prototypes/i1b-runtime/src/native_network.rs": "03f400441dc631f338285848db59dd9cbfcb7d5430ab5c7432072ded914b2867",
+    "poc/prototypes/i1b-runtime/src/native_replica.rs": "629fbd4e3f08de5a8b779b1e985070335a59392f9d2da58438567a6a7e5e692c",
+    "poc/prototypes/i1b-runtime/src/native_scheme.rs": "51df999757962531b87f7cd7f699e5a2598ab536136d8086a7a82141d901175b",
+    "poc/prototypes/i1b-runtime/src/native_step_journal.rs": "55038a5504942d9e5ef5c1e2190518f4b13080234c8cec792c28aa636416d543",
+    "poc/prototypes/i1b-runtime/src/native_wire_support.rs": "06fc52ef063889ec1153f1db0090ead618ea154e13db1c2157182fdd27d1d65c",
+    "poc/prototypes/i1b-runtime/src/rng.rs": "656e0f949a7b0ede42b1c15fc0ed8eafc03260ef201917292cc21aaa893cfe9f",
+    "poc/prototypes/i1b-runtime/src/storage.rs": "8fcc7d7d86d497e897eed2b27009961c14541f898fa02b4fc5e3f70ace30d3bd",
+    "poc/prototypes/i1b-runtime/src/witness.rs": "8b12864c3a676620ec7dc1af3fb5d65e55a716a08884a8d43df177509f955f6b",
+    "poc/prototypes/i1b-runtime/src/witness_ledger.rs": "87bfda4127f5d16f5f10194de651990c6b67a32396127aaf5322080c55e0a7c8",
+    "poc/prototypes/i1b-runtime/src/witness_recovery.rs": "6401255e7962299892c2f40287424b6967f373c138a1959c952b18312283d4fb"
+  },
+  "final_verifier_source_hashes": {
+    "poc/verification/native-engine-fresh/acceptance.rs": "a82f6de1ad41347cd7253d94413982078174b6d99f4ba335bb2ce8466783cb16",
+    "poc/verification/native-engine-fresh/boundary_controls.py": "14e1d3e8bca82122c097cd9a5d86c09b30fed5fa65816749e28df95e224cc137",
+    "poc/verification/native-engine-fresh/check.py": "2cb7e36e2ac4e7926215ba834115373d3071b4246016ae20e89c4a23df6dafdf",
+    "poc/verification/native-engine-fresh/control.rs": "7e8b2d282513f57be63589cecfdf5dc3ae7611d7b6f6482613cfc492e29adac6",
+    "poc/verification/native-engine-fresh/crypto.rs": "7a68c073a8d1d3c79b50f583654a937afc7730ad3591467c1d6c0ef21edb456c",
+    "poc/verification/native-engine-fresh/mutations.py": "e352e7c94867368c35bf399e251fddafd3f7cb658b62cb2788ef9ab47a899fd1",
+    "poc/verification/native-engine-fresh/recheck_boundaries.py": "6456e084fe5f5dc3f6b264e4baeb1debb87afee541530505b7ecefea2e4baf7a",
+    "poc/verification/native-engine-fresh/run_verification.py": "c5821be7f164889e1509b5478ada87f6af0368294048b27ce470171d503e9614",
+    "poc/verification/native-engine-fresh/socket_controls.py": "3a4afcd64effb0bc1a0f2e5b571da6db02b6c0f7983936a3d4dbd9176676b0b8",
+    "poc/verification/native-engine-fresh/verify_pairs.py": "f296aaa621f63ccde4ed4a1eb16451d91756208ba79bf62b2246ebdce6f8f6a7"
+  },
+  "binary_hashes": {
+    "native-hub": "0a78e18b8bff6de4db34c4c122326aed6d259c3e07dae11d053d4874d5b4386e",
+    "native-worker": "f53dfab1f581af3b968cfe678c2825f67790f9709af789930ca4caca960a3dc9",
+    "native-engine-verifier": "c7310cfe4e48d1a8e14c3d3de982b61bbfafd4c2115ecdc6a1770dc627c5acdf"
+  },
+  "limits": [
+    "two actual workers; three explicitly scripted endpoints are not live replicas",
+    "all21 traces exercised VOTE,CERTIFICATE,BODY; no RESOLVER packet was emitted, so resolver bridge remains source-reviewed rather than executed repair/liveness evidence",
+    "no same-cid process restart, native timing/auxiliary restoration, v10 admission/window or full I1b claim",
+    "formal66-run matrix follows integrated verification"
+  ],
+  "open_production_findings": [],
+  "payload_boundary_artifact": "/tmp/native-fresh-socket-controls-o41jcg9d",
+  "native_packet_channels_executed": [
+    1,
+    2,
+    4
+  ],
+  "validation_note": "111 full-suite PASS;5 independent pure cases repeated PASS after final test-only transport extension. Production files/binaries unchanged.21 latest raw-artifact checks include actual native V1 storage bytes and effective native-parent certificate binding."
+}

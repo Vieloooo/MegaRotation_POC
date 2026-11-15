@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "scope": "transport-only adversarial worker control",
+  "original_failed_report": "/tmp/native-fresh-socket-controls-f9u3ceyw/report.json",
+  "original_report_sha256": "7c3237dc87f96d88ae86618023cff6eb9f98a36956049fbcdf9c0b1f965420b2",
+  "failure_cause": "verifier counted DuplicateAck; frozen implementation records AckDuplicate",
+  "raw_worker0_acks": 196,
+  "distinct_committed_worker0_acks": 98,
+  "exact_duplicate_records": 98,
+  "each_raw_ack_occurs_twice_and_equals_committed": true,
+  "committed_clock_effects": 91,
+  "clock_transits": 91,
+  "all_six_controls_pass_after_raw_recheck": true
+}

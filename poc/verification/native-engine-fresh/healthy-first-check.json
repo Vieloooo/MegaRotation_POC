@@ -1,0 +1,26 @@
+[
+  {
+    "status": "PASS",
+    "case": "healthy",
+    "seed": 7,
+    "rows": 393,
+    "metrics": {
+      "acks": 78,
+      "clock_reads": 362,
+      "work_started": 8,
+      "work_completed": 8,
+      "created": 8,
+      "sends": 96,
+      "network_deliveries": 88,
+      "scripted_sends": 24,
+      "proofs": 4,
+      "delivered": 4
+    },
+    "delivered": [
+      2,
+      2
+    ],
+    "source": "poc/artifacts/verification/native-engine-fresh/candidate-6686a00-seed7/healthy",
+    "logical_trace_sha256": "fd8c5347b64c2d848c8a4201dfdeac290ae3d2ae8b4810ecaafaf5e3ac706994"
+  }
+]

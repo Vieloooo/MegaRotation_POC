@@ -1,0 +1,49 @@
+{
+  "source": "/tmp/native-fresh-completion-boundaries-o3uig2my",
+  "results": [
+    {
+      "mode": "explicit-close",
+      "status": "PASS",
+      "root_steps": 5,
+      "completion_tick_us": 1005500,
+      "counts": {
+        "work_completed": 0,
+        "work_discarded": 1,
+        "persisted": 0
+      },
+      "sign_effects": 0,
+      "retirement_reasons": []
+    },
+    {
+      "mode": "lease-boundary",
+      "status": "PASS",
+      "root_steps": 4,
+      "completion_tick_us": 1100250,
+      "counts": {
+        "work_completed": 0,
+        "work_discarded": 1,
+        "persisted": 0
+      },
+      "sign_effects": 0,
+      "retirement_reasons": [
+        "ClockUnsafe"
+      ]
+    },
+    {
+      "mode": "stop-boundary",
+      "status": "PASS",
+      "root_steps": 6,
+      "completion_tick_us": 1799000,
+      "counts": {
+        "work_completed": 0,
+        "work_discarded": 1,
+        "persisted": 0
+      },
+      "sign_effects": 0,
+      "retirement_reasons": [
+        "LocalStop"
+      ]
+    }
+  ],
+  "scope": "one genuine worker per controlled authority probe; not native quorum or restart evidence"
+}

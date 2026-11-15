@@ -58,3 +58,11 @@ path = "../../verification/native-storage/acceptance.rs"
 [[test]]
 name = "native_witness_independent"
 path = "../../verification/native-witness/acceptance.rs"
+
+[[test]]
+name = "native_engine_fresh_independent"
+path = "../../verification/native-engine-fresh/acceptance.rs"
+
+[[bin]]
+name = "native-engine-verifier"
+path = "../../verification/native-engine-fresh/crypto.rs"
