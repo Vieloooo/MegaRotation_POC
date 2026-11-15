@@ -10,10 +10,10 @@ message Binding {
 }
 message RegisterRequest {
   Binding binding = 1; bytes registry_hash = 2; bytes namespace_hash = 3;
-  string profile = 4;
+  string profile = 4; RecoveryRegistration recovery = 5;
 }
 message RegisterReply { Binding binding = 1; bytes clock_domain = 2; }
-message WorkerFrame { oneof frame { RegisterRequest hello = 1; Ack ack = 2; } }
+message WorkerFrame { oneof frame { RegisterRequest hello = 1; Ack ack = 2; RecoveredAck recovered_ack = 3; } }
 message HubFrame { oneof frame { Grant grant = 1; Shutdown shutdown = 2; } }
 message Shutdown { string reason = 1; }
 message Grant {
@@ -27,7 +27,8 @@ message Input {
     StartEngine start = 3; Empty drive_ready = 4;
     Envelope deliver = 5; Timer timer_fired = 6;
     Work work_completed = 7; Cid close = 8;
-    Empty flush_archive = 9;
+    Empty flush_archive = 9; RecoverEngine recover = 10;
+    RecoveryWorkCompleted recovery_work = 11; FaultCheckpoint arm_fault = 12;
   }
 }
 message Empty {}
@@ -46,7 +47,7 @@ message ClockSample {
   uint64 lease_end_tick_us = 11;
 }
 message Timer { uint64 id = 1; bytes cid = 2; sint64 local_deadline_us = 3; }
-enum WorkKind { WORK_UNSPECIFIED = 0; PROPOSE = 1; VERIFY = 2; CERTIFY = 3; }
+enum WorkKind { WORK_UNSPECIFIED = 0; PROPOSE = 1; VERIFY = 2; CERTIFY = 3; PREPARE = 4; }
 message Work { bytes operation_id = 1; bytes cid = 2; WorkKind kind = 3; uint64 duration_us = 4; }
 message ClockRequest { uint64 request_id = 1; }
 message Receipt { uint64 sequence = 1; bytes hash = 2; }
@@ -90,6 +91,7 @@ message Effect {
     ClockRequest clock_request = 1; Timer timer_arm = 2; Timer timer_cancel = 3;
     Work work = 4; Envelope send = 5; SignAudit sign = 6;
     ProofObserved proof = 7; Delivered delivered = 8; Lifecycle lifecycle = 9;
+    RecoveryReady recovery_ready = 10; RecoveryCutReceipt recovery_cut = 11;
   }
 }
 enum AckStatus { STATUS_UNSPECIFIED = 0; QUIESCENT = 1; REJECTED = 2; INFRASTRUCTURE_FAILURE = 3; }
@@ -99,4 +101,38 @@ message Ack {
   bytes runtime_events_json = 7; bytes application_events_json = 8;
   Receipt witness_receipt = 9; uint64 durable_step_sequence = 10;
   bytes durable_step_hash = 11; bytes logical_ack_hash = 12;
+  RecoveryCutReceipt recovery_receipt = 13;
+}
+
+message TrustedRecoveryFloor {
+  bytes run_id = 1; bytes config_hash = 2; uint32 worker_id = 3;
+  bytes cid = 4; uint64 epoch = 5; Receipt root_receipt = 6;
+  Receipt auxiliary_receipt = 7; bytes cut_hash = 8; Receipt witness_receipt = 9;
+}
+message RecoveryRegistration {
+  TrustedRecoveryFloor floor = 1; uint64 old_incarnation = 2;
+  uint64 storage_generation = 3; bool terminal = 4;
+  bytes validated_source_manifest_hash = 5;
+}
+message RecoverEngine {
+  TrustedRecoveryFloor floor = 1; StartEngine engine = 2;
+  uint64 old_incarnation = 3; uint64 old_generation = 4;
+  uint64 new_generation = 5; bytes outstanding_grant_hash = 6;
+  bytes recovery_profile_hash = 7;
+}
+message RecoveryWorkCompleted {
+  Work work = 1; uint64 original_due_tick_us = 2;
+  uint64 reconnect_generation = 3; bytes cut_hash = 4;
+}
+message FaultCheckpoint { bytes cid = 1; string name = 2; uint32 occurrence = 3; }
+message ActorReady { string actor = 1; bytes state_hash = 2; }
+message RecoveryReady {
+  bytes cid = 1; bytes cut_hash = 2; repeated ActorReady actors = 3;
+  Receipt auxiliary_receipt = 4; Receipt witness_receipt = 5;
+  bool terminal = 6;
+}
+message RecoveryCutReceipt { bytes cut_hash = 1; Receipt auxiliary = 2; }
+message RecoveredAck {
+  Binding current_binding = 1; bytes original_ack_bytes = 2;
+  bytes original_grant_hash = 3; Receipt root_receipt = 4; bytes cut_hash = 5;
 }
