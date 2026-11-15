@@ -1,5 +1,7 @@
 # 06 Publisher 与确定性 SimEspresso
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以含 **02、03** 的集成 SHA 建 managed worktree `poc-publisher-espresso`，分支 `codex/poc-publisher-espresso`。用受控通信交付持久 Publisher、确定性 Espresso 公共日志和逐读者 finalized 前缀。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。遵循[共用工作约定](workflow-zh.md)。

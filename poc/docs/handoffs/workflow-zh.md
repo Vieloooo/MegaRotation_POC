@@ -1,6 +1,6 @@
 # 新会话共用工作约定
 
-给新会话的输入包括任务 Markdown、本文、源 checkout `/mnt/reth/jy/megaroation_poc` 和实现基线 SHA。若前置提交未就绪，先完成 source mapping、合同草案和独立期望。基线齐备后再进入依赖它的实现。分任务交接说明记录范围与期望，合同经主会话冻结后作为 Builder 和 Verifier 的执行依据。01 直接继承已经冻结的恢复合同。
+给新会话的输入包括任务 Markdown、本文、源 checkout `/mnt/reth/jy/megaroation_poc` 和实现基线 SHA。按[分层依赖v2](../commander/dependency-plan-v2.md)区分接口冻结与真实集成依赖。独立组件获分配后可先冻结合同、形成独立预期并实现；依赖上游实际行为的接线和完整验收等待准确上游提交。分任务交接说明记录范围与期望，合同经主会话冻结后作为 Builder 和 Verifier 的执行依据。01 直接继承已经冻结的恢复合同。
 
 ## Worktree 与基线
 

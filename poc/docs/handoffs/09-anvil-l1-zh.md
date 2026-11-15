@@ -1,5 +1,7 @@
 # 09 Anvil L1 driver、ControlAuthority 与 BatchInbox
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以含 **02、03** 的集成 SHA 建 managed worktree `poc-anvil-l1`，分支 `codex/poc-anvil-l1`。交付受虚拟时钟调度的真实 Anvil 链、两个 P0 合约以及 finalized L1 reader。提前与 11、12 核对 ABI 和数据绑定。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。遵循[共用工作约定](workflow-zh.md)。
