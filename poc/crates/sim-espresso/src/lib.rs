@@ -10,6 +10,11 @@ pub use reader::{
 };
 pub use wire::{WireError, decode_finalized, encode_finalized};
 
+/// Checks that this exact message list fits in one PELG block for this source.
+pub fn validate_message_list(source_id: &[u8], messages: &[LogMessage]) -> Result<(), WireError> {
+    wire::block_len(source_id, messages).map(|_| ())
+}
+
 pub const MAX_SOURCE_BYTES: usize = 256;
 pub const MAX_MESSAGE_BYTES: usize = 65_536;
 pub const MAX_MESSAGES: usize = 1_024;
