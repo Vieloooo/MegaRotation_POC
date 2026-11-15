@@ -6,12 +6,28 @@ use sim_transport::*;
 
 mod custody_clock_cases;
 mod route_cases;
+mod snapshot_recheck_cases;
 
 fn save_evidence(name: &str, bytes: &[u8]) {
     if let Ok(directory) = std::env::var("SIMT_VERIFY_ARTIFACTS") {
         let directory = std::path::Path::new(&directory);
         std::fs::create_dir_all(directory).unwrap();
-        std::fs::write(directory.join(name), bytes).unwrap();
+        let path = directory.join(name);
+        if path.exists() {
+            assert_eq!(
+                std::fs::read(&path).unwrap(),
+                bytes,
+                "existing evidence must be identical; use a fresh output directory"
+            );
+        } else {
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path)
+                .unwrap();
+            file.write_all(bytes).unwrap();
+        }
     }
 }
 
