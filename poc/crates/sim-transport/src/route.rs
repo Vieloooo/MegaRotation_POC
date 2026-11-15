@@ -347,6 +347,31 @@ fn jitter(seed: u64, envelope: &Envelope, bound: u64) -> u64 {
     word % (bound + 1)
 }
 
+fn queued_fault_delay_bounds(profile: &LinkProfile, sent: u64) -> [Option<(u128, u128)>; 2] {
+    fn include_delay(bounds: &mut Option<(u128, u128)>, delay: u128) {
+        *bounds = Some(bounds.map_or((delay, delay), |(min, max)| {
+            (min.min(delay), max.max(delay))
+        }));
+    }
+
+    let past_faults = profile
+        .faults
+        .partition_point(|fault| fault.send_ordinal <= sent);
+    let mut primary = (sent > past_faults as u64).then_some((0, 0));
+    let mut duplicate = None;
+    for fault in profile.faults[..past_faults]
+        .iter()
+        .filter(|fault| !fault.drop)
+    {
+        let extra = u128::from(fault.extra_delay_us);
+        include_delay(&mut primary, extra);
+        if let Some(delay) = fault.duplicate_delay_us {
+            include_delay(&mut duplicate, extra + u128::from(delay));
+        }
+    }
+    [primary, duplicate]
+}
+
 impl RouteKernel {
     pub fn new(config: TransportConfig) -> Result<Self, Error> {
         let (config, expanded) = config.normalize_and_expand()?;
@@ -701,6 +726,19 @@ impl RouteKernel {
             {
                 return Err(Error::CorruptSnapshot);
             }
+            if link.next_release_us != 0 {
+                let step = state.last_step.ok_or(Error::CorruptSnapshot)?;
+                let max_pacing = profile.spacing(config.limits.payload_bytes as usize)?;
+                if u128::from(link.next_release_us)
+                    > u128::from(step.tick_us) + u128::from(max_pacing)
+                {
+                    return Err(Error::CorruptSnapshot);
+                }
+            }
+            if link.queue.is_empty() {
+                continue;
+            }
+            let fault_delay = queued_fault_delay_bounds(profile, link.send_ordinal);
             for queued in &link.queue {
                 let QueuedPacket {
                     envelope,
@@ -718,11 +756,21 @@ impl RouteKernel {
                 let destination = config
                     .endpoint(message.destination)
                     .map_err(|_| Error::CorruptSnapshot)?;
-                let minimum_due = message
-                    .origin
-                    .sent_tick_us
-                    .checked_add(profile.latency_us)
-                    .and_then(|v| v.checked_add(jitter(config.seed, envelope, profile.jitter_us)));
+                // The snapshot retains the message's origin and the last step,
+                // which bound the actual send tick. It does not identify the
+                // original fault ordinal for each surviving packet.
+                let base_delay = u128::from(profile.latency_us)
+                    + u128::from(jitter(config.seed, envelope, profile.jitter_us));
+                let due = u128::from(*raw_due_us);
+                let due_possible =
+                    fault_delay
+                        .get(usize::from(packet.copy_index))
+                        .is_some_and(|bounds| {
+                            bounds.is_some_and(|(min, max)| {
+                                due >= u128::from(message.origin.sent_tick_us) + base_delay + min
+                                    && due <= u128::from(step.tick_us) + base_delay + max
+                            })
+                        });
                 let last_attempt = state
                     .attempts
                     .binary_search_by_key(&packet.logical_id, |a| a.logical_id)
@@ -733,13 +781,12 @@ impl RouteKernel {
                     || packet.logical_id != message.logical_id
                     || packet.attempt == 0
                     || packet.attempt != envelope.attempt
-                    || packet.copy_index > 1
                     || packet.packet_seq == 0
                     || packet.packet_seq >= state.next_packet_seq
                     || !packet_sequences.insert(packet.packet_seq)
                     || !copies.insert((packet.logical_id, packet.attempt, packet.copy_index))
                     || message.origin.sent_tick_us > step.tick_us
-                    || minimum_due.is_none_or(|minimum| *raw_due_us < minimum)
+                    || !due_possible
                     || envelope.source_incarnation < source.binding.incarnation
                     || envelope.destination_incarnation < destination.binding.incarnation
                     || envelope.source_incarnation < message.origin.source_incarnation

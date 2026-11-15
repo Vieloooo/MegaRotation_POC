@@ -749,9 +749,18 @@ impl MailboxSnapshot {
         }
         for item in &self.outbox {
             config.check_header(&item.header, true)?;
+            // Each attempt adds one full interval. The mailbox watermark can
+            // advance on another item after this entry's last attempt.
+            let interval = u128::from(self.retry_interval_us);
+            let retry_due = u128::from(item.retry_due_us);
+            let earliest_due = u128::from(item.header.origin.sent_tick_us)
+                + u128::from(item.last_attempt) * interval;
+            let latest_due = u128::from(self.last_action_tick_us)
+                + if item.last_attempt == 0 { 0 } else { interval };
             if item.header.source != self.owner
                 || item.header.origin.source_incarnation > self.incarnation
-                || item.header.origin.sent_tick_us > self.last_action_tick_us
+                || retry_due < earliest_due
+                || retry_due > latest_due
             {
                 return Err(Error::CorruptSnapshot);
             }
@@ -765,8 +774,7 @@ impl MailboxSnapshot {
             let payload = item.payload.as_ref().ok_or(Error::CorruptSnapshot)?;
             config.check_message(&item.header.with_payload(payload.clone()), true)?;
             match &item.last_envelope {
-                None if item.last_attempt == 0 && item.retry_due_us <= self.last_action_tick_us => {
-                }
+                None if item.last_attempt == 0 => {}
                 Some(envelope)
                     if item.last_attempt != 0
                         && envelope.attempt == item.last_attempt
@@ -782,13 +790,6 @@ impl MailboxSnapshot {
                     )?;
                     if envelope.source_incarnation < item.header.origin.source_incarnation
                         || envelope.source_incarnation > self.incarnation
-                        || item
-                            .retry_due_us
-                            .checked_sub(self.retry_interval_us)
-                            .is_none_or(|attempt_at| {
-                                attempt_at > self.last_action_tick_us
-                                    || attempt_at < item.header.origin.sent_tick_us
-                            })
                     {
                         return Err(Error::CorruptSnapshot);
                     }

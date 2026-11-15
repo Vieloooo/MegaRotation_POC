@@ -581,10 +581,158 @@ fn route_snapshot_rejects_noncanonical_and_inconsistent_packet_data() {
         RouteKernel::from_snapshot(cfg.clone(), too_early.as_bytes()).unwrap_err(),
         Error::CorruptSnapshot
     );
+    let too_late = canonical.replacen("\"raw_due_us\":1020004", "\"raw_due_us\":1020005", 1);
+    assert_ne!(canonical, too_late);
+    assert_eq!(
+        RouteKernel::from_snapshot(cfg.clone(), too_late.as_bytes()).unwrap_err(),
+        Error::CorruptSnapshot
+    );
     let wrong_packet = canonical.replacen("\"packet_seq\":1", "\"packet_seq\":2", 1);
     assert_ne!(canonical, wrong_packet);
     assert_eq!(
-        RouteKernel::from_snapshot(cfg, wrong_packet.as_bytes()).unwrap_err(),
+        RouteKernel::from_snapshot(cfg.clone(), wrong_packet.as_bytes()).unwrap_err(),
+        Error::CorruptSnapshot
+    );
+
+    let due = kernel.next_wakeup_us().unwrap();
+    route(&mut kernel, stamp(2, 2, due), &[RouteCommand::Drain]);
+    let drained = kernel.snapshot_bytes().unwrap();
+    let restored = RouteKernel::from_snapshot(cfg.clone(), &drained).unwrap();
+    assert_eq!(restored.next_wakeup_us(), None);
+    let drained = String::from_utf8(drained).unwrap();
+    let impossible_pacing = drained.replacen(
+        "\"next_release_us\":1020007",
+        "\"next_release_us\":18446744073709551615",
+        1,
+    );
+    assert_ne!(drained, impossible_pacing);
+    assert_eq!(
+        RouteKernel::from_snapshot(cfg, impossible_pacing.as_bytes()).unwrap_err(),
+        Error::CorruptSnapshot
+    );
+}
+
+#[test]
+fn route_snapshot_accepts_near_maximum_time_and_bounds_each_copy() {
+    let cfg = config(LinkProfile {
+        latency_us: 20,
+        faults: vec![FaultEntry {
+            send_ordinal: 1,
+            drop: false,
+            duplicate_delay_us: Some(4),
+            extra_delay_us: 3,
+        }],
+        ..LinkProfile::default()
+    });
+    let mut kernel = RouteKernel::new(cfg.clone()).unwrap();
+    let send_at = Tick::MAX - 27;
+    route(
+        &mut kernel,
+        stamp(1, 1, send_at),
+        &[RouteCommand::Send(envelope(message(2, vec![])))],
+    );
+
+    // At the send step, the original packet cannot borrow the duplicate's delay.
+    let original = String::from_utf8(kernel.snapshot_bytes().unwrap()).unwrap();
+    let changed = original.replacen(
+        &format!("\"raw_due_us\":{}", Tick::MAX - 4),
+        &format!("\"raw_due_us\":{}", Tick::MAX - 3),
+        1,
+    );
+    assert_ne!(original, changed);
+    assert_eq!(
+        RouteKernel::from_snapshot(cfg.clone(), changed.as_bytes()).unwrap_err(),
+        Error::CorruptSnapshot
+    );
+
+    // A later step raises the theoretical upper bound past u64::MAX. Both
+    // queued due ticks still fit and must round-trip.
+    route(&mut kernel, stamp(2, 2, Tick::MAX - 1), &[]);
+    let snapshot = kernel.snapshot_bytes().unwrap();
+    let mut restored = RouteKernel::from_snapshot(cfg.clone(), &snapshot).unwrap();
+    assert_eq!(restored.snapshot_bytes().unwrap(), snapshot);
+    assert_eq!(restored.next_wakeup_us(), Some(Tick::MAX - 1));
+    route(
+        &mut restored,
+        stamp(3, 3, Tick::MAX - 1),
+        &[RouteCommand::Drain],
+    );
+    let paced = RouteKernel::from_snapshot(cfg, &restored.snapshot_bytes().unwrap()).unwrap();
+    assert_eq!(paced.next_wakeup_us(), Some(Tick::MAX));
+}
+
+#[test]
+fn tombstone_retry_bound_accepts_an_old_deadline_under_a_newer_watermark() {
+    let cfg = golden();
+    let mut sender =
+        ReliableMailbox::new(cfg.clone(), R0, ReliableLimits::default(), 20_000).unwrap();
+    let mut receiver =
+        ReliableMailbox::new(cfg.clone(), R1, ReliableLimits::default(), 20_000).unwrap();
+    let confirm = |mailbox: &mut ReliableMailbox, action| {
+        let plan = mailbox.plan(action).unwrap();
+        let confirmation = receipt(&plan);
+        mailbox.confirm(plan, confirmation).unwrap()
+    };
+    let first = message(2, vec![]);
+    let logical_id = first.logical_id;
+    confirm(
+        &mut sender,
+        MailboxAction::Enqueue {
+            message: first,
+            now_us: START,
+        },
+    );
+    let attempt = |now_us| MailboxAction::Attempt {
+        logical_id,
+        now_us,
+        destination: binding(R1, 1),
+    };
+    confirm(&mut sender, attempt(START));
+    let committed = confirm(&mut sender, attempt(START + 20_000));
+    let [CustodyRelease::Send(envelope)] = committed.releases.as_slice() else {
+        panic!("missing retry")
+    };
+    let committed = confirm(
+        &mut receiver,
+        MailboxAction::Receive {
+            envelope: envelope.clone(),
+            received_tick_us: START + 20_000,
+            received_local_us: None,
+            authenticated_source: binding(R0, 1),
+        },
+    );
+    let [_, CustodyRelease::ReceiveAck(ack)] = committed.releases.as_slice() else {
+        panic!("missing ACK")
+    };
+    confirm(
+        &mut sender,
+        MailboxAction::Enqueue {
+            message: message(3, vec![]),
+            now_us: Tick::MAX - 1,
+        },
+    );
+
+    let plan = sender
+        .plan(MailboxAction::Acknowledge {
+            ack: ack.clone(),
+            authenticated_receiver: binding(R1, 1),
+        })
+        .unwrap();
+    let confirmation = receipt(&plan);
+    let record = std::str::from_utf8(plan.persistence_bytes()).unwrap();
+    assert!(record.contains("\"last_attempt\":2,\"retry_due_us\":1040000"));
+    let (restored, _) =
+        ReliableMailbox::restore(cfg.clone(), record.as_bytes(), confirmation.clone()).unwrap();
+    assert_eq!(restored.retry_due_us(logical_id), None);
+
+    // This deadline follows one attempt, but cannot follow two.
+    let impossible = record.replacen("\"retry_due_us\":1040000", "\"retry_due_us\":1020000", 1);
+    let matching_mock = DurabilityReceipt {
+        candidate_record_hash: framed_hash("SIMT/custody-record/v1", &[impossible.as_bytes()]),
+        ..confirmation
+    };
+    assert_eq!(
+        ReliableMailbox::restore(cfg, impossible.as_bytes(), matching_mock).unwrap_err(),
         Error::CorruptSnapshot
     );
 }
