@@ -3,13 +3,16 @@ use commonware_consensus::simplex::recovery::RecoveryReceipt;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},
-    io::{Read, Seek, SeekFrom, Write},
+    io::{ErrorKind, Read, Seek, SeekFrom, Write},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
 const MAGIC: &[u8; 8] = b"I1RCHEAD";
 const LIMIT: usize = 16 * 1024 * 1024;
 const MARKER: &[u8] = b",\"data\":";
+pub(crate) const AUX_PENDING_HEAD: &str = "native-aux.head.pending";
+pub(crate) const ROOT_PENDING_HEAD: &str = "root-step.head.pending";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Header {
@@ -105,6 +108,8 @@ impl RecoveryLedger {
         ledger.install_head(Head::EMPTY, false)?;
         Ok(ledger)
     }
+    /// Open an exclusive mutable working copy. Keep the original crash image
+    /// separately. Recovery may preserve an owned scratch and promote a tail.
     pub fn open(
         root: &Path,
         id: Identity,
@@ -165,15 +170,24 @@ impl RecoveryLedger {
                         head.offset == length && authorized_tail.is_some_and(|allow| allow(&item)),
                         "unauthorized native recovery descendant",
                     )?;
+                    preserve_pending_head(
+                        root,
+                        &ledger.dir,
+                        AUX_PENDING_HEAD,
+                        Some((head.sequence, &head.encode(id))),
+                    )?;
                     io(ledger.file.sync_all())?;
                     ledger.install_head(head, true)?;
                     ledger.records.push(item);
                 }
                 None => {
+                    preserve_pending_head(root, &ledger.dir, AUX_PENDING_HEAD, None)?;
                     io(ledger.file.set_len(committed.offset))?;
                     io(ledger.file.sync_all())?;
                 }
             }
+        } else {
+            preserve_pending_head(root, &ledger.dir, AUX_PENDING_HEAD, None)?;
         }
         io(ledger.file.seek(SeekFrom::Start(ledger.head.offset)))?;
         Ok(ledger)
@@ -244,7 +258,7 @@ impl RecoveryLedger {
     fn install_head(&mut self, head: Head, replace: bool) -> Result<()> {
         let dest = self.root.join("native-aux.head");
         let path = if replace {
-            self.root.join("native-aux.head.pending")
+            self.root.join(AUX_PENDING_HEAD)
         } else {
             dest.clone()
         };
@@ -309,6 +323,101 @@ impl RecoveryLedger {
         self.head = head;
         self.records.push(item);
     }
+}
+
+struct OwnedScratch {
+    file: File,
+    bytes: Vec<u8>,
+}
+
+fn read_owned_scratch(dir: &File, path: &Path) -> Result<Option<OwnedScratch>> {
+    let meta = match fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("cannot inspect recovery head scratch")),
+    };
+    require(
+        meta.file_type().is_file()
+            && meta.nlink() == 1
+            && meta.uid() == io(dir.metadata())?.uid()
+            && meta.len() <= 88,
+        "invalid owned recovery head scratch",
+    )?;
+    let mut file = io(File::open(path))?;
+    let opened = io(file.metadata())?;
+    require(
+        opened.dev() == meta.dev()
+            && opened.ino() == meta.ino()
+            && opened.uid() == meta.uid()
+            && opened.nlink() == 1
+            && opened.len() == meta.len(),
+        "changed recovery head scratch",
+    )?;
+    let mut bytes = Vec::with_capacity(88);
+    io((&mut file).take(89).read_to_end(&mut bytes))?;
+    require(
+        bytes.len() as u64 == meta.len(),
+        "changed recovery head scratch size",
+    )?;
+    Ok(Some(OwnedScratch { file, bytes }))
+}
+
+/// Preserve a crash-left scratch from the exclusive working directory. The
+/// caller supplies a head only after authorizing its complete synced record.
+/// Evidence files are consulted here solely to make preservation retryable.
+pub(crate) fn preserve_pending_head(
+    root: &Path,
+    dir: &File,
+    name: &str,
+    candidate: Option<(u64, &[u8; 88])>,
+) -> Result<()> {
+    let pending_path = root.join(name);
+    let Some(pending) = read_owned_scratch(dir, &pending_path)? else {
+        return Ok(());
+    };
+    let (sequence, expected) =
+        candidate.ok_or(Error("recovery head scratch has no complete descendant"))?;
+    require(
+        expected.starts_with(&pending.bytes),
+        "recovery head scratch differs from authorized descendant",
+    )?;
+    let evidence_path = root.join(format!(
+        "{name}.recovery.{sequence}.{}",
+        pending.bytes.len()
+    ));
+    if let Some(evidence) = read_owned_scratch(dir, &evidence_path)? {
+        require(
+            evidence.bytes == pending.bytes,
+            "conflicting preserved recovery head scratch",
+        )?;
+        io(evidence.file.sync_all())?;
+        // Make the already-matching evidence durable before disposal.
+        io(dir.sync_all())?;
+        io(fs::remove_file(pending_path))?;
+    } else {
+        io(pending.file.sync_all())?;
+        io(fs::rename(pending_path, evidence_path))?;
+    }
+    io(dir.sync_all())
+}
+
+/// Copy both original scratch images without using either to infer a head.
+pub(crate) fn copy_pending_heads(source: &Path, working: &Path) -> Result<()> {
+    let source_dir = io(File::open(source))?;
+    let scratch = [AUX_PENDING_HEAD, ROOT_PENDING_HEAD]
+        .map(|name| read_owned_scratch(&source_dir, &source.join(name)));
+    let [aux, root] = scratch;
+    for (name, image) in [(AUX_PENDING_HEAD, aux?), (ROOT_PENDING_HEAD, root?)] {
+        if let Some(image) = image {
+            let mut target = io(OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(working.join(name)))?;
+            io(target.write_all(&image.bytes))?;
+            io(target.sync_all())?;
+        }
+    }
+    io(io(File::open(working))?.sync_all())
 }
 
 fn encode(header: &Header, data: &[u8]) -> Result<Vec<u8>> {
@@ -423,5 +532,221 @@ mod tests {
         assert!(RecoveryLedger::open(&root, identity, floor, None).is_err());
         assert_eq!(fs::read(&path).unwrap(), original[..original.len() - 1]);
         fs::remove_dir_all(root).unwrap();
+    }
+    struct InterruptedHead {
+        root: PathBuf,
+        identity: Identity,
+        floor: RecoveryReceipt,
+        next: RecoveryReceipt,
+        old_head: Vec<u8>,
+        new_head: Vec<u8>,
+    }
+
+    impl InterruptedHead {
+        fn new() -> Self {
+            let root = (0..u64::MAX)
+                .map(|index| {
+                    std::env::temp_dir()
+                        .join(format!("aux-scratch-test-{}-{index}", std::process::id()))
+                })
+                .find(|path| fs::create_dir(path).is_ok())
+                .unwrap();
+            let identity = Identity {
+                run: [5; 32],
+                config: [6; 32],
+                worker: 1,
+            };
+            let mut ledger = RecoveryLedger::create(&root, identity).unwrap();
+            let floor = ledger.append("GRANT_INTENT", None, &[1]).unwrap();
+            let old_head = fs::read(root.join("native-aux.head")).unwrap();
+            let next = ledger
+                .append("PREPARATION", Some(floor.hash), &[2])
+                .unwrap();
+            let new_head = fs::read(root.join("native-aux.head")).unwrap();
+            drop(ledger);
+            fs::write(root.join("native-aux.head"), &old_head).unwrap();
+            Self {
+                root,
+                identity,
+                floor,
+                next,
+                old_head,
+                new_head,
+            }
+        }
+
+        fn open(&self, authorized: bool) -> Result<RecoveryLedger> {
+            RecoveryLedger::open(
+                &self.root,
+                self.identity,
+                self.floor,
+                Some(&|record| authorized && record.receipt == self.next),
+            )
+        }
+
+        fn evidence(&self, length: usize) -> PathBuf {
+            self.root
+                .join(format!("{AUX_PENDING_HEAD}.recovery.2.{length}"))
+        }
+    }
+
+    impl Drop for InterruptedHead {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.root).unwrap();
+        }
+    }
+
+    #[test]
+    fn preserves_each_valid_scratch_shape_through_retry_and_append() {
+        for length in [0, 1, 43, 87, 88] {
+            let fixture = InterruptedHead::new();
+            let pending = fixture.root.join(AUX_PENDING_HEAD);
+            let bytes = &fixture.new_head[..length];
+            fs::write(&pending, bytes).unwrap();
+            let evidence = fixture.evidence(length);
+            let mut opened = fixture.open(true).unwrap();
+            assert_eq!(opened.receipt(), fixture.next);
+            assert!(!pending.exists());
+            assert_eq!(fs::read(&evidence).unwrap(), bytes);
+            drop(opened);
+
+            // Emulate another interruption after preserving the first scratch:
+            // the old committed head remains and the head reinstall has retried.
+            fs::write(fixture.root.join("native-aux.head"), &fixture.old_head).unwrap();
+            fs::write(&pending, bytes).unwrap();
+            opened = fixture.open(true).unwrap();
+            assert!(!pending.exists());
+            assert_eq!(fs::read(evidence).unwrap(), bytes);
+            assert_eq!(
+                opened
+                    .append("FOLLOWUP", Some(fixture.next.hash), &[3])
+                    .unwrap()
+                    .sequence,
+                3
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_scratch_before_changing_ledger_or_evidence() {
+        use std::os::unix::fs::symlink;
+        for case in [
+            "wrong_prefix",
+            "wrong_binding",
+            "oversize",
+            "symlink",
+            "directory",
+            "alias",
+            "conflicting_backup",
+            "missing_tail",
+            "torn_tail",
+            "unauthorized_tail",
+        ] {
+            let fixture = InterruptedHead::new();
+            let pending = fixture.root.join(AUX_PENDING_HEAD);
+            let data = fixture.root.join("native-aux");
+            let committed_offset = u64::from_be_bytes(fixture.old_head[8..16].try_into().unwrap());
+            match case {
+                "wrong_prefix" => fs::write(&pending, b"I1RX").unwrap(),
+                "wrong_binding" => {
+                    let head = Head::decode(&fixture.new_head, fixture.identity).unwrap();
+                    let foreign = Identity {
+                        worker: 2,
+                        ..fixture.identity
+                    };
+                    fs::write(&pending, head.encode(foreign)).unwrap();
+                }
+                "oversize" => fs::write(&pending, [0; 89]).unwrap(),
+                "symlink" => symlink(fixture.root.join("native-aux.head"), &pending).unwrap(),
+                "directory" => fs::create_dir(&pending).unwrap(),
+                "alias" => fs::hard_link(fixture.root.join("native-aux.head"), &pending).unwrap(),
+                "conflicting_backup" => {
+                    fs::write(&pending, &fixture.new_head[..4]).unwrap();
+                    fs::write(fixture.evidence(4), b"abcd").unwrap();
+                }
+                "missing_tail" | "torn_tail" => {
+                    fs::write(&pending, []).unwrap();
+                    let end = if case == "missing_tail" {
+                        committed_offset
+                    } else {
+                        committed_offset + 16
+                    };
+                    File::options()
+                        .write(true)
+                        .open(&data)
+                        .unwrap()
+                        .set_len(end)
+                        .unwrap();
+                }
+                "unauthorized_tail" => fs::write(&pending, &fixture.new_head).unwrap(),
+                _ => unreachable!(),
+            }
+            let before = fs::read(&data).unwrap();
+            let pending_meta = fs::symlink_metadata(&pending).unwrap();
+            let pending_bytes = pending_meta
+                .file_type()
+                .is_file()
+                .then(|| fs::read(&pending).unwrap());
+            assert!(fixture.open(case != "unauthorized_tail").is_err(), "{case}");
+            let after = fs::symlink_metadata(&pending).unwrap();
+            assert_eq!(
+                (after.dev(), after.ino(), after.len()),
+                (pending_meta.dev(), pending_meta.ino(), pending_meta.len()),
+                "{case}"
+            );
+            if let Some(bytes) = pending_bytes {
+                assert_eq!(fs::read(&pending).unwrap(), bytes, "{case}");
+            }
+            assert_eq!(fs::read(&data).unwrap(), before, "{case}");
+            assert_eq!(
+                fs::read(fixture.root.join("native-aux.head")).unwrap(),
+                fixture.old_head,
+                "{case}"
+            );
+            if case == "conflicting_backup" {
+                assert_eq!(fs::read(fixture.evidence(4)).unwrap(), b"abcd");
+            }
+        }
+    }
+
+    #[test]
+    fn copies_pending_images_without_changing_the_original() {
+        let fixture = InterruptedHead::new();
+        let working = fixture.root.join("working");
+        fs::create_dir(&working).unwrap();
+        fs::write(fixture.root.join(AUX_PENDING_HEAD), &fixture.new_head[..20]).unwrap();
+        fs::write(fixture.root.join(ROOT_PENDING_HEAD), []).unwrap();
+        copy_pending_heads(&fixture.root, &working).unwrap();
+        for name in [AUX_PENDING_HEAD, ROOT_PENDING_HEAD] {
+            assert_eq!(
+                fs::read(working.join(name)).unwrap(),
+                fs::read(fixture.root.join(name)).unwrap()
+            );
+            assert_ne!(
+                fs::metadata(working.join(name)).unwrap().ino(),
+                fs::metadata(fixture.root.join(name)).unwrap().ino()
+            );
+        }
+        assert_eq!(
+            fs::read(fixture.root.join("native-aux.head")).unwrap(),
+            fixture.old_head
+        );
+
+        let rejected = fixture.root.join("rejected");
+        fs::create_dir(&rejected).unwrap();
+        fs::remove_file(fixture.root.join(ROOT_PENDING_HEAD)).unwrap();
+        std::os::unix::fs::symlink(
+            fixture.root.join("native-aux.head"),
+            fixture.root.join(ROOT_PENDING_HEAD),
+        )
+        .unwrap();
+        assert!(copy_pending_heads(&fixture.root, &rejected).is_err());
+        assert!(fs::read_dir(rejected).unwrap().next().is_none());
+        assert!(
+            fs::symlink_metadata(fixture.root.join(ROOT_PENDING_HEAD))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
     }
 }

@@ -1,6 +1,7 @@
 use crate::{
     Error, Id, Result, hash_parts,
     native_config::Resolved,
+    native_recovery_ledger::{ROOT_PENDING_HEAD, preserve_pending_head},
     native_wire::{Ack, Grant, Receipt, RecoveredAck, WorkerFrame, worker_frame},
     native_wire_support as wire,
 };
@@ -76,6 +77,8 @@ impl StepJournal {
         journal.sync_head(false)?;
         Ok(journal)
     }
+    /// Open an exclusive mutable working copy with a separately retained
+    /// original crash image. Only authorized complete tails may be promoted.
     pub fn open_recovery(
         root: &Path,
         config: &Resolved,
@@ -137,16 +140,27 @@ impl StepJournal {
                     if Some(&record.0.grant) == authorized
                         && journal.offset.checked_add(record.2) == Some(length) =>
                 {
+                    let sequence = record.0.sequence;
+                    let next_head = journal.head_bytes(length, sequence, record.1);
+                    preserve_pending_head(
+                        root,
+                        &journal.dir,
+                        ROOT_PENDING_HEAD,
+                        Some((sequence, &next_head)),
+                    )?;
                     io(journal.file.sync_all())?;
                     journal.adopt_recovery_record(record)?;
                     journal.sync_head(true)?;
                 }
                 Some(_) => return Err(Error("unauthorized complete root step descendant")),
                 None => {
+                    preserve_pending_head(root, &journal.dir, ROOT_PENDING_HEAD, None)?;
                     io(journal.file.set_len(committed))?;
                     io(journal.file.sync_all())?;
                 }
             }
+        } else {
+            preserve_pending_head(root, &journal.dir, ROOT_PENDING_HEAD, None)?;
         }
         io(journal.file.seek(SeekFrom::Start(journal.offset)))?;
         Ok(journal)
@@ -295,17 +309,22 @@ impl StepJournal {
         Ok(())
     }
 
+    fn head_bytes(&self, offset: u64, sequence: u64, hash: Id) -> [u8; 88] {
+        let mut bytes = [0; 88];
+        bytes[..8].copy_from_slice(b"I1SHEAD1");
+        bytes[8..16].copy_from_slice(&offset.to_be_bytes());
+        bytes[16..24].copy_from_slice(&sequence.to_be_bytes());
+        bytes[24..56].copy_from_slice(&hash);
+        let checksum = self.bound_head(&bytes[..56]);
+        bytes[56..].copy_from_slice(&checksum);
+        bytes
+    }
+
     fn sync_head(&self, rename: bool) -> Result<()> {
-        let mut bytes = Vec::with_capacity(88);
-        bytes.extend_from_slice(b"I1SHEAD1");
-        bytes.extend_from_slice(&self.offset.to_be_bytes());
-        bytes.extend_from_slice(&self.sequence.to_be_bytes());
-        bytes.extend_from_slice(&self.head);
-        let checksum = self.bound_head(&bytes);
-        bytes.extend_from_slice(&checksum);
+        let bytes = self.head_bytes(self.offset, self.sequence, self.head);
         let head = self.root.join("root-step.head");
         let file = if rename {
-            self.root.join("root-step.head.pending")
+            self.root.join(ROOT_PENDING_HEAD)
         } else {
             head.clone()
         };
@@ -445,13 +464,23 @@ mod tests {
         let first_head = fs::read(&head_path).unwrap();
         let a2 = journal.commit(g2.clone(), a2).unwrap();
         let completed = journal.receipt();
+        let second_head = fs::read(&head_path).unwrap();
         drop(journal);
         fs::write(&head_path, &first_head).unwrap();
+        let pending = root.join(ROOT_PENDING_HEAD);
+        fs::write(&pending, &second_head[..41]).unwrap();
 
         assert!(StepJournal::open_recovery(&root, &config, 0, anchor, None).is_err());
         assert_eq!(fs::read(&head_path).unwrap(), first_head);
+        assert_eq!(fs::read(&pending).unwrap(), &second_head[..41]);
         let journal = StepJournal::open_recovery(&root, &config, 0, anchor, Some(&g2)).unwrap();
         assert_eq!(journal.receipt(), completed);
+        assert_eq!(fs::read(&head_path).unwrap(), second_head);
+        assert!(!pending.exists());
+        assert_eq!(
+            fs::read(root.join(format!("{ROOT_PENDING_HEAD}.recovery.2.41"))).unwrap(),
+            &second_head[..41],
+        );
         assert_eq!(
             journal.cached(&g1).unwrap().unwrap().encode_to_vec(),
             a1.encode_to_vec()

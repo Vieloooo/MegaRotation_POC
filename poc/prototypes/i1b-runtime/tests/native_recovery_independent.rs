@@ -19,5 +19,6 @@ mod native_config{
  }
 }
 #[path="../src/native_recovery_ledger.rs"] mod aux;
+use crate::aux as native_recovery_ledger;
 #[path="../src/native_step_journal.rs"] mod root_step;
 #[path="../../../verification/native-recovery/ledger_acceptance.rs"] mod acceptance;

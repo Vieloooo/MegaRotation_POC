@@ -766,9 +766,7 @@ fn prepare_worker(
                 std::io::copy(&mut input, &mut output).map_err(io)?;
                 output.sync_all().map_err(io)?;
             }
-            File::open(root)
-                .and_then(|file| file.sync_all())
-                .map_err(io)?;
+            crate::native_recovery_ledger::copy_pending_heads(&source, root)?;
             let root_floor = recovery_driver::read_wire_receipt(floor.root_receipt.as_ref())?;
             let aux_floor = recovery_driver::read_wire_receipt(floor.auxiliary_receipt.as_ref())?;
             let witness_floor = recovery_driver::read_wire_receipt(floor.witness_receipt.as_ref())?;

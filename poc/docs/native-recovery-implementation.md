@@ -112,3 +112,30 @@ sequence. Holding or coalescing arbitrary ingress across the fence awaits the
 broader recovery phase. R16 needs actual
 resolver repair across restart. R18 needs independent process replay and
 mutation results. Overall native recovery and I1b remain open.
+
+## Crash-left head scratch
+
+The auxiliary and root-step readers first validate the committed head, trusted
+prefix and complete authorized descendant through EOF. In an exclusive mutable
+working copy, they admit an owned regular single-link pending file only if it
+contains a 0–88 byte prefix of that descendant's recomputed head. They preserve
+the exact prefix as `<pending>.recovery.<candidate-sequence>.<prefix-length>`.
+An existing backup can only deduplicate an identical regular singleton. The
+readers sync preservation before installing the recomputed head. No pending or
+backup bytes select a head or authorize a descendant. Pending scratch with a
+missing, torn or unauthorized descendant fails before tail repair. The worker
+copies possible scratch files from its immutable source with type, ownership and
+size checks so the working-copy readers can enforce the same rules.
+
+The two independent reproducers passed with the original fixtures and
+assertions. The only harness change is
+`use crate::aux as native_recovery_ledger;` so both actual production modules
+refer to the same helper. Builder tests cover empty, partial and full images,
+repeated preservation, the next append, conflicting backups, wrong binding and
+prefixes, oversized and aliased files, missing or torn tails, and nondestructive
+source copying. This closes the pending-file collision in the two readers.
+The broader R11 process cut matrix remains open.
+The complete locked offline prototype suite passed 129 tests after the fix,
+including the Fresh golden root-step hash. The bounded worker still opens this
+snapshot without authorizing an interrupted transaction. Process-level
+authorization and reconciliation of an outstanding grant belong to R11.
