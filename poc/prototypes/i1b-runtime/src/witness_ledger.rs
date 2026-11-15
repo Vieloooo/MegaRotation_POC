@@ -1,13 +1,13 @@
 use crate::{
     Error, Id, Result, hash_parts,
     witness::{
-        ArtifactWitness, Barrier, EligiblePayload, NativeWire, PolicySeal, Submission,
-        WitnessPolicy, require,
+        ArtifactWitness, Barrier, EligiblePayload, Image, Images, MAX_BLOB_BYTES, NativeWire,
+        PolicySeal, Submission, WitnessPolicy, require, verify_protected,
     },
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
@@ -38,6 +38,7 @@ pub struct BlobSeal {
     pub id: Id,
     pub open_id: u64,
     pub section: u64,
+    pub initial_bytes: Vec<u8>,
 }
 impl BlobSeal {
     pub(crate) fn new(policy: &PolicySeal, open_id: u64, section: u64) -> Self {
@@ -58,6 +59,7 @@ impl BlobSeal {
             id,
             open_id,
             section,
+            initial_bytes: Vec::new(),
         }
     }
 }
@@ -70,14 +72,43 @@ pub struct RecoveryLink {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IoObservation {
+    pub io_id: u64,
+    pub change: ObservedChange,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "operation", rename_all = "snake_case")]
+pub enum ObservedChange {
+    Write {
+        blob_id: Id,
+        offset: u64,
+        bytes: Vec<u8>,
+    },
+    Resize {
+        blob_id: Id,
+        len: u64,
+    },
+    Remove {
+        section: Option<u64>,
+    },
+    Uncertain {
+        section: Option<u64>,
+        reason: String,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "entry", content = "value", rename_all = "snake_case")]
 pub enum LedgerEntry {
     Policy(PolicySeal),
     Blob(BlobSeal),
+    Observation(IoObservation),
     Barrier(Barrier),
     Witness(ArtifactWitness),
     Eligible(EligiblePayload),
     Submission(Submission),
+    GenerationStarted(RecoveryLink),
     Recovery(RecoveryLink),
 }
 
@@ -169,81 +200,114 @@ pub(crate) struct Records {
     pub witnesses: BTreeMap<Id, ArtifactWitness>,
     pub eligible: BTreeMap<Id, EligiblePayload>,
     pub submissions: BTreeMap<Id, Submission>,
+    pub images: Images,
+    pub uncertain_sections: BTreeSet<u64>,
+    last_io: u64,
+    recovering: Option<RecoveryLink>,
     recovery: Option<RecoveryLink>,
 }
 
 impl Records {
-    fn apply(&mut self, policy: &WitnessPolicy, entries: &[LedgerEntry]) -> Result<()> {
+    fn apply(
+        &mut self,
+        supplied: &WitnessPolicy,
+        previous_hash: Id,
+        entries: &[LedgerEntry],
+    ) -> Result<()> {
         require(!entries.is_empty(), "empty witness batch")?;
+        let mut decoded = BTreeMap::new();
         for entry in entries {
             if self.policy.is_none() {
                 let LedgerEntry::Policy(seal) = entry else {
                     return Err(Error("missing initial witness policy"));
                 };
-                require(seal == policy.seal(), "witness policy mismatch")?;
+                let mut expected = supplied.seal().clone();
+                expected.config.generation = seal.config.generation;
+                require(
+                    *seal == expected
+                        && seal.config.generation <= supplied.seal().config.generation,
+                    "witness policy mismatch",
+                )?;
                 self.policy = Some(seal.clone());
                 continue;
             }
+            let policy = self.policy.clone().expect("sealed generation");
             match entry {
                 LedgerEntry::Policy(_) => return Err(Error("repeated witness policy")),
                 LedgerEntry::Blob(blob) => {
+                    self.advance_io(blob.open_id)?;
                     require(
-                        blob.open_id > 0
-                            && policy.seal.config.sections.contains(&blob.section)
-                            && *blob == BlobSeal::new(policy.seal(), blob.open_id, blob.section),
-                        "invalid witness blob identity",
+                        policy.config.sections.contains(&blob.section)
+                            && blob.id == BlobSeal::new(&policy, blob.open_id, blob.section).id
+                            && blob.initial_bytes.len() <= MAX_BLOB_BYTES
+                            && (self.recovering.is_none() || blob.initial_bytes.is_empty()),
+                        "invalid witness blob identity or initial image",
                     )?;
+                    verify_protected(self.witnesses.values(), blob.section, &blob.initial_bytes)
+                        .or_else(|error| {
+                            if self.recovering.is_some() {
+                                Ok(())
+                            } else {
+                                Err(error)
+                            }
+                        })?;
+                    self.drop_images(Some(blob.section));
+                    let mut image = Image::new(blob.initial_bytes.clone());
+                    image.uncertain = self.uncertain_sections.contains(&blob.section);
+                    self.images.insert(blob.id, image);
                     require(
                         self.blobs.insert(blob.id, blob.clone()).is_none(),
                         "repeated witness blob",
                     )?;
                 }
+                LedgerEntry::Observation(observation) => {
+                    self.advance_io(observation.io_id)?;
+                    self.observe_mutation(&policy, &observation.change)?;
+                    decoded.clear();
+                }
                 LedgerEntry::Barrier(barrier) => {
-                    require(
-                        self.blobs.contains_key(&barrier.blob_id)
-                            && matches!(barrier.kind, 1 | 2)
-                            && !barrier.bytes.is_empty()
-                            && barrier.io_id > 0
-                            && barrier
-                                .offset
-                                .checked_add(barrier.bytes.len() as u64)
-                                .is_some_and(|end| end <= crate::witness::MAX_BLOB_BYTES as u64)
-                            && (barrier.kind == 1 || barrier.offset == 0)
-                            && *barrier
-                                == Barrier::new(
-                                    barrier.blob_id,
-                                    barrier.io_id,
-                                    barrier.kind,
-                                    barrier.offset,
-                                    barrier.bytes.clone(),
-                                ),
-                        "invalid witness barrier",
-                    )?;
-                    require(
-                        self.barriers.insert(barrier.id, barrier.clone()).is_none(),
-                        "repeated witness barrier",
-                    )?;
+                    self.advance_io(barrier.io_id)?;
+                    self.install_barrier(barrier)?;
+                    decoded.remove(&barrier.blob_id);
                 }
                 LedgerEntry::Witness(witness) => {
+                    let section = self
+                        .blobs
+                        .get(&witness.blob_id)
+                        .ok_or(Error("unknown witness blob"))?
+                        .section;
                     require(
-                        self.blobs
-                            .get(&witness.blob_id)
-                            .is_some_and(|blob| blob.section == witness.frame.section),
-                        "witness blob/view mismatch",
-                    )?;
-                    require(
-                        witness.barrier_ids.windows(2).all(|ids| ids[0] < ids[1])
+                        section == witness.frame.section
+                            && witness.barrier_ids.windows(2).all(|ids| ids[0] < ids[1])
                             && *witness
                                 == ArtifactWitness::new(
-                                    policy.seal(),
+                                    &policy,
                                     witness.blob_id,
                                     witness.frame.clone(),
                                     witness.barrier_ids.clone(),
                                 ),
-                        "invalid witness identity",
+                        "invalid witness identity or section",
                     )?;
-                    policy.verify_evidence(&witness.frame)?;
-                    verify_coverage(witness, &self.barriers)?;
+                    let image = self
+                        .images
+                        .get(&witness.blob_id)
+                        .ok_or(Error("witness is not on a live blob"))?;
+                    require(
+                        !self.uncertain_sections.contains(&section)
+                            && image.provenance(&witness.frame).as_ref()
+                                == Some(&witness.barrier_ids),
+                        "witness disagrees with current durable byte versions",
+                    )?;
+                    let frames = match decoded.entry(witness.blob_id) {
+                        std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
+                        std::collections::btree_map::Entry::Vacant(entry) => {
+                            entry.insert(supplied.decode_frames(section, &image.bytes, true)?)
+                        }
+                    };
+                    require(
+                        frames.iter().any(|frame| *frame == witness.frame),
+                        "witness does not identify a current canonical journal frame",
+                    )?;
                     require(
                         self.witnesses.insert(witness.id, witness.clone()).is_none(),
                         "repeated artifact witness",
@@ -254,11 +318,12 @@ impl Records {
                         self.witnesses
                             .get(&payload.witness_id)
                             .is_some_and(|witness| {
-                                witness.frame.wire.as_ref() == Some(&payload.wire)
+                                self.images.contains_key(&witness.blob_id)
+                                    && witness.frame.wire.as_ref() == Some(&payload.wire)
                             })
                             && *payload
                                 == EligiblePayload::new(
-                                    policy.seal(),
+                                    &policy,
                                     payload.witness_id,
                                     payload.wire.clone(),
                                 ),
@@ -271,9 +336,10 @@ impl Records {
                 }
                 LedgerEntry::Submission(submission) => {
                     require(
-                        self.eligible.contains_key(&submission.payload_id)
+                        self.recovering.is_none()
+                            && self.eligible.contains_key(&submission.payload_id)
                             && submission.destination < 5
-                            && submission.destination != policy.seal.config.member
+                            && submission.destination != policy.config.member
                             && *submission
                                 == Submission::new(submission.payload_id, submission.destination),
                         "invalid witness submission",
@@ -285,25 +351,248 @@ impl Records {
                         "repeated witness submission",
                     )?;
                 }
+                LedgerEntry::GenerationStarted(link) => {
+                    require(
+                        entries.len() == 1
+                            && self.recovering.is_none()
+                            && link.old_head_hash == previous_hash,
+                        "recovery transition lacks exact predecessor head",
+                    )?;
+                    self.validate_link(&policy, link)?;
+                    let generation = link
+                        .old_generation
+                        .checked_add(1)
+                        .ok_or(Error("witness generation overflow"))?;
+                    require(
+                        generation <= supplied.seal().config.generation,
+                        "recovery exceeds configured generation",
+                    )?;
+                    self.policy
+                        .as_mut()
+                        .expect("sealed generation")
+                        .config
+                        .generation = generation;
+                    self.recovering = Some(link.clone());
+                    self.recovery = None;
+                    self.images.clear();
+                    self.uncertain_sections.clear();
+                    self.last_io = 0;
+                }
                 LedgerEntry::Recovery(link) => {
                     require(
-                        link.old_generation.checked_add(1) == Some(policy.seal.config.generation)
-                            && link
-                                .source_files
-                                .windows(2)
-                                .all(|pair| pair[0].0 < pair[1].0)
-                            && link
-                                .source_files
-                                .iter()
-                                .all(|(section, _)| policy.seal.config.sections.contains(section)),
-                        "invalid recovery generation link",
+                        entries.len() == 1 && self.recovering.as_ref() == Some(link),
+                        "recovery completion lacks pending transition",
                     )?;
-                    require(
-                        self.recovery.replace(link.clone()).is_none(),
-                        "repeated recovery generation link",
+                    self.complete_recovery(link, supplied)?;
+                    self.recovering = None;
+                    self.recovery = Some(link.clone());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn in_recovery(&self) -> bool {
+        self.recovering.is_some()
+    }
+
+    fn advance_io(&mut self, id: u64) -> Result<()> {
+        require(
+            id > self.last_io,
+            "selected witness I/O ID is not increasing",
+        )?;
+        self.last_io = id;
+        Ok(())
+    }
+
+    fn drop_images(&mut self, section: Option<u64>) {
+        self.images
+            .retain(|id, _| section.is_some_and(|section| self.blobs[id].section != section));
+    }
+
+    fn observe_mutation(&mut self, policy: &PolicySeal, change: &ObservedChange) -> Result<()> {
+        match change {
+            ObservedChange::Write {
+                blob_id,
+                offset,
+                bytes,
+            } => {
+                let image = self
+                    .images
+                    .get_mut(blob_id)
+                    .ok_or(Error("write is not on a live blob"))?;
+                require(
+                    !image.uncertain && !bytes.is_empty(),
+                    "invalid observed write",
+                )?;
+                image.write(
+                    usize::try_from(*offset).map_err(|_| Error("observed offset overflow"))?,
+                    bytes,
+                )?;
+                if self.recovering.is_none() {
+                    verify_protected(
+                        self.witnesses.values(),
+                        self.blobs[blob_id].section,
+                        &image.bytes,
                     )?;
                 }
             }
+            ObservedChange::Resize { blob_id, len } => {
+                let image = self
+                    .images
+                    .get_mut(blob_id)
+                    .ok_or(Error("resize is not on a live blob"))?;
+                require(
+                    !image.uncertain && self.recovering.is_none(),
+                    "invalid observed resize",
+                )?;
+                image.resize(
+                    usize::try_from(*len).map_err(|_| Error("observed extent overflow"))?,
+                )?;
+                verify_protected(
+                    self.witnesses.values(),
+                    self.blobs[blob_id].section,
+                    &image.bytes,
+                )?;
+            }
+            ObservedChange::Remove { section } => {
+                require(
+                    self.recovering.is_none()
+                        && section.is_none_or(|value| policy.config.sections.contains(&value))
+                        && !self.witnesses.values().any(|witness| {
+                            section.is_none_or(|section| witness.frame.section == section)
+                        }),
+                    "observed removal erases protected journal history",
+                )?;
+                self.drop_images(*section);
+            }
+            ObservedChange::Uncertain { section, reason } => {
+                require(
+                    self.recovering.is_none()
+                        && matches!(reason.as_str(), "write" | "resize" | "sync" | "remove")
+                        && section.map_or(reason == "remove", |value| {
+                            policy.config.sections.contains(&value)
+                        }),
+                    "invalid uncertainty observation",
+                )?;
+                for value in policy
+                    .config
+                    .sections
+                    .iter()
+                    .filter(|value| section.is_none_or(|section| section == **value))
+                {
+                    self.uncertain_sections.insert(*value);
+                }
+                for (id, image) in &mut self.images {
+                    if section.is_none_or(|value| self.blobs[id].section == value) {
+                        image.uncertain = true;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn install_barrier(&mut self, barrier: &Barrier) -> Result<()> {
+        let image = self
+            .images
+            .get_mut(&barrier.blob_id)
+            .ok_or(Error("barrier is not on a live blob"))?;
+        let section = self.blobs[&barrier.blob_id].section;
+        let start =
+            usize::try_from(barrier.offset).map_err(|_| Error("barrier offset overflow"))?;
+        let end = start
+            .checked_add(barrier.bytes.len())
+            .filter(|end| *end <= MAX_BLOB_BYTES)
+            .ok_or(Error("barrier exceeds witness bounds"))?;
+        require(
+            !image.uncertain
+                && !self.uncertain_sections.contains(&section)
+                && !barrier.bytes.is_empty()
+                && *barrier
+                    == Barrier::new(
+                        barrier.blob_id,
+                        barrier.io_id,
+                        barrier.kind,
+                        barrier.offset,
+                        barrier.bytes.clone(),
+                    ),
+            "invalid witness barrier",
+        )?;
+        match barrier.kind {
+            // A range barrier is a single combined successful SYNC write.
+            1 if self.recovering.is_none() => image.write(start, &barrier.bytes)?,
+            2 if start == 0 && image.bytes == barrier.bytes => {}
+            _ => return Err(Error("barrier disagrees with current extent or bytes")),
+        }
+        verify_protected(self.witnesses.values(), section, &image.bytes)?;
+        image.cover(start..end, barrier.id);
+        require(
+            self.barriers.insert(barrier.id, barrier.clone()).is_none(),
+            "repeated witness barrier",
+        )
+    }
+
+    fn validate_link(&self, policy: &PolicySeal, link: &RecoveryLink) -> Result<()> {
+        require(
+            link.old_generation == policy.config.generation
+                && link
+                    .source_files
+                    .windows(2)
+                    .all(|pair| pair[0].0 < pair[1].0)
+                && link
+                    .source_files
+                    .iter()
+                    .all(|(section, _)| policy.config.sections.contains(section)),
+            "invalid recovery generation link",
+        )
+    }
+
+    fn complete_recovery(&self, link: &RecoveryLink, policy: &WitnessPolicy) -> Result<()> {
+        require(
+            self.images.len() == link.source_files.len(),
+            "recovery image set mismatch",
+        )?;
+        for (section, hash) in &link.source_files {
+            let (blob_id, image) = self
+                .images
+                .iter()
+                .find(|(id, _)| self.blobs[*id].section == *section)
+                .ok_or(Error("copied section missing after recovery"))?;
+            require(
+                crate::witness_recovery::v1_raw_hash(&image.bytes) == *hash
+                    && (image.bytes.is_empty()
+                        || self.barriers.values().any(|barrier| {
+                            barrier.blob_id == *blob_id
+                                && barrier.kind == 2
+                                && barrier.bytes == image.bytes
+                        })),
+                "recovery lacks matching new full barrier",
+            )?;
+            for frame in policy.decode_section(*section, &image.bytes)? {
+                require(
+                    self.witnesses
+                        .values()
+                        .any(|witness| witness.blob_id == *blob_id && witness.frame == frame),
+                    "recovery lacks new artifact witness",
+                )?;
+            }
+        }
+        for witness in self
+            .witnesses
+            .values()
+            .filter(|witness| !self.images.contains_key(&witness.blob_id))
+        {
+            require(
+                self.witnesses.values().any(|new| {
+                    self.images.contains_key(&new.blob_id)
+                        && new.frame.section == witness.frame.section
+                        && new.frame.logical_offset == witness.frame.logical_offset
+                        && new.frame.frame_bytes == witness.frame.frame_bytes
+                        && new.frame.wire == witness.frame.wire
+                }),
+                "recovery lost protected journal history",
+            )?;
         }
         Ok(())
     }
@@ -311,46 +600,6 @@ impl Records {
     pub(crate) fn payload(&self, wire: &NativeWire) -> Option<&EligiblePayload> {
         self.eligible.values().find(|payload| payload.wire == *wire)
     }
-}
-
-fn verify_coverage(witness: &ArtifactWitness, known: &BTreeMap<Id, Barrier>) -> Result<()> {
-    use crate::witness::{DATA_BYTES, PAGE_BYTES};
-    let barriers: Vec<_> = witness
-        .barrier_ids
-        .iter()
-        .map(|id| {
-            known
-                .get(id)
-                .filter(|b| b.blob_id == witness.blob_id)
-                .ok_or(Error("missing or foreign witness barrier"))
-        })
-        .collect::<Result<_>>()?;
-    for page in &witness.frame.pages {
-        let physical = page.physical_offset as usize;
-        require(
-            barriers.iter().any(|barrier| {
-                barrier
-                    .offset
-                    .checked_add(barrier.bytes.len() as u64)
-                    .is_some_and(|end| end >= (physical + PAGE_BYTES) as u64)
-            }),
-            "witness lacks durable physical page extent",
-        )?;
-        let footer = DATA_BYTES + usize::from(page.selected_slot) * 6;
-        for offset in (0..usize::from(page.selected_length)).chain(footer..footer + 6) {
-            let absolute = (physical + offset) as u64;
-            require(
-                barriers.iter().any(|b| {
-                    absolute
-                        .checked_sub(b.offset)
-                        .and_then(|local| b.bytes.get(local as usize))
-                        .is_some_and(|byte| *byte == page.bytes[offset])
-                }),
-                "selected CRC byte lacks matching durable coverage",
-            )?;
-        }
-    }
-    Ok(())
 }
 
 pub struct WitnessLedger {
@@ -450,6 +699,19 @@ impl WitnessLedger {
         Ok(ledger)
     }
 
+    pub(crate) fn begin_recovery(
+        &mut self,
+        target: WitnessPolicy,
+        link: RecoveryLink,
+    ) -> Result<()> {
+        require(
+            self.anchored && self.index.recovering.is_none(),
+            "recovery predecessor is not settled and anchored",
+        )?;
+        self.policy = target;
+        self.append(vec![LedgerEntry::GenerationStarted(link)], None)
+    }
+
     /// Authorize an explicit recovery submission on a completed, anchored
     /// target generation. The supplied exact wire bytes are bound to the
     /// committed destination authorizations returned here.
@@ -514,7 +776,7 @@ impl WitnessLedger {
             "witness ledger already has uncommitted tail",
         )?;
         let mut index = self.index.clone();
-        index.apply(&self.policy, &entries)?;
+        index.apply(&self.policy, self.head.hash, &entries)?;
         let record = LedgerRecord {
             schema: 1,
             sequence: self
@@ -702,7 +964,7 @@ fn read_records(
                 && scan.end.sequence.checked_add(1) == Some(record.sequence),
             "witness record chain/identity mismatch",
         )?;
-        scan.index.apply(policy, &record.entries)?;
+        scan.index.apply(policy, scan.end.hash, &record.entries)?;
         let was_committed = scan.end.offset < head.offset;
         scan.end = Head {
             offset: scan.end.offset + frame,
@@ -720,6 +982,10 @@ fn read_records(
             break;
         }
     }
+    require(
+        scan.index.policy.as_ref() == Some(policy.seal()),
+        "ledger does not reach configured generation",
+    )?;
     Ok(scan)
 }
 
@@ -751,45 +1017,44 @@ mod tests {
     use crate::witness::{DecodedArtifact, PageEvidence};
 
     #[test]
-    fn reopen_evidence_rejects_missing_crc_prefix_bytes_or_extent() {
+    fn current_image_provenance_requires_the_crc_prefix_and_extent() {
         let blob = [1; 32];
         let page: Vec<_> = (0..=255).collect();
         let whole_crc_not_extent = Barrier::new(blob, 1, 1, 0, page[..250].to_vec());
         let second_frame_and_extent = Barrier::new(blob, 2, 1, 86, page[86..].to_vec());
         let extent = Barrier::new(blob, 3, 1, 250, page[250..].to_vec());
-        let known: BTreeMap<_, _> = [&whole_crc_not_extent, &second_frame_and_extent, &extent]
-            .into_iter()
-            .map(|barrier| (barrier.id, barrier.clone()))
-            .collect();
-        let mut witness = ArtifactWitness {
-            id: [0; 32],
-            blob_id: blob,
-            artifact_hash: [0; 32],
-            barrier_ids: vec![second_frame_and_extent.id],
-            frame: DecodedArtifact {
-                section: 1,
-                logical_offset: 86,
-                frame_bytes: page[86..172].to_vec(),
-                artifact_bytes: page[87..172].to_vec(),
-                pages: vec![PageEvidence {
-                    physical_offset: 0,
-                    selected_slot: 0,
-                    selected_length: 172,
-                    bytes: page,
-                }],
-                wire: None,
-            },
+        let mut image = Image::new(page.clone());
+        let frame = DecodedArtifact {
+            section: 1,
+            logical_offset: 86,
+            frame_bytes: page[86..172].to_vec(),
+            artifact_bytes: page[87..172].to_vec(),
+            pages: vec![PageEvidence {
+                physical_offset: 0,
+                selected_slot: 0,
+                selected_length: 172,
+                bytes: page,
+            }],
+            wire: None,
         };
+        image.cover(86..256, second_frame_and_extent.id);
+        assert!(image.provenance(&frame).is_none());
+        let mut image = Image::new(image.bytes);
+        image.cover(0..250, whole_crc_not_extent.id);
+        assert!(image.provenance(&frame).is_none());
+        image.cover(250..256, extent.id);
+        let expected = BTreeSet::from([whole_crc_not_extent.id, extent.id]);
         assert_eq!(
-            verify_coverage(&witness, &known),
-            Err(Error("selected CRC byte lacks matching durable coverage"))
+            image
+                .provenance(&frame)
+                .unwrap()
+                .into_iter()
+                .collect::<BTreeSet<_>>(),
+            expected
         );
-        witness.barrier_ids = vec![whole_crc_not_extent.id];
-        assert_eq!(
-            verify_coverage(&witness, &known),
-            Err(Error("witness lacks durable physical page extent"))
-        );
-        witness.barrier_ids.push(extent.id);
-        assert_eq!(verify_coverage(&witness, &known), Ok(()));
+        image.write(0, &[19]).unwrap();
+        assert!(image.provenance(&frame).is_none());
+        image.write(0, &[0]).unwrap();
+        assert!(image.provenance(&frame).is_none());
     }
 }

@@ -142,12 +142,21 @@ pub fn recover_witness_generation(
     };
     let storage = target_path.join("native");
     let ledger = target_path.join("witness");
+    copy_regular(&copied_ledger, &ledger)?;
+    save(&side(&ledger, ".head"), &head_bytes)?;
+    io(io(File::open(&target_path))?.sync_all())?;
     let partition = old.partition.clone();
     let native_cfg = Config::default()
         .with_storage_directory(storage)
         .with_storage_blob_layouts(BlobLayout::V1..=BlobLayout::V1);
     Runner::new(native_cfg).start(|native| async move {
-        let ledger = WitnessLedger::create(&ledger, target.clone())?;
+        let mut ledger = WitnessLedger::open_anchored(
+            &ledger,
+            source,
+            crate::LedgerTail::RejectComplete,
+            expected,
+        )?;
+        ledger.begin_recovery(target.clone(), link.clone())?;
         let mut runtime = WitnessRuntime::new(target, ledger);
         for (ordinal, (section, bytes)) in images.into_iter().enumerate() {
             let cfg = &runtime.policy.seal().config;
@@ -285,6 +294,15 @@ pub(crate) fn validate_existing_layout(root: &Path, policy: &WitnessPolicy) -> R
             Ok(())
         }
     }
+}
+
+pub(crate) fn v1_raw_hash(data: &[u8]) -> crate::Id {
+    let mut raw = vec![0; HEADER];
+    raw[..8].copy_from_slice(b"CWIK\0\x01\0\0");
+    let crc = Crc32::checksum(&raw[..8]);
+    raw[8..12].copy_from_slice(&crc.to_be_bytes());
+    raw.extend_from_slice(data);
+    hash_parts(b"I1b/source-raw/v1", &[&raw])
 }
 
 pub fn native_data(raw: &[u8]) -> Result<&[u8]> {

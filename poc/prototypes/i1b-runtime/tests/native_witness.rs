@@ -491,6 +491,27 @@ fn fresh_generation_resyncs_exact_history_and_preserves_source() {
     assert_eq!(resumed.submit_recovered(&f.vote, &[2]).unwrap(), [original]);
     assert_eq!(resumed.head(), submitted_head);
     assert!(
+        fs::read(target_path.join("witness"))
+            .unwrap()
+            .starts_with(&ledger_before)
+    );
+    fs::remove_dir_all(target_path.join("source-snapshot")).unwrap();
+    let mut reopened = WitnessLedger::open_anchored(
+        &target_path.join("witness"),
+        f.target.clone(),
+        LedgerTail::RejectComplete,
+        report.new_head,
+    )
+    .unwrap();
+    let before_duplicate = reopened.head();
+    let same = reopened.submit_recovered(&f.vote, &[2]).unwrap();
+    assert_eq!(same, resumed.submit_recovered(&f.vote, &[2]).unwrap());
+    assert_eq!(reopened.head(), before_duplicate);
+    // One genuine new route appends exactly one authorization. The old proof
+    // chain and duplicate route require no external audit snapshot.
+    assert_ne!(reopened.submit_recovered(&f.vote, &[3]).unwrap(), same);
+    assert_eq!(reopened.head().sequence, before_duplicate.sequence + 1);
+    assert!(
         recover_witness_generation(
             RecoveryPaths {
                 source_storage: &source_path,
@@ -935,4 +956,110 @@ fn native_journal_flush_can_end_inside_an_unsealed_frame() {
         Ok(())
     })
     .unwrap();
+}
+
+#[test]
+fn lost_sync_response_is_typed_and_durably_fences_the_old_generation() {
+    for detached in [false, true] {
+        let f = fixture();
+        let dir = TestDir::new();
+        let target = TestDir::new();
+        let p = profile();
+        let root = dir.config().storage_directory().clone();
+        let path = root.join("witness");
+        let image = pages(&frame(&f.records[3]));
+        let anchor = ControlledDriver::run_async(dir.config(), p.clone(), async |driver| {
+            driver.configure_witness(f.policy.clone(), &path)?;
+            driver.inject_lost_sync_response(3)?;
+            calibrate(driver, &p, START + 500);
+            driver
+                .grant_async(grant(3), Input::None, |driver| {
+                    driver.spawn_session(CID, STOP, move |context| async move {
+                        let (blob, _) = context.open(PARTITION, &SECTION).await.unwrap();
+                        blob.write_at(0, image, WriteOptions::default())
+                            .await
+                            .unwrap();
+                        let result = if detached {
+                            blob.start_sync().await.await
+                        } else {
+                            blob.sync().await
+                        };
+                        assert!(matches!(result, Err(commonware_runtime::Error::Closed)));
+                        blob.sync().await.unwrap();
+                        drop(blob);
+                        let (blob, _) = context.open(PARTITION, &SECTION).await.unwrap();
+                        blob.sync().await.unwrap();
+                    })
+                })
+                .await?;
+            let events = driver.events();
+            let lost = events
+                .iter()
+                .position(|event| *event == Event::IoSyncResponseLost { io_id: 3 })
+                .unwrap();
+            let committed = events
+                .iter()
+                .position(|event| matches!(event, Event::WitnessCommitted { io_id: 3, .. }))
+                .unwrap();
+            let released = events
+                .iter()
+                .position(|event| {
+                    matches!(
+                        event,
+                        Event::IoReleased {
+                            io_id: 3,
+                            delivered: true
+                        }
+                    )
+                })
+                .unwrap();
+            assert!(lost < committed && committed < released);
+            assert!(
+                !driver
+                    .witness_records()
+                    .unwrap()
+                    .iter()
+                    .flat_map(|record| &record.entries)
+                    .any(|entry| matches!(
+                        entry,
+                        LedgerEntry::Barrier(_) | LedgerEntry::Witness(_)
+                    ))
+            );
+            Ok(driver.witness_head().unwrap())
+        })
+        .unwrap();
+        let reopened = WitnessLedger::open_anchored(
+            &path,
+            f.policy.clone(),
+            LedgerTail::RejectComplete,
+            anchor,
+        )
+        .unwrap();
+        assert!(reopened.records().iter().flat_map(|record| &record.entries).any(|entry|
+            matches!(entry, LedgerEntry::Observation(observation) if matches!(
+                &observation.change,
+                poc_native_runtime::ObservedChange::Uncertain { section: Some(1), reason } if reason == "sync"
+            ))
+        ));
+        let fresh = target.config().storage_directory().join("fresh");
+        let report = recover_witness_generation(
+            RecoveryPaths {
+                source_storage: &root,
+                source_ledger: &path,
+                fresh_target: &fresh,
+            },
+            f.policy,
+            f.target.clone(),
+            anchor,
+        )
+        .unwrap();
+        let mut recovered = WitnessLedger::open_anchored(
+            &fresh.join("witness"),
+            f.target,
+            LedgerTail::RejectComplete,
+            report.new_head,
+        )
+        .unwrap();
+        assert_eq!(recovered.submit_recovered(&f.vote, &[2]).unwrap().len(), 1);
+    }
 }

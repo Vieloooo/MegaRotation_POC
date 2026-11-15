@@ -2,7 +2,8 @@ use crate::{
     ClockSample, Error, Id, Profile, Result, RngCheckpoint, RoleRng, SimContext, Timer,
     clock::NodeClock,
     storage::{
-        CompletedIo, DiskQueue, IoIdentity, IoJob, IoOperation, IoResult, IoTarget, StorageAccess,
+        CompletedIo, DiskQueue, IoDisposition, IoIdentity, IoJob, IoOperation, IoResult, IoTarget,
+        StorageAccess,
     },
 };
 use crate::{
@@ -128,6 +129,9 @@ pub enum Event {
         identity: IoIdentity,
         target: IoTarget,
         operation: IoOperation,
+    },
+    IoSyncResponseLost {
+        io_id: u64,
     },
     IoReady {
         io_id: u64,
@@ -267,6 +271,7 @@ pub struct ControlledDriver {
     witness: Option<WitnessRuntime>,
     evidence: Option<EvidenceIo>,
     witness_fault: Option<(u64, WitnessFault)>,
+    lost_sync_response: Option<u64>,
     witness_hold: Option<(u64, WitnessHold)>,
     staged_submissions: BTreeMap<Id, (Submission, NativeWire)>,
     io_wall_pause: std::time::Duration,
@@ -355,6 +360,7 @@ impl ControlledDriver {
             witness: None,
             evidence: None,
             witness_fault: None,
+            lost_sync_response: None,
             witness_hold: None,
             staged_submissions: BTreeMap::new(),
             io_wall_pause: std::time::Duration::ZERO,
@@ -447,6 +453,14 @@ impl ControlledDriver {
 
     pub fn witness_head(&self) -> Option<WitnessHead> {
         self.witness.as_ref().map(|witness| witness.ledger.head())
+    }
+
+    /// Diagnostic: replace a successful selected full sync response with Closed.
+    /// Physical work still completes. Selected evidence is marked uncertain.
+    pub fn inject_lost_sync_response(&mut self, io_id: u64) -> Result<()> {
+        self.configure_io(io_id > 0 && self.lost_sync_response.is_none())?;
+        self.lost_sync_response = Some(io_id);
+        Ok(())
     }
 
     pub fn inject_witness_fault(&mut self, io_id: u64, fault: WitnessFault) -> Result<()> {
@@ -763,11 +777,33 @@ impl ControlledDriver {
                 if let (Some(io), Some(native)) = (&mut witness, opened) {
                     io.native = Some(native);
                 }
+                let lost_sync_response = self.lost_sync_response == Some(identity.io_id);
+                let result = if lost_sync_response {
+                    self.lost_sync_response = None;
+                    if result == IoResult::Ok
+                        && witness
+                            .as_ref()
+                            .is_some_and(|io| matches!(io.operation, IoOperation::Sync { .. }))
+                    {
+                        self.shared.event(Event::IoSyncResponseLost {
+                            io_id: identity.io_id,
+                        });
+                        IoResult::Error { kind: "closed" }
+                    } else {
+                        self.shared.record_failure(
+                            "lost-sync diagnostic did not target a successful selected sync",
+                        );
+                        result
+                    }
+                } else {
+                    result
+                };
                 self.disk.completed = Some(CompletedIo {
                     identity: identity.clone(),
                     result,
                     release,
                     witness,
+                    lost_sync_response,
                 });
                 let completed = self.disk.completed.as_ref().expect("stored completion");
                 self.shared.event(Event::IoReady {
@@ -950,6 +986,7 @@ impl ControlledDriver {
             identity: id,
             release,
             witness,
+            lost_sync_response,
             ..
         } = completed;
         let permit = self.enter_permit(id.task, id.io_id, Some(id.cid), mode);
@@ -957,7 +994,12 @@ impl ControlledDriver {
         // any consumer. Dispose an abandoned result under this same permit.
         let result = catch_unwind(AssertUnwindSafe(|| {
             drop(witness);
-            release(mode == PermitMode::IoRelease)
+            let disposition = match (mode, lost_sync_response) {
+                (PermitMode::IoRelease, true) => IoDisposition::LostSyncResponse,
+                (PermitMode::IoRelease, false) => IoDisposition::Deliver,
+                _ => IoDisposition::Discard,
+            };
+            release(disposition)
         }));
         match result {
             Ok(delivered) if mode == PermitMode::IoRelease => {

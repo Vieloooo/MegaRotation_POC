@@ -169,7 +169,7 @@ impl WitnessPolicy {
         self.decode_frames(section, image, false)
     }
 
-    fn decode_frames(
+    pub(crate) fn decode_frames(
         &self,
         section: u64,
         image: &[u8],
@@ -263,73 +263,6 @@ impl WitnessPolicy {
             offset = end;
         }
         Ok(frames)
-    }
-
-    pub(crate) fn verify_evidence(&self, frame: &DecodedArtifact) -> Result<()> {
-        let start =
-            usize::try_from(frame.logical_offset).map_err(|_| Error("frame offset overflow"))?;
-        let end = start
-            .checked_add(frame.frame_bytes.len())
-            .ok_or(Error("frame offset overflow"))?;
-        require(
-            !frame.frame_bytes.is_empty() && end <= MAX_BLOB_BYTES,
-            "invalid frame bounds",
-        )?;
-        require(
-            frame.pages.len() == (end - 1) / DATA_BYTES - start / DATA_BYTES + 1,
-            "invalid frame page count",
-        )?;
-        let mut bytes = Vec::new();
-        for (index, page) in frame.pages.iter().enumerate() {
-            let page_index = start / DATA_BYTES + index;
-            let (slot, length) = page_slot(&page.bytes)?;
-            require(
-                page.physical_offset == (page_index * PAGE_BYTES) as u64
-                    && slot == page.selected_slot
-                    && length == usize::from(page.selected_length),
-                "invalid witness page mapping",
-            )?;
-            let page_start = page_index * DATA_BYTES;
-            let slice_start = start.max(page_start) - page_start;
-            let slice_end = end.min(page_start + DATA_BYTES) - page_start;
-            require(
-                slice_end <= length && slice_start < slice_end,
-                "witness frame beyond CRC prefix",
-            )?;
-            bytes.extend_from_slice(&page.bytes[slice_start..slice_end]);
-        }
-        require(
-            bytes == frame.frame_bytes,
-            "witness frame does not match pages",
-        )?;
-        let mut reader = Copying(bytes.as_slice());
-        let length =
-            UInt::<u32>::read(&mut reader).map_err(|_| Error("invalid witness frame varint"))?;
-        use bytes::Buf as _;
-        let prefix = bytes.len() - reader.remaining();
-        require(
-            length.encode().as_ref() == &bytes[..prefix]
-                && length.0 as usize == frame.artifact_bytes.len()
-                && (1..=MAX_ARTIFACT_BYTES).contains(&frame.artifact_bytes.len())
-                && bytes[prefix..] == frame.artifact_bytes,
-            "native witness frame mismatch",
-        )?;
-        let value = NativeArtifact::decode_cfg(
-            Copying(&frame.artifact_bytes),
-            &self.scheme.certificate_codec_config(),
-        )
-        .map_err(|_| Error("invalid native witness artifact"))?;
-        require(
-            value.encode().as_ref() == frame.artifact_bytes
-                && value.epoch().get() == self.seal.config.epoch
-                && value.view().get() == frame.section,
-            "invalid native witness artifact context",
-        )?;
-        let mut rng = ChaCha20Rng::from_seed(self.seal.namespace_hash);
-        require(
-            self.verify(&mut rng, value)? == frame.wire,
-            "native witness wire mismatch",
-        )
     }
 
     fn verify(
@@ -689,26 +622,81 @@ mod tests {
 use crate::{
     IoIdentity, IoOperation, IoResult,
     storage::{NativeBlob, WitnessIo},
-    witness_ledger::{BlobSeal, LedgerEntry, WitnessFault, WitnessLedger},
+    witness_ledger::{
+        BlobSeal, IoObservation, LedgerEntry, ObservedChange, WitnessFault, WitnessLedger,
+    },
 };
 use commonware_runtime::{Blob as _, ReadOptions};
 use std::sync::Arc;
 
+pub(crate) fn verify_protected<'a>(
+    witnesses: impl Iterator<Item = &'a ArtifactWitness>,
+    section: u64,
+    image: &[u8],
+) -> Result<()> {
+    use bytes::Buf as _;
+    let protected: Vec<_> = witnesses.filter(|w| w.frame.section == section).collect();
+    let Some(end) = protected
+        .iter()
+        .map(|w| w.frame.logical_offset as usize + w.frame.frame_bytes.len())
+        .max()
+    else {
+        return Ok(());
+    };
+    let mut logical = Vec::new();
+    for index in 0..end.div_ceil(DATA_BYTES) {
+        let physical = index * PAGE_BYTES;
+        let page = image
+            .get(physical..physical + PAGE_BYTES)
+            .ok_or(Error("selected mutation removes a protected page"))?;
+        let (_, len) = page_slot(page)?;
+        require(
+            len == DATA_BYTES || physical + PAGE_BYTES == image.len(),
+            "selected mutation creates a nonfinal partial page",
+        )?;
+        logical.extend_from_slice(&page[..len]);
+    }
+    let mut remaining = logical
+        .get(..end)
+        .ok_or(Error("protected frame is outside valid CRC prefix"))?;
+    let mut offset = 0;
+    let mut offsets = BTreeMap::new();
+    while !remaining.is_empty() {
+        let mut reader = Copying(remaining);
+        let len =
+            UInt::<u32>::read(&mut reader).map_err(|_| Error("protected native frame varint"))?;
+        let prefix = remaining.len() - reader.remaining();
+        require(
+            (1..=MAX_ARTIFACT_BYTES).contains(&(len.0 as usize))
+                && len.encode().as_ref() == &remaining[..prefix],
+            "protected native frame prefix changed",
+        )?;
+        let frame_len = prefix + len.0 as usize;
+        let frame = remaining
+            .get(..frame_len)
+            .ok_or(Error("protected native frame boundary changed"))?;
+        offsets.insert(offset, frame);
+        offset += frame_len;
+        remaining = &remaining[frame_len..];
+    }
+    require(
+        protected.iter().all(|w| {
+            offsets
+                .get(&(w.frame.logical_offset as usize))
+                .is_some_and(|bytes| *bytes == w.frame.frame_bytes)
+        }),
+        "selected mutation would alter protected history",
+    )
+}
+
 pub(crate) struct WitnessRuntime {
     pub policy: WitnessPolicy,
     pub ledger: WitnessLedger,
-    images: Images,
-    uncertain_sections: std::collections::BTreeSet<u64>,
 }
 
 impl WitnessRuntime {
     pub fn new(policy: WitnessPolicy, ledger: WitnessLedger) -> Self {
-        Self {
-            policy,
-            ledger,
-            images: Images::new(),
-            uncertain_sections: std::collections::BTreeSet::new(),
-        }
+        Self { policy, ledger }
     }
 
     pub fn preflight(&self, identity: &IoIdentity, io: &WitnessIo) -> Result<()> {
@@ -755,16 +743,22 @@ impl WitnessRuntime {
             section,
         );
         let mut forecast = self
+            .ledger
+            .index
             .images
             .get(&blob.id)
             .ok_or(Error("selected blob lacks observed extent"))?
             .clone();
         require(
-            !forecast.uncertain && !self.uncertain_sections.contains(&section),
+            !forecast.uncertain && !self.ledger.index.uncertain_sections.contains(&section),
             "selected blob mutation requires fresh recovery",
         )?;
         Self::mutate(&mut forecast, io)?;
-        self.verify_protected(section, &forecast.bytes)
+        verify_protected(
+            self.ledger.index.witnesses.values(),
+            section,
+            &forecast.bytes,
+        )
     }
 
     async fn read_image(native: Option<Arc<NativeBlob>>, length: usize) -> Result<Vec<u8>> {
@@ -801,44 +795,6 @@ impl WitnessRuntime {
         }
     }
 
-    fn verify_protected(&self, section: u64, image: &[u8]) -> Result<()> {
-        for old in self
-            .ledger
-            .index
-            .witnesses
-            .values()
-            .filter(|w| w.frame.section == section)
-        {
-            let start = old.frame.logical_offset as usize;
-            let mut logical = start;
-            for page in &old.frame.pages {
-                let physical = page.physical_offset as usize;
-                let actual = image
-                    .get(physical..physical + PAGE_BYTES)
-                    .ok_or(Error("selected mutation removes a protected page"))?;
-                let (_, len) = page_slot(actual)?;
-                let page_index = physical / PAGE_BYTES;
-                if page_index + 1 < image.len().div_ceil(PAGE_BYTES) {
-                    require(
-                        len == DATA_BYTES,
-                        "selected mutation creates a nonfinal partial page",
-                    )?;
-                }
-                let start_in_page = logical % DATA_BYTES;
-                let remaining = old.frame.frame_bytes.len() - (logical - start);
-                let count = remaining.min(DATA_BYTES - start_in_page);
-                require(
-                    start_in_page + count <= len
-                        && actual[start_in_page..start_in_page + count]
-                            == old.frame.frame_bytes[logical - start..logical - start + count],
-                    "selected mutation would alter protected history",
-                )?;
-                logical += count;
-            }
-        }
-        Ok(())
-    }
-
     pub async fn observe(
         mut self,
         identity: IoIdentity,
@@ -860,50 +816,49 @@ impl WitnessRuntime {
         io: &mut WitnessIo,
         outcome: &IoResult,
     ) -> Result<Vec<LedgerEntry>> {
-        if matches!(io.operation, IoOperation::Remove)
-            && io.target.name.is_none()
-            && *outcome == IoResult::Ok
-        {
-            self.images.clear();
-            return Ok(Vec::new());
-        }
-        let section = match self
+        let section = self
             .policy
-            .section(&io.target.partition, io.target.name.as_deref())
-        {
-            Some(section) => section,
-            None => return Ok(Vec::new()),
+            .section(&io.target.partition, io.target.name.as_deref());
+        let observed = |change| {
+            LedgerEntry::Observation(IoObservation {
+                io_id: identity.io_id,
+                change,
+            })
         };
-        if matches!(io.operation, IoOperation::Remove) && *outcome == IoResult::Ok {
-            let stale: Vec<_> = self
-                .ledger
-                .index
-                .blobs
-                .values()
-                .filter(|blob| blob.section == section)
-                .map(|blob| blob.id)
-                .collect();
-            for id in stale {
-                self.images.remove(&id);
-            }
-            return Ok(Vec::new());
+        if matches!(io.operation, IoOperation::Remove) {
+            return Ok(vec![observed(if *outcome == IoResult::Ok {
+                ObservedChange::Remove { section }
+            } else {
+                ObservedChange::Uncertain {
+                    section,
+                    reason: "remove".to_owned(),
+                }
+            })]);
         }
+        let Some(section) = section else {
+            return Ok(Vec::new());
+        };
         let Some(open_id) = io.target.open_id else {
             return Ok(Vec::new());
         };
-        let blob = BlobSeal::new(self.policy.seal(), open_id, section);
+        let mut blob = BlobSeal::new(self.policy.seal(), open_id, section);
         if let IoResult::Open { len, version } = outcome {
             require(
                 *version == 0,
                 "unexpected selected blob application version",
             )?;
-            let bytes = Self::read_image(
+            blob.initial_bytes = Self::read_image(
                 io.native.take(),
                 usize::try_from(*len).map_err(|_| Error("selected open size overflow"))?,
             )
             .await?;
-            self.verify_protected(section, &bytes)?;
-            self.images.insert(blob.id, Image::new(bytes));
+            if !self.ledger.index.in_recovery() {
+                verify_protected(
+                    self.ledger.index.witnesses.values(),
+                    section,
+                    &blob.initial_bytes,
+                )?;
+            }
             return Ok(vec![LedgerEntry::Blob(blob)]);
         }
         if !matches!(
@@ -912,38 +867,39 @@ impl WitnessRuntime {
         ) {
             return Ok(Vec::new());
         }
-        let mut image = self
-            .images
-            .remove(&blob.id)
-            .ok_or(Error("missing selected observed blob"))?;
         if matches!(outcome, IoResult::Error { .. }) {
-            if matches!(
-                io.operation,
-                IoOperation::Write { .. } | IoOperation::Resize { .. }
-            ) {
-                image.uncertain = true;
-                self.uncertain_sections.insert(section);
-            }
-            self.images.insert(blob.id, image);
-            return Ok(Vec::new());
+            let reason = match io.operation {
+                IoOperation::Write { .. } => "write",
+                IoOperation::Resize { .. } => "resize",
+                IoOperation::Sync { .. } => "sync",
+                _ => unreachable!("selected mutation"),
+            };
+            return Ok(vec![observed(ObservedChange::Uncertain {
+                section: Some(section),
+                reason: reason.to_owned(),
+            })]);
         }
         require(
             *outcome == IoResult::Ok,
             "selected completion kind mismatch",
         )?;
+        let mut image = self
+            .ledger
+            .index
+            .images
+            .get(&blob.id)
+            .ok_or(Error("missing selected observed blob"))?
+            .clone();
         Self::mutate(&mut image, io)?;
-        self.verify_protected(section, &image.bytes)?;
-        if image.uncertain || self.uncertain_sections.contains(&section) {
-            self.images.insert(blob.id, image);
-            return Ok(Vec::new());
-        }
+        verify_protected(self.ledger.index.witnesses.values(), section, &image.bytes)?;
+        let uncertain = image.uncertain || self.ledger.index.uncertain_sections.contains(&section);
         let barrier = match io.operation {
             IoOperation::Write {
                 offset,
                 len,
                 sync: true,
                 ..
-            } if len > 0 => {
+            } if len > 0 && !uncertain => {
                 let start = usize::try_from(offset).map_err(|_| Error("range offset overflow"))?;
                 Barrier::new(
                     blob.id,
@@ -953,13 +909,24 @@ impl WitnessRuntime {
                     image.bytes[start..start + len].to_vec(),
                 )
             }
-            IoOperation::Sync { .. } if !image.bytes.is_empty() => {
+            IoOperation::Write { offset, len, .. } if len > 0 => {
+                let start = usize::try_from(offset).map_err(|_| Error("write offset overflow"))?;
+                return Ok(vec![observed(ObservedChange::Write {
+                    blob_id: blob.id,
+                    offset,
+                    bytes: image.bytes[start..start + len].to_vec(),
+                })]);
+            }
+            IoOperation::Resize { len } => {
+                return Ok(vec![observed(ObservedChange::Resize {
+                    blob_id: blob.id,
+                    len,
+                })]);
+            }
+            IoOperation::Sync { .. } if !image.bytes.is_empty() && !uncertain => {
                 Barrier::new(blob.id, identity.io_id, 2, 0, image.bytes.clone())
             }
-            _ => {
-                self.images.insert(blob.id, image);
-                return Ok(Vec::new());
-            }
+            _ => return Ok(Vec::new()),
         };
         let actual = Self::read_image(io.native.take(), image.bytes.len()).await?;
         require(
@@ -995,7 +962,6 @@ impl WitnessRuntime {
                 }
             }
         }
-        self.images.insert(blob.id, image);
         Ok(entries)
     }
 }

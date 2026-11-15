@@ -76,7 +76,12 @@ pub enum IoResult {
     Error { kind: &'static str },
 }
 
-pub(crate) type Release = Box<dyn FnOnce(bool) -> bool + Send>;
+pub(crate) enum IoDisposition {
+    Deliver,
+    Discard,
+    LostSyncResponse,
+}
+type Release = Box<dyn FnOnce(IoDisposition) -> bool + Send>;
 type Physical = Pin<Box<dyn Future<Output = (IoResult, Release, Option<Arc<NativeBlob>>)> + Send>>;
 
 pub(crate) struct WitnessIo {
@@ -96,6 +101,7 @@ pub(crate) struct CompletedIo {
     pub identity: IoIdentity,
     pub result: IoResult,
     pub release: Release,
+    pub lost_sync_response: bool,
     pub witness: Option<WitnessIo>,
 }
 
@@ -128,7 +134,14 @@ impl IoJob {
             } else {
                 None
             };
-            let release: Release = Box::new(move |deliver| deliver && sender.send(result).is_ok());
+            let release: Release = Box::new(move |disposition| match disposition {
+                IoDisposition::Deliver => sender.send(result).is_ok(),
+                IoDisposition::Discard => false,
+                IoDisposition::LostSyncResponse => {
+                    drop(result);
+                    sender.send(Err(Error::Closed)).is_ok()
+                }
+            });
             (summary, release, native)
         });
         Self {
