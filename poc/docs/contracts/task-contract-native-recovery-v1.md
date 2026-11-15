@@ -93,7 +93,7 @@ New domains:
 - I1b/recovery-cut/v1: canonical RecoveryCut bytes, excluding cut_hash.
 - I1b/recovery-state/v1: canonical native recovery-sensitive state projection.
 - I1b/recovery-body-manifest/v1: canonical ArchiveManifest bytes.
-- I1b/recovery-cache/v1: canonical signer-cache entry bytes.
+- I1b/recovery-cache/v1: canonical signer-cache entry bytes with the cache_entry_hash field omitted (not an empty or zero placeholder). This explicit self-hash exclusion was frozen by lead on 2026-11-15 during source-first acceptance preparation.
 - I1b/recovery-ready/v1: cut_hash, actor tag UTF-8, restored state hash.
 
 The auxiliary ledger uses u64 length, u64 complement, payload, 32-byte record hash; Record fields are schema, sequence, previous_record_hash, grant_intent_ref, kind, data. Head is 88 bytes: magic I1RCHEAD, offset-u64BE, sequence-u64BE, last hash32, bound checksum32. Create/sync files and directory; append+sync; create/sync pending head, rename, sync directory. The same root-owned pending/Ready custody and protected-history rules as accepted Witness apply. No possibly published/acknowledged history is truncated. One fully verified descendant above the head can be promoted only under hub-issued-grant authorization; corrupt complete records or missing committed bytes fail closed.
