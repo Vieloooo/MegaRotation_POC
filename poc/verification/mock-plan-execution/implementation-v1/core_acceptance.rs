@@ -207,6 +207,12 @@ fn finalized_source_and_two_readers_have_separate_explicit_progress() {
     assert!(a.deliver_header(&zero, 1499999).is_err());
     assert_eq!(a.finalized_tip(), None);
     a.deliver_header(&zero, 2000000).unwrap();
+    let header_only_snapshot = serde_json::json!({
+        "a_tip": a.finalized_tip().map(|r| r.height),
+        "a_header0_ready": matches!(a.header(0), InputStatus::Ready(_)),
+        "a_control0_ready": matches!(a.require_control_coverage(0), InputStatus::Ready(())),
+        "b_tip": b.finalized_tip().map(|r| r.height)
+    });
     assert_eq!(a.header(0), InputStatus::Ready(raw.rows[0].header.clone()));
     assert!(matches!(
         a.require_control_coverage(0),
@@ -240,6 +246,16 @@ fn finalized_source_and_two_readers_have_separate_explicit_progress() {
     a.deliver_empty_control(&one, raw.rows[1].empty_control_commitment, 6100000)
         .unwrap();
     assert_eq!(a.require_control_coverage(2), InputStatus::Ready(()));
+    println!(
+        "COMPONENT_EVIDENCE={}",
+        serde_json::json!({
+            "case": "independent_readers", "seed": null,
+            "header_only": header_only_snapshot,
+            "after_gap_fill": {"a_tip": a.finalized_tip().map(|r| r.height),
+                "a_control2_ready": matches!(a.require_control_coverage(2), InputStatus::Ready(())),
+                "b_tip": b.finalized_tip().map(|r| r.height)}
+        })
+    );
     a.deliver_header(&two, 7000000).unwrap();
     a.deliver_empty_control(&two, raw.rows[2].empty_control_commitment, 7000000)
         .unwrap();
@@ -404,6 +420,21 @@ fn merge_gap_and_native_chain_match_independent_goldens() {
         other => panic!("{other:?}"),
     };
     assert_eq!(out.blocks.len(), 3);
+    println!(
+        "COMPONENT_EVIDENCE={}",
+        serde_json::json!({
+            "case": "merge_main_vector", "seed": null,
+            "blocks": out.blocks.iter().map(|block| serde_json::json!({
+                "metadata": block.virtual_block.metadata,
+                "pre_root": poc_types::hex(block.virtual_block.pre_state_root.as_bytes()),
+                "post_root": poc_types::hex(block.native_block.post_state_root.as_bytes()),
+                "native_parent": poc_types::hex(block.native_block.parent.as_bytes()),
+                "native_hash": poc_types::hex(block.native_hash.as_bytes()),
+                "physical_digest": block.physical_digest.map(|h| poc_types::hex(h.as_bytes())),
+                "kept": block.native_block.kept.iter().map(|raw| poc_types::hex(raw)).collect::<Vec<_>>()
+            })).collect::<Vec<_>>()
+        })
+    );
     let input = fixture::inputs();
     for (i, block) in out.blocks.iter().enumerate() {
         let h = (i + 1) as u64;
@@ -657,5 +688,218 @@ fn known_invalid_context_rejects_before_missing_body_wait() {
             &changed_config
         ),
         InputStatus::Reject(InputError::InvalidSource)
+    ));
+    let mut conflicting = initial.clone();
+    conflicting.anchor.block.block_id = Hash32::new([0x99; 32]);
+    let supplied = SelectedTip {
+        anchor: &initial.anchor,
+        execution_anchor: Some(&conflicting),
+        tip,
+    };
+    assert!(matches!(
+        merge_from_tip(supplied, &missing, &window, &metadata, &deposits, &config),
+        InputStatus::Reject(InputError::Conflict)
+    ));
+    let mut invalid_state = initial.clone();
+    invalid_state.state.metadata.height = 1;
+    let supplied = SelectedTip {
+        anchor: &initial.anchor,
+        execution_anchor: Some(&invalid_state),
+        tip,
+    };
+    assert!(matches!(
+        merge_from_tip(supplied, &missing, &window, &metadata, &deposits, &config),
+        InputStatus::Reject(_)
+    ));
+    let mut invalid_native = initial.clone();
+    invalid_native.native_hash = Hash32::new([0; 32]);
+    let supplied = SelectedTip {
+        anchor: &initial.anchor,
+        execution_anchor: Some(&invalid_native),
+        tip,
+    };
+    assert!(matches!(
+        merge_from_tip(supplied, &missing, &window, &metadata, &deposits, &config),
+        InputStatus::Reject(InputError::InvalidSource)
+    ));
+}
+
+struct FetchedBody {
+    hash: Hash32,
+    block: PhysicalBlock,
+}
+impl PhysicalSource for FetchedBody {
+    fn physical_block(&self, digest: Hash32) -> InputStatus<PhysicalBlock> {
+        if digest == self.hash {
+            InputStatus::Ready(self.block.clone())
+        } else {
+            InputStatus::Wait(InputMissing::Parent(digest))
+        }
+    }
+}
+
+#[test]
+fn fetched_tip_known_invalid_fields_reject_before_missing_ancestor() {
+    let initial = fixture::execution_anchor();
+    let absent_parent = Hash32::new([0x99; 32]);
+    for variant in 0..4 {
+        let mut config = fixture::config();
+        let mut physical = fixture::physical3();
+        physical.parent = absent_parent;
+        let mut window = Window {
+            h_min: 1,
+            h_max: 10,
+        };
+        match variant {
+            0 => {}
+            1 => physical.metadata.timestamp_us += 1,
+            2 => config.byte_limit = 18,
+            3 => {
+                window = Window {
+                    h_min: 4091,
+                    h_max: 4100,
+                };
+                physical.metadata = Metadata {
+                    height: 4097,
+                    timestamp_us: 4107000000,
+                    origin: 2051,
+                };
+            }
+            _ => unreachable!(),
+        }
+        let reader = ready_reader(&config);
+        let metadata = RegionalMetadata::new(&config, &reader).unwrap();
+        let deposits = ValidatedDepFixture::load(&config, fixture::dep_fixture()).unwrap();
+        let tip = physical.digest().unwrap();
+        let source = FetchedBody {
+            hash: tip,
+            block: physical,
+        };
+        let selected = SelectedTip {
+            anchor: &initial.anchor,
+            execution_anchor: Some(&initial),
+            tip,
+        };
+        let result = merge_from_tip(selected, &source, &window, &metadata, &deposits, &config);
+        if variant == 0 {
+            assert!(
+                matches!(result, InputStatus::Wait(InputMissing::Parent(hash)) if hash == absent_parent)
+            );
+        } else if variant == 3 {
+            assert!(matches!(
+                result,
+                InputStatus::Reject(InputError::Malformed(DomainError::LimitExceeded {
+                    limit: 4096,
+                    actual: 4097
+                }))
+            ));
+        } else {
+            assert!(
+                matches!(result, InputStatus::Reject(_)),
+                "variant {variant}"
+            );
+        }
+    }
+}
+
+#[test]
+fn merge_expansion_resource_boundary_4096_accepts_and_4097_rejects() {
+    let expected: Value = serde_json::from_str(include_str!("merge-boundary-golden.json")).unwrap();
+    let mut config = fixture::config();
+    let raw_dep = DepFixture {
+        first_height: 1,
+        rows: vec![vec![]; 4096],
+    };
+    let mut parent = Hash32::new([0; 32]);
+    let rows = (0..=2051u64)
+        .map(|height| {
+            let mut bytes = [0; 32];
+            for part in bytes.chunks_exact_mut(8) {
+                part.copy_from_slice(&height.to_be_bytes());
+            }
+            let hash = Hash32::new(bytes);
+            let row = L1FixtureRow {
+                header: L1Header {
+                    height,
+                    hash,
+                    parent_hash: parent,
+                    timestamp_s: 2 * height,
+                },
+                finalized_at_us: 2_000_000 * height + 1_500_000,
+                empty_control_commitment: empty_control_commitment(),
+            };
+            parent = hash;
+            row
+        })
+        .collect();
+    let raw_l1 = L1Fixture { rows };
+    config.dep_fixture_hash = raw_dep.digest().unwrap();
+    config.l1_fixture_hash = raw_l1.digest().unwrap();
+    let source = ValidatedFixture::load(&config, raw_l1.clone()).unwrap();
+    let mut finalizer = source.finalizer();
+    let mut reader = source.reader();
+    for row in &raw_l1.rows {
+        let token = finalizer
+            .finalize(&row.header, row.finalized_at_us)
+            .unwrap();
+        reader
+            .deliver_header(&token, row.finalized_at_us + 500000)
+            .unwrap();
+    }
+    let metadata = RegionalMetadata::new(&config, &reader).unwrap();
+    let deposits = ValidatedDepFixture::load(&config, raw_dep).unwrap();
+    let initial = fixture::execution_anchor();
+    let window = Window {
+        h_min: 4091,
+        h_max: 4100,
+    };
+    let physical = PhysicalBlock {
+        parent: initial.anchor.block.block_id,
+        metadata: fixture::metadata(&expected["accepted_metadata"]),
+        pre_state_root: fixture::hash(&expected["pre_state_root"]),
+        transactions: vec![],
+    };
+    assert_eq!(
+        physical.digest().unwrap(),
+        fixture::hash(&expected["physical_hash"])
+    );
+    let out = match merge(
+        &initial,
+        &[physical.clone()],
+        &window,
+        &metadata,
+        &deposits,
+        &config,
+    ) {
+        InputStatus::Ready(out) => out,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(out.blocks.len(), 4096);
+    let last = out.blocks.last().unwrap();
+    assert_eq!(last.native_hash, fixture::hash(&expected["native_hash"]));
+    assert_eq!(
+        last.native_block.parent,
+        fixture::hash(&expected["native_parent"])
+    );
+    assert_eq!(
+        last.native_block.post_state_root,
+        fixture::hash(&expected["post_state_root"])
+    );
+    println!(
+        "COMPONENT_EVIDENCE={}",
+        serde_json::json!({"case":"merge_resource_boundary","seed":null,"accepted_heights":out.blocks.len(),"last_native_hash":poc_types::hex(last.native_hash.as_bytes()),"rejected_span":4097})
+    );
+    let mut over = physical;
+    over.metadata = Metadata {
+        height: 4097,
+        timestamp_us: 4107000000,
+        origin: 2051,
+    };
+    assert!(matches!(
+        merge(&initial, &[over], &window, &metadata, &deposits, &config),
+        InputStatus::Reject(InputError::Malformed(DomainError::LimitExceeded {
+            limit: 4096,
+            actual: 4097
+        }))
     ));
 }

@@ -150,13 +150,7 @@ fn validate_chain(
     config: &PublicConfig,
 ) -> Result<Vec<Hash32>, InputError> {
     validate_context(&anchor.anchor, window, metadata, dep, config)?;
-    anchor.validate().map_err(InputError::Malformed)?;
-    if anchor.anchor.block.height == config.genesis.block.height
-        && (anchor.native_hash != config.genesis_native_hash
-            || anchor.state.root().map_err(InputError::Malformed)? != config.genesis_state_root)
-    {
-        return Err(InputError::InvalidSource);
-    }
+    validate_execution_anchor(anchor, &anchor.anchor, config)?;
     if chain.len() > MAX_PHYSICAL_BLOCKS {
         return Err(limit(MAX_PHYSICAL_BLOCKS, chain.len()));
     }
@@ -165,31 +159,45 @@ fn validate_chain(
     let mut digests = Vec::with_capacity(chain.len());
     for block in chain {
         let height = block.metadata.height;
-        if height <= previous_height || !(window.h_min..=window.h_max).contains(&height) {
+        if height <= previous_height {
             return Err(malformed("invalid physical height"));
         }
         if block.parent != expected_parent {
             return Err(InputError::Conflict);
         }
-        let span = height - anchor.anchor.block.height;
-        if span > MAX_EXPANDED_HEIGHTS as u64 {
-            return Err(limit(
-                MAX_EXPANDED_HEIGHTS,
-                usize::try_from(span).unwrap_or(usize::MAX),
-            ));
-        }
-        if block.metadata.timestamp_us
-            != l2_timestamp_us(config, height).map_err(InputError::Malformed)?
-        {
-            return Err(malformed("physical timestamp mismatch"));
-        }
-        validate_transactions(&block.transactions, config.byte_limit as usize)
-            .map_err(InputError::Malformed)?;
+        validate_physical_bounds(block, &anchor.anchor, window, config)?;
         expected_parent = block.digest().map_err(InputError::Malformed)?;
         previous_height = height;
         digests.push(expected_parent);
     }
     Ok(digests)
+}
+
+fn validate_physical_bounds(
+    block: &PhysicalBlock,
+    anchor: &Anchor,
+    window: &Window,
+    config: &PublicConfig,
+) -> Result<(), InputError> {
+    let height = block.metadata.height;
+    if !(window.h_min..=window.h_max).contains(&height) {
+        return Err(malformed("invalid physical height"));
+    }
+    // validate_context checked that the entire window is above the anchor.
+    let span = height - anchor.block.height;
+    if span > MAX_EXPANDED_HEIGHTS as u64 {
+        return Err(limit(
+            MAX_EXPANDED_HEIGHTS,
+            usize::try_from(span).unwrap_or(usize::MAX),
+        ));
+    }
+    if block.metadata.timestamp_us
+        != l2_timestamp_us(config, height).map_err(InputError::Malformed)?
+    {
+        return Err(malformed("physical timestamp mismatch"));
+    }
+    validate_transactions(&block.transactions, config.byte_limit as usize)
+        .map_err(InputError::Malformed)
 }
 
 fn validate_context(
@@ -218,6 +226,24 @@ fn validate_context(
     Ok(())
 }
 
+fn validate_execution_anchor(
+    material: &ExecutionAnchor,
+    selected_anchor: &Anchor,
+    config: &PublicConfig,
+) -> Result<(), InputError> {
+    if material.anchor != *selected_anchor {
+        return Err(InputError::Conflict);
+    }
+    material.validate().map_err(InputError::Malformed)?;
+    if selected_anchor.block.height == config.genesis.block.height
+        && (material.native_hash != config.genesis_native_hash
+            || material.state.root().map_err(InputError::Malformed)? != config.genesis_state_root)
+    {
+        return Err(InputError::InvalidSource);
+    }
+    Ok(())
+}
+
 pub trait PhysicalSource {
     fn physical_block(&self, digest: Hash32) -> InputStatus<PhysicalBlock>;
 }
@@ -240,6 +266,11 @@ pub fn merge_from_tip(
     if let Err(error) = validate_context(selected.anchor, window, metadata, dep, config) {
         return InputStatus::Reject(error);
     }
+    if let Some(material) = selected.execution_anchor
+        && let Err(error) = validate_execution_anchor(material, selected.anchor, config)
+    {
+        return InputStatus::Reject(error);
+    }
     let mut digest = selected.tip;
     let anchor_id = selected.anchor.block.block_id;
     let mut h_next = None;
@@ -259,10 +290,15 @@ pub fn merge_from_tip(
             Err(error) => return InputStatus::Reject(InputError::Malformed(error)),
         }
         let height = block.metadata.height;
-        if !(window.h_min..=window.h_max).contains(&height)
-            || h_next.is_some_and(|next| height >= next)
-        {
+        if h_next.is_some_and(|next| height >= next) {
             return reject("invalid physical ancestry");
+        }
+        if let Err(error) = validate_physical_bounds(&block, selected.anchor, window, config) {
+            return InputStatus::Reject(error);
+        }
+        // At the first physical height, there is no earlier in-window physical parent.
+        if height == window.h_min && block.parent != anchor_id {
+            return InputStatus::Reject(InputError::Conflict);
         }
         h_next = Some(height);
         digest = block.parent;
@@ -271,9 +307,6 @@ pub fn merge_from_tip(
     let Some(execution_anchor) = selected.execution_anchor else {
         return InputStatus::Wait(InputMissing::State(anchor_id));
     };
-    if execution_anchor.anchor != *selected.anchor {
-        return InputStatus::Reject(InputError::Conflict);
-    }
     chain.reverse();
     merge(execution_anchor, &chain, window, metadata, dep, config)
 }

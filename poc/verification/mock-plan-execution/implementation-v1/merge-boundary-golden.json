@@ -1,0 +1,35 @@
+{
+  "schema": "merge-resource-boundary-independent-v1",
+  "source": "Frozen v2 section5.3 expansion maximum4096; independently computed with empty credits/ordinary transactions",
+  "seed": null,
+  "window": [
+    4091,
+    4100
+  ],
+  "anchor_height": 0,
+  "accepted_tip_height": 4096,
+  "rejected_tip_height": 4097,
+  "expected_error": "LimitExceeded{limit:4096,actual:4097}",
+  "accepted_metadata": [
+    4096,
+    4106000000,
+    2050
+  ],
+  "accounts": [
+    [
+      0,
+      0,
+      100
+    ],
+    [
+      2,
+      0,
+      7
+    ]
+  ],
+  "pre_state_root": "bc030b03fdda32227cfd06610bb4ca801b5549ce66b3eaa2d8253840405f09d7",
+  "post_state_root": "d2ced826bc330807221afc5735a9b748330f9b154fec4488afb7667c7db8588a",
+  "native_parent": "3253468df5cafa0536dde8e82fd445444e699f0139bee06176674e4c63f87c4c",
+  "native_hash": "b574146396dc53a3e9099193398887106a874121ed46564d98322c90a9146db3",
+  "physical_hash": "04fce1f7330123b3edf5d380f430420268844d0c5775448969fb7f101973551d"
+}
