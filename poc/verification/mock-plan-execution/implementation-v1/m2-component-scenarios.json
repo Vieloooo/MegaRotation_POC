@@ -1,0 +1,277 @@
+{
+  "schema": "M2-independent-component-scenarios-v1",
+  "seed": null,
+  "l1_trace": [
+    {
+      "id": "L01",
+      "input": "Load valid fixture; create readers A/B; query h0, even with observer clock far beyond scheduled finality",
+      "expected": "Both WAIT(L1Header(0)); no implicit Finalize or delivery"
+    },
+    {
+      "id": "L02",
+      "input": "Deliver row0 to A without source Finalize material",
+      "expected": "REJECT; A prefix/control coverage unchanged"
+    },
+    {
+      "id": "L03",
+      "input": "Finalize row0 at1499999us, required1500000us",
+      "expected": "REJECT; no finalized material"
+    },
+    {
+      "id": "L04",
+      "input": "Finalize row0 at1500000us",
+      "expected": "Ready finalized material; neither reader changes"
+    },
+    {
+      "id": "L05",
+      "input": "Deliver finalized row0 to A at1499999us",
+      "expected": "REJECT; cannot deliver before finalization"
+    },
+    {
+      "id": "L06",
+      "input": "Deliver row0 header to A at2000000us, omit complete control material",
+      "expected": "A header0 READY/tip0; A control coverage0 WAIT; B header0 WAIT"
+    },
+    {
+      "id": "L07",
+      "input": "Deliver matching complete empty-control material0 to A",
+      "expected": "A coverage0 READY; header unchanged; B remains WAIT"
+    },
+    {
+      "id": "L08",
+      "input": "Finalize row1/2 at3500000/5500000us; deliver row2 to A at6000000us before row1",
+      "expected": "Out-of-order staged; A visible tip remains0; header2 WAIT"
+    },
+    {
+      "id": "L09",
+      "input": "Deliver row1 and controls to A at6100000us",
+      "expected": "A contiguous header prefix reaches2; coverage reaches2 iff row2 control material was also delivered"
+    },
+    {
+      "id": "L10",
+      "input": "Deliver row0 and controls to B at7000000us",
+      "expected": "B prefix0 only; A prefix2 unchanged; equal prefix values compare equal"
+    },
+    {
+      "id": "L11",
+      "input": "Redeliver identical header/control objects to A",
+      "expected": "Idempotent; no second visible event or prefix change"
+    },
+    {
+      "id": "L12",
+      "input": "Deliver conflicting row1 hash or source-mismatched finalized material",
+      "expected": "REJECT; preserve prior immutable visible prefix and staged state"
+    },
+    {
+      "id": "L13",
+      "input": "Query height7 in seven-row0..6 fixture",
+      "expected": "REJECT FixtureExhausted(requested7,first0,last6)"
+    },
+    {
+      "id": "L14",
+      "input": "Load fixture with missing row, wrong parent, wrong committed source hash, bad empty-control commitment, or backwards timestamp",
+      "expected": "REJECT FixtureCorrupt/InvalidSource; no ValidatedFixture"
+    },
+    {
+      "id": "L15",
+      "input": "Finalize future row without delivering; advance caller wall/virtual time",
+      "expected": "Reader remains WAIT; only explicit delivery changes its state"
+    },
+    {
+      "id": "L16",
+      "input": "Deliver late-finalized row with delivery timestamp earlier than actual Finalize event",
+      "expected": "REJECT even if delivery timestamp is after the original scheduled finalization threshold"
+    }
+  ],
+  "metadata_cases": [
+    {
+      "id": "MD01",
+      "anchor": [
+        0,
+        3
+      ],
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected_origin": [
+        3,
+        3,
+        4,
+        4,
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "MD02",
+      "anchor": [
+        0,
+        1
+      ],
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected_origin": [
+        2,
+        3,
+        4,
+        4,
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "MD03",
+      "anchor": [
+        0,
+        5
+      ],
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected_origin": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "MD04",
+      "input": "h1 fixed schedule requires origin3 but reader visible tip2",
+      "expected": "WAIT L1Header(3), never silently choose origin2"
+    },
+    {
+      "id": "MD05",
+      "input": "ahead anchor origin5, h1 sch3, reader only has up to3",
+      "expected": "WAIT L1Header(5); actual anchor-clamped origin is5"
+    },
+    {
+      "id": "MD06",
+      "input": "L1 timestamp seconds*1000000 overflows u64; L2 slot product/add overflow; h below genesis; empty scheduled-origin set",
+      "expected": "REJECT named arithmetic/config/input error, never wrapping origin or timestamp"
+    },
+    {
+      "id": "MD07",
+      "input": "Actual origin header hash/timestamp inconsistent with checked fixture/config pace; invalid anchor O2/O3",
+      "expected": "REJECT, not WAIT/default origin0"
+    }
+  ],
+  "merge_cases": [
+    {
+      "id": "MG01",
+      "input": "Frozen anchor0 and physical3 main vector",
+      "expected": "Exactly virtual1/2/3; state/Kept/physical/native hashes match production-BE goldens"
+    },
+    {
+      "id": "MG02",
+      "input": "Anchor only; caller time beyond window end",
+      "expected": "Ready empty incremental output; native anchor retained"
+    },
+    {
+      "id": "MG03",
+      "input": "Change physical3 parent to same-height unrelated id",
+      "expected": "REJECT, no partial output"
+    },
+    {
+      "id": "MG04",
+      "input": "Use anchor root or post-h3 root as physical3 pre-root",
+      "expected": "REJECT; correct root is post-h2/pre-Begin-h3"
+    },
+    {
+      "id": "MG05",
+      "input": "Missing required metadata/header/dep row or ancestor body",
+      "expected": "WAIT precise missing input, no partial committable MergeOutput"
+    },
+    {
+      "id": "MG06",
+      "input": "Wrong metadata/origin, descending/duplicate physical height, malformed ordinary/DEP, or outside fixedWindow",
+      "expected": "REJECT before committed output"
+    },
+    {
+      "id": "MG07",
+      "input": "Run twice from same immutable ExecutionAnchor/inputs",
+      "expected": "Byte-identical output, unchanged parent; not second execution on post-state"
+    },
+    {
+      "id": "MG08",
+      "input": "Same h with different actual native parent",
+      "expected": "Different native hash even if execution root matches"
+    },
+    {
+      "id": "MG09",
+      "input": "Remove only invalid raw transactions from physical3",
+      "expected": "Physical digest changes; resulting Kept/post-state/native hash match"
+    },
+    {
+      "id": "MG10",
+      "input": "Regular predecessor window1..10 ended at physical9; next window11..20 starts physical11",
+      "expected": "Virtual10 padding allowed despite physical minimum11; physical11 pre-root after padding10"
+    },
+    {
+      "id": "MG11",
+      "input": "Valid19-byte transfer with config.byte_limit18",
+      "expected": "apply_with_byte_limit and Merge reject atomically; global-limit apply is a separate unconfigured helper"
+    },
+    {
+      "id": "MG12",
+      "input": "Different parent/cid at same height with cached execution result",
+      "expected": "Cannot reuse unchecked height-only cache; recompute from supplied immutable parent identity"
+    }
+  ],
+  "authorization_cases": [
+    {
+      "id": "AU01",
+      "input": "Actual valid15-key registry sorted/reversed input; all branches/views in old schedule arithmetic vectors",
+      "expected": "Same normalized pid-order record, real PoP valid, exact schedule/member/signermap"
+    },
+    {
+      "id": "AU02",
+      "input": "Max-u64 beta/r/view and view0",
+      "expected": "Modular arithmetic does not overflow; view0 rejects"
+    },
+    {
+      "id": "AU03",
+      "input": "ReferenceView WAIT/REJECT or Ready with different same-height id/origin",
+      "expected": "WAIT missingreference / REJECT invalidsource; no Plan success"
+    },
+    {
+      "id": "AU04",
+      "input": "Change any Plan authorization field, config_ref, authorization_ref, window or committee after resolve",
+      "expected": "validate_plan/validate_descriptor reject"
+    },
+    {
+      "id": "AU05",
+      "input": "Regular reference initial-anchor0 with production-anchor9; two different production anchors sameheight",
+      "expected": "Plan/authref unchanged by production anchor alone; descriptor cid changes with anchor id"
+    },
+    {
+      "id": "AU06",
+      "input": "Diagnostic offline/lateEnter participant changes",
+      "expected": "No registry, quorum, region, leader change; default static provider never None for mere outage"
+    }
+  ]
+}
