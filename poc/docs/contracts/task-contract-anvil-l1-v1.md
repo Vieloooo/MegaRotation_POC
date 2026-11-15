@@ -1,6 +1,6 @@
 # 功能09：Anvil、ControlAuthority、BatchInbox 组件合同 v1
 
-日期：2026-11-15。接口版本：`ANVIL-L1-ABI-v1`。状态：**FROZEN；09 lead 已落实独立 Verifier 的三项冻结条件，可交 Builder**。本合同授权范围为独立合约及显式输入的真实 L1 组件；组件通过不等于功能09完整 accepted。
+日期：2026-11-15。接口版本：`ANVIL-L1-ABI-v1`。合同修订：`r1`（2026-11-16，canonical calldata明确化，ABI/签名域不变）。状态：**FROZEN；09 lead 已落实独立 Verifier 的三项冻结条件，可交 Builder**。本合同授权范围为独立合约及显式输入的真实 L1 组件；组件通过不等于功能09完整 accepted。
 
 基线 `0a951c482a9712678ab9de34765b781b9c3c9f42`，工作区 `/home/jy/.codex/worktrees/65ef/megaroation_poc`，分支 `codex/poc-anvil-l1`。本合同按[分层依赖v2](../commander/dependency-plan-v2.md)覆盖旧交接的整任务等待；不改变协议语义或完整验收。
 
@@ -35,7 +35,7 @@
 
 ## 2. ABI 数据与配置（E）
 
-Solidity `0.8.20`，Shanghai，ABI 标准编码，不用 `abi.encodePacked` 拼签名字段。公开 interface 与编译产生的 ABI 一并发布。所有整数范围检查在窄化前完成；溢出拒绝，不能取模。所有动态 `bytes` 在 JSON 中是偶数位 `0x` hex；这只是传输表示，签名字节是其原始 bytes。
+Solidity `0.8.20`，Shanghai，ABI 标准编码，不用 `abi.encodePacked` 拼签名字段。r1显式要求所有写入口（含Override）的 `msg.data[4:]` 与 `abi.encode(decoded arguments)` 逐字节相同；拒绝额外尾字节、动态offset别名或其他非规范布局。这是09工程profile限制，不是Solidity默认decoder的保证。格式拒绝发生在任何请求缓存/状态/事件生效前；规范编码中的有效异签名重试仍按§4幂等规则处理。公开 interface 与编译产生的 ABI 一并发布。所有整数范围检查在窄化前完成；溢出拒绝，不能取模。所有动态 `bytes` 在 JSON 中是偶数位 `0x` hex；这只是传输表示，签名字节是其原始 bytes。
 
 ```solidity
 struct Policy {
@@ -216,7 +216,7 @@ Verifier必须先从来源与本合同推导expected，并在读实现前保存�
 | A01 | 固定三域与数据，独立hash/signature/ABI vectors | 离线独立expected与合约digest/真实ecrecover一致；保留preimage和签名。 |
 | A02 | 错chain、contract、configRef、control type、req caller/rid及Force/Resume每一实际输入变异 | 对应签名拒绝；无seq/cursor/req/events变化。 |
 | A03 | first seq0；later seq2；重复/下降seq；max边界 | 0和跳号2成功；新rid的旧/相同seq拒绝；不overflow。 |
-| A04 | 同caller/rid/内容有效重试；同rid不同内容；不同有效签名同内容 | 原结果/零新日志/原written_at；异内容拒绝；坏重试签名拒绝；失败不耗rid。 |
+| A04 | 同caller/rid/内容有效重试；同rid不同内容；不同有效签名同内容；合法签名配trailing/alias ABI | 原结果/零新日志/原written_at；异内容拒绝；坏重试签名拒绝；失败不耗rid；非规范ABI以真实status=0收据验证。 |
 | A05 | 固定policy及mask0/非法高bit、非固定排列/重复/越界、l1Floor变化 | 仅(7,0,1,2,l1Floor)接受；其他mask/order拒绝；所有policy字段被签名绑定。 |
 | A06 | 真实两批1–2height接纳；错submitter、wrong prev任一字段、source tag/bytes、range、origin | 正例各恰1条Advanced；拒绝不动cursor；完整prev比较不只height。 |
 | A07 | DA错误signer/commitment，certifier错误signer；逐字段变异；signature长度/v/r/s边界 | 实际cryptographic拒绝；high-s/错误域/type不通过；没有bool替代。 |
@@ -246,3 +246,5 @@ Anvil部署地址与nonce固定到run manifest；完整matrix使用准确candida
 未决项只限外部接线：03/07 canonical ReplayPosition bytes、最终公共Rust类型/traits与02命令-envelope、03实际genesis/config映射、11实际frame codec/DA持久性和12实际ResumeCut。以上不会阻塞本合同的opaque绑定、真实合约和driver组件实现，但禁止以fixture证明这些外部项。
 
 冻结记录：09 lead已落实[独立合同审查](../../verification/anvil-l1/contract-review.md)的三项条件；[黄金向量](../../verification/anvil-l1/golden-vectors.json) SHA-256为 `c189ae0c36df64bb60ee565c45c0f85cd23bb2a87500e17110c37cadc68d24d5`。接口提交同时包含合同、来源预期、向量及独立准备结果；本冻结不是候选实现通过。
+
+r1记录：lead与独立Verifier在候选前确认canonical-calldata限制与原独立decoder一致；不改函数selector、事件topic、EIP-712域或请求semantic identity。初始可消费接口提交为 `daad412e46eeecd64ef9b8af8175e64ec40edc53`，消费者继续使用规范ABI编码；候选包含本明确化和相应真实EVM拒绝向量。

@@ -21,3 +21,5 @@ Python 3.12.8 and coincurve 20.0.0 were used. Cast is the previously installed/p
 `sourceKind=GLOBAL` and gpos `0x01020304` are explicit opaque-byte binding fixtures. They do not claim to encode a valid canonical ReplayPosition. Consumer03/07 supplies and validates actual bytes. The source positions in semantic vectors are literal expected triples, not a second canonical Rust type. Same-transaction Set/Resume fixtures do not construct a derived cut.
 
 Submission, inclusion, successful EVM execution, simulated finalization and reader delivery must all be evidenced separately later. Only `CursorAdvanced` from a configured Inbox successful finalized receipt is ordinary batch acceptance; `CursorSet` is an override control input. Accepted DA that is missing or mismatched blocks downstream derivation. Full09 still requires real02/03 wiring; 11/12/13 outcomes are separate gates.
+
+`receipt_checker.py` 与 `candidate-review-plan.md` 在读Builder源码前独立准备；它们可从真实原始RPC bundle重查签名、完整收据、精确位置配对和历史cursor。运行 `python3 poc/verification/anvil-l1/receipt_checker.py --bundle /ABSOLUTE/raw-rpc-bundle.json`。这不代替driver时间/reader/command路径审查。
