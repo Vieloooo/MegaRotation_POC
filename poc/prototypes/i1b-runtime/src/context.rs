@@ -1,7 +1,7 @@
 use crate::{
     Id, RoleRng,
     clock::{local_time, system_time},
-    driver::{Event, Placement, Shared, TaskPhase},
+    driver::{Authority, Event, Placement, Shared, TaskPhase},
     storage::{ControlledBlob, StorageAccess},
 };
 use commonware_runtime::{
@@ -56,6 +56,25 @@ impl SimContext {
 
     fn runtime(&self) -> Arc<Shared> {
         self.shared.upgrade().expect("driver owns protocol jobs")
+    }
+
+    pub(crate) fn authority(&self, role: &str) -> Authority {
+        Authority {
+            shared: self.shared.clone(),
+            cid: self.cid,
+            role: role.to_owned(),
+        }
+    }
+
+    fn audited_time(&self, caller: &str) -> SystemTime {
+        self.runtime().ordinary(self.cid);
+        let role = self.native.name().label;
+        system_time(
+            self.authority(&role)
+                .clock_read(caller)
+                .local_time_us
+                .expect("usable node clock"),
+        )
     }
 
     pub fn publication_allowed(&self) -> bool {
@@ -213,7 +232,7 @@ impl Storage for SimContext {
 impl governor::clock::Clock for SimContext {
     type Instant = SystemTime;
     fn now(&self) -> SystemTime {
-        self.current()
+        self.audited_time("governor")
     }
 }
 
@@ -221,7 +240,7 @@ impl governor::clock::ReasonablyRealtime for SimContext {}
 
 impl Clock for SimContext {
     fn current(&self) -> SystemTime {
-        system_time(self.runtime().local(self.cid))
+        self.audited_time("clock")
     }
 
     fn sleep(&self, duration: Duration) -> impl Future<Output = ()> + Send + 'static + use<> {

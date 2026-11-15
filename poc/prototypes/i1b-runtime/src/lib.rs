@@ -3,6 +3,14 @@
 mod clock;
 mod context;
 mod driver;
+mod native_application;
+mod native_config;
+mod native_elector;
+pub mod native_hub;
+mod native_network;
+pub mod native_replica;
+mod native_scheme;
+mod native_step_journal;
 mod rng;
 mod storage;
 mod witness;

@@ -117,6 +117,12 @@ impl NodeClock {
         Ok(())
     }
 
+    pub(crate) fn calibration(&self) -> Option<(u64, u64)> {
+        self.prior
+            .as_ref()
+            .map(|sample| (sample.sequence, sample.lease_end_tick_us))
+    }
+
     pub fn local(&self) -> Option<i64> {
         let sample = self.prior.as_ref()?;
         if self.tick_us >= sample.lease_end_tick_us {

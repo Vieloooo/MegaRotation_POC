@@ -92,10 +92,11 @@ impl WitnessPolicy {
                     .bytes()
                     .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
                 && !config.sections.is_empty()
-                && config
-                    .sections
-                    .iter()
-                    .all(|section| [1, 2].contains(section))
+                && config.sections.iter().all(|section| {
+                    [1, 2].contains(section)
+                        || (config.partition == crate::native_config::PARTITION
+                            && config.sections.as_slice() == [1, 2, 3, 4, 5, 6, 7, 8])
+                })
                 && config.sections.windows(2).all(|pair| pair[0] < pair[1]),
             "invalid witness scope",
         )?;

@@ -117,6 +117,10 @@ pub enum Event {
         sequence: u64,
         cleanup: bool,
     },
+    ClockRead {
+        caller: String,
+        snapshot: ClockAudit,
+    },
     RngDraw {
         task: u64,
         role: Id,
@@ -164,6 +168,84 @@ pub enum Event {
 pub struct Step {
     pub grant: Grant,
     pub events: Vec<Event>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct ClockAudit {
+    pub cid: Id,
+    pub grant_id: u64,
+    pub task_id: u64,
+    pub tick_us: u64,
+    pub local_time_us: Option<i64>,
+    pub sample_sequence: u64,
+    pub lease_end_tick_us: u64,
+    pub local_stop_us: Option<i64>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Authority {
+    pub shared: Weak<Shared>,
+    pub cid: Id,
+    pub role: String,
+}
+
+impl Authority {
+    pub fn clock_read(&self, caller: &str) -> ClockAudit {
+        self.shared
+            .upgrade()
+            .expect("native task owner")
+            .audit_clock(self.cid, &format!("{}/{}", self.role, caller))
+    }
+
+    pub fn check(&self) -> Result<ClockAudit> {
+        let shared = self
+            .shared
+            .upgrade()
+            .ok_or(Error("native task owner closed"))?;
+        shared.try_ordinary(Some(self.cid))?;
+        Ok(shared.audit_clock(self.cid, &format!("{}/authority", self.role)))
+    }
+
+    pub fn snapshot(&self) -> ClockAudit {
+        self.shared
+            .upgrade()
+            .map_or_else(ClockAudit::default, |s| s.snapshot_clock(self.cid))
+    }
+
+    pub fn stage_route(&self, wire: NativeWire, dest: u32) -> Result<()> {
+        let shared = self
+            .shared
+            .upgrade()
+            .ok_or(Error("native task owner closed"))?;
+        shared.try_ordinary(Some(self.cid))?;
+        shared.inner.lock().unwrap().actor_routes.push((wire, dest));
+        Ok(())
+    }
+}
+
+pub(crate) struct ArchiveAuthority {
+    shared: Weak<Shared>,
+    cid: Id,
+}
+
+impl ArchiveAuthority {
+    pub fn check(&self) -> Result<()> {
+        let state = self
+            .shared
+            .upgrade()
+            .ok_or(Error("archive driver closed"))?;
+        let permit = state.try_ordinary(None)?;
+        if permit.task != 0
+            || permit.cid.is_some()
+            || state
+                .audit_clock(self.cid, "archive/clock")
+                .local_time_us
+                .is_none()
+        {
+            return Err(Error("archive send requires a calibrated root grant"));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -219,6 +301,8 @@ pub(crate) struct Inner {
     current: Option<Grant>,
     queued_io: BTreeMap<u64, IoJob>,
     next_io: u64,
+    native_clock_audit: bool,
+    actor_routes: Vec<(NativeWire, u32)>,
     witness_partition: Option<String>,
     permit: Option<Permit>,
     sessions: BTreeMap<Id, Session>,
@@ -339,6 +423,8 @@ impl ControlledDriver {
                 current: None,
                 queued_io: BTreeMap::new(),
                 next_io: 0,
+                native_clock_audit: false,
+                actor_routes: vec![],
                 witness_partition: None,
                 permit: None,
                 sessions: BTreeMap::new(),
@@ -522,6 +608,58 @@ impl ControlledDriver {
         Err(Error("transport disconnected"))
     }
 
+    pub(crate) fn enable_native_clock_audit(&mut self) {
+        self.shared.inner.lock().unwrap().native_clock_audit = true;
+    }
+
+    pub(crate) fn archive_authority(&self, cid: Id) -> ArchiveAuthority {
+        ArchiveAuthority {
+            shared: Arc::downgrade(&self.shared),
+            cid,
+        }
+    }
+
+    pub(crate) fn native_manager_time(&self, cid: Id) -> Result<i64> {
+        self.shared.try_ordinary(None)?;
+        self.shared
+            .audit_clock(cid, "manager/clock")
+            .local_time_us
+            .ok_or(Error("manager clock unsafe"))
+    }
+
+    pub(crate) fn native_clock_ready(&self) -> bool {
+        self.shared.inner.lock().unwrap().clock.local().is_some()
+    }
+
+    pub(crate) fn native_witness_for(
+        &self,
+        wire: &NativeWire,
+        destination: u32,
+    ) -> Result<crate::native_wire::LocalWitness> {
+        let ledger = &self
+            .witness
+            .as_ref()
+            .ok_or(Error("missing witness policy"))?
+            .ledger;
+        let payload = ledger
+            .index
+            .payload(wire)
+            .ok_or(Error("missing exact native wire witness"))?;
+        let route = Submission::new(payload.id, destination);
+        if !ledger.index.submissions.contains_key(&route.id) {
+            return Err(Error("uncommitted native route"));
+        }
+        let head = ledger.head();
+        Ok(crate::native_wire::LocalWitness {
+            witness_ids: vec![payload.witness_id.to_vec()],
+            authorization_id: route.id.to_vec(),
+            receipt: Some(crate::native_wire::Receipt {
+                sequence: head.sequence,
+                hash: head.hash.to_vec(),
+            }),
+        })
+    }
+
     pub fn manager_time_us(&self) -> Result<i64> {
         self.shared.try_ordinary(None)?;
         self.shared
@@ -587,6 +725,12 @@ impl ControlledDriver {
                 }
                 self.await_evidence(PermitMode::IoRelease).await?;
                 self.release_io(PermitMode::IoRelease);
+            }
+            let routes = std::mem::take(&mut self.shared.inner.lock().unwrap().actor_routes);
+            for (wire, destination) in routes {
+                let permit = self.enter_permit(0, 0, None, PermitMode::Ordinary);
+                self.stage_witnessed_send(wire, &[destination])?;
+                drop(permit);
             }
             self.commit_submissions().await?;
             self.finish_grant(grant, start)
@@ -1142,6 +1286,7 @@ impl ControlledDriver {
         }
         self.shared.record_failure(reason);
         self.staged_submissions.clear();
+        self.shared.inner.lock().unwrap().actor_routes.clear();
         // A synchronous owner must release its permit. Root can await disk
         // cleanup after a failed or abandoned async grant.
         if !self.has_active_permit() {
@@ -1430,6 +1575,22 @@ impl Shared {
         self.event(Event::Failure { reason });
     }
 
+    fn snapshot_clock(&self, cid: Id) -> ClockAudit {
+        self.inner.lock().unwrap().clock_snapshot(cid)
+    }
+
+    fn audit_clock(&self, cid: Id, caller: &str) -> ClockAudit {
+        let mut inner = self.inner.lock().unwrap();
+        let snapshot = inner.clock_snapshot(cid);
+        if inner.native_clock_audit {
+            inner.events.push(Event::ClockRead {
+                caller: caller.to_owned(),
+                snapshot: snapshot.clone(),
+            });
+        }
+        snapshot
+    }
+
     fn try_ordinary(&self, cid: Option<Id>) -> Result<Permit> {
         let inner = self.inner.lock().unwrap();
         if self.failed() {
@@ -1461,16 +1622,6 @@ impl Shared {
             self.failure.store(true, Ordering::SeqCst);
             panic!("{error}");
         }
-    }
-
-    pub fn local(&self, cid: Id) -> i64 {
-        self.ordinary(cid);
-        self.inner
-            .lock()
-            .unwrap()
-            .clock
-            .local()
-            .expect("guarded NodeClock")
     }
 
     pub fn can_publish(&self, cid: Id) -> bool {
@@ -1633,6 +1784,22 @@ impl Shared {
                 .push(Event::TimerCancelled { timer: wait.timer });
             drop(inner);
             drop(wait.waker);
+        }
+    }
+}
+
+impl Inner {
+    fn clock_snapshot(&self, cid: Id) -> ClockAudit {
+        let (sample_sequence, lease_end_tick_us) = self.clock.calibration().unwrap_or_default();
+        ClockAudit {
+            cid,
+            grant_id: self.current.map_or(0, |g| g.id),
+            task_id: self.permit.map_or(0, |p| p.task),
+            tick_us: self.clock.tick_us,
+            local_time_us: self.clock.local(),
+            sample_sequence,
+            lease_end_tick_us,
+            local_stop_us: self.sessions.get(&cid).map(|s| s.stop_local_us),
         }
     }
 }
