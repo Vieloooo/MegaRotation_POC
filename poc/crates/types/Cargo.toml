@@ -22,3 +22,7 @@ protoc-bin-vendored = "=3.3.0"
 [[test]]
 name = "mock_plan_m1_independent"
 path = "../../verification/mock-plan-execution/implementation-v1/m1_acceptance.rs"
+
+[[test]]
+name = "mock_plan_m2_codec_independent"
+path = "../../verification/mock-plan-execution/implementation-v1/m2_codec_acceptance.rs"
