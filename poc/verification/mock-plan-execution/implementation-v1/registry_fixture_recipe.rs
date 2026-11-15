@@ -2,9 +2,9 @@
 //! Test-only deterministic seeds; private bytes are never serialized or printed.
 use commonware_codec::Encode;
 use commonware_cryptography::{
+    Signer,
     bls12381::primitives::{ops, variant::MinSig},
     ed25519,
-    Signer,
 };
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
@@ -21,11 +21,33 @@ fn generate_public_registry_fixture_from_primitives() {
         let mut rng = ChaCha20Rng::seed_from_u64(303_100 + u64::from(pid));
         let (vote_private, vote_public) = ops::keypair::<_, MinSig>(&mut rng);
         let pop = ops::sign_proof_of_possession::<MinSig>(&vote_private, b"PoC/Registry/PoP/v1");
-        let wrong_namespace = ops::sign_proof_of_possession::<MinSig>(&vote_private, b"PoC/Registry/PoP/v0");
-        let wrong_kind = ops::sign_message::<MinSig>(&vote_private, b"PoC/Registry/PoP/v1", &vote_public.encode());
-        assert!(ops::verify_proof_of_possession::<MinSig>(&vote_public, b"PoC/Registry/PoP/v1", &pop).is_ok());
-        assert!(ops::verify_proof_of_possession::<MinSig>(&vote_public, b"PoC/Registry/PoP/v1", &wrong_namespace).is_err());
-        assert!(ops::verify_proof_of_possession::<MinSig>(&vote_public, b"PoC/Registry/PoP/v1", &wrong_kind).is_err());
+        let wrong_namespace =
+            ops::sign_proof_of_possession::<MinSig>(&vote_private, b"PoC/Registry/PoP/v0");
+        let wrong_kind = ops::sign_message::<MinSig>(
+            &vote_private,
+            b"PoC/Registry/PoP/v1",
+            &vote_public.encode(),
+        );
+        assert!(
+            ops::verify_proof_of_possession::<MinSig>(&vote_public, b"PoC/Registry/PoP/v1", &pop)
+                .is_ok()
+        );
+        assert!(
+            ops::verify_proof_of_possession::<MinSig>(
+                &vote_public,
+                b"PoC/Registry/PoP/v1",
+                &wrong_namespace
+            )
+            .is_err()
+        );
+        assert!(
+            ops::verify_proof_of_possession::<MinSig>(
+                &vote_public,
+                b"PoC/Registry/PoP/v1",
+                &wrong_kind
+            )
+            .is_err()
+        );
         entries.push(serde_json::json!({
             "pid": pid,
             "identity_key": hex(&identity.public_key().encode()),
