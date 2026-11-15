@@ -1,12 +1,12 @@
 # 功能02：时钟与通信准备记录
 
-日期：2026-11-15。当前状态：**KERNEL CONTRACT REVIEW；native-integration-waiting-dependency=01**。原准备材料保存于 `125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10`；下方“环境、基线与角色”至旧准备结论记录首轮事实，不冒称当前仍受whole-feature门禁。[dependency-plan-v2](commander/dependency-plan-v2.md) 已于 `0a951c4` 冻结并正常合并为本worktree `c647098`，授权独立生产kernel先实现，完整02/I1验收范围不变。
+更新：2026-11-16。当前状态：**COMPONENT VERIFIED；native-integration-waiting-dependency=01**。独立运输组件在 `4fd6f115bd969b0a8f252d7933edd21c27f00a8f` 上通过46项独立测试和同SHA正式12组矩阵，完整02仍未accepted。详见[组件交付记录](sim-transport-kernel-results.md)。原准备材料保存于 `125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10`；下方“环境、基线与角色”至旧准备结论记录首轮事实。[dependency-plan-v2](commander/dependency-plan-v2.md) 已于 `0a951c4` 冻结并正常合并为本worktree `c647098`，完整02/I1验收范围不变。
 
-当前新增交付为 [kernel合同](contracts/task-contract-sim-transport-kernel-v1.md) 与 [API v1](sim-transport-api-v1.md)。Docer本轮只修四份文档；Verifier同时只读独立推导；lead冻结并提交接口版本后，交棒Verifier保存预期，再由一个Builder实现新 `poc/crates/sim-transport/` 独立workspace/lock。native/I1a/根manifest/types/proto仍禁改。组件通过不计完整功能accepted，不启动额外用户chat。
+已交付[kernel合同](contracts/task-contract-sim-transport-kernel-v1.md)、[API v1](sim-transport-api-v1.md)、[独立workspace与lockfile](../crates/sim-transport/README.md)及独立测试/原始证据。接口与独立预期先于Builder提交为 `4446133`；实现、独立发现、修复、同SHA复核与正式Tester按顺序完成。native/I1a/根manifest/types/proto未改，组件通过不计完整功能accepted。
 
 资源状态更新（lead交接）：`.build` 已安全链接至02专属数据盘目录，776MB公开Cargo registry已复制，Rust1.95版本已核对；当前root/home约13GB、数据盘约1.4TB。`.build` 是生成资源链接，由现有common `.git/info/exclude` 忽略，不纳入Git（该exclude非本chat修改）。所有重型命令仍全宿主flock串行，CARGO_BUILD_JOBS=2。Docer未构建、未执行源码或提交。
 
-当前决议：Q3/Q4纯运输算法与组件持久确认API由本kernel合同选定，等待lead冻结；真实fsync/root floors/恢复签名gate仍属01，公共registry/cid/ReplayPosition属03，reader prefix/日志顺序属06，L1业务属09。上述边界不阻塞独立kernel。当前无需要总协调先行裁决才能写kernel的新增实质阻塞项。
+当前决议：Q3/Q4纯运输算法与组件确认API已冻结并通过有限组件验收；真实fsync/root floors/恢复签名gate仍属01，公共registry/cid/ReplayPosition属03，reader prefix/日志顺序属06，L1业务属09。未来cid授权、两类config绑定与真实持久/副作用接线的具体剩余gate已列入交付记录。
 
 ## 环境、基线与角色
 

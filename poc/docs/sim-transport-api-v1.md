@@ -1,6 +1,6 @@
 # sim-transport API v1
 
-2026-11-15。**FROZEN by lead；实现/运行验收尚未完成**。与 [kernel合同](contracts/task-contract-sim-transport-kernel-v1.md) 一起由02 lead在独立预期审阅后冻结。以下名称、字段顺序、类型、方法和错误是Builder/Verifier/06/09共同消费的最小接口；不是新RPC/protobuf或03公共对象规范。
+2026-11-15冻结；2026-11-16状态更新：**FROZEN by lead；有限组件验收PASS**，见[交付记录](sim-transport-kernel-results.md)。与 [kernel合同](contracts/task-contract-sim-transport-kernel-v1.md) 一起由02 lead在独立预期审阅后冻结。以下名称、字段顺序、类型、方法和错误是Builder/Verifier/06/09共同消费的最小接口；不是新RPC/protobuf或03公共对象规范，真实root/RPC/native接线仍待完成。
 
 crate路径 `poc/crates/sim-transport/`，Rust导入名 `sim_transport`。文中所有pub value types可Clone/Debug/PartialEq/Eq；Endpoint、ChannelId、Id、StepStamp等key还实现Ord。私有kernel/plan不暴露可变内部字段；plan不Clone，commit按值消费。serde采用下文唯一编码，不另设feature切换编码。
 

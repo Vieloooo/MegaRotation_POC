@@ -1,6 +1,6 @@
 # SIM-COMMUNICATION v1 — 全局虚拟时钟与仿真通信准备合同
 
-日期：2026-11-15。阶段：**KERNEL CONTRACT REVIEW；native-integration-waiting-dependency=01**。[分层依赖 v2](../commander/dependency-plan-v2.md) 已解除整个02实现必须等待01完成的门禁。独立 `poc/crates/sim-transport/` 可在 [kernel合同](task-contract-sim-transport-kernel-v1.md) 和 [API v1](../sim-transport-api-v1.md) 经lead冻结、独立预期先行后实现。native/root/RPC真实接线仍等待01准确提交与文件移交；公共身份/域对象消费03。本文保留完整功能硬规则和原验收，不是功能完成或测试通过证据。
+日期：2026-11-15；状态更新于2026-11-16。阶段：**COMPONENT VERIFIED；native-integration-waiting-dependency=01**。[分层依赖 v2](../commander/dependency-plan-v2.md) 已解除整个02实现必须等待01完成的门禁。独立 `poc/crates/sim-transport/` 已按[kernel合同](task-contract-sim-transport-kernel-v1.md)和[API v1](../sim-transport-api-v1.md)完成有限组件验收，证据见[交付记录](../sim-transport-kernel-results.md)。native/root/RPC真实接线仍等待01准确提交与文件移交；公共身份/域对象消费03。本文保留完整功能硬规则和原验收，完整02尚未accepted。
 
 原准备基线：`ada48a584ad4de15e302c479ee8cd41b9e2a8d9b`，其中代码基线为 `36eff1c76d5c4df5d0790133c0e14719c0c73ebd`；准备提交为 `125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10`。本阶段在正常合并授权提交 `0a951c4` 的本worktree revision `c647098` 上冻结独立组件。只有后续native接线/完整功能验收必须包含获接受的01准确集成SHA。
 

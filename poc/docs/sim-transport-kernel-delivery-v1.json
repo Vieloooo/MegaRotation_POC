@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "date": "2026-11-16",
+  "timezone": "Asia/Shanghai",
+  "component_status": "PASS",
+  "full_feature_02_status": "OPEN",
+  "accepted_feature_increment": 0,
+  "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+  "branch": "codex/poc-sim-communication",
+  "host": "xuelab_jump",
+  "baseline_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+  "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10",
+  "dependency_authorization_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42",
+  "authorization_merge_sha": "c64709871827128aae974343bc28bdafb9f89486",
+  "interface_and_expectations_sha": "444613345e045e861f94298ac68042050bb8e4db",
+  "initial_implementation_sha": "bc4111aab6240b364a1a9c632d1bf02474a57272",
+  "failed_review_harness_sha": "c749973e9c1bb9e6625eb4521ec89f50bcb6fbee",
+  "fix_sha": "653a0654ba1765cb600e603250efa0ee40d85aeb",
+  "verified_candidate_sha": "4fd6f115bd969b0a8f252d7933edd21c27f00a8f",
+  "tested_candidate_sha": "4fd6f115bd969b0a8f252d7933edd21c27f00a8f",
+  "production_tree_oid": "3d2ff54ca9231d2611e424599b0db73170faa9a2",
+  "harness_aggregate_sha256": "0a6918330be068cab59815c92d6a1b8e57ccbbdd2f1c6112bea788e776befd50",
+  "regional_bft_pin": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+  "roles": {
+    "lead": "gpt-6-astra/ultra",
+    "bft_spec": "gpt-6-astra/xhigh",
+    "bft_verifier": "gpt-6-astra/xhigh",
+    "bft_builder": "gpt-6.1-sol/high",
+    "bft_simulator": "gpt-6.1-sol/high"
+  },
+  "tests": {
+    "builder": {
+      "passed": 10,
+      "total": 10
+    },
+    "independent": {
+      "passed": 46,
+      "total": 46,
+      "status": "PASS_FINAL_NAMED_COMPONENT_CANDIDATE"
+    },
+    "formal_replay": {
+      "passed": 12,
+      "total": 12
+    },
+    "fmt": "PASS"
+  },
+  "formal_matrix": {
+    "seeds": [
+      7,
+      42,
+      99
+    ],
+    "declaration_orders": [
+      "forward",
+      "reverse"
+    ],
+    "wall_pause_ms": [
+      0,
+      2
+    ],
+    "same_seed_full_trace_byte_equality": true,
+    "seed_comparisons": {
+      "7": {
+        "full_trace_byte_equal": true,
+        "full_trace_sha256": "73c3adc7c16489ee914e822d767a1de4f05b0176b5f3d855ec44b1d8217e083e",
+        "variants_with_complete_trace": 4
+      },
+      "42": {
+        "full_trace_byte_equal": true,
+        "full_trace_sha256": "77ab1819569654b7b9a9496eb3ab52191217ca3f66c9ab57b726d48f8046dbed",
+        "variants_with_complete_trace": 4
+      },
+      "99": {
+        "full_trace_byte_equal": true,
+        "full_trace_sha256": "02dac34bc05409f29b23fe2d53a8ffc20436a4c5a978d6488c33c69a92585e8b",
+        "variants_with_complete_trace": 4
+      }
+    }
+  },
+  "findings": {
+    "F-01": "CLOSED",
+    "F-02": "CLOSED",
+    "related_pacing_bound": "VERIFIED",
+    "original_failure_evidence": "PRESERVED"
+  },
+  "evidence": {
+    "verifier": {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/sim-communication/kernel-v1/4fd6f11/final-verifier.json",
+      "sha256": "697e699a9a0f40a2958016f14c167aeb42adb056e9138eec8484a91650a3572a"
+    },
+    "formal_manifest": {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/simulation/sim-communication/kernel-v1/4fd6f11/manifest.json",
+      "sha256": "64a1ecdb4a496a7820cfaf0317f3a6ed43e74ed491b7d4dbf32bd09ad6b288f4"
+    },
+    "formal_command": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/simulation/sim-communication/kernel-v1/4fd6f11/command.txt",
+    "formal_checksums": {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/simulation/sim-communication/kernel-v1/4fd6f11/SHA256SUMS",
+      "sha256": "48e19904a7888386c5835546c03e46a6122ec2c3733171dccba1774a4074e50a",
+      "files_checked": 71
+    },
+    "binary": {
+      "bytes": 15463960,
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/target/sim-transport/debug/examples/replay",
+      "sha256": "63e3503c214338997a7e0c93ccf8cf0f898154e5fd2a4b24ea2a9a9e28ec4939"
+    }
+  },
+  "actual_native_engines": 0,
+  "actual_native_workers": 0,
+  "real_network_measurements": false,
+  "remaining_integration_gates": [
+    "01 accepted recovery SHA and native path handoff, real root persistence and authentication",
+    "03/02 public and transport config binding; 03/05/02 controlled dynamic cid permissions preserving history",
+    "06/09 business persistence with MarkConsumed and reader public-prefix semantics",
+    "Controlled service grants and external side-effect recovery, including actual Anvil",
+    "Actual Clock RPC, native vote/certificate/resolver/body, affected I1a/Fresh/R1-R18 and full SC coverage"
+  ],
+  "documentation_delivery_note": "Later delivery commits change only documentation and this index; verified/tested source and harness are the exact candidate above."
+}

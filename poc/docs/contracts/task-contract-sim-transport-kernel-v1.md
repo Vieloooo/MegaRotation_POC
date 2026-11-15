@@ -1,6 +1,6 @@
 # SIM-TRANSPORT-KERNEL v1
 
-2026-11-15。状态：**FROZEN by lead；实现和运行验收尚未完成**。本合同按总协调 [dependency-plan-v2](../commander/dependency-plan-v2.md) 授权，选定独立生产运输内核的具体方案。lead已复核本版、API及[独立预期](../../verification/sim-communication/kernel-v1/expectations.md)，授权一个Builder开始独立组件，无需等待整个01；不能据组件通过宣称功能02已accepted。精确Rust接口以 [sim-transport-api-v1](../sim-transport-api-v1.md) 为同版附件，两者一起冻结。
+2026-11-15冻结；2026-11-16状态更新：**FROZEN by lead；有限组件验收PASS，真实集成未完成**。证据见[交付记录](../sim-transport-kernel-results.md)。本合同按总协调 [dependency-plan-v2](../commander/dependency-plan-v2.md) 授权，选定独立生产运输内核的具体方案。lead已复核本版、API及[独立预期](../../verification/sim-communication/kernel-v1/expectations.md)；不能据组件通过宣称功能02已accepted。精确Rust接口以 [sim-transport-api-v1](../sim-transport-api-v1.md) 为同版附件，两者一起冻结。
 
 来源硬规则继承 [完整02合同](task-contract-sim-communication-v1.md) S1–S7及F项。本合同选定其中Q3/Q4的纯算法；Q1真实root custody/恢复与03公共canonical仍是集成边界。正常FIFO、稳定消息身份、受控释放、RPC/时钟/墙钟分离、既有terminal/signature不复活等规则不变。
 
