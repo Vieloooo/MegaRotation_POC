@@ -149,20 +149,10 @@ fn validate_chain(
     dep: &dyn DepProvider,
     config: &PublicConfig,
 ) -> Result<Vec<Hash32>, InputError> {
-    let config_ref = config.reference().map_err(InputError::Malformed)?;
-    if metadata.config_ref() != config_ref || dep.config_ref() != config_ref {
-        return Err(InputError::InvalidSource);
-    }
+    validate_context(&anchor.anchor, window, metadata, dep, config)?;
     anchor.validate().map_err(InputError::Malformed)?;
-    validate_window(&anchor.anchor, window, config)?;
-    if anchor.anchor.timestamp_us
-        != l2_timestamp_us(config, anchor.anchor.block.height).map_err(InputError::Malformed)?
-    {
-        return Err(malformed("invalid anchor timestamp"));
-    }
     if anchor.anchor.block.height == config.genesis.block.height
-        && (anchor.anchor != config.genesis
-            || anchor.native_hash != config.genesis_native_hash
+        && (anchor.native_hash != config.genesis_native_hash
             || anchor.state.root().map_err(InputError::Malformed)? != config.genesis_state_root)
     {
         return Err(InputError::InvalidSource);
@@ -202,14 +192,28 @@ fn validate_chain(
     Ok(digests)
 }
 
-fn validate_window(
+fn validate_context(
     anchor: &Anchor,
     window: &Window,
+    metadata: &dyn MetadataProvider,
+    dep: &dyn DepProvider,
     config: &PublicConfig,
 ) -> Result<(), InputError> {
+    let config_ref = config.reference().map_err(InputError::Malformed)?;
+    if metadata.config_ref() != config_ref || dep.config_ref() != config_ref {
+        return Err(InputError::InvalidSource);
+    }
     window.validate().map_err(InputError::Malformed)?;
     if anchor.block.height < config.genesis.block.height || anchor.block.height >= window.h_min {
         return Err(malformed("anchor outside physical window"));
+    }
+    if anchor.timestamp_us
+        != l2_timestamp_us(config, anchor.block.height).map_err(InputError::Malformed)?
+    {
+        return Err(malformed("invalid anchor timestamp"));
+    }
+    if anchor.block.height == config.genesis.block.height && *anchor != config.genesis {
+        return Err(InputError::InvalidSource);
     }
     Ok(())
 }
@@ -233,7 +237,7 @@ pub fn merge_from_tip(
     dep: &dyn DepProvider,
     config: &PublicConfig,
 ) -> MergeOutcome {
-    if let Err(error) = validate_window(selected.anchor, window, config) {
+    if let Err(error) = validate_context(selected.anchor, window, metadata, dep, config) {
         return InputStatus::Reject(error);
     }
     let mut digest = selected.tip;

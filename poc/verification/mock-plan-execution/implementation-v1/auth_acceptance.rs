@@ -1,7 +1,7 @@
 //! Independent registry and authorization acceptance using only public test keys.
 #[path = "component_fixture.rs"]
 mod fixture;
-use commonware_codec::{DecodeExt, Encode};
+use commonware_codec::{Copying, DecodeExt, Encode};
 use commonware_cryptography::{
     Signer,
     bls12381::primitives::{ops, variant::MinSig},
@@ -107,10 +107,39 @@ fn input(config: &PublicConfig, session: SessionId) -> PlanInput {
 fn real_pop_registry_hash_normalization_and_identity_index_mapping() {
     assert_eq!(POP_NAMESPACE, b"PoC/Registry/PoP/v1");
     let (record, _, _) = public_record();
+    let public: Value = serde_json::from_str(include_str!("public-registry.json")).unwrap();
+    let fixed: Value = serde_json::from_str(include_str!("registry-golden.json")).unwrap();
+    for (entry, expected) in record
+        .entries
+        .iter()
+        .zip(public["entries"].as_array().unwrap())
+    {
+        assert_eq!(
+            u64::from(entry.pid.get()),
+            expected["pid"].as_u64().unwrap()
+        );
+        assert_eq!(
+            entry.identity_key.to_vec(),
+            fixture::unhex(expected["identity_key"].as_str().unwrap())
+        );
+        assert_eq!(
+            entry.vote_key.to_vec(),
+            fixture::unhex(expected["vote_key"].as_str().unwrap())
+        );
+        assert_eq!(
+            entry.pop.to_vec(),
+            fixture::unhex(expected["pop"].as_str().unwrap())
+        );
+    }
     let registry = ValidatedRegistry::load(record.clone()).unwrap();
     let expected =
         independently_framed_hash("PoC/Registry/v1", &independently_encoded_registry(&record));
     assert_eq!(registry.digest(), expected);
+    assert_eq!(expected, fixture::hash(&fixed["registry_hash"]));
+    assert_eq!(
+        independently_encoded_registry(&record),
+        fixture::unhex(fixed["registry_canonical_hex"].as_str().unwrap())
+    );
     assert_eq!(registry.record(), &record);
     let mut reordered = record.clone();
     reordered.entries.reverse();
@@ -126,12 +155,25 @@ fn real_pop_registry_hash_normalization_and_identity_index_mapping() {
             .filter(|e| e.pid.region() == region)
             .collect();
         entries.sort_by_key(|e| e.identity_key);
+        let expected_order: Vec<u8> = fixed["sorted_signer_pids_by_region"][usize::from(r)]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_u64().unwrap() as u8)
+            .collect();
+        assert_eq!(
+            entries
+                .iter()
+                .map(|entry| entry.pid.get())
+                .collect::<Vec<_>>(),
+            expected_order
+        );
         assert_eq!(registry.participants(region).len(), 5);
         for (index, entry) in entries.iter().enumerate() {
             let idx = SignerIndex::new(index as u8).unwrap();
             assert_eq!(registry.signer_index(entry.pid), idx);
             assert_eq!(registry.pid_at(region, idx), entry.pid);
-            let identity = ed25519::PublicKey::decode(entry.identity_key.as_slice()).unwrap();
+            let identity = ed25519::PublicKey::decode(Copying(&entry.identity_key)).unwrap();
             assert_eq!(registry.pid_for_identity(&identity), Some(entry.pid));
         }
     }

@@ -595,3 +595,67 @@ fn selected_tip_missing_body_or_execution_state_waits_without_fake_padding() {
         InputStatus::Reject(_)
     ));
 }
+
+#[test]
+fn known_invalid_context_rejects_before_missing_body_wait() {
+    let config = fixture::config();
+    let reader = ready_reader(&config);
+    let metadata = RegionalMetadata::new(&config, &reader).unwrap();
+    let deposits = ValidatedDepFixture::load(&config, fixture::dep_fixture()).unwrap();
+    let initial = fixture::execution_anchor();
+    let window = Window {
+        h_min: 1,
+        h_max: 10,
+    };
+    let tip = fixture::golden("physical-h3");
+    let missing = BodySource { body: None };
+    let selected = || SelectedTip {
+        anchor: &initial.anchor,
+        execution_anchor: Some(&initial),
+        tip,
+    };
+    assert!(matches!(
+        merge_from_tip(selected(), &missing, &window, &metadata, &deposits, &config),
+        InputStatus::Wait(InputMissing::Parent(hash)) if hash == tip
+    ));
+    let wrong_provider = MissingDep {
+        config_ref: ConfigRef::new(Hash32::new([0; 32])),
+    };
+    assert!(matches!(
+        merge_from_tip(
+            selected(),
+            &missing,
+            &window,
+            &metadata,
+            &wrong_provider,
+            &config
+        ),
+        InputStatus::Reject(InputError::InvalidSource)
+    ));
+    let mut invalid_config = config.clone();
+    invalid_config.byte_limit = 0;
+    assert!(matches!(
+        merge_from_tip(
+            selected(),
+            &missing,
+            &window,
+            &metadata,
+            &deposits,
+            &invalid_config
+        ),
+        InputStatus::Reject(_)
+    ));
+    let mut changed_config = config.clone();
+    changed_config.byte_limit = 18;
+    assert!(matches!(
+        merge_from_tip(
+            selected(),
+            &missing,
+            &window,
+            &metadata,
+            &deposits,
+            &changed_config
+        ),
+        InputStatus::Reject(InputError::InvalidSource)
+    ));
+}
