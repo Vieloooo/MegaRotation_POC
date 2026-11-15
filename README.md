@@ -39,6 +39,8 @@ git submodule update --init --recursive
 
 [PoC 当前进度、验证范围和下一步](poc/docs/POC进度报告.md)。
 
+[分任务交接索引与新会话工作约定](poc/docs/handoffs/README.md)。
+
 历史设计、学习资料和会议记录保留在本仓库 Git 历史的 `0f013e2` 中。v10 文档里的历史来源链接可通过 `git show 0f013e2:路径` 查看，v10 正文与 PoC 设计保持原始内容。
 
 ## 规格快照与交接来源

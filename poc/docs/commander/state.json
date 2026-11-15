@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "date": "2026-11-15",
+  "source_checkout": "/mnt/reth/jy/megaroation_poc",
+  "project_id": "afd93354-4ab5-406d-9931-9e67039cbd61",
+  "host_id": "remote-ssh-discovered:xuelab_direct",
+  "max_active_jobs": 3,
+  "feature_lead_model": "gpt-6-astra",
+  "feature_lead_effort": "ultra",
+  "main_branch": "main",
+  "implementation_base_sha": "36eff1c76d5c4df5d0790133c0e14719c0c73ebd",
+  "documentation_base_sha": null,
+  "main_sha": null,
+  "heavy_job_lock": "/tmp/megaroation-poc-heavy.lock",
+  "accepted_since_merge": [],
+  "jobs": [
+    {"feature": "01", "status": "queued", "phase_authorized": "full-feature", "thread_id": null, "candidate_sha": null},
+    {"feature": "02", "status": "queued", "phase_authorized": "contract-and-independent-expectations", "waits_for": ["01"], "thread_id": null, "candidate_sha": null},
+    {"feature": "03", "status": "queued", "phase_authorized": "contract-and-independent-expectations", "waits_for": ["01"], "thread_id": null, "candidate_sha": null}
+  ],
+  "remaining_features": ["04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16"],
+  "merge_batches": []
+}
