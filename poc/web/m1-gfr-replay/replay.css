@@ -133,3 +133,8 @@ th { color: var(--muted); font-weight: 600; }
   .lane-name { position: sticky; left: 0; z-index: 3; padding-right: 5px; background: var(--panel); }
   .explanation, .handoff-box { grid-template-columns: 1fr; gap: 10px; }
 }
+
+.masthead-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.scenario-link { font-size: 13px; text-decoration: none; }
+.timeline-row.stacked { min-height: 77px; }
+.mark.excluded { --mark-color: #fda4af; }

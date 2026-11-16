@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Build/check the self-contained HTML for the sealed M1 Regular smoke."""
+"""Build or check the standalone GFR replay for a sealed M1 or M2 run."""
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from wire import (
@@ -82,9 +81,9 @@ def trace_subject(row):
     return (trace_hash(row["detail"]["cid"]), trace_hash(row["detail"]["physical_id"]))
 
 
-def read_trace(data):
+def read_trace(data, extra_kinds=()):
     kinds = ("RegionalDelivered", "PublisherRecorded", "GAccepted", "GfrReplayRecord", "Handoff",
-             "SmokeComplete")
+             "SmokeComplete") + extra_kinds
     groups = {kind: [] for kind in kinds}
     tick = 0
     for line, raw in enumerate(data.splitlines(), 1):
@@ -356,9 +355,12 @@ def render_html(projected):
     template = (PAGE_DIR / "template.html").read_text(encoding="utf-8")
     data = json.dumps(projected, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    script = (PAGE_DIR / "replay.js").read_text(encoding="utf-8")
+    if "force" in projected:
+        script = (PAGE_DIR / "force.js").read_text(encoding="utf-8") + "\n" + script
     assets = {
         "/* INLINE_CSS */": (PAGE_DIR / "replay.css").read_text(encoding="utf-8"),
-        "/* INLINE_JS */": (PAGE_DIR / "replay.js").read_text(encoding="utf-8"),
+        "/* INLINE_JS */": script,
         "INLINE_JSON": data,
     }
     for marker, content in assets.items():
@@ -369,23 +371,34 @@ def render_html(projected):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--bundle", type=Path, required=True, help="sealed healthy M1 smoke directory")
+    parser.add_argument("--scenario", choices=("regular", "force"), default="regular")
+    parser.add_argument("--bundle", type=Path, required=True, help="sealed run directory")
     parser.add_argument("--independent", type=Path, help="independent report directory (defaults to adjacent)")
-    parser.add_argument("--output", type=Path, default=PAGE_DIR / "index.html", help="standalone replay page")
+    parser.add_argument("--output", type=Path, help="standalone replay page")
     parser.add_argument("--check", action="store_true", help="verify existing output byte for byte")
     args = parser.parse_args()
-    directory = args.independent or args.bundle.parent / VERIFY_NAME
+    is_force = args.scenario == "force"
+    output = args.output or PAGE_DIR / ("force.html" if is_force else "index.html")
     try:
-        projected = build_projection(Bundle(args.bundle), read_independent(directory))
+        if is_force:
+            from force_projection import ForceBundle, VERIFY_NAME as FORCE_VERIFY_NAME
+            from force_projection import build_force_projection, read_force_independent
+
+            directory = args.independent or args.bundle.parent / FORCE_VERIFY_NAME
+            projected = build_force_projection(ForceBundle(args.bundle), read_force_independent(directory))
+            summary = "11 physical admissions, 5 padding heights, 1 regular handoff, 1 Force, 12 verified proofs"
+        else:
+            directory = args.independent or args.bundle.parent / VERIFY_NAME
+            projected = build_projection(Bundle(args.bundle), read_independent(directory))
+            summary = "21 G acceptances, 2 regular handoffs, 21 independently verified proofs"
         html = render_html(projected)
         if args.check:
-            equal(args.output.read_bytes(), html, str(args.output))
+            equal(output.read_bytes(), html, str(output))
         else:
-            args.output.write_bytes(html)
-    except (OSError, ValueError, TypeError, KeyError, IndexError) as error:
-        parser.exit(1, f"M1 replay generation failed: {error}\n")
-    print(f"PASS: 21 G acceptances, 2 regular handoffs, 21 independently verified proofs; "
-          f"{args.output} sha256={sha256(html)}")
+            output.write_bytes(html)
+    except (OSError, ValueError, TypeError, KeyError, IndexError, StopIteration) as error:
+        parser.exit(1, f"{args.scenario} replay generation failed: {error}\n")
+    print(f"PASS: {summary}; {output} sha256={sha256(html)}")
 
 
 if __name__ == "__main__":

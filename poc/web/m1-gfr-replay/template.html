@@ -15,7 +15,10 @@
         <h1>Regular Handoff 回放</h1>
         <p class="subtitle">从公开日志接纳区块，切换 GFR 生产职责</p>
       </div>
-      <a class="source-jump" href="#provenance">证据包 <span class="mono">91547857 · seed 42</span> ↓</a>
+      <div class="masthead-links">
+        <a class="scenario-link" href="force.html">M2 Force →</a>
+        <a class="source-jump" href="#provenance">证据包 <span class="mono">91547857 · seed 42</span> ↓</a>
+      </div>
     </header>
 
     <noscript>请启用 JavaScript，页面直接读取内嵌的封存证据。</noscript>
@@ -68,11 +71,11 @@
       </details>
       <details><summary>重放规则与边界 <span class="muted">v10 GFR §3–4</span></summary>
         <div class="manual">
-          <p>规则来源为 <code>formalization_v10/09_finality_rules_zh_v0_1.md</code> §3.2–3.4、§4.2–4.3。时间键先排序。同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。处理 Espresso(q) 时，其完整前缀已经覆盖当前的公开键。</p>
+          <p id="rule-source">规则来源为 <code>formalization_v10/09_finality_rules_zh_v0_1.md</code> §3.2–3.4、§4.2–4.3。时间键先排序。同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。处理 Espresso(q) 时，其完整前缀已经覆盖当前的公开键。</p>
           <p>只有缺少必需公共输入或已公开材料尚未读齐时，当前重放位置才 WAIT。公开历史本身尚缺证明或正文的候选暂不合格，其他事件仍可处理。读者补齐材料保留原公开位置。</p>
           <p>满窗交接由接纳上界 physical block 的同一 Espresso 转移触发。若未满窗，SessionEnd 依赖公开前缀覆盖截止键并且旧职责仍为 NEXT，使用前驱最后已接纳的 physical block 为 anchor。无新块时沿用初始 anchor。后继窗口始终从前驱名义上界加一开始。</p>
-          <p>同一虚拟时刻的 trace 按 seq 展示。若 fixture finalized 时刻与 trace 相同，页面先展示 fixture header。</p>
-          <p>本次封存观察范围截至 h21。L1 数据是预生成 finalized fixture，Espresso 数据来自 SimEspresso。fixture 包含超出本次轨迹的 header，逐 header 的 reader 收取时间未记录。</p>
+          <p id="timing-note">同一虚拟时刻的 trace 按 seq 展示。若 fixture finalized 时刻与 trace 相同，页面先展示 fixture header。</p>
+          <p id="scope">本次封存观察范围截至 h21。L1 数据是预生成 finalized fixture，Espresso 数据来自 SimEspresso。fixture 包含超出本次轨迹的 header，逐 header 的 reader 收取时间未记录。</p>
         </div>
       </details>
     </section>

@@ -148,7 +148,7 @@ def decode_descriptor(data, label):
     r = canonical(data, label)
     d = {"beta": r.uint(8), "session": r.uint(8), "cause": r.uint(1)}
     source_tag = r.uint(1)
-    r.check(source_tag in (0, 1) and d["cause"] in (0, 1), "healthy boundary tag")
+    r.check(source_tag in (0, 1) and d["cause"] in (0, 1, 2), "healthy boundary tag")
     d["source_region"] = r.uint(1) if source_tag else None
     d["region"] = r.uint(1)
     committee = []
