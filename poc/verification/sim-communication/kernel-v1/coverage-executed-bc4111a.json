@@ -1,0 +1,431 @@
+{
+  "production_candidate": "bc4111aab6240b364a1a9c632d1bf02474a57272",
+  "vector_count": 46,
+  "coverage": [
+    {
+      "vector": "KV01",
+      "gate": "K-01",
+      "tests": [
+        "route_cases::kv01_02_golden_hash_enum_namespace_and_wrapper_independence"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV02",
+      "gate": "K-01",
+      "tests": [
+        "route_cases::kv01_02_golden_hash_enum_namespace_and_wrapper_independence"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV03",
+      "gate": "K-01",
+      "tests": [
+        "route_cases::kv03_route_single_field_rejection_is_atomic"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV04",
+      "gate": "K-01",
+      "tests": [
+        "route_cases::kv04_payload_limits_and_empty_payload"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV05",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv05_normalize_golden_and_duplicates"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV06",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv06_profile_priority_ambiguity_missing_and_context_independent_expansion"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV07",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv07_fixed_seed_jitter_literals"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV08",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv08_10_fifo_and_explicit_unordered"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV09",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv09_cross_link_tie_literals_and_event_ordinals"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV10",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv08_10_fifo_and_explicit_unordered"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV11",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv11_12_partition_endpoints_and_immediate_drop_coordinates",
+        "route_cases::kv11_late_hold_drain_and_adjacent_intervals"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV12",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv11_12_partition_endpoints_and_immediate_drop_coordinates",
+        "route_cases::kv14_15_duplicate_overflow_and_budget_classes",
+        "route_cases::kv17_18_checked_time_stale_binding_and_origin_domain"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV13",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv13_late_drain_charges_actual_tick_and_empty_frame"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV14",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv14_15_duplicate_overflow_and_budget_classes"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV15",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv14_15_duplicate_overflow_and_budget_classes"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV16",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv16_tracked_history_capacity_survives_queue_drain",
+        "route_cases::kv16_literal_v1_maxima_1024_copies_4mib_8192_ids",
+        "route_cases::kv14_15_duplicate_overflow_and_budget_classes"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV17",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv17_18_checked_time_stale_binding_and_origin_domain"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV18",
+      "gate": "K-02",
+      "tests": [
+        "route_cases::kv17_18_checked_time_stale_binding_and_origin_domain"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV19",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv19_23_atomic_plan_stale_cross_instance_noop"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV20",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv19_23_atomic_plan_stale_cross_instance_noop"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV21",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv19_23_atomic_plan_stale_cross_instance_noop"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV22",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv19_23_atomic_plan_stale_cross_instance_noop"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV23",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv19_23_atomic_plan_stale_cross_instance_noop"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV24",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv24_snapshot_mutations_keep_canonical_field_order",
+        "route_cases::snapshot_raw_due_respects_fixed_profile_and_last_committed_tick"
+      ],
+      "status": "FAIL",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV25",
+      "gate": "K-03",
+      "tests": [
+        "route_cases::kv25_command_budget_is_checked_before_mutation",
+        "route_cases::kv25_event_count_exact_boundary_and_one_more_batch",
+        "route_cases::kv25_encoded_event_budget_is_atomic"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV26",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv26_four_complete_golden_records_and_receive_original_watermark"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV27",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv27_wrong_receipts_never_install_or_release"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV28",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv28_29_durability_transitions_do_not_release_during_plan"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV29",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv28_29_durability_transitions_do_not_release_during_plan"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV30",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv30_duplicate_first_receipt_consumed_history_and_receive_time_rule"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV31",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv31_32_ack_delete_tombstone_and_reenqueue_are_durable_and_idempotent",
+        "custody_clock_cases::active_ack_requires_attempt_and_supports_new_receiver_incarnation"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV32",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv31_32_ack_delete_tombstone_and_reenqueue_are_durable_and_idempotent",
+        "custody_clock_cases::active_ack_requires_attempt_and_supports_new_receiver_incarnation"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV33",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv33_restore_preserves_record_release_identity_and_original_retry"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV34",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv34_stale_and_cross_instance_custody_confirmation"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV35",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv35_retry_due_attempt_progress_and_rebind_preserve_origin"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV36",
+      "gate": "K-04",
+      "tests": [
+        "custody_clock_cases::kv36_mailbox_capacity_counts_tombstones_consumed_and_payload"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV37",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv37_43_clock_offset_age_and_lease_equality"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV38",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv38_39_clock_poisoning_out_of_order_and_wrong_sample_atomicity"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV39",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv38_39_clock_poisoning_out_of_order_and_wrong_sample_atomicity"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV40",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv40_clock_request_capacity_and_counter_no_poisoning"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV41",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv41_clock_rebind_preserves_request_sequence_and_delivery_floor"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV42",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv42_clock_deadline_clamp_offsets_and_checked_projection"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV43",
+      "gate": "K-05",
+      "tests": [
+        "custody_clock_cases::kv37_43_clock_offset_age_and_lease_equality"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV44",
+      "gate": "K-06",
+      "tests": [
+        "custody_clock_cases::kv44_grant_consumer_reader_isolation_and_opaque_effects"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV45",
+      "gate": "K-07",
+      "tests": [
+        "route_cases::kv45_twelve_component_replay_pairs"
+      ],
+      "status": "PASS",
+      "scope": "component assertions only; full SC integration remains open"
+    },
+    {
+      "vector": "KV46",
+      "gate": "K-07",
+      "tests": [
+        "custody_clock_cases::kv46_canonical_record_semantic_mutations_and_receipt_scope",
+        "custody_clock_cases::snapshot_tombstone_preserves_possible_original_retry_deadline"
+      ],
+      "status": "FAIL",
+      "scope": "component assertions only; full SC integration remains open"
+    }
+  ]
+}

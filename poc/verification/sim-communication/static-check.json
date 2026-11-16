@@ -1,0 +1,60 @@
+{
+  "stage": "PREPARATION_ONLY",
+  "scope": "static JSON/Markdown/source-reference/literal-arithmetic consistency only",
+  "status": "PASS",
+  "waiting_dependency": "01",
+  "baseline_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+  "runtime_candidate_sha": null,
+  "simulation": "not_run",
+  "runtime_verification": "not_run",
+  "seeds_executed": [],
+  "planned_runtime_seeds": [
+    7,
+    42,
+    99
+  ],
+  "vector_count": 64,
+  "groups": {
+    "A": 8,
+    "C": 10,
+    "E": 8,
+    "L": 10,
+    "O": 10,
+    "R": 5,
+    "S": 7,
+    "T": 6
+  },
+  "contract_gates_mapped": 18,
+  "local_links_checked": 21,
+  "regional_bft_pin": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+  "contract_sha256": "9242760a1dacd559e6a5ac629b0604d8626a0cdd7f3ed5345b76971596d3e1a5",
+  "checked_file_sha256": {
+    "poc/verification/sim-communication/README.md": "8a64251cbdc872bfd50b7f7afb8e7410c636c2896cb09af8754d768fd1ba2f29",
+    "poc/verification/sim-communication/contract-review.md": "bde724e7ac72f9812eaa25e774690df102442fb9da99b8ef6ef2ab8cf7288aa0",
+    "poc/verification/sim-communication/expectations-v1.md": "e20fc3e9ad4422864861f343d30ccfaf7037cc1ff2da142ae8ab9d294c8d6272",
+    "poc/verification/sim-communication/planned-matrix.md": "be7b8ed1aaaf90faf7c35552af0a76492989b855c007af493e82d217b108f8f0",
+    "poc/verification/sim-communication/source-map.md": "64a682ae5174120718c7e01e5be8bb0051b00e9fd758dccb1b331e82ab2d615e",
+    "poc/verification/sim-communication/vectors-v1.json": "dfd018e2ee9d18d902c00c943c8cbfd28db9cc3388cc8e0671ffb0f7e3939920"
+  },
+  "checks": [
+    "JSON parses; 64 unique IDs; source IDs and pending-decision markers",
+    "literal endpoint, Clock/RPC, timer/drain and replay-matrix arithmetic",
+    "SC-01..SC-18 mapped",
+    "all local Markdown link targets exist; no trailing whitespace",
+    "only assigned preparation paths dirty/untracked",
+    "exact baseline and submodule gitlink; git diff --check"
+  ],
+  "limits": [
+    "No runtime code/proto/types/manifests changed",
+    "No build, heavy test, native process or simulation executed",
+    "Semantic symbols are not finalized protobuf/signature fixtures",
+    "Interface proposals remain pending Q1-Q6 and accepted dependency01"
+  ],
+  "commands": [
+    {
+      "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+      "command": "python3 - <<'PY'\nimport collections, hashlib, json, re, subprocess\nfrom pathlib import Path\nroot=Path('/home/jy/.codex/worktrees/0b8e/megaroation_poc')\nbase=root/'poc/verification/sim-communication'\nd=json.loads((base/'vectors-v1.json').read_text())\nv={r['id']:r for r in d['vectors']}\nassert len(d['vectors'])==len(v)==64\nassert d['runtime_candidate_sha'] is None and d['simulation']=='not_run'\nassert d['waiting_dependency']=='01'\nsource_text=(base/'source-map.md').read_text()\nfor r in v.values():\n    assert r['execution_status']=='NOT_RUN'\n    assert r['source_rules'] and set(r['source_rules']) <= set(d['source_ids'])\n    assert all(('| '+s+' |') in source_text for s in r['source_rules'])\n    assert r['pre_state'] and r['trigger'] and r['expected']\n    if r['classification']=='conditional_adapter_proposal':\n        assert r['pending_decisions']\ngroups=dict(sorted(collections.Counter(r['id'].split('-')[0] for r in v.values()).items()))\nassert groups=={'A':8,'C':10,'E':8,'L':10,'O':10,'R':5,'S':7,'T':6}\nfor p,pair in zip(v['E-02']['pre_state']['public_pids'],v['E-02']['pre_state']['region_member_pairs']):\n    assert p==5*pair[0]+pair[1]\nep=v['E-04']['pre_state']\nassert int(ep['source'].split(':')[1]) in ep['committee_public_pids']\nassert int(ep['destination'].split(':')[1]) in ep['committee_public_pids']\nassert ep['source']!=ep['destination'] and ep['channel']=='native.vote'\nfor row in v['C-01']['trigger']['rpc_profiles']:\n    assert row['as_of_us']==1000000+row['request_us']\n    assert row['delivery_us']==row['as_of_us']+row['response_us']\n    assert row['age_us']==row['response_us']\n    assert row['locals_us']==[row['delivery_us']+1000,row['delivery_us']-1000]\nassert v['T-01']['expected']['first_eligible_reference_ticks_us']==[1025000-1000,1025000+1000]\nassert v['T-05']['expected']['stop_boundary_local_reads_us']==[x+1000 for x in v['T-05']['trigger']['stop_boundary_reference_ticks_us']]\nassert v['T-05']['expected']['stop_boundary_sign_permitted_if_no_prior_Close']==[True,False,False]\nassert v['L-07']['expected']['drain_slots_us']==[1020000,1021000,1022000]\nassert v['L-07']['expected']['uncontended_delivery_ticks_us']==[x+2000 for x in v['L-07']['expected']['drain_slots_us']]\nassert v['R-01']['expected']['total_runs']==3*2*2\nassert v['C-10']['expected']['accepted_sequence_after_each']==[5,5]\nassert v['S-07']['expected']['A_prefix_after_each']==[0,0,2]\ncontract=root/'poc/docs/contracts/task-contract-sim-communication-v1.md'\nassert hashlib.sha256(contract.read_bytes()).hexdigest()=='9242760a1dacd559e6a5ac629b0604d8626a0cdd7f3ed5345b76971596d3e1a5'\nreview=(base/'contract-review.md').read_text()\nassert all('SC-%02d'%i in review for i in range(1,19))\nchecked_links=[]\nfiles=sorted(p for p in base.iterdir() if p.name!='static-check.json')\nfor p in files:\n    if p.suffix=='.json':\n        json.loads(p.read_text())\n    if p.suffix=='.md':\n        text=p.read_text()\n        for line_number,line in enumerate(text.splitlines(),1):\n            assert line.rstrip()==line, (str(p),line_number,'trailing whitespace')\n        for target in re.findall(r'\\[[^\\]]*\\]\\(([^)]+)\\)',text):\n            if '://' in target or target.startswith('#'):\n                continue\n            target=target.split('#',1)[0]\n            assert (p.parent/target).resolve().exists(),(str(p),target)\n            checked_links.append({'file':str(p.relative_to(root)),'target':target})\nstatus=subprocess.check_output(['git','status','--porcelain','--untracked-files=all'],cwd=root,text=True).splitlines()\nallowed=('poc/verification/sim-communication/','poc/docs/contracts/task-contract-sim-communication-v1.md','poc/docs/sim-communication-preparation.md')\nassert all(row[3:].startswith(allowed) for row in status), status\nbaseline=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()\nassert baseline=='ada48a584ad4de15e302c479ee8cd41b9e2a8d9b'\npin=subprocess.check_output(['git','ls-tree','HEAD','regional_BFT_sim'],cwd=root,text=True).split()[2]\nassert pin=='691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6'\nsubprocess.run(['git','diff','--check'],cwd=root,check=True)\nreport={'stage':'PREPARATION_ONLY','scope':'static JSON/Markdown/source-reference/literal-arithmetic consistency only','status':'PASS','waiting_dependency':'01','baseline_sha':baseline,'runtime_candidate_sha':None,'simulation':'not_run','runtime_verification':'not_run','seeds_executed':[],'planned_runtime_seeds':[7,42,99],'vector_count':len(v),'groups':groups,'contract_gates_mapped':18,'local_links_checked':len(checked_links),'regional_bft_pin':pin,'contract_sha256':hashlib.sha256(contract.read_bytes()).hexdigest(),'checked_file_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'checks':['JSON parses; 64 unique IDs; source IDs and pending-decision markers','literal endpoint, Clock/RPC, timer/drain and replay-matrix arithmetic','SC-01..SC-18 mapped','all local Markdown link targets exist; no trailing whitespace','only assigned preparation paths dirty/untracked','exact baseline and submodule gitlink; git diff --check'],'limits':['No runtime code/proto/types/manifests changed','No build, heavy test, native process or simulation executed','Semantic symbols are not finalized protobuf/signature fixtures','Interface proposals remain pending Q1-Q6 and accepted dependency01']}\nprint(json.dumps(report,ensure_ascii=False,indent=2))\n\nPY",
+      "exit_code": 0
+    }
+  ]
+}

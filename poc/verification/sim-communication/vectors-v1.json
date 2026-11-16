@@ -1,0 +1,2408 @@
+{
+  "schema_version": 1,
+  "kind": "static_semantic_acceptance_vectors",
+  "stage": "PREPARATION_ONLY",
+  "waiting_dependency": "01",
+  "baseline_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+  "runtime_candidate_sha": null,
+  "simulation": "not_run",
+  "source_ids": [
+    "V2-ID",
+    "V2-CLOCK",
+    "V2-RUNTIME",
+    "V2-NET",
+    "V2-START",
+    "V2-READERS",
+    "V2-EVIDENCE",
+    "SP-LIFE",
+    "I1-SCHED",
+    "I1-CLOCK",
+    "I1-ANNEX",
+    "RECOVERY",
+    "FRESH",
+    "CW-CLOCK",
+    "CW-P2P",
+    "RBFT",
+    "H02"
+  ],
+  "semantic_symbols": {
+    "run-A": "logical test run; final bytes pending",
+    "config-A": "shared configuration binding owned with task03",
+    "cid-A": "original context; final canonical bytes pending task03",
+    "cid-B": "different context; not interchangeable",
+    "m1": "stable logical message; final encoding/hash pending",
+    "m2": "distinct logical message",
+    "ack-A": "exact canonical future Ack fixture",
+    "retained-signature-A": "exact real pre-stop native signature fixture, not generated here"
+  },
+  "notes": [
+    "No signatures, final protobuf bytes, runtime checker or executable scenarios are implemented by this file.",
+    "Expected values derive from sources; implementation was inspected only after the independent source expectation report.",
+    "conditional_adapter_proposal rows require named decisions before execution; no implicit public type or wire freeze.",
+    "All time integers are microseconds unless a field explicitly says otherwise.",
+    "Actual feature02 PID and active-engine coverage must be reported independently of registration counts.",
+    "Initial source-first draft had 60 vectors; O-09 explicitly adds sender confirmation/delete crash coverage after contract cross-check, derived again from V2-NET/RECOVERY.",
+    "Lead review expanded O-10/C-10/S-07 and corrected E-04 to a valid same-region native.vote pre-state; these are static source-based boundary refinements."
+  ],
+  "vectors": [
+    {
+      "id": "E-01",
+      "source_rules": [
+        "V2-ID",
+        "H02"
+      ],
+      "pre_state": {
+        "regions": 3,
+        "members_per_region": 5,
+        "public_pids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "services": [
+          "publisher",
+          "espresso",
+          "l1-driver",
+          "da",
+          "reader-A",
+          "reader-B"
+        ]
+      },
+      "trigger": "register all configured endpoints independently",
+      "expected": {
+        "replica_endpoint_count": 15,
+        "service_endpoint_count": 6,
+        "public_pid_aliases": 0,
+        "report_actual_os_pids": true,
+        "report_actual_active_engines": true,
+        "scripted_peers_reported_separately": true,
+        "full_slot_aware_session_claim": false
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-02",
+      "source_rules": [
+        "V2-ID",
+        "RBFT",
+        "H02"
+      ],
+      "pre_state": {
+        "public_pids": [
+          0,
+          5,
+          10
+        ],
+        "region_member_pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ]
+        ]
+      },
+      "trigger": "route to each public pid using the corresponding context mapping",
+      "expected": {
+        "distinct_route_destinations": 3,
+        "same_local_member": 0,
+        "cross_region_aliases": 0,
+        "signer_index_inferred_from_pid": false
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-03",
+      "source_rules": [
+        "V2-ID",
+        "I1-SCHED",
+        "H02"
+      ],
+      "pre_state": {
+        "registered_endpoint": "replica:5",
+        "incarnation": 1
+      },
+      "trigger": {
+        "register_variants": [
+          "conflicting key for same public pid",
+          "same endpoint claimed by different owner",
+          "unplanned incarnation reuse",
+          "unplanned incarnation skip"
+        ]
+      },
+      "expected": {
+        "accepted_variants": 0,
+        "registry_mutations": 0,
+        "protocol_deliveries": 0
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-04",
+      "source_rules": [
+        "I1-SCHED",
+        "H02",
+        "RBFT"
+      ],
+      "pre_state": {
+        "run": "run-A",
+        "config": "config-A",
+        "live_cid": "cid-A",
+        "destination": "replica:6",
+        "source": "replica:5",
+        "source_incarnation": 2,
+        "destination_incarnation": 3,
+        "channel": "native.vote",
+        "region": 1,
+        "committee_public_pids": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "epoch": 1,
+        "namespace": "namespace-A",
+        "all_unmutated_fields_valid": true
+      },
+      "trigger": {
+        "mutate_one_field": [
+          "run",
+          "config",
+          "live_cid",
+          "destination",
+          "source_ownership",
+          "source_incarnation_to_1",
+          "destination_incarnation_to_2",
+          "epoch",
+          "namespace",
+          "payload_digest"
+        ]
+      },
+      "expected": {
+        "accepted_variants": 0,
+        "enqueued_effects": 0,
+        "delivered_effects": 0,
+        "accepted_ack_delta": 0
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-05",
+      "source_rules": [
+        "V2-NET",
+        "SP-LIFE",
+        "H02"
+      ],
+      "pre_state": {
+        "receiver_live_cid": "cid-B",
+        "retained_history_cids": [
+          "cid-A"
+        ]
+      },
+      "trigger": {
+        "messages": [
+          {
+            "kind": "LIVE_VOTE",
+            "cid": "cid-A"
+          },
+          {
+            "kind": "HISTORICAL_FINAL",
+            "cid": "cid-A"
+          },
+          {
+            "kind": "PUBLIC_LOG",
+            "cid": null
+          }
+        ]
+      },
+      "expected": {
+        "live_vote_to_cid_B": false,
+        "historical_result_preserves_cid": "cid-A",
+        "historical_result_may_reach_history_verifier": true,
+        "absent_cid_is_wildcard": false,
+        "public_log_absence_requires_channel_policy": true
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "channel-context-policy",
+        "03-context-canonical"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-06",
+      "source_rules": [
+        "I1-SCHED",
+        "I1-ANNEX",
+        "H02"
+      ],
+      "pre_state": {
+        "payload_limit_bytes": 65536,
+        "frame_limit_bytes": 1048576
+      },
+      "trigger": {
+        "payload_lengths_bytes": [
+          65535,
+          65536,
+          65537
+        ]
+      },
+      "expected": {
+        "transport_payload_guard_accepts": [
+          true,
+          true,
+          false
+        ],
+        "native_semantic_validity_implied": false,
+        "oversize_partial_effects": 0
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-07",
+      "source_rules": [
+        "H02",
+        "CW-P2P",
+        "RBFT"
+      ],
+      "pre_state": {
+        "required_native_channels": [
+          "VOTE",
+          "CERTIFICATE",
+          "RESOLVER",
+          "BODY"
+        ]
+      },
+      "trigger": "exercise each actual native producer, controlled send and native receive/consume",
+      "expected": {
+        "each_channel_real_message_minimum": 1,
+        "exact_signed_bytes_preserved": true,
+        "send_has_committed_root_ack": true,
+        "body_only_resolver_substitute": false,
+        "report_pids_active_engines_and_scripts": true
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "E-08",
+      "source_rules": [
+        "V2-ID",
+        "SP-LIFE",
+        "RBFT"
+      ],
+      "pre_state": {
+        "committee_size": 5,
+        "quorum": 4,
+        "source_context": "cid-A",
+        "target_context": "cid-B"
+      },
+      "trigger": {
+        "certificate_variants": [
+          "3 distinct signers",
+          "4 distinct signers with wrong context",
+          "4 distinct signers with correct context",
+          "duplicate signer counted twice"
+        ]
+      },
+      "expected": {
+        "wrong_quorum_or_context_acceptance": 0,
+        "routing_acceptance_proves_certificate_validity": false,
+        "native_verifier_required": true,
+        "cross_cid_signature_rewrite": false
+      },
+      "planned_scenario": "endpoint-domain",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-01",
+      "source_rules": [
+        "I1-SCHED",
+        "RECOVERY",
+        "H02"
+      ],
+      "pre_state": {
+        "hub_observation_set": [
+          "scheduler",
+          "event_allocator",
+          "queues",
+          "attempt_counters",
+          "outbox",
+          "receiver_dedup",
+          "receiver_inbox",
+          "reader_prefixes",
+          "accepted_ack_index",
+          "trusted_floors",
+          "worker_logical_progress",
+          "protocol_success_trace",
+          "timers",
+          "samples"
+        ],
+        "outstanding_step": 7
+      },
+      "trigger": {
+        "ack_effects": [
+          "valid ClockRequest",
+          "valid Send(m1)",
+          "invalid Send(wrong destination)"
+        ]
+      },
+      "expected": {
+        "ack_accepts": false,
+        "unchanged": [
+          "scheduler",
+          "event_allocator",
+          "queues",
+          "attempt_counters",
+          "outbox",
+          "receiver_dedup",
+          "receiver_inbox",
+          "reader_prefixes",
+          "accepted_ack_index",
+          "trusted_floors",
+          "worker_logical_progress",
+          "protocol_success_trace",
+          "timers",
+          "samples"
+        ],
+        "successful_effect_count": 0,
+        "rejection_diagnostic_allowed": true,
+        "prior_authorized_native_io_rollback_promised": false
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-02",
+      "source_rules": [
+        "I1-SCHED",
+        "I1-ANNEX"
+      ],
+      "pre_state": {
+        "accepted_step": 7,
+        "exact_ack": "ack-A"
+      },
+      "trigger": {
+        "receive": [
+          "ack-A",
+          "ack-A"
+        ]
+      },
+      "expected": {
+        "total_logical_step_adoptions": 1,
+        "new_effects_on_duplicate": 0,
+        "new_attempts_on_duplicate": 0
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-03",
+      "source_rules": [
+        "I1-SCHED"
+      ],
+      "pre_state": {
+        "accepted_step": 7,
+        "exact_ack": "ack-A"
+      },
+      "trigger": {
+        "duplicate_with_mutation": [
+          "payload_bytes",
+          "effect_order",
+          "logical_ack_hash",
+          "grant_hash"
+        ]
+      },
+      "expected": {
+        "accepted_mutants": 0,
+        "new_effects": 0,
+        "classification": "INFRASTRUCTURE_FAILURE"
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-04",
+      "source_rules": [
+        "I1-SCHED",
+        "RECOVERY",
+        "H02"
+      ],
+      "pre_state": {
+        "outstanding_owner": "replica:0",
+        "outstanding_step": 7,
+        "current_incarnation": 2
+      },
+      "trigger": {
+        "ack_variants": [
+          "unsolicited step8",
+          "wrong owner",
+          "old incarnation1",
+          "wrong grant hash",
+          "unknown effect oneof",
+          "invalid status"
+        ]
+      },
+      "expected": {
+        "accepted_variants": 0,
+        "new_effects": 0,
+        "trusted_floor_advances": 0
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-05",
+      "source_rules": [
+        "V2-RUNTIME",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "authorized_native_io_may_be_durable": true,
+        "root_step_committed": false
+      },
+      "trigger": "attempt external Send or protocol output before required root durability",
+      "expected": {
+        "externally_released_effects": 0,
+        "may_retain_auditable_prior_native_io": true,
+        "successful_ack": false
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-06",
+      "source_rules": [
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "old_ack": "exact-old-ack",
+        "old_send_attempt": 3,
+        "new_incarnation": 2,
+        "known_original_grant": true
+      },
+      "trigger": {
+        "recover_modes": [
+          "old Ack lost before hub adoption",
+          "old Ack already adopted"
+        ],
+        "repeat_recovered_envelope": 2
+      },
+      "expected": {
+        "new_send_adoptions_per_mode": [
+          1,
+          0
+        ],
+        "preserved_attempt": 3,
+        "changed_old_ack_bytes": 0,
+        "direct_old_clock_timer_work_scheduling": 0,
+        "new_private_key_invocations_for_replay": 0
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-07",
+      "source_rules": [
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "cutpoint": "after_final_cut_sync_before_root_record",
+        "output_intents": [
+          "effect0 bytes",
+          "effect1 bytes"
+        ],
+        "completed_original_ack": false
+      },
+      "trigger": "recover authorized pending root transaction",
+      "expected": {
+        "claim_cached_ack": false,
+        "exact_ordered_intents_retained": true,
+        "newly_invented_send_bytes": 0,
+        "completion_mapping_recorded": true,
+        "release_before_required_commits": 0
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "A-08",
+      "source_rules": [
+        "I1-SCHED",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "complete_recovered_frame_limit_bytes": 1048576,
+        "future_incarnation_width_reserved": true
+      },
+      "trigger": {
+        "complete_frame_encoded_lengths_bytes": [
+          1048575,
+          1048576,
+          1048577
+        ]
+      },
+      "expected": {
+        "size_guard_accepts": [
+          true,
+          true,
+          false
+        ],
+        "oversize_root_journal_head_cache_mutations": 0,
+        "oversize_released_outputs": 0,
+        "exact_protobuf_boundary_fixture": "planned after accepted 01 encoding"
+      },
+      "planned_scenario": "ack-atomicity",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-01",
+      "source_rules": [
+        "V2-NET",
+        "CW-P2P"
+      ],
+      "pre_state": {
+        "route": "replica:0->replica:1/VOTE",
+        "mode": "FIFO",
+        "send_ticks_us": [
+          1000000,
+          1000001
+        ],
+        "latency_plus_jitter_us": [
+          20000,
+          1000
+        ]
+      },
+      "trigger": {
+        "messages": [
+          "m1",
+          "m2"
+        ]
+      },
+      "expected": {
+        "raw_due_ticks_us": [
+          1020000,
+          1001001
+        ],
+        "delivery_order": [
+          "m1",
+          "m2"
+        ],
+        "second_delivery_not_before_us": 1020000
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "transport-attempt-FIFO",
+        "same-tick-queue-rule"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-02",
+      "source_rules": [
+        "V2-NET"
+      ],
+      "pre_state": {
+        "routes": [
+          "replica:0->replica:1/VOTE",
+          "replica:5->replica:6/VOTE"
+        ],
+        "send_ticks_us": [
+          1000000,
+          1000000
+        ],
+        "delays_us": [
+          20000,
+          1000
+        ]
+      },
+      "trigger": {
+        "messages": [
+          "m1",
+          "m2"
+        ]
+      },
+      "expected": {
+        "uncontended_due_ticks_us": [
+          1020000,
+          1001000
+        ],
+        "permitted_delivery_order": [
+          "m2",
+          "m1"
+        ]
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-03",
+      "source_rules": [
+        "V2-NET"
+      ],
+      "pre_state": {
+        "routes": [
+          "replica:0->replica:1/VOTE",
+          "replica:0->replica:1/BODY"
+        ],
+        "send_ticks_us": [
+          1000000,
+          1000000
+        ],
+        "delays_us": [
+          20000,
+          1000
+        ]
+      },
+      "trigger": {
+        "messages": [
+          "m1",
+          "m2"
+        ]
+      },
+      "expected": {
+        "uncontended_due_ticks_us": [
+          1020000,
+          1001000
+        ],
+        "permitted_delivery_order": [
+          "m2",
+          "m1"
+        ],
+        "cross_channel_total_fifo_required": false
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-04",
+      "source_rules": [
+        "I1-SCHED",
+        "I1-ANNEX"
+      ],
+      "pre_state": {
+        "seed": 7,
+        "parent_tick_us": 1000000,
+        "parent_wave": 0,
+        "child_same_tick": true
+      },
+      "trigger": "schedule committed child and independent same-tick events",
+      "expected": {
+        "child_wave": 1,
+        "parent_precedes_child": true,
+        "order_key": [
+          "tick_us",
+          "causal_wave",
+          "tie_rank",
+          "event_id"
+        ],
+        "pid_or_wall_in_tie_rank": false,
+        "i1_legacy_tie_seed7_event9": "4a627d335c54960d4e399bfde1204228969592a05258b1180ee5ef798b908736"
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-05",
+      "source_rules": [
+        "I1-SCHED",
+        "I1-ANNEX",
+        "H02"
+      ],
+      "pre_state": {
+        "queue_capacity": 64,
+        "existing_queue_entries": 64,
+        "overflow": "drop-newest"
+      },
+      "trigger": {
+        "send": "m65"
+      },
+      "expected": {
+        "retained_queue_entries": 64,
+        "new_network_admissions": 0,
+        "visible_queue_overflow_events": 1,
+        "successful_receiver_deliveries": 0
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-06",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "offline_interval_us": [
+          1010000,
+          1020000
+        ],
+        "interval_convention": "half-open"
+      },
+      "trigger": {
+        "link_check_ticks_us": [
+          1009999,
+          1010000,
+          1019999,
+          1020000
+        ]
+      },
+      "expected": {
+        "online": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "offline_attempt_counts_as_receipt": false
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "link-interval-convention"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-07",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "backlog": [
+          "m1",
+          "m2",
+          "m3"
+        ],
+        "heal_tick_us": 1020000,
+        "drain_interval_us": 1000,
+        "latency_us": 2000,
+        "first_drain_at_heal": true
+      },
+      "trigger": "recover partition and drain one attempt per drain slot",
+      "expected": {
+        "drain_slots_us": [
+          1020000,
+          1021000,
+          1022000
+        ],
+        "uncontended_delivery_ticks_us": [
+          1022000,
+          1023000,
+          1024000
+        ],
+        "burst_all_at_heal": false
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "drain-slot-semantics"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-08",
+      "source_rules": [
+        "V2-NET",
+        "CW-P2P"
+      ],
+      "pre_state": {
+        "route": "replica:0->replica:1/VOTE",
+        "messages": [
+          "m1",
+          "m2"
+        ]
+      },
+      "trigger": {
+        "explicit_adversarial_release_order": [
+          "m2",
+          "m1"
+        ]
+      },
+      "expected": {
+        "allowed_only_when_reordering_profile_declared": true,
+        "default_fifo_coverage_claim_for_adversarial_run": false,
+        "message_ids_unchanged": true
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "adversarial-reorder-profile"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-09",
+      "source_rules": [
+        "H02"
+      ],
+      "pre_state": {
+        "matching_profiles": [
+          "exact src,dst,channel",
+          "wildcard region,channel"
+        ],
+        "same_precedence_conflict": true
+      },
+      "trigger": "resolve LinkProfile",
+      "expected": {
+        "silent_iteration_order_choice": false,
+        "must_freeze_precedence_or_reject_ambiguity": true,
+        "os_order_in_resolution": false
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "profile-match-precedence"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "L-10",
+      "source_rules": [
+        "I1-SCHED",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "last_attempt": 3,
+        "message_id": "m1",
+        "payload_hex": "010203"
+      },
+      "trigger": {
+        "operations": [
+          "retry",
+          "network duplicates retry packet",
+          "attempt counter at max then retry"
+        ]
+      },
+      "expected": {
+        "retry_attempt": 4,
+        "duplicate_packet_attempt": 4,
+        "logical_message_count": 1,
+        "overflow_wrap_allowed": false,
+        "payload_hex": "010203"
+      },
+      "planned_scenario": "link-order-faults",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-01",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "sender_outbox": [
+          "m1"
+        ],
+        "durable_enqueue_complete": true,
+        "send_attempts": 0,
+        "progress_conditions": {
+          "durable_storage_retained": true,
+          "eventually_online": true,
+          "finite_post_heal_delay": true,
+          "fair_grants": true,
+          "positive_drain_rate": true,
+          "sufficient_retention": true
+        }
+      },
+      "trigger": "crash sender after durable enqueue and restart with new PID/incarnation",
+      "expected": {
+        "outbox_message_id": "m1",
+        "logical_message_count": 1,
+        "eventual_receiver_custody_under_conditions": true,
+        "outbox_deleted_before_durable_receipt": false
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-02",
+      "source_rules": [
+        "V2-NET",
+        "H02",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "sender_outbox": [
+          "m1"
+        ],
+        "last_attempt": 1,
+        "ack_received": false,
+        "original_send_position": [
+          "step7",
+          0
+        ],
+        "payload_hex": "010203"
+      },
+      "trigger": "crash sender after send before receive ACK and restart",
+      "expected": {
+        "retry_attempt": 2,
+        "message_id": "m1",
+        "original_send_position": [
+          "step7",
+          0
+        ],
+        "payload_hex": "010203",
+        "receiver_durable_inserts_max": 1,
+        "signature_recreation_for_old_payload": 0
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-03",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "receiver_dedup": [
+          "m1"
+        ],
+        "receiver_inbox": [
+          "m1"
+        ],
+        "receive_custody_durable": true,
+        "ack_lost": true,
+        "sender_outbox": [
+          "m1"
+        ],
+        "first_receive_tick_us": 1005000,
+        "first_receive_local_us": 1006000,
+        "restart_tick_us": 1050000
+      },
+      "trigger": "restart receiver; sender retries m1; reissue receive ACK",
+      "expected": {
+        "total_receiver_durable_inserts": 1,
+        "first_receive_overwrites": 0,
+        "reissued_ack_allowed": true,
+        "sender_delete_only_after_valid_ack": true,
+        "arbitrary_external_side_effect_exactly_once_claim": false,
+        "first_receive_tick_us": 1005000,
+        "first_receive_local_us": 1006000
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-04",
+      "source_rules": [
+        "V2-NET",
+        "H02",
+        "I1-SCHED"
+      ],
+      "pre_state": {
+        "sender_outbox": [
+          "m1"
+        ],
+        "receipt_identity_bound": true
+      },
+      "trigger": {
+        "ack_mutants": [
+          "wrong run",
+          "wrong config",
+          "wrong sender",
+          "wrong recipient",
+          "wrong channel",
+          "wrong message_id",
+          "wrong payload digest",
+          "unauthorized physical incarnation",
+          "missing durable custody receipt"
+        ]
+      },
+      "expected": {
+        "accepted_mutants": 0,
+        "deleted_outbox_entries": 0,
+        "dedup_or_floor_mutations": 0
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reliable-ACK-receipt-schema"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-05",
+      "source_rules": [
+        "V2-NET",
+        "SP-LIFE",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "cid": "cid-A",
+        "terminal": true,
+        "outbox": [
+          "pre-close-final"
+        ],
+        "signed_bytes": "retained-signature-A"
+      },
+      "trigger": "restart and forward historical final/proof/body/state for closed cid",
+      "expected": {
+        "new_signatures": 0,
+        "terminal": true,
+        "historical_task_retained": true,
+        "signed_bytes": "retained-signature-A",
+        "old_cid_reentered": false
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-06",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "logical_enqueue_order": [
+          "m1",
+          "m2"
+        ],
+        "first_m1_attempt_lost": true,
+        "transport_attempt_fifo": true
+      },
+      "trigger": {
+        "receive_attempts": [
+          "m2-attempt1",
+          "m1-attempt2",
+          "m1-attempt2-duplicate"
+        ]
+      },
+      "expected": {
+        "durable_inbox_insert_order": [
+          "m2",
+          "m1"
+        ],
+        "insert_counts": {
+          "m1": 1,
+          "m2": 1
+        },
+        "end_to_end_logical_fifo_claim": false
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "transport-attempt-FIFO",
+        "durable-receiver-dedup"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-07",
+      "source_rules": [
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "sender_outbox": [
+          "m1"
+        ],
+        "physical_queue_full": true
+      },
+      "trigger": "attempt enqueue overflows then queue drains and retry succeeds",
+      "expected": {
+        "outbox_after_overflow": [
+          "m1"
+        ],
+        "overflow_counts_as_receive_ack": false,
+        "retry_reuses_message_id": "m1",
+        "eventual_custody_requires_progress_conditions": true
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-08",
+      "source_rules": [
+        "V2-NET",
+        "CW-P2P",
+        "RECOVERY",
+        "H02"
+      ],
+      "pre_state": {
+        "channel_classes": {
+          "native": [
+            "VOTE",
+            "CERTIFICATE",
+            "RESOLVER",
+            "BODY"
+          ],
+          "cross_region_reliable": [
+            "FINAL",
+            "PROOF",
+            "BODY",
+            "STATE"
+          ]
+        }
+      },
+      "trigger": "drop native certificate response, restart requester, then repair",
+      "expected": {
+        "native_resolver_request_response_must_execute": true,
+        "old_request_generation_cancelled": true,
+        "cross_region_outbox_substitutes_for_native_resolver": false,
+        "raw_votes_permanently_retained_claim": false
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-01",
+      "source_rules": [
+        "V2-CLOCK",
+        "I1-CLOCK",
+        "I1-ANNEX",
+        "H02"
+      ],
+      "pre_state": {
+        "request_tick_us": 1000000,
+        "epsilon_us": [
+          1000,
+          -1000
+        ],
+        "service_processing_us": 0,
+        "lease_duration_us": 100000
+      },
+      "trigger": {
+        "rpc_profiles": [
+          {
+            "request_us": 50,
+            "response_us": 50,
+            "as_of_us": 1000050,
+            "delivery_us": 1000100,
+            "age_us": 50,
+            "locals_us": [
+              1001100,
+              999100
+            ]
+          },
+          {
+            "request_us": 250,
+            "response_us": 250,
+            "as_of_us": 1000250,
+            "delivery_us": 1000500,
+            "age_us": 250,
+            "locals_us": [
+              1001500,
+              999500
+            ]
+          },
+          {
+            "request_us": 250,
+            "response_us": 10000,
+            "as_of_us": 1000250,
+            "delivery_us": 1010250,
+            "age_us": 10000,
+            "locals_us": [
+              1011250,
+              1009250
+            ]
+          },
+          {
+            "request_us": 10000,
+            "response_us": 1000,
+            "as_of_us": 1010000,
+            "delivery_us": 1011000,
+            "age_us": 1000,
+            "locals_us": [
+              1012000,
+              1010000
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "pairwise_difference_us": 2000,
+        "maximum_absolute_error_us": 1000,
+        "rows_are_literal_expected_times": true,
+        "rpc_latency_added_to_offset": false
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-02",
+      "source_rules": [
+        "V2-CLOCK",
+        "I1-CLOCK"
+      ],
+      "pre_state": {
+        "accepted_lease_end_us": 1100000,
+        "sample_refresh_lost": true
+      },
+      "trigger": {
+        "grant_ticks_us": [
+          1050000,
+          1099999,
+          1100000,
+          1100001
+        ]
+      },
+      "expected": {
+        "lease_end_after_each_grant_us": [
+          1100000,
+          1100000,
+          1100000,
+          1100000
+        ],
+        "renewal_events": 0
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-03",
+      "source_rules": [
+        "I1-CLOCK",
+        "H02"
+      ],
+      "pre_state": {
+        "accepted_sequence": 2,
+        "outstanding_requests": [
+          11,
+          12
+        ],
+        "lease_end_us": 1100000
+      },
+      "trigger": {
+        "sample_mutations": [
+          "wrong run",
+          "wrong endpoint",
+          "wrong incarnation",
+          "wrong clock domain",
+          "wrong rate profile",
+          "unknown request",
+          "sequence2 replay",
+          "future as_of",
+          "delivery equal lease_end",
+          "uncertainty1001",
+          "wrong oscillator projection"
+        ]
+      },
+      "expected": {
+        "accepted_mutants": 0,
+        "accepted_sequence": 2,
+        "outstanding_requests": [
+          11,
+          12
+        ],
+        "lease_end_us": 1100000,
+        "unrelated_request_mutations": 0
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-04",
+      "source_rules": [
+        "I1-CLOCK"
+      ],
+      "pre_state": {
+        "accepted_sequence": 2,
+        "outstanding_requests": [
+          11,
+          12
+        ]
+      },
+      "trigger": {
+        "responses": [
+          {
+            "request_id": 11,
+            "sequence": 100,
+            "uncertainty_us": 1001
+          },
+          {
+            "request_id": 12,
+            "sequence": 3,
+            "uncertainty_us": 1000,
+            "other_guards_valid": true
+          }
+        ]
+      },
+      "expected": {
+        "accepts": [
+          false,
+          true
+        ],
+        "accepted_sequence_after_each": [
+          2,
+          3
+        ],
+        "outstanding_requests_after_each": [
+          [
+            11,
+            12
+          ],
+          [
+            11
+          ]
+        ]
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-05",
+      "source_rules": [
+        "I1-CLOCK",
+        "SP-LIFE"
+      ],
+      "pre_state": {
+        "lease_end_us": 1100000,
+        "local_stop_us": 1300000,
+        "epsilon_us": 1000,
+        "other_signing_guards_valid": true,
+        "clock_unsafe_notification_ran": false
+      },
+      "trigger": {
+        "sign_ticks_us": [
+          1099999,
+          1100000,
+          1100001
+        ]
+      },
+      "expected": {
+        "new_signature_permitted": [
+          true,
+          false,
+          false
+        ],
+        "terminal_after_unsafe": true
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-06",
+      "source_rules": [
+        "I1-CLOCK",
+        "RECOVERY",
+        "SP-LIFE"
+      ],
+      "pre_state": {
+        "old_lease_end_us": 1100000,
+        "old_cid_entered": true,
+        "old_incarnation": 1,
+        "new_incarnation": 2,
+        "last_request_id": 12,
+        "accepted_sequence": 3,
+        "continuation_condition": "fresh sample/startup release before old lease expiry and original stop; no prior terminal state"
+      },
+      "trigger": {
+        "recovery_ticks_us": [
+          1099999,
+          1100000,
+          1100001
+        ],
+        "recovery_ticks_mean": "safe-recovery/startup-eligibility observation after fresh sample, not OS process start",
+        "first_branch_conditions": {
+          "fresh_sample_delivered_before_old_lease_expiry": true,
+          "startup_ready_before_old_lease_expiry": true,
+          "original_stop_not_reached": true,
+          "prior_terminal_state": false
+        }
+      },
+      "expected": {
+        "old_cid_may_continue_after_fresh_calibration": [
+          true,
+          false,
+          false
+        ],
+        "old_sample_immediately_usable": [
+          false,
+          false,
+          false
+        ],
+        "first_new_request_id_minimum": 13,
+        "new_accepted_sample_sequence_minimum": 4,
+        "old_reply_accepts": false
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-07",
+      "source_rules": [
+        "I1-CLOCK"
+      ],
+      "pre_state": {
+        "accepted_sequence": 3,
+        "outstanding_requests": [
+          13,
+          14
+        ],
+        "current_tick_us": 1100000
+      },
+      "trigger": {
+        "responses": [
+          {
+            "request_id": 13,
+            "sequence": 5,
+            "as_of_us": 1000000,
+            "lease_end_us": 1100000
+          },
+          {
+            "request_id": 14,
+            "sequence": 4,
+            "as_of_us": 1099990,
+            "lease_end_us": 1199990,
+            "other_guards_valid": true
+          }
+        ]
+      },
+      "expected": {
+        "accepts": [
+          false,
+          true
+        ],
+        "accepted_sequence_after_each": [
+          3,
+          4
+        ],
+        "outstanding_requests_after_each": [
+          [
+            13,
+            14
+          ],
+          [
+            13
+          ]
+        ]
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-08",
+      "source_rules": [
+        "V2-CLOCK",
+        "I1-CLOCK"
+      ],
+      "pre_state": {
+        "epsilon_us": 1000,
+        "last_local_us": 1051000,
+        "current_tick_us": 1050000
+      },
+      "trigger": {
+        "new_projected_local_us": 1049000
+      },
+      "expected": {
+        "sample_accepts": false,
+        "max_last_new_clipping_allowed": false,
+        "last_local_us": 1051000,
+        "healthy_clock_claim_for_undetected_error": false
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "C-09",
+      "source_rules": [
+        "V2-CLOCK",
+        "V2-RUNTIME",
+        "CW-CLOCK"
+      ],
+      "pre_state": {
+        "grant_tick_us": 1050000,
+        "epsilon_us": -1000,
+        "lease_end_us": 1100000
+      },
+      "trigger": {
+        "callers": [
+          "Manager",
+          "BFT",
+          "governor",
+          "signing guard"
+        ],
+        "wall_pauses_ms": [
+          0,
+          2
+        ]
+      },
+      "expected": {
+        "all_local_reads_us": 1049000,
+        "grant_tick_after_wall_pause_us": 1050000,
+        "blocking_network_in_current": false,
+        "worker_advance_authority": false
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-01",
+      "source_rules": [
+        "V2-CLOCK",
+        "I1-CLOCK"
+      ],
+      "pre_state": {
+        "absolute_local_deadline_us": 1025000,
+        "epsilon_us": [
+          1000,
+          -1000
+        ]
+      },
+      "trigger": "arm timer in valid calibrated lease",
+      "expected": {
+        "first_eligible_reference_ticks_us": [
+          1024000,
+          1026000
+        ]
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-02",
+      "source_rules": [
+        "I1-CLOCK",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "timer_id": 7,
+        "generation": 2,
+        "absolute_local_deadline_us": 1025000,
+        "original_arm_local_us": 1005000
+      },
+      "trigger": {
+        "events": [
+          "valid renewal",
+          "RPC retry",
+          "safe recovery"
+        ]
+      },
+      "expected": {
+        "absolute_deadline_after_each_us": [
+          1025000,
+          1025000,
+          1025000
+        ],
+        "new_duration_from_recovery": false
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-03",
+      "source_rules": [
+        "I1-CLOCK",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "cancelled_timer": {
+          "id": 7,
+          "generation": 2
+        },
+        "active_timer": {
+          "id": 7,
+          "generation": 3
+        }
+      },
+      "trigger": {
+        "deliveries": [
+          {
+            "id": 7,
+            "generation": 2
+          },
+          {
+            "id": 7,
+            "generation": 3
+          },
+          {
+            "id": 7,
+            "generation": 3
+          }
+        ]
+      },
+      "expected": {
+        "wake_counts": [
+          0,
+          1,
+          0
+        ],
+        "total_generation3_wakes": 1,
+        "cancelled_generation_resurrected": false
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-04",
+      "source_rules": [
+        "I1-CLOCK",
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "local_deadline_us": 1025000,
+        "epsilon_us": 1000,
+        "safe_recovery_tick_us": 1050000,
+        "startup_released": true,
+        "fresh_calibration_valid": true
+      },
+      "trigger": "rebind already-due logical timer",
+      "expected": {
+        "eligible_at_us": 1050000,
+        "retained_local_deadline_us": 1025000,
+        "old_incarnation_timer_delivery_accepted": false,
+        "terminal_cid_variant_wakes": 0
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-05",
+      "source_rules": [
+        "V2-RUNTIME",
+        "I1-CLOCK",
+        "SP-LIFE"
+      ],
+      "pre_state": {
+        "local_stop_us": 1100000,
+        "epsilon_us": 1000,
+        "work_pending": true,
+        "equal_reference_tick_us": 1099000
+      },
+      "trigger": {
+        "same_tick_order_variants": [
+          [
+            "Close",
+            "WorkCompleted"
+          ],
+          [
+            "WorkCompleted",
+            "Close"
+          ]
+        ],
+        "stop_boundary_reference_ticks_us": [
+          1098999,
+          1099000,
+          1099001
+        ]
+      },
+      "expected": {
+        "new_signatures_in_each_variant": [
+          0,
+          0
+        ],
+        "local_at_completion_us": 1100000,
+        "terminal_state_survives_restart": true,
+        "stop_boundary_local_reads_us": [
+          1099999,
+          1100000,
+          1100001
+        ],
+        "stop_boundary_sign_permitted_if_no_prior_Close": [
+          true,
+          false,
+          false
+        ]
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "T-06",
+      "source_rules": [
+        "RECOVERY"
+      ],
+      "pre_state": {
+        "operation_id": "op-A",
+        "original_due_us": 1020000,
+        "recovery_ready_tick_us": 1050000,
+        "reconnect_generation": 2
+      },
+      "trigger": {
+        "completion": "authenticated RecoveryWorkCompleted(op-A,original_due=1020000,generation=2)"
+      },
+      "expected": {
+        "eligible_at_us": 1050000,
+        "original_due_us": 1020000,
+        "replacement_due_us_1055000_allowed": false,
+        "logical_operation_count": 1,
+        "late_cancelled_operation_signatures": 0
+      },
+      "planned_scenario": "original-timers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-01",
+      "source_rules": [
+        "V2-READERS",
+        "V2-NET",
+        "H02"
+      ],
+      "pre_state": {
+        "reader_prefixes": {
+          "A": 0,
+          "B": 0
+        },
+        "finalized_log": [
+          "q1",
+          "q2"
+        ]
+      },
+      "trigger": {
+        "deliveries": [
+          [
+            "A",
+            "q2"
+          ],
+          [
+            "B",
+            "q1"
+          ],
+          [
+            "A",
+            "q1"
+          ]
+        ]
+      },
+      "expected": {
+        "prefixes_after_each": [
+          {
+            "A": 0,
+            "B": 0
+          },
+          {
+            "A": 0,
+            "B": 1
+          },
+          {
+            "A": 2,
+            "B": 1
+          }
+        ],
+        "A_buffer_after_first": [
+          "q2"
+        ],
+        "shared_mutable_cursor": false,
+        "q2_custody_ack_implies_prefix2": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reader-prefix-gate"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-02",
+      "source_rules": [
+        "V2-READERS",
+        "V2-CLOCK"
+      ],
+      "pre_state": {
+        "proposed_at_us": 1000000,
+        "finalized_at_us": 1010000,
+        "public_theta_us": 1000000,
+        "reader_received_at_us": 1030000,
+        "replica_epsilon_us": 1000
+      },
+      "trigger": "deliver finalized public log entry",
+      "expected": {
+        "timestamp_fields_remain_distinct": true,
+        "public_theta_us": 1000000,
+        "public_theta_shifted_by_replica_epsilon": false,
+        "late_receive_rewrites_public_key": false,
+        "local_timer_triggers_GFR_handoff": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-03",
+      "source_rules": [
+        "V2-RUNTIME",
+        "V2-READERS",
+        "H02"
+      ],
+      "pre_state": {
+        "actors": [
+          "publisher",
+          "espresso",
+          "l1-driver",
+          "da",
+          "reader-A",
+          "reader-B"
+        ],
+        "fault_target": "publisher"
+      },
+      "trigger": "scripted publisher crash and restart",
+      "expected": {
+        "other_actor_state_reset_count": 0,
+        "actor_inboxes_independent": true,
+        "service_effects_outside_ack": 0,
+        "actual_fault_class": "SCRIPTED_FAULT"
+      },
+      "planned_scenario": "services-readers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-04",
+      "source_rules": [
+        "V2-CLOCK",
+        "V2-READERS"
+      ],
+      "pre_state": {
+        "actors_without_admin": [
+          "replica:0",
+          "governance",
+          "web"
+        ]
+      },
+      "trigger": {
+        "calls": [
+          "Advance",
+          "Step",
+          "SetFault"
+        ],
+        "diagnostic_fault_script_injected_into_protocol": true
+      },
+      "expected": {
+        "successful_admin_calls": 0,
+        "protocol_time_mutations": 0,
+        "fault_script_usable_as_protocol_observation": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-05",
+      "source_rules": [
+        "V2-RUNTIME",
+        "I1-SCHED"
+      ],
+      "pre_state": {
+        "wall_watchdog_seconds": 30,
+        "virtual_tick_us": 1050000,
+        "scripted_fault": false
+      },
+      "trigger": {
+        "faults": [
+          "unscripted panic",
+          "unplanned disconnect",
+          "wall watchdog timeout"
+        ]
+      },
+      "expected": {
+        "classification_for_each": "INFRASTRUCTURE_FAILURE",
+        "virtual_tick_us": 1050000,
+        "invented_protocol_crash_events": 0,
+        "liveness_pass_claim": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "S-06",
+      "source_rules": [
+        "V2-NET",
+        "V2-READERS",
+        "RBFT"
+      ],
+      "pre_state": {
+        "message": "proof-with-missing-body",
+        "receiver_custody_durable": true,
+        "body_available": false,
+        "signature_verified": false
+      },
+      "trigger": "send receive ACK after durable custody",
+      "expected": {
+        "transport_custody_ack_allowed": true,
+        "ProofObserved_implied": false,
+        "ValidatedDelivered_implied": false,
+        "GAccepted_implied": false,
+        "InboxAccepted_implied": false,
+        "DDerived_implied": false,
+        "missing_accepted_DA_replaced_with_empty": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reliable-ACK-receipt-schema"
+      ],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "R-01",
+      "source_rules": [
+        "I1-ANNEX",
+        "V2-EVIDENCE",
+        "H02"
+      ],
+      "pre_state": {
+        "seeds": [
+          7,
+          42,
+          99
+        ],
+        "wall_pauses_ms": [
+          0,
+          2
+        ],
+        "start_orders": [
+          "forward",
+          "reverse"
+        ],
+        "same_logical_inputs_within_seed": true
+      },
+      "trigger": "run all within-seed paired variants on one candidate",
+      "expected": {
+        "runs_per_seed": 4,
+        "total_runs": 12,
+        "within_seed_full_logical_trace_equal": true,
+        "cross_seed_full_trace_equal_required": false,
+        "excluded_diagnostics_only": [
+          "wall_elapsed",
+          "os_pid",
+          "ephemeral_port"
+        ],
+        "protocol_events_removed_for_equality": 0
+      },
+      "planned_scenario": "replay-regression",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "R-02",
+      "source_rules": [
+        "FRESH",
+        "RECOVERY",
+        "H02",
+        "I1-ANNEX"
+      ],
+      "pre_state": {
+        "regressions": [
+          "I1a loopback",
+          "Fresh",
+          "accepted 01 affected R1-R18"
+        ]
+      },
+      "trigger": "run regressions on same named integrated feature02 candidate",
+      "expected": {
+        "Fresh_legacy_canonical_bytes_unchanged": true,
+        "old_artifact_relabel_allowed": false,
+        "bounded_recover_pending_verify_is_full_R1_R18": false,
+        "verifier_and_simulator_candidate_match": true
+      },
+      "planned_scenario": "replay-regression",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "R-03",
+      "source_rules": [
+        "I1-SCHED",
+        "I1-CLOCK",
+        "RECOVERY",
+        "V2-EVIDENCE"
+      ],
+      "pre_state": {
+        "valid_raw_trace": "future verified fixture"
+      },
+      "trigger": {
+        "mutations": [
+          "lease renewed by grant",
+          "missing root durability before send",
+          "valid prefix of rejected Ack adopted",
+          "duplicate durable inbox insert",
+          "old timer reset at recovery",
+          "changed signed payload",
+          "reader prefix jumps gap",
+          "wrong context certificate accepted",
+          "old incarnation sample installed",
+          "output outside grant"
+        ]
+      },
+      "expected": {
+        "accepted_mutated_traces": 0,
+        "checker_uses_candidate_transition_function": false,
+        "raw_evidence_required": true
+      },
+      "planned_scenario": "replay-regression",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "R-04",
+      "source_rules": [
+        "V2-START",
+        "V2-CLOCK",
+        "H02"
+      ],
+      "pre_state": {
+        "ready_offsets_us": [
+          0,
+          20000,
+          100000,
+          500000,
+          1500000
+        ],
+        "same_cid": true
+      },
+      "trigger": "grant independent readiness and Enter",
+      "expected": {
+        "entered_offsets_not_forced_equal": true,
+        "early_ready_worker_may_enter_before_last": true,
+        "all_ready_barrier_required": false,
+        "pairwise_clock_bound_limits_enter_skew": false,
+        "first_enter_is_quorum_ready_time": false
+      },
+      "planned_scenario": "replay-regression",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "R-05",
+      "source_rules": [
+        "SP-LIFE",
+        "V2-NET",
+        "RBFT"
+      ],
+      "pre_state": {
+        "cid": "cid-A",
+        "closed": true,
+        "signatures_created_before_stop": true,
+        "historical_proof_available_after_stop": true
+      },
+      "trigger": "observe historical proof and later validated body",
+      "expected": {
+        "new_signature_count": 0,
+        "historical_proof_observation_permitted": true,
+        "proof_observation_equals_body_delivery": false,
+        "clock_recalibration_revives_cid": false
+      },
+      "planned_scenario": "replay-regression",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN"
+    },
+    {
+      "id": "O-09",
+      "source_rules": [
+        "V2-NET",
+        "RECOVERY",
+        "H02"
+      ],
+      "pre_state": {
+        "outbox": [
+          "m1"
+        ],
+        "valid_receive_ack_arrived": true
+      },
+      "trigger": {
+        "sender_crash_boundaries": [
+          "before durable confirmation/delete commit",
+          "after durable confirmation/delete commit"
+        ]
+      },
+      "expected": {
+        "recovered_pending_outbox_by_boundary": [
+          [
+            "m1"
+          ],
+          []
+        ],
+        "safe_duplicate_retry_before_commit": true,
+        "receiver_total_logical_inserts": 1,
+        "unknown_message_deleted": false
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reliable-ACK-receipt-schema",
+        "01-root-commit-custody"
+      ],
+      "execution_status": "NOT_RUN",
+      "derivation_phase": "post-contract coverage refinement from original V2-NET/RECOVERY sources; no implementation oracle"
+    },
+    {
+      "id": "O-10",
+      "source_rules": [
+        "V2-NET",
+        "H02",
+        "I1-SCHED"
+      ],
+      "pre_state": {
+        "durable_receipt": {
+          "logical_id": "m1",
+          "payload_hex": "010203",
+          "context": "cid-A",
+          "origin": [
+            "step7",
+            0
+          ]
+        },
+        "receiver_logical_inserts": 1
+      },
+      "trigger": {
+        "same_id_mutants": [
+          {
+            "payload_hex": "010204"
+          },
+          {
+            "context": "cid-B"
+          },
+          {
+            "origin": [
+              "step8",
+              0
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "accepted_mutants": 0,
+        "successful_receive_acks": 0,
+        "dedup_overwrites": 0,
+        "new_logical_inserts": 0,
+        "original_receipt_unchanged": true
+      },
+      "planned_scenario": "reliable-custody",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reliable-ACK-receipt-schema",
+        "durable-receiver-dedup"
+      ],
+      "execution_status": "NOT_RUN",
+      "derivation_phase": "post-contract source-based boundary expansion requested by lead; no implementation oracle"
+    },
+    {
+      "id": "C-10",
+      "source_rules": [
+        "I1-CLOCK",
+        "H02"
+      ],
+      "pre_state": {
+        "accepted_sequence": 3,
+        "outstanding_requests": [
+          13,
+          14
+        ],
+        "lease_end_us": 1100000
+      },
+      "trigger": {
+        "ordered_responses": [
+          {
+            "request_id": 14,
+            "sequence": 5,
+            "as_of_us": 1090000,
+            "delivery_us": 1090100,
+            "lease_end_us": 1190000,
+            "other_guards_valid": true
+          },
+          {
+            "request_id": 13,
+            "sequence": 4,
+            "as_of_us": 1080000,
+            "delivery_us": 1090200,
+            "lease_end_us": 1180000,
+            "other_guards_valid": true
+          }
+        ]
+      },
+      "expected": {
+        "accepts": [
+          true,
+          false
+        ],
+        "accepted_sequence_after_each": [
+          5,
+          5
+        ],
+        "lease_end_after_each_us": [
+          1190000,
+          1190000
+        ],
+        "outstanding_requests_after_each": [
+          [
+            13
+          ],
+          [
+            13
+          ]
+        ],
+        "clock_regressions": 0
+      },
+      "planned_scenario": "clock-c1-c2",
+      "classification": "source_or_existing_contract_obligation",
+      "pending_decisions": [],
+      "execution_status": "NOT_RUN",
+      "derivation_phase": "post-contract source-based boundary expansion requested by lead; no implementation oracle"
+    },
+    {
+      "id": "S-07",
+      "source_rules": [
+        "V2-READERS",
+        "V2-NET",
+        "RECOVERY",
+        "H02"
+      ],
+      "pre_state": {
+        "reader_A": {
+          "prefix": 0,
+          "durable_gap_custody": [
+            "q2"
+          ]
+        },
+        "reader_B": {
+          "prefix": 1,
+          "durable_gap_custody": []
+        }
+      },
+      "trigger": {
+        "steps": [
+          "restart A",
+          "duplicate q2 delivered to A",
+          "q1 delivered to A"
+        ]
+      },
+      "expected": {
+        "A_prefix_after_each": [
+          0,
+          0,
+          2
+        ],
+        "B_prefix_after_each": [
+          1,
+          1,
+          1
+        ],
+        "A_q2_logical_custody_insert_count": 1,
+        "A_gap_after_restart": [
+          "q2"
+        ],
+        "A_uses_B_cursor": false,
+        "duplicate_q2_skips_q1": false
+      },
+      "planned_scenario": "services-readers",
+      "classification": "conditional_adapter_proposal",
+      "pending_decisions": [
+        "reader-prefix-gate",
+        "01-root-commit-custody"
+      ],
+      "execution_status": "NOT_RUN",
+      "derivation_phase": "post-contract source-based boundary expansion requested by lead; no implementation oracle"
+    }
+  ]
+}
