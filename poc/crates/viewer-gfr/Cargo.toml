@@ -19,3 +19,6 @@ debug = "line-tables-only"
 
 [profile.release]
 overflow-checks = true
+
+[dev-dependencies]
+serde_json = "=1.0.154"

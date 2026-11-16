@@ -34,6 +34,7 @@ pub enum GfrError {
     ConflictingControl(L1Position),
     InconsistentFinality(ResultKey),
     CheckpointMismatch,
+    HistoricalBound,
 }
 
 impl From<DomainError> for GfrError {

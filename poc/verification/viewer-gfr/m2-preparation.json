@@ -1,0 +1,16 @@
+{
+  "phase": "M2_independent_transition_harness_prepared_before_reducer_inspection",
+  "candidate_named": false,
+  "reducer_inspected": false,
+  "public_state_and_wrapper_api_read": "authorized by lead",
+  "compiled": false,
+  "rustfmt_parse": "PASS",
+  "expected_oracle": "literal account/Kept outcomes and03canonicalhashing; noViewer/Apply/Merge",
+  "files": {
+    "m2-preparation.md": "0e077e83b046d2b45cbc8343e79838ce2f3c2c25057530fbcc1006455373300b",
+    "independent-harness/Cargo.toml": "affb607e0937788b863780adcaa597eacd73ac2273c1f98263ff520cda0b38c2",
+    "independent-harness/src/m2_fixture.rs": "cc00f9f3ba2f7834131221435e474715d6bef1b2b2938637003f71f3b84ac2b4",
+    "independent-harness/src/m2_world.rs": "879450932dafd57a7c4ce0a1f230df842041c0d2a40308cafb64d95125861089",
+    "independent-harness/src/bin/m2.rs": "3506535d3f519aa6800cd4b994149fa28bc820db66159b78207f4266a3ab8fcb"
+  }
+}

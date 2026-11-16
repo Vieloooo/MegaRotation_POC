@@ -1432,6 +1432,7 @@ dependencies = [
  "poc-authorization",
  "poc-core",
  "poc-types",
+ "serde_json",
  "sim-espresso",
 ]
 
