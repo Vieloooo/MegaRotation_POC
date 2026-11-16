@@ -1,0 +1,12 @@
+[package]
+name = "publisher-espresso-independent-verification"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[dependencies]
+poc-publisher = { path = "../../../crates/publisher" }
+sim-espresso = { path = "../../../crates/sim-espresso" }
+
+[workspace]

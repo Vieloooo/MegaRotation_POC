@@ -1,5 +1,7 @@
 # 01 原生同 cid 崩溃恢复与 I1 收口
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 的 `36eff1c76d5c4df5d0790133c0e14719c0c73ebd` 上创建 managed worktree `poc-native-recovery`，分支 `codex/poc-native-recovery`。以新进程恢复同一 cid，完成现有 R1–R18 合同和 I1 验收。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。按[共用工作约定](workflow-zh.md)返回提交与证据。

@@ -1,5 +1,7 @@
 # 03 Mock Plan、公共对象与轻量执行
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以 **01 的集成 SHA** 建 managed worktree `poc-mock-plan-execution`，分支 `codex/poc-mock-plan-execution`。完成 P0 排班、公共对象的规范编码和共用轻量执行。与 02 分开生产路径。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。按[共用工作约定](workflow-zh.md)交付。
