@@ -1,0 +1,72 @@
+{
+  "schema": "healthy-session-api-sources-v1",
+  "phase": "SOURCE_DERIVED_BEFORE_API_CONTRACT",
+  "sources": [
+    {
+      "id": "D55",
+      "revision": "d55d39f73593676325bdc0fbb7ba3845ca93025f",
+      "path": "poc/docs/milestones/M1-implementation-dispatch-20261116.md",
+      "sections": "ownership; decisions1–10",
+      "sha256": "4a211cd38a5db108dc3b8548a87c19e599cb3870e534e513b41e487b4c5cc8b6"
+    },
+    {
+      "id": "H2",
+      "revision": "027ba8be9f8f64e35313f990f4f03c5d3c238a0c",
+      "path": "poc/docs/contracts/h2-session-manager-healthy-preparation-v1.md",
+      "sections": "3–6,8; earlier authorization/M0 gates superseded by D55",
+      "sha256": "837ed8f317e890c3b7a8e393f768cc69c62f7bcf4cec54790816ccc311340754"
+    },
+    {
+      "id": "H3",
+      "revision": "c4a944a754e6f9cfa50f57a2399b707a2555ce94",
+      "path": "poc/docs/h3-publication-gfr-interface-proposal-v1.md",
+      "sections": "1–3; earlier authorization/M0 gates superseded by D55",
+      "sha256": "892376107f8f08c0534f5a77cdbcbc2129d98627fe96bf6052f0b554c64b0ce4"
+    },
+    {
+      "id": "SP",
+      "revision": "4741489ba7a07d2a3f3f194dbd59ae3fd8d17bb9",
+      "path": "formalization_v10/02_session_program_zh_v0_1.md",
+      "sections": "3.1–3.12",
+      "sha256": "a8cafc846acffda6b2d08915b9ccc251825c33cf84e776dae94d67611db47eb2"
+    },
+    {
+      "id": "SM",
+      "revision": "4741489ba7a07d2a3f3f194dbd59ae3fd8d17bb9",
+      "path": "formalization_v10/03_session_manager_zh_v0_1.md",
+      "sections": "3.1–3.10,4.1–4.3",
+      "sha256": "dbcc467b6f3f52d7832112217c3caf27de1e09bdda11b9745393aea326fd5954"
+    },
+    {
+      "id": "MPX",
+      "revision": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "path": "poc/docs/contracts/task-contract-mock-plan-execution-v2.md",
+      "sections": "2–5",
+      "sha256": "a18d2b33f9c541abc81b4fead601c3ccaead6221c90dc43345d52a850429cc15"
+    },
+    {
+      "id": "PUBLIC03",
+      "revision": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "path": "poc/crates/types/src/domain/objects.rs",
+      "sections": "public DTO/InputStatus/FinalVerifier type boundaries; source lookup after expected semantics formed",
+      "sha256": "3d49888368cb197e51000403324a7c424415c8ef2fd678220a0ac2bcc447ff20"
+    },
+    {
+      "id": "PUBLIC07",
+      "revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "path": "poc/crates/viewer-gfr/src/api.rs",
+      "sections": "VerificationBasis/VerifierBinding/ReplayRecord; source lookup after expected semantics formed",
+      "sha256": "13a95666aae42d5bec869b2547a35d8c3432a10334165a258c1de56f23a2f74f"
+    },
+    {
+      "id": "CODEC07",
+      "revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "path": "poc/crates/viewer-gfr/src/codec.rs",
+      "sections": "lifecycle_projection/lifecycle_id/encode_publication; no replacement codec",
+      "sha256": "993c8bbe224372d34e9eb3c05f37365a492909444960ef47f828eddf3284baf1"
+    }
+  ],
+  "api_contract_read": false,
+  "authority": "D55 supersedes old prepare-only/M0-unavailable and owner-decision clauses; v10+explicit v2 mock remain semantic source.",
+  "runtime_status": "NOT_RUN"
+}

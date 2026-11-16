@@ -1,0 +1,47 @@
+{
+  "phase": "INDEPENDENT_CAPTURE_BEFORE_H1_DOC_READ",
+  "baseline": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+  "h1_documents_read": false,
+  "runtime": "NOT_RUN",
+  "files": {
+    "source-map.json": "7222602120d30ce794d10378c4b912fa8dae3af18e48a2c873662ecda0ff46ae",
+    "expectations.md": "fc4347787b32a37ee28dd1a10e863aefed64ce8f5cfdebf84c333ce75afeae58",
+    "vectors.json": "dd5fdab5531a79f25d3e65f0f0714ee549d8e059fc79fcb54384893d5130f1c1",
+    "planned-matrix.md": "59d861606212bb151e28bbb114fbdded6121f9f9842cbccd70ab65eb5f614631"
+  },
+  "format_only_normalization": {
+    "phase": "AFTER_H1_DOC_REVIEW_FORMAT_ONLY",
+    "operation": "Remove surplus terminal LF bytes; preserve exactly one terminal LF. Original files hashes above are historical and unchanged.",
+    "reconstruction": "Append removed_lf_count bytes of value 0x0A to normalized bytes; SHA-256 must equal the historical files[name] hash.",
+    "files": {
+      "source-map.json": {
+        "original_sha256": "7222602120d30ce794d10378c4b912fa8dae3af18e48a2c873662ecda0ff46ae",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "3e7f4066de0195915314484da6fc88e13da11942ab06254cccad80b7a53ae946",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "expectations.md": {
+        "original_sha256": "fc4347787b32a37ee28dd1a10e863aefed64ce8f5cfdebf84c333ce75afeae58",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "bb821d4e272ad89d701eb8b8087a4f9c3fdb8576476e37c9c537e7a82ac4ca39",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "vectors.json": {
+        "original_sha256": "dd5fdab5531a79f25d3e65f0f0714ee549d8e059fc79fcb54384893d5130f1c1",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "366e1ef54b1cff02eef9cc720303da8b0c10442309a286e2c1001b5056588665",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "planned-matrix.md": {
+        "original_sha256": "59d861606212bb151e28bbb114fbdded6121f9f9842cbccd70ab65eb5f614631",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "79b980aed5ee7cfb1121d897f10a34db163e7a78e41b04ae6036911f09cb7993",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      }
+    }
+  }
+}

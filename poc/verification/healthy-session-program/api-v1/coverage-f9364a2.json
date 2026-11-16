@@ -1,0 +1,506 @@
+{
+  "candidate": "f9364a2a8e59913f7f9373fab2774be4ed528e57",
+  "source_recipe_file": "source-recipes.json",
+  "source_recipes_unchanged": true,
+  "clarification": "Full record input_ref/effects preserved; no recursive Duty/Tail/L1 source_bytes semantics or total nested-byte validation in ReplayBatch shape.",
+  "cases": [
+    {
+      "id": "API-PUBLIC-TYPE-IDENTITY",
+      "source": "D55:reuse; H2:3; H3:1",
+      "trigger": "Pass existing 03 Descriptor/RegionalResult/InputStatus and 07 ReplayRecord/VerifierBinding to the API surface.",
+      "expected": "Public values are the same imported Rust types; no look-alike local structs/copy codec; compile usage after candidate exists.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "public_type_identity_and_no_local_kind_authentication_claim"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-LOCAL-ID-TYPES",
+      "source": "D55:H1-interface-owner; SP:3.2",
+      "trigger": "Attempt to use one local command/action/job/handle identity in a semantically different slot.",
+      "expected": "Binding guards or distinct types prevent unlabelled confusion; exact newtype/alias policy and constructors await the frozen API contract.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "independent_literal_ids_and_derived_obligation_ids"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-NO-AUTH-FROM-BYTES",
+      "source": "D55:5–7; H3:1",
+      "trigger": "Construct an opaque Hash32/Cid/ref and pass shape validation.",
+      "expected": "Construction/shape success proves only shape/binding, not descriptor authenticity, execution, cryptography, durable sync or selected duty.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "public_type_identity_and_no_local_kind_authentication_claim"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-COMMAND-RETRY",
+      "source": "D55:2; H2:6.6",
+      "trigger": "Replay the same complete command identity and bound inputs.",
+      "expected": "Stable local identity and equal immutable intent; API has no external side effects; runtime dedup is a later test, not claimed by DTO equality.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "independent_literal_ids_and_derived_obligation_ids"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-COMMAND-MUTATIONS",
+      "source": "D55:2,5; H2:6.1",
+      "trigger": "Hold command identity fixed and change run,worker,cid,anchor,instance/job generation,operation kind or bound payload individually.",
+      "expected": "Context/content mismatch is rejected or detected via the frozen identity contract; cannot authorize another worker/cid/anchor/job under the old operation.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "commands_bind_worker_cid_instance_and_ready_job"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-HANDLE-REUSE",
+      "source": "SP:3.4–3.5; D55:4",
+      "trigger": "Represent duplicate Create/Enter and A→B→A lifecycle intents.",
+      "expected": "Same handle and original entry identity retained for A; resume intent distinct from new Enter; API metadata alone does not assert original engine existence.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "commands_bind_worker_cid_instance_and_ready_job"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-STALE-JOB",
+      "source": "D55:5; H2:A02,A10",
+      "trigger": "Preparation result carries prior/cancelled generation or wrong worker/cid/anchor.",
+      "expected": "Guard rejects mismatched result; stale completion cannot be represented as a valid Ready for the new request.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h2_consumer_keeps_wait_reject_and_exact_ready_job_separate"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-BOUNDS",
+      "source": "D55:finite-decisions; H3:2",
+      "trigger": "Boundary count/length/revision/local-ID values including max and overflow.",
+      "expected": "Use frozen limits, checked arithmetic and explicit errors; no implicit truncation, wrapping, unbounded allocation or API panics from malformed DTOs.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "basic_bounds_and_error_order_are_explicit"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-REPLAY-FULL",
+      "source": "D55:2; H2:6.1–6.3",
+      "trigger": "Provide full ReplayRecord with effects,ordered events and source binding.",
+      "expected": "All event identities use 07 lifecycle_id/projection, ordered full record retained; pc alone is not batch identity or completeness evidence.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "replay_full_same_position_batch_and_empty_events"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-REPLAY-SAME-PC",
+      "source": "D55:2; H2:A11",
+      "trigger": "Same pc contains Close→Assign or repeated regular handoffs.",
+      "expected": "Distinct full event identities and sequence retained; no per-position dedup or transient permission for intermediate assigned-then-closed cid.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "replay_full_same_position_batch_and_empty_events"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-REPLAY-EMPTY-EVENTS",
+      "source": "H2:6.3; D55:2",
+      "trigger": "Valid full committed record has events=[] but effects/public views.",
+      "expected": "Can bind complete record and cursor obligations without inventing lifecycle event; empty list is not missing record.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "replay_full_same_position_batch_and_empty_events"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-REPLAY-BINDING-MUTATION",
+      "source": "H2:6.1; H3:1",
+      "trigger": "Mutate run,worker,config,GFR source,prior cursor,complete record/event list or same-position views.",
+      "expected": "Reject inconsistent binding/known conflicts; availability gaps explicit; no partial assignment/close output.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "replay_event_binding_mutations_and_cardinality"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-KNOWN-CLOSE-WAIT",
+      "source": "D55:2,3; H2:A07,A13",
+      "trigger": "Verified record closes old cid, selects new descriptor, but successor exact execution material missing.",
+      "expected": "Represent close/tombstone + SelectedPreparing + cursor + action intents as Committed(actions_pending); retain old-cid fence; no Ready or Enter.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h2_consumer_known_close_with_missing_successor_is_committed_pending"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-INVALID-RECORD",
+      "source": "D55:2; H2:6.2",
+      "trigger": "Last event/source/descriptor is known invalid, rather than merely lacking successor execution state.",
+      "expected": "Reject whole candidate record; do not claim committed record or install its new assignment; any prior independent safety fence remains.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "replay_opaque_input_and_effects_are_preserved_not_deep_validated"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-MISSING-RECORD-BASIS",
+      "source": "D55:2; H2:6.2",
+      "trigger": "Record structural/source validation cannot yet complete.",
+      "expected": "WAIT/pending before committed-record claim; distinguish from known-valid close plus execution-state WAIT.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h3_feed_preserves_full_record_and_rejects_shape_conflict"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-COMMIT-PHASES",
+      "source": "D55:2; H2:6.5–6.7",
+      "trigger": "Construct prepared/committed(actions_pending)/actions-applied outcomes.",
+      "expected": "Phases distinguish accepted durable obligations from execution completion; no Applied claim while required actions remain pending; exact enum names await API freeze.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "committed_is_not_applied_and_execution_binds_original_pending"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-RECEIPT-BINDING",
+      "source": "D55:2; H2:ActionReceipt,6.6",
+      "trigger": "Receipt changes worker/root/record/delta/action ID or omits required bound reference.",
+      "expected": "Shape/binding rejects inconsistent acknowledgment; receipt DTO cannot authenticate its own real fsync/service custody.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "applied_receipts_must_exactly_cover_order_root_delta_and_scope"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-FENCE-FAILURE",
+      "source": "D55:3",
+      "trigger": "Existing durable terminal/ClockUnsafe safety fence then later root/action/assignment failure.",
+      "expected": "API outcome preserves monotonic fence and pending disposition; cannot encode rollback permission to Running or silently clear guard.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "fail_closed_any_commit_must_bind_and_pending_remains_bounded_unique"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-ACTION-RETRY",
+      "source": "D55:2,3; H2:6.6",
+      "trigger": "Committed Close/Offer intent lacks action receipt; repeat command/record.",
+      "expected": "Same stable intent identity remains pending; do not create second Enter/Offer or falsely return ActionsApplied.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "independent_literal_ids_and_derived_obligation_ids"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-LATE-ENTER-RECEIPT",
+      "source": "D55:3; H2:6.6",
+      "trigger": "Receipt for earlier Enter/Resume arrives after later terminal guard.",
+      "expected": "Receipt may document historical completion but never clears terminal or grants new execution.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "applied_receipts_must_exactly_cover_order_root_delta_and_scope"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-CURSOR-SEPARATION",
+      "source": "D55:2; H3:6.1",
+      "trigger": "GFR pc ahead, Manager batch committed with pending actions, engine terminal.",
+      "expected": "Distinct coordinates remain representable; Manager lag never rolls GFR pc back and cursor acceptance never claims ActionsApplied.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [],
+      "remaining_limit": "Static interface review only; actual producer/consumer semantics remain outside API."
+    },
+    {
+      "id": "API-CLOSE-SCOPE",
+      "source": "D55:2,3; H2:A01,A09,A10",
+      "trigger": "Session/branch close scope with no currently created matching program; late candidate follows.",
+      "expected": "Scope/tombstone and existing cid terminal facts distinct and retainable; no metadata shape that treats missing instance as absence of known close.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "commands_bind_worker_cid_instance_and_ready_job"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-LOCAL-CLOCK-CAUSE",
+      "source": "D55:5; H2:O3",
+      "trigger": "Represent ClockUnsafe or local safety fence in a lifecycle command.",
+      "expected": "Private local cause; do not add/modify 03 CloseReason or relabel as public Time; local cause not public Publisher stop.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "commands_bind_worker_cid_instance_and_ready_job"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-PAUSE-DEADLINE",
+      "source": "D55:4; H2:A05,A06",
+      "trigger": "Pause/resume metadata includes original instance,deadline and pending work.",
+      "expected": "Same handle/deadline/work refs preserved; no resume-time now+timeout substitution and no second Enter; physical engine behavior deferred.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "phases_pause_and_terminal_are_separate_metadata"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-READY-EXACT",
+      "source": "D55:5; H2:4.S2,5; H3:6.1",
+      "trigger": "Ready payload binds ExecutionAnchor,checkpoint,prefix/execution evidence,worker,cid,anchor,validation profile.",
+      "expected": "Shape guard checks exact matching anchor/metadata/request binding and required evidence refs; actual replay validation remains H1 runtime port duty.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "handles_jobs_and_ready_require_exact_binding_but_not_proof_truth"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-READY-ROOT-ONLY",
+      "source": "D55:5; H2:A02",
+      "trigger": "Only root/hash/URL or H3 VerificationBasis::require returns Ready(()).",
+      "expected": "Cannot stand in for H1 exact-execution ReadyToken; explicit WAIT or wrong type/shape rejection; no bool promotion.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "preparation_missing_material_and_bounded_sources"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-READY-MUTATIONS",
+      "source": "D55:5",
+      "trigger": "Ready token retains id but alters worker,cid,anchor id,height/origin/timestamp,generation or validation-version binding.",
+      "expected": "Each mismatched context rejected; same height/root not enough; keep actual execution/source checks explicitly outside mere DTO shape.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "handles_jobs_and_ready_require_exact_binding_but_not_proof_truth"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-READY-RESUPPLY",
+      "source": "H2:5,6; D55:5",
+      "trigger": "Repeated exact preparation material vs contradictory same-key material.",
+      "expected": "Stable request/token identity contract; contradictions reject; input bytes/evidence preserved, no execution or state mutation performed by library.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "commands_bind_worker_cid_instance_and_ready_job"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-READY-UNSUPPORTED",
+      "source": "D55:scope; H2:A20",
+      "trigger": "Force/Resume-specific material received under this M1-only slice.",
+      "expected": "No fabricated support or successful runtime action; preserve public variants if imported but expose explicit unsupported/pending boundary where relevant.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [],
+      "remaining_limit": "Static interface review only; actual producer/consumer semantics remain outside API."
+    },
+    {
+      "id": "API-PROOF-SUBJECT-ONLY",
+      "source": "D55:7; H3:1",
+      "trigger": "Actual or symbolic proof bytes arrive without target body/ancestor inputs.",
+      "expected": "Observation metadata can retain native subject/digest/proof refs; cannot label complete RegionalResult,ExecutionReady,Offer or G acceptance.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "proof_subject_target_and_delivery_have_distinct_shapes"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-COMPLETE-RESULT",
+      "source": "D55:7; SP:3.2,3.12; H3:1",
+      "trigger": "Complete RegionalResult container supplied.",
+      "expected": "Uses 03 existing object and preserves full proof/body/chain/anchor bytes; shape validation only checks declared structural connections/refs, does not stand in for real FinalVerifier/execution.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "regional_complete_chain_shape_does_not_execute_or_verify"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-DIGEST-KINDS",
+      "source": "H3:1; MPX:3",
+      "trigger": "Use native hash where ResultKey physical block digest is expected.",
+      "expected": "Bindings must preserve distinction; shape may validate known expected digest but no generic Hash32 conversion claims equivalence.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "proof_subject_target_and_delivery_have_distinct_shapes"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-VERIFIER-REUSE",
+      "source": "D55:6; H3:1",
+      "trigger": "Consume 03 FinalVerifier and 07 VerifierBinding/VerificationProfile.",
+      "expected": "Same public traits/types; no new independent finality predicate or production always-true default; no implicit RPC/current-clock/engine dependency.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "native_binding_shape_never_invokes_crypto_or_basis"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-BASIS-WAIT",
+      "source": "D55:6,7; H3:1",
+      "trigger": "Historical verifier basis missing.",
+      "expected": "Typed WAIT/missing remains explicit; no call path labels missing inputs as invalid proof or silently selects fixture verification.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h3_consumer_binding_is_not_proof_or_execution_readiness"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-BASIS-INVALID",
+      "source": "D55:6,7; H3:1",
+      "trigger": "Known conflicting historical basis or malformed proof binding.",
+      "expected": "Typed Reject/invalid remains distinct from WAIT; no true-by-default mapping.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h3_consumer_binding_is_not_proof_or_execution_readiness"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-BASIS-READY-NOT-PROOF",
+      "source": "H3:1; 07:VerificationBasis",
+      "trigger": "Basis::require returns Ready(()) but actual FinalVerifier would reject proof.",
+      "expected": "Ready is prerequisite availability only; it is neither successful signature check nor H1 execution ReadyToken.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "available_historical_basis_never_means_valid_finality_or_execution_ready"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-HISTORICAL-FINAL",
+      "source": "SP:3.10; D55:6; H3:1",
+      "trigger": "Verify historical descriptor/block/proof after local pause/close/lease expiry.",
+      "expected": "Pure interface requires no current NodeClock,live instance or selected state for finality; runtime lifecycle guards still control new signatures.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "h3_consumer_binding_is_not_proof_or_execution_readiness"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-OBSERVATION-LAYERS",
+      "source": "D55:7; H3:1",
+      "trigger": "Represent progress,final-proof observation,complete local delivery,public completeness and G acceptance.",
+      "expected": "Cannot infer later layer merely from earlier enum/tag/ref; distinct typed records or explicit phases and provenance required.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "proof_subject_target_and_delivery_have_distinct_shapes"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-PUBLIC-STOP",
+      "source": "D55:7; H3:1",
+      "trigger": "Use local Time/Pause/ClockUnsafe as stop-source metadata.",
+      "expected": "Cannot masquerade as verified public replay position/scope/event; preserve separately typed local vs public basis.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [],
+      "remaining_limit": "Static interface review only; actual producer/consumer semantics remain outside API."
+    },
+    {
+      "id": "API-NO-IMPLICIT-EFFECTS",
+      "source": "D55:interface-owner,2; H2:5",
+      "trigger": "Construct/hash/validate DTOs and call pure shape helpers.",
+      "expected": "No network,fsync,timer,wall-clock,randomness,engine spawn/signing,selection or reader advance; ports only describe explicitly invoked owner behavior.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_LIMITED_METADATA_OR_INTERFACE_ONLY",
+      "tests": [
+        "native_binding_shape_never_invokes_crypto_or_basis"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-GOLDEN-SOURCE",
+      "source": "D55:finite-decisions; 03/07 frozen codecs",
+      "trigger": "After exact API local ID/hash preimages freeze, compute independent literal vectors.",
+      "expected": "Derive literals independently from frozen framing/tags and imported canonical rules; do not invoke candidate helper to compute expected; no invented BLS goldens.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "independent_literal_ids_and_derived_obligation_ids"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    },
+    {
+      "id": "API-GOLDEN-MUTATION",
+      "source": "D55:typed-binding; H2:6; H3:1",
+      "trigger": "Mutate each bound component of fixed command/action/handle/job/receipt ID vector.",
+      "expected": "Known literal byte/hash outcomes or binding rejection match independent derivation; include wrong domain/type/order/length,overflow/version only as frozen local contract defines.",
+      "check_mode": "PLANNED_PURE_API_CHECK",
+      "slice_review_status": "PASS_SHAPE_OR_LITERAL_API",
+      "tests": [
+        "independent_literal_ids_and_derived_obligation_ids"
+      ],
+      "remaining_limit": "Only the named DTO/helper/test-port observations were checked. Any real issuer, ledger, runtime, signature, persistence, lifecycle or public-replay claim remains unexecuted."
+    }
+  ]
+}

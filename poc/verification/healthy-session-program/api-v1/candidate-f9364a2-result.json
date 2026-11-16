@@ -1,0 +1,207 @@
+{
+  "status": "PASS_FINITE_API_SLICE",
+  "candidate": "f9364a2a8e59913f7f9373fab2774be4ed528e57",
+  "contract_freeze": "2ea612a16fb4620e5faf7191b7b9c4f32dd7b07b",
+  "contract_sha256": "d713561ecc002b0ac2993539fde07a6b4b11146d8e70e9df46b29a137473677e",
+  "production_tree": "1db217a616c61827d6b5c132316ddcdd007b1b71",
+  "production_file_hashes": {
+    "poc/crates/healthy-session-api/Cargo.lock": "3a22cdc352e0da49523902932f8ecd477b7d0234ad415ce97e90b1cd7cad45ad",
+    "poc/crates/healthy-session-api/Cargo.toml": "10b9e0b1e6cc1ab1833bc0d99a5da66ac54b918b330704ee555371863beab148",
+    "poc/crates/healthy-session-api/README.md": "bed9ed62b957f5e880dddc1eefa2d855f4128b8bcb4b9b11f1e6f3a926c3be23",
+    "poc/crates/healthy-session-api/examples/h2_consumer.rs": "ff56fbdb5a036cf06627c3c918388d5f5a7e69fb4be079e48931e603b624acfa",
+    "poc/crates/healthy-session-api/examples/h3_consumer.rs": "e81cc299b08cdf73a3ae8f633e0eccda86210d9dcedda36909648105ad16d19c",
+    "poc/crates/healthy-session-api/src/lib.rs": "bd0a3c300fc9cd4e68040ed2404cc242673b73455fd2c3101fa947ad5e0a1068",
+    "poc/crates/healthy-session-api/src/shape.rs": "55b4123c2aba8de46afbe6f58e175cc2176736ead1053837242e0568cbae7136",
+    "poc/crates/healthy-session-api/tests/local_ids.rs": "59738a1cca86c910010af7e6345ff144d106f6f7bdf085c4e8f8bf1eb35f642d",
+    "poc/crates/healthy-session-api/tests/shape.rs": "a4b49585a5123b3f0dab7b6857169d127af1a0c60a1893bac6f53ea691eb9a8d"
+  },
+  "original_goldens_sha256": "a943f8e9135c28057b544d3a72edb41d207bd372b6cc7ce80486a1fd5f35cfc2",
+  "harness_input_hashes": {
+    "poc/verification/healthy-session-program/api-v1/harness/Cargo.toml": "77736e62c42e972f6972dbb60c70e5636003601b674bccc6c5c7e9fcf50a0897",
+    "poc/verification/healthy-session-program/api-v1/harness/Cargo.lock": "0dfde3997e27bb9284862358fa17f4e37ed7a0f21a2ed2baf09bffb9be4587b9",
+    "poc/verification/healthy-session-program/api-v1/harness/tests/independent.rs": "568b7fb612af3ca62a83cee62d85ac637938178cb747c7083b5fee2237edf8f6",
+    "poc/verification/healthy-session-program/api-v1/harness/run-checks.sh": "97df34673ef4a4ec3b6b62bfd7ddd740dec1d24ee929fd1c0a172d027c08999a"
+  },
+  "harness_bundle_framing": "sorted(path + NUL + hex_sha256 + LF), UTF-8 then SHA256",
+  "harness_bundle_sha256": "654f9759bd1f47c7fabeebb3247424e07df029cdbcb1fc21c8fd0a7fd37763bc",
+  "tests": [
+    "applied_receipts_must_exactly_cover_order_root_delta_and_scope",
+    "available_historical_basis_never_means_valid_finality_or_execution_ready",
+    "basic_bounds_and_error_order_are_explicit",
+    "commands_bind_worker_cid_instance_and_ready_job",
+    "committed_is_not_applied_and_execution_binds_original_pending",
+    "cross_worker_results_are_allowed_but_cross_run_config_are_not",
+    "duplicate_actions_precede_derived_id_and_revision_checks_remain_first",
+    "fail_closed_any_commit_must_bind_and_pending_remains_bounded_unique",
+    "fail_closed_subsets_preserve_obligation_order",
+    "h2_consumer_keeps_wait_reject_and_exact_ready_job_separate",
+    "h2_consumer_known_close_with_missing_successor_is_committed_pending",
+    "h3_consumer_binding_is_not_proof_or_execution_readiness",
+    "h3_feed_preserves_full_record_and_rejects_shape_conflict",
+    "handles_jobs_and_ready_require_exact_binding_but_not_proof_truth",
+    "independent_literal_ids_and_derived_obligation_ids",
+    "manager_payload_action_and_guard_limits",
+    "native_binding_shape_never_invokes_crypto_or_basis",
+    "phases_pause_and_terminal_are_separate_metadata",
+    "preparation_missing_material_and_bounded_sources",
+    "proof_subject_target_and_delivery_have_distinct_shapes",
+    "public_type_identity_and_no_local_kind_authentication_claim",
+    "regional_complete_chain_shape_does_not_execute_or_verify",
+    "replay_event_binding_mutations_and_cardinality",
+    "replay_event_limit_equality_and_plus_one_use_distinct_events",
+    "replay_full_same_position_batch_and_empty_events",
+    "replay_opaque_input_and_effects_are_preserved_not_deep_validated"
+  ],
+  "test_count": 26,
+  "failed": 0,
+  "ignored": 0,
+  "test_result": "26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+  "format": "PASS",
+  "raw_evidence_dir": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02",
+  "raw_artifact_hashes": {
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/candidate.txt": "35f7f2007c4724c5bc5bd8abf6df11b065f394c878201e42d185f869f5aada0e",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/cargo-version.txt": "c10ec31b8c6e6e2693cf65fc1971b41edbc3da1ae7db6f9f3f36c4823f8dcab5",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/generate-lockfile.log": "2f8178ecaae14a92ed4b2761f1fe3966ce09b5731bf08e6709f2c9dafd91a2f7",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/git-status-after.txt": "a60e3c029facc801897cb585c357941ec8820d7f2b93c1907c5a61a087a4f3b4",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/git-status-before.txt": "a60e3c029facc801897cb585c357941ec8820d7f2b93c1907c5a61a087a4f3b4",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/harness-final-sha256.txt": "6b7c11c3c48c11a65b77d9deacf15908551a5ce9207f2a05b463c62d09982c4f",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/harness-initial-sha256.txt": "45f9423d2dd7fe8f6fa68b80388ff89765b0dd9c250e4f3c5279f0379913b436",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/independent-tests.log": "fcd0fa7fd2a8d9b6694d927c30e2681135672e64666b989f86ba72e4d218be2a",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02/rustc-version.txt": "f4d034f5660bb49f22bfcba3f3445be67e25b704c193ff421b53863b4faee148"
+  },
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "dirty_state": "?? poc/verification/healthy-session-program/api-v1/candidate-f9364a2-report.md\n?? poc/verification/healthy-session-program/api-v1/coverage-f9364a2.json\n?? poc/verification/healthy-session-program/api-v1/harness/\n",
+  "independent_source_recipe_count": 42,
+  "source_first_artifacts_unchanged": true,
+  "static_checks": [
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/candidate-f9364a2-report.md"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/coverage-f9364a2.json"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/harness/Cargo.lock"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/harness/Cargo.toml"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/harness/README.md"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/harness/run-checks.sh"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "poc/verification/healthy-session-program/api-v1/harness/tests/independent.rs"
+      ],
+      "exit_code": 1,
+      "whitespace_diagnostics": false
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "seed": "NOT_APPLICABLE: fixed literal API inputs; no network simulation",
+  "findings": [],
+  "limits": [
+    "Synthetic shape fixtures and test spies, not cryptographic/execution/durability witnesses.",
+    "No real worker, native engine, signing, runtime journal, action ledger, public chain or network simulation executed.",
+    "ReplayBatch intentionally preserves input/effects without recursive semantics or total nested-byte validation.",
+    "Original runtime75+2 and overallH1/M1 gates remain OPEN."
+  ],
+  "history": [
+    {
+      "directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-01",
+      "tests": 24,
+      "result": "PASS; retained before adding two explicit basis/event-limit checks"
+    }
+  ],
+  "workdir": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+  "commands": {
+    "final": "flock /tmp/megaroation-poc-heavy.lock env PATH=/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:$PATH CARGO_HOME=/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/cargo CARGO_TARGET_DIR=/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/target/healthy-session-api CARGO_BUILD_JOBS=2 bash poc/verification/healthy-session-program/api-v1/harness/run-checks.sh /mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-02",
+    "previous": "flock /tmp/megaroation-poc-heavy.lock env PATH=/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:$PATH CARGO_HOME=/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/cargo CARGO_TARGET_DIR=/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/target/healthy-session-api CARGO_BUILD_JOBS=2 bash poc/verification/healthy-session-program/api-v1/harness/run-checks.sh /mnt/reth/jy/megaroation_poc/.build/commander-jobs/02/artifacts/verification/healthy-session-program/api-v1/f9364a2/review-01",
+    "execution_policy": "One outer flock; CARGO_BUILD_JOBS=2; assigned data02 cargo/target/artifacts; no M0 matrix rerun."
+  },
+  "initial_sandbox_attempt": {
+    "result": "Stopped before Cargo: assigned data02 path was read-only in default sandbox.",
+    "resolution": "Authorized require_escalated execution succeeded; no automatic approval rejection."
+  },
+  "finalization_required": "Lead commits verifier harness/report to a named final candidate; independently recheck identical production/harness inputs on that SHA before Tester API-only checks."
+}

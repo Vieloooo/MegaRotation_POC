@@ -1,0 +1,15 @@
+[package]
+name = "h1-api-independent-verifier"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+poc-healthy-session-api = { path = "../../../../crates/healthy-session-api" }
+poc-types = { path = "../../../../crates/types" }
+poc-viewer-gfr = { path = "../../../../crates/viewer-gfr" }
+serde_json = "=1.0.154"

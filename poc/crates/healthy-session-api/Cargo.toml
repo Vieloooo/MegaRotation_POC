@@ -1,0 +1,13 @@
+[package]
+name = "poc-healthy-session-api"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+poc-types = { path = "../types" }
+poc-viewer-gfr = { path = "../viewer-gfr" }
