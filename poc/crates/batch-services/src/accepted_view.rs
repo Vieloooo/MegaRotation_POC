@@ -363,9 +363,9 @@ impl AcceptedRecord {
 
 #[derive(Clone, Debug)]
 pub struct VerifiedDaObject {
-    commitment: Hash32,
-    payload: Vec<u8>,
-    receipt: [u8; 65],
+    pub(crate) commitment: Hash32,
+    pub(crate) payload: Vec<u8>,
+    pub(crate) receipt: [u8; 65],
 }
 
 impl VerifiedDaObject {
@@ -399,7 +399,7 @@ impl AcceptedPayload {
     }
 }
 
-fn authenticate(
+pub(crate) fn authenticate(
     batch: &BatchWire,
     domain: &InboxDomain,
     signers: InboxSigners,
@@ -460,4 +460,479 @@ fn hash(value: &Value, label: &'static str) -> Result<Hash32, ReadError> {
 }
 fn address(value: &Value, label: &'static str) -> Result<Address, ReadError> {
     Ok(decode_fixed(string(value, label)?, label)?)
+}
+
+/// A paired control in the 09 verified history, with both transaction-local positions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, Serialize)]
+pub struct ResumeRequirement {
+    pub set: L1Position,
+    pub resume: L1Position,
+    pub control_seq: u64,
+}
+
+/// One named reader's latest delivered cursor, including verified recovery history.
+#[derive(Clone, Debug, Serialize)]
+pub struct CurrentCursor {
+    domain: InboxDomain,
+    reader: String,
+    as_of: u64,
+    cursor: CursorWire,
+    written_at: L1Position,
+    latest_resume: Option<ResumeRequirement>,
+    evidence: Value,
+}
+
+impl CurrentCursor {
+    pub fn cursor(&self) -> &CursorWire {
+        &self.cursor
+    }
+    pub fn domain(&self) -> InboxDomain {
+        self.domain
+    }
+    pub fn reader(&self) -> &str {
+        &self.reader
+    }
+    pub fn as_of(&self) -> u64 {
+        self.as_of
+    }
+    pub fn written_at(&self) -> L1Position {
+        self.written_at
+    }
+    pub fn latest_resume(&self) -> Option<ResumeRequirement> {
+        self.latest_resume
+    }
+    pub fn evidence(&self) -> &Value {
+        &self.evidence
+    }
+}
+
+/// One complete, reader-visible finalized block from the concrete gateway.
+#[derive(Clone, Debug, Serialize)]
+pub struct FinalizedBlock {
+    domain: InboxDomain,
+    reader: String,
+    height: u64,
+    accepted: Vec<AcceptedRecord>,
+    block: Value,
+}
+
+impl FinalizedBlock {
+    pub fn domain(&self) -> InboxDomain {
+        self.domain
+    }
+    pub fn reader(&self) -> &str {
+        &self.reader
+    }
+    pub fn height(&self) -> u64 {
+        self.height
+    }
+    pub fn accepted(&self) -> &[AcceptedRecord] {
+        &self.accepted
+    }
+    pub fn raw_block(&self) -> &Value {
+        &self.block["header_and_transactions"]
+    }
+    pub fn raw_receipts(&self) -> &[Value] {
+        self.block["receipts"]
+            .as_array()
+            .expect("verified 09 receipt list")
+    }
+
+    pub fn overrides(&self) -> Result<Vec<ResumeRequirement>, ReadError> {
+        parse_overrides(&self.block, self.height)
+    }
+}
+
+impl InboxGateway {
+    pub fn read_finalized_block(
+        &mut self,
+        command_id: u64,
+        reader: &str,
+        height: u64,
+    ) -> (Reply, Result<FinalizedBlock, ReadError>) {
+        let (reply, records) = self.read_accepted_block(command_id, reader, height);
+        let result = records.map(|accepted| {
+            let Outcome::Ready { result } = &reply.outcome else {
+                unreachable!("accepted extraction requires ready reply")
+            };
+            FinalizedBlock {
+                domain: self.domain,
+                reader: reader.into(),
+                height,
+                accepted,
+                block: result["block"].clone(),
+            }
+        });
+        (reply, result)
+    }
+
+    /// Reads the current delivered cursor and proves latest-RESUME coverage by
+    /// scanning the same reader's verified block history at/before `written_at`.
+    /// Returned commands/replies preserve the exact queries for the run trace.
+    pub fn read_current_cursor(
+        &mut self,
+        next_id: &mut u64,
+        reader: &str,
+        height: u64,
+    ) -> (Vec<(Command, Reply)>, Result<CurrentCursor, ReadError>) {
+        let mut trace = Vec::new();
+        let domain = self.domain;
+        let mut read = |query| {
+            let id = *next_id;
+            *next_id = id
+                .checked_add(1)
+                .ok_or_else(|| reject("driver command id exhausted"))?;
+            let command = Command {
+                id,
+                action: Action::Read {
+                    reader: reader.into(),
+                    query,
+                },
+            };
+            let reply = self.apply(command.clone());
+            let result = match &reply.outcome {
+                Outcome::Ready { result } => Ok((
+                    result.clone(),
+                    reply.visible_heights.get(reader).copied(),
+                    reply.finalized_height,
+                )),
+                Outcome::Wait { reason } => Err(ReadError::Wait(reason.clone())),
+                Outcome::Reject { reason } => Err(ReadError::Reject(reason.clone())),
+                Outcome::Infrastructure { reason } => {
+                    Err(ReadError::Infrastructure(reason.clone()))
+                }
+            };
+            trace.push((command, reply));
+            result
+        };
+        let result = (|| {
+            let (result, visible, finalized) = read(Query::Cursor { height })?;
+            if visible != Some(height) || height > finalized {
+                return Err(ReadError::Wait(
+                    "cursor request was not the current reader prefix".into(),
+                ));
+            }
+            let evidence = &result["read_evidence"];
+            if number(&result["as_of"], "cursor as_of")? != height
+                || number(&evidence["chain_id"], "cursor evidence chain")? != domain.chain_id
+                || address(&evidence["inbox"], "cursor evidence Inbox")? != domain.inbox
+                || hash(&evidence["config_ref"], "cursor evidence configRef")? != domain.config_ref
+            {
+                return Err(reject("cursor evidence deployment mismatch"));
+            }
+            let cursor = parse_cursor(&result["cursor"])?;
+            crate::crypto::validate_cursor(&cursor)?;
+            let written_at = log_position(&result["written_at"])?;
+            if written_at.block > height {
+                return Err(reject("cursor written outside reader prefix"));
+            }
+            let latest_resume = latest_resume_in_history(written_at, |height| {
+                let (result, _, _) = read(Query::Block { height })?;
+                Ok(result["block"].clone())
+            })?;
+            Ok(CurrentCursor {
+                domain,
+                reader: reader.into(),
+                as_of: height,
+                cursor,
+                written_at,
+                latest_resume,
+                evidence: result,
+            })
+        })();
+        (trace, result)
+    }
+}
+
+fn log_position(wire: &Value) -> Result<L1Position, ReadError> {
+    Ok(L1Position {
+        block: number(&wire["block"], "position block")?,
+        tx: number(&wire["tx"], "position transaction")?,
+        log: number(&wire["log"], "position log")?,
+    })
+}
+
+fn latest_resume_in_history(
+    written_at: L1Position,
+    mut read_block: impl FnMut(u64) -> Result<Value, ReadError>,
+) -> Result<Option<ResumeRequirement>, ReadError> {
+    for height in (0..=written_at.block).rev() {
+        let block = read_block(height)?;
+        if let Some(control) = parse_overrides(&block, height)?
+            .into_iter()
+            .rev()
+            .find(|control| control.set <= written_at)
+        {
+            return Ok(Some(control));
+        }
+    }
+    Ok(None)
+}
+
+fn parse_overrides(block: &Value, height: u64) -> Result<Vec<ResumeRequirement>, ReadError> {
+    if number(&block["number"], "override block height")? != height {
+        return Err(reject("override block mismatch"));
+    }
+    let events = block["events"]
+        .as_array()
+        .ok_or_else(|| reject("override history events"))?;
+    let mut controls = vec![];
+    for event in events.iter().filter(|event| event["event"] == "cursor_set") {
+        let set = log_position(&event["position"])?;
+        let resume = log_position(&event["resume"])?;
+        let matching = events
+            .iter()
+            .find(|other| other["event"] == "resume" && other["position"] == event["resume"])
+            .ok_or_else(|| reject("missing paired RESUME in complete block"))?;
+        if resume.block != height
+            || set.block != height
+            || set.tx != resume.tx
+            || set.log >= resume.log
+            || matching["set"] != event["position"]
+        {
+            return Err(reject("RESUME and CursorSet position mismatch"));
+        }
+        controls.push(ResumeRequirement {
+            set,
+            resume,
+            control_seq: number(&matching["seq"], "RESUME control seq")?,
+        });
+    }
+    Ok(controls)
+}
+
+/// Materialization of the accepted view from exact gpos fixture sources. Controls
+/// retain the historical prefix while the matching ResumeCut is unavailable.
+#[derive(Clone, Debug, Serialize)]
+pub struct AcceptedView {
+    pub cursor_read: CurrentCursor,
+    pub genesis_height: u64,
+    pub virtual_prefix: Vec<poc_types::domain::VirtualBlock>,
+    pub historical_prefix: Vec<poc_types::domain::VirtualBlock>,
+    pub missing_sources: Vec<MissingSource>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum MissingSource {
+    Gpos {
+        position: L1Position,
+        gpos: String,
+        reason: String,
+    },
+    ResumeCut {
+        control: ResumeRequirement,
+    },
+}
+
+pub fn materialize_accepted_view(
+    cursor_read: CurrentCursor,
+    blocks: &[FinalizedBlock],
+    source: &dyn crate::source::BatchSource,
+    configuration: &crate::ServiceConfig,
+) -> Result<AcceptedView, ReadError> {
+    use crate::{
+        frame::{commitment, encode_closed},
+        source::{SourceQuery, replay_range},
+    };
+    if cursor_read.domain() != configuration.inbox {
+        return Err(reject("materialization cursor deployment mismatch"));
+    }
+    if blocks.last().map(FinalizedBlock::height) != Some(cursor_read.as_of()) {
+        return Err(ReadError::Wait(
+            "materialization requires reader's complete finalized prefix".into(),
+        ));
+    }
+    let mut initialized: Option<(u64, CursorWire, L1Position)> = None;
+    let mut materialized = Vec::new();
+    let mut materialized_tip: Option<(Hash32, Hash32)> = None;
+    let mut historical = Vec::new();
+    let mut missing = Vec::new();
+    for (index, block) in blocks.iter().enumerate() {
+        if block.domain() != configuration.inbox
+            || block.reader() != cursor_read.reader()
+            || block.height() != index as u64
+            || (index > 0
+                && block.raw_block()["parentHash"] != blocks[index - 1].raw_block()["hash"])
+        {
+            return Err(reject(
+                "materialization requires one complete reader history",
+            ));
+        }
+        for event in block.block["events"]
+            .as_array()
+            .expect("verified 09 event list")
+        {
+            match event["event"].as_str() {
+                Some("cursor_initialized") => {
+                    let genesis = parse_cursor(&event["cursor"])?;
+                    let position = log_position(&event["position"])?;
+                    if initialized
+                        .replace((genesis.height, genesis, position))
+                        .is_some()
+                    {
+                        return Err(reject("duplicate Inbox genesis"));
+                    }
+                }
+                Some("cursor_set") => {
+                    let position = log_position(&event["position"])?;
+                    let control = block
+                        .overrides()?
+                        .into_iter()
+                        .find(|control| control.set == position)
+                        .ok_or_else(|| reject("unpaired CursorSet"))?;
+                    if !materialized.is_empty() {
+                        historical = std::mem::take(&mut materialized);
+                    }
+                    if !matches!(missing.last(), Some(MissingSource::ResumeCut { control: old }) if *old == control)
+                    {
+                        missing.push(MissingSource::ResumeCut { control });
+                    }
+                }
+                Some("cursor_advanced") if missing.is_empty() => {
+                    let position = log_position(&event["position"])?;
+                    let record = block
+                        .accepted
+                        .iter()
+                        .find(|record| record.position() == position)
+                        .ok_or_else(|| {
+                            reject("no authenticated accepted record at actual advance")
+                        })?;
+                    let Some((_, previous, previous_position)) = &mut initialized else {
+                        return Err(reject("accepted advance before genesis"));
+                    };
+                    let batch = record.submission();
+                    if &batch.prev != previous {
+                        return Err(reject("materialization cursor discontinuity"));
+                    }
+                    let gpos = decode_hex(&batch.gpos, 1024, "gpos")?;
+                    let query = SourceQuery {
+                        gpos: &gpos,
+                        first: batch.first_height,
+                        last: batch.last_height,
+                        cursor_written_at: *previous_position,
+                        required_resume: None,
+                    };
+                    let replayed = match replay_range(source, &query, previous, configuration) {
+                        Ok(replayed) => replayed,
+                        Err(ReadError::Wait(reason)) => {
+                            missing.push(MissingSource::Gpos {
+                                position,
+                                gpos: batch.gpos.clone(),
+                                reason,
+                            });
+                            continue;
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    let payload =
+                        encode_closed(&replayed.records).map_err(|e| reject(&e.to_string()))?;
+                    if commitment(&payload) != record.commitment()
+                        || replayed.records.last().map(|record| record.epoch_num)
+                            != Some(batch.next.origin)
+                    {
+                        return Err(reject(
+                            "gpos source contradicts the accepted commitment or cursor",
+                        ));
+                    }
+                    if let Some((state_root, native_hash)) = materialized_tip {
+                        if replayed.virtual_blocks[0].pre_state_root != state_root
+                            || replayed.native_parent != native_hash
+                        {
+                            return Err(reject(
+                                "gpos source contradicts the already materialized prefix",
+                            ));
+                        }
+                    }
+                    let applied = replayed
+                        .audit
+                        .last()
+                        .expect("replayed range includes one or more heights");
+                    materialized_tip = Some((applied.post_state_root, applied.native_hash));
+                    materialized.extend(replayed.virtual_blocks);
+                    *previous = batch.next.clone();
+                    *previous_position = position;
+                }
+                _ => (),
+            }
+        }
+    }
+    let (genesis_height, previous, _) =
+        initialized.ok_or_else(|| ReadError::Wait("Inbox genesis unavailable".into()))?;
+    if missing.is_empty() && &previous != cursor_read.cursor() {
+        return Err(reject(
+            "complete materialization does not match current cursor",
+        ));
+    }
+    Ok(AcceptedView {
+        cursor_read,
+        genesis_height,
+        virtual_prefix: materialized,
+        historical_prefix: historical,
+        missing_sources: missing,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn later_global_cursor_still_requires_exact_paired_resume() {
+        let set = json!({"block":7,"tx":2,"log":0,"rpc_log_index":4,"tx_hash":"fixture"});
+        let resume = json!({"block":7,"tx":2,"log":1,"rpc_log_index":5,"tx_hash":"fixture"});
+        let control_block = json!({"number": 7,"events":[
+            {"event":"cursor_set","position":set,"resume":resume},
+            {"event":"resume","position":resume,"set":set,"seq":9}
+        ]});
+        let expected = ResumeRequirement {
+            set: L1Position {
+                block: 7,
+                tx: 2,
+                log: 0,
+            },
+            resume: L1Position {
+                block: 7,
+                tx: 2,
+                log: 1,
+            },
+            control_seq: 9,
+        };
+        for written_at in [
+            expected.set,
+            L1Position {
+                block: 8,
+                tx: 0,
+                log: 0,
+            },
+        ] {
+            let result = latest_resume_in_history(written_at, |h| {
+                Ok(match h {
+                    7 => control_block.clone(),
+                    8 => json!({"number":8,"events":[]}),
+                    _ => panic!("cannot skip past required RESUME"),
+                })
+            })
+            .unwrap();
+            assert_eq!(result, Some(expected));
+        }
+        assert!(matches!(
+            latest_resume_in_history(
+                L1Position {
+                    block: 8,
+                    tx: 0,
+                    log: 0
+                },
+                |h| {
+                    if h == 8 {
+                        Ok(json!({"number":8,"events":[]}))
+                    } else {
+                        Err(ReadError::Wait("missing complete finalized history".into()))
+                    }
+                }
+            ),
+            Err(ReadError::Wait(_))
+        ));
+    }
 }
