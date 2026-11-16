@@ -21,10 +21,11 @@ flock /tmp/megaroation-poc-heavy.lock cargo build --locked --offline \
   --repository "$PWD" --candidate "$(git rev-parse HEAD)" \
   --raw "$M2_RUN/raw" --receipts "$M2_RUN/raw/l1/raw-rpc-bundle.json" \
   --driver-rpc "$M2_RUN/raw/l1/driver-trace.json" \
+  --hub-l1 "$M2_RUN/raw/l1/hub-l1.jsonl" \
   --public-checker "$CARGO_TARGET_DIR/debug/m2-force-independent" \
   --output "$M2_NEW_REPORT"
 ```
 
-For the pause comparison, pass `--repeat-raw "$M2_REPEAT_RUN/raw"`. For the M1 full-window regression, pass `--mode regular --raw "$M1_RUN/raw"` and omit `--receipts` and `--driver-rpc`. The report records independent results and SHA-256 of the sealed input manifest, raw JSONL, and public replay. The normalized pause comparison strips only process wall diagnostics from WorkerSpawn and WorkerExit.
+For the pause comparison, pass `--repeat-raw "$M2_REPEAT_RUN/raw"`. For the M1 full-window regression, pass `--mode regular --raw "$M1_RUN/raw"` and omit `--receipts` and `--driver-rpc`. The input manifests must bind clean candidate revisions and every raw file. The report records the manifest, trace and public replay SHA-256 values. The pause comparison strips process wall diagnostics from WorkerSpawn and WorkerExit, then checks equality of the normalized trace, raw native frames and raw RPC bundle.
 
 This bounded check trusts the local Anvil RPC as the execution source, independently verifies receipt/event consistency and the actual EIP-712 signer, and checks finalization against the explicit virtual driver and reader actions. The live report covers the specified process and slot schedule. It does not imply real-network timing, Ethereum proof verification, automatic failure detection, or recovery across process restart.

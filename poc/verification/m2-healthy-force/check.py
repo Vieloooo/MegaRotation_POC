@@ -107,6 +107,8 @@ def check_frames(raw, public, proto_file, trace):
     observed = {}
     delivered = {}
     ack_event = {}
+    work_due = {}
+    completed_before_terminal = set()
     last_tick = 0
     post_close = []
     samples = {}
@@ -140,8 +142,15 @@ def check_frames(raw, public, proto_file, trace):
                 if kind == 5:
                     require(identity_of_envelope(p) in sent, "delivery outside committed route")
                 if (pid, cid) in terminal and kind != 8:
-                    post_close.append({"pid": pid, "cid": cid.hex(), "input_tag": kind, "event": grant[3],
-                                       "tick_us": tick})
+                    probe = {"pid": pid, "cid": cid.hex(), "input_tag": kind, "event": grant[3], "tick_us": tick}
+                    if kind == 7:
+                        key = (pid, p[1])
+                        probe["operation_id"] = p[1].hex()
+                        probe["already_completed"] = key in completed_before_terminal
+                        probe["scheduled_due_us"] = work_due[key]
+                    post_close.append(probe)
+                elif kind == 7:
+                    completed_before_terminal.add((pid, p[1]))
             pending = pid, grant, raw_frame
             continue
 
@@ -167,10 +176,22 @@ def check_frames(raw, public, proto_file, trace):
                 kind = work["binding"]["work"]["kind"]
                 if kind in (1, 2):
                     admit.add((pid, view, digest))
+        if post_close and post_close[-1]["event"] == grant[3] and post_close[-1]["input_tag"] == 7:
+            probe = post_close[-1]
+            probe["discarded"] = any(work["event"] == "work_discarded"
+                and work["reason"] == "unknown_or_retired_work"
+                and bytes(work["work"]["operation_id"]).hex() == probe["operation_id"]
+                for work in application.get("work", []))
+            require(probe["discarded"] and all(single(effect)[0] not in (5, 6) for effect in ack[6]),
+                    "closed cid completion reached a native send/sign output")
         for effect in ack[6]:
             tag, data = single(effect)
             p = fields(data)
-            if tag == 5:
+            if tag == 4:
+                key = (pid, p[1])
+                require(key not in work_due, "native work issued twice")
+                work_due[key] = tick + p[4]
+            elif tag == 5:
                 require((pid, p[2]) not in terminal, "new network output from terminal cid")
                 sent.add(identity_of_envelope(p))
             elif tag == 6:
@@ -282,7 +303,7 @@ def check_frames(raw, public, proto_file, trace):
             released[index] = seq
             active = None
         elif kind in {"NetworkAdmitted", "ProofObserved", "RegionalDelivered", "Ready", "Enter", "Close",
-                      "CutoffRetire", "PublishScheduled"} and "logical_step_id" in detail:
+                      "CutoffRetire", "PublishScheduled", "CloseProbe"} and "logical_step_id" in detail:
             index = detail["logical_step_id"]
             actual_pid, grant, ack = steps[index]
             require(released[index] < seq and pid == actual_pid, "release before persisted Ack")
@@ -319,9 +340,52 @@ def load_rows(path):
     return [load(line) for line in data.splitlines() if line.strip()]
 
 
-def driver_times(virtual_path, rpc_path, evm, control):
+def bind_hub_calls(path, transcript):
+    # A Hub operation always begins with a Tick, including multiple operations at one tick.
+    calls = []
+    for row in transcript:
+        if row["command"]["op"] == "tick":
+            calls.append([row])
+        else:
+            calls[-1].append(row)
+    for step, group in zip(load_rows(path), calls, strict=True):
+        hub, result = step["command"], step["result"]
+        tick, height, reader = hub["tick_us"], hub["height"], hub["reader"]
+        require(all(row["reply"]["status"] == "ready" and row["reply"]["reference_us"] == tick for row in group),
+                "Hub step does not match ready driver replies at the scheduled virtual time")
+        require(group[0]["command"]["reference_us"] == tick, "Hub and driver tick disagree")
+        rest = group[1:]
+        op = hub["op"]
+        operations = [row["command"]["op"] for row in rest]
+        replies = [row["reply"]["result"] for row in rest]
+        if op == "mine":
+            require(operations == ["mine"] and rest[0]["command"]["slot"] == height and
+                    replies[0]["included_block"] == result, "Hub inclusion evidence")
+        elif op == "finalize":
+            require(operations == ["finalize"] and rest[0]["command"]["through_height"] == height and
+                    replies == [result] and result["finalized_through"] == height, "Hub finalization evidence")
+        elif op in {"genesis", "deliver"}:
+            expected = ["read"] if op == "genesis" else ["deliver", "read"]
+            require(operations == expected and rest[-1]["command"]["reader"] == reader and
+                    rest[-1]["command"]["query"] == {"kind": "block", "height": height} and
+                    replies[-1]["control_coverage_through"] == height and replies[-1]["block"] == result,
+                    "Hub reader receipt evidence")
+            if op == "deliver":
+                require(replies[0]["delivered_through"] == height and replies[0]["reader"] == reader,
+                        "missing driver finalized reader delivery")
+        elif op in {"deploy", "submit", "retry"}:
+            require(operations == ["submit"] * len(result) and
+                    [r["submitted_tx_hash"] for r in replies] == [r["hash"] for r in result],
+                    "Hub submitted transaction result")
+        else:
+            raise ValueError(f"unexpected Hub L1 operation: {op}")
+    return len(calls)
+
+
+def driver_times(hub_path, rpc_path, evm, control):
     rpc = load_rows(rpc_path)
-    virtual = load_rows(virtual_path) if virtual_path is not None else [row for row in rpc if "command" in row]
+    virtual = [row for row in rpc if "command" in row]
+    hub_operations = bind_hub_calls(hub_path, virtual)
     transcript = [r["startup_rpc"] for r in rpc if "startup_rpc" in r]
     require(len(transcript) == 1, "missing unique Anvil startup evidence")
     automine = [r for r in transcript[0] if r["request"]["method"] == "anvil_getAutomine"]
@@ -401,7 +465,7 @@ def driver_times(virtual_path, rpc_path, evm, control):
     require(stages["submit_us"] < stages["include_us"] < stages["finalize_us"] <= min(readers.values()),
             "misordered Force L1 stages")
     require(min(readers.values()) - stages["include_us"] <= 2_000_000, "L1 finalized reader availability exceeds 2s")
-    return {**stages, "reader_us": readers}
+    return {**stages, "reader_us": readers, "checked_hub_operations": hub_operations}
 
 
 def acceptance_rows(trace, public):
@@ -426,7 +490,7 @@ def acceptance_rows(trace, public):
     return accepted
 
 
-def check_primary(trace, public, controls, lifecycle, stages):
+def check_primary(trace, public, controls, lifecycle, stages, evm):
     require(len(controls) == 1, "primary run must have exactly one L1 control log")
     [control] = controls
     require(control["position"][0] == 6 and control["act_us"] == 22_000_000 and control["target"] == 0,
@@ -448,6 +512,9 @@ def check_primary(trace, public, controls, lifecycle, stages):
     require(pos["key_us"] == force["act_us"], "Force replay position time mismatch")
     require(pos["index"] == {"L1": {"block": control["position"][0], "tx": control["position"][1],
                                     "log": control["position"][2]}}, "Force replay L1 position mismatch")
+    lifted = replayed["detail"]["input"]
+    require(lifted == {"position": pos["index"]["L1"], "control_seq": control["seq"], "target_beta": control["target"]},
+            "GFR input does not match the independently decoded Force record")
     [activated] = [r for r in trace if r["kind"] == "ForceActivated"]
     supplied = activated["detail"]
     desc = supplied["descriptor"]
@@ -525,7 +592,8 @@ def check_primary(trace, public, controls, lifecycle, stages):
                 "h11 must use pre-close actual native proof and late public completion")
     require(not any(row["cid"] == old_r1 for row in entries), "old h11 or descendant entered G")
     probes = [row for row in lifecycle["post_close_grants"] if row["cid"] == old_r1]
-    require(probes, "healthy run needs controlled old-cid callback after Close")
+    require({p["pid"] for p in probes if p.get("discarded")} == set(range(5, 10)),
+            "old-committee post-close Work replay not bound to raw discarded callbacks")
     for kind, key in (("L1Submitted", "submit_us"), ("L1Included", "include_us"), ("L1Finalized", "finalize_us")):
         matches = [r for r in trace if r["kind"] == kind and r["tick_us"] == stages[key]]
         if kind == "L1Submitted":
@@ -535,12 +603,26 @@ def check_primary(trace, public, controls, lifecycle, stages):
             matches = [r for r in matches if r["detail"]["height"] == 6]
         require(matches, f"{kind} not bound to verified raw L1 stage")
     projected = set()
+    reader_tip = {}
+    projection_grants = 0
     for event in trace:
-        if event["kind"] == "L1ReaderAvailable" and event["detail"]["height"] >= 6:
-            reader = event["detail"]["reader"]
-            if event["tick_us"] == stages["reader_us"].get(reader):
+        detail = event["detail"]
+        if event["kind"] == "L1ReaderAvailable":
+            reader, height = detail["reader"], detail["height"]
+            require(reader_tip.get(reader, -1) + 1 == height, "finalized L1 reader is not a continuous prefix")
+            reader_tip[reader] = height
+            require(address(detail["hash"]) == evm["blocks"][height]["hash"][2:].lower(),
+                    "L1 reader hash differs from real canonical RPC data")
+            if height == 6 and event["tick_us"] == stages["reader_us"].get(reader):
                 projected.add(reader)
-    require(projected, "no live reader delivery bound to finalized L1 driver evidence")
+        elif event["kind"] == "Grant":
+            eligible = [r["height"] for r in public["l1"] if r["finalized_us"] + 1 <= event["tick_us"]]
+            horizon = max(eligible, default=-1)
+            require(detail["worker_l1_through"] == horizon and reader_tip.get("A", -1) >= horizon,
+                    "worker metadata visibility was not constrained by actual Anvil reader A")
+            projection_grants += 1
+    require(projected == set(stages["reader_us"]), "live reader delivery not bound to finalized L1 driver evidence")
+    require(projection_grants == lifecycle["counts"]["acks"], "projection gate omitted worker grants")
     new = [r for r in public["public_finals"] if r["target"] == first["target"] and r["cid"] == cid]
     require(new, "first new accepted physical result lacks verified finality")
     first_native = min(r["observed"][0] for r in new)
@@ -561,6 +643,7 @@ def check_primary(trace, public, controls, lifecycle, stages):
         "first_new": first, "first_new_g_tick_us": accepted[-1]["tick_us"],
         "last_old": entries[9], "late": late, "ready_us": ready, "enter_us": enter,
         "post_close_probes": probes, "first_native_us": first_native, "pack_us": pack_tick,
+        "checked_projected_worker_grants": projection_grants,
         "first_espresso": q_first,
     }
 
@@ -577,7 +660,49 @@ def check_regular(trace, public, lifecycle):
 
 
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    sha = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1 << 20):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+
+def sealed_manifest(path, candidate, repository, raw):
+    content = path.read_bytes()
+    sha = hashlib.sha256(content).hexdigest()
+    require(path.with_suffix(".sha256").read_text().split() == [sha, path.name], "manifest SHA-256 seal mismatch")
+    manifest = load(content)
+    require(manifest["candidate"] == candidate and manifest["seed"] == 42 and manifest["status"] == "COMPLETED",
+            "sealed run status/candidate/seed mismatch")
+    if manifest["schema"] == "M2-HEALTHY-FORCE-RUN-1":
+        before, after = manifest["before"], manifest["after"]
+        require(before == after and before["head"] == candidate and before["status"] == "",
+                "M2 checkout was dirty or changed during run")
+        require(before["bft_gitlink"] == "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6"
+                and manifest["commonware"] == "2026.10.0", "M2 pinned sources")
+        for name, sha_expected in manifest["inputs"].items():
+            require(digest(repository / name) == sha_expected, f"candidate frozen input mismatch: {name}")
+        inventory = manifest["files"]
+    elif manifest["schema"] == "M1-SMOKE-RUN-1":
+        before, after = manifest["revision_before"], manifest["revision_after"]
+        require(before == after and before["head"] == candidate and before["status"] == [],
+                "M1 checkout was dirty or changed during run")
+        inventory = {r["path"]: r for r in manifest["artifacts"]}
+        require(len(inventory) == len(manifest["artifacts"]), "duplicate M1 inventory entries")
+    else:
+        raise ValueError("unsupported run manifest schema")
+    run = path.parent.resolve()
+    for name, expected in inventory.items():
+        item = (run / name).resolve()
+        require(item.is_relative_to(run) and item.is_file() and item.stat().st_size == expected["bytes"]
+                and digest(item) == expected["sha256"], f"sealed evidence mismatch: {name}")
+    if raw is not None:
+        require(raw.resolve() == run / "raw", "raw evidence directory is outside sealed manifest")
+        actual_raw = {str(p.relative_to(run)) for p in raw.resolve().rglob("*") if p.is_file()}
+        require(actual_raw == {name for name in inventory if name.startswith("raw/")},
+                "sealed raw inventory differs from actual files")
+    return manifest, sha
+
 
 
 def normalized_trace(raw):
@@ -599,7 +724,7 @@ def main():
     parser.add_argument("--repository", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--receipts", type=Path)
-    parser.add_argument("--driver-virtual", type=Path)
+    parser.add_argument("--hub-l1", type=Path)
     parser.add_argument("--driver-rpc", type=Path)
     parser.add_argument("--repeat-raw", type=Path)
     parser.add_argument("--raw", type=Path)
@@ -616,26 +741,27 @@ def main():
     require(__debug__, "checks require Python assertions enabled")
     manifest = args.manifest or (args.raw.parent / "manifest.json" if args.raw else None)
     require(manifest is not None, "sealed run manifest required")
-    manifest_data = load(manifest.read_bytes())
-    require(manifest_data["candidate"] == candidate, "run manifest candidate differs from checkout")
-    require(manifest_data["seed"] == 42, "unexpected sealed scenario seed")
-    for stage in ("revision_before", "revision_after"):
-        rev = manifest_data.get(stage)
-        if rev is not None:
-            require(rev["head"] == candidate and rev["status"] == [],
-                    "run checkout was dirty or revision changed")
+    manifest_data, manifest_sha = sealed_manifest(manifest, candidate, args.repository, args.raw)
     controls = []
-    report = {"candidate": candidate, "mode": args.mode, "run_manifest_sha256": digest(manifest)}
+    report = {"candidate": candidate, "mode": args.mode, "run_manifest_sha256": manifest_sha}
     if args.repeat_raw:
         repeat_manifest = args.repeat_raw.parent / "manifest.json"
-        repeat = load(repeat_manifest.read_bytes())
-        require(repeat["candidate"] == candidate and repeat["seed"] == manifest_data["seed"],
-                "comparison repeat differs in candidate or seed")
+        repeat, repeat_sha = sealed_manifest(repeat_manifest, candidate, args.repository, args.repeat_raw)
+        require(args.mode == "force" and manifest_data["wall_pause_ms"] == 0 and repeat["wall_pause_ms"] > 0,
+                "pause comparison requires a plain and a wall-paused Force run")
+        require(manifest_data["binaries"] == repeat["binaries"], "primary and repeat binaries differ")
         base_trace = normalized_trace(args.raw)
         repeat_trace = normalized_trace(args.repeat_raw)
-        require(base_trace == repeat_trace, "normalized full logical traces differ")
-        report["repeat"] = {"status": "PASS", "normalized_sha256": hashlib.sha256(base_trace).hexdigest(),
-                            "run_manifest_sha256": digest(repeat_manifest)}
+        require(base_trace == repeat_trace == (args.raw / "trace.virtual.jsonl").read_bytes()
+                == (args.repeat_raw / "trace.virtual.jsonl").read_bytes(), "normalized full logical traces differ")
+        replay_digests = {}
+        for name in ("frames.bin", "l1/raw-rpc-bundle.json"):
+            base_hash = digest(args.raw / name)
+            require(base_hash == digest(args.repeat_raw / name), f"raw deterministic artifact differs: {name}")
+            replay_digests[name] = base_hash
+        report["repeat"] = {"status": "PASS", "wall_pause_ms": repeat["wall_pause_ms"],
+                            "normalized_sha256": hashlib.sha256(base_trace).hexdigest(),
+                            "run_manifest_sha256": repeat_sha, "equal_raw_sha256": replay_digests}
     if args.mode in ("force", "abi"):
         evm, controls, report["receipts"] = receipt_projection(args.repository, args.receipts)
         expected = {"signature", "conflicting_request", "stale_sequence", "exact_retry"}
@@ -655,14 +781,19 @@ def main():
         if args.mode == "force":
             require(evm["config"]["announcementSeconds"] == 10 and evm["config"]["genesisTimestampSeconds"] == 0
                     and evm["config"]["slotSeconds"] == 2, "real L1 profile differs")
+            profile = load((args.raw / "profile.json").read_bytes())
+            require(profile["force"]["worker_l1_projection"] == "reg-a-height-timestamp-v1"
+                    and profile["force"]["worker_l1_visibility_lag_us"] == 1,
+                    "execution metadata projection missing profile provenance")
             require(evm["config"]["configRef"].lower() == "0x" + public["config_ref"], "L1 EIP-712 config binding")
             require(len(evm["blocks"]) >= 11, "L1 evidence omits execution origin horizon")
             for real, projected in zip(evm["blocks"], public["l1"]):
                 require(projected["height"] == int(real["number"], 16)
                         and projected["timestamp_s"] == int(real["timestamp"], 16), "real L1/metadata header projection")
-            stages = driver_times(args.driver_virtual, args.driver_rpc, evm, controls[0])
+            hub_l1 = args.hub_l1 or (args.raw / "l1/hub-l1.jsonl")
+            stages = driver_times(hub_l1, args.driver_rpc, evm, controls[0])
             report["stages"] = stages
-            report["force"] = check_primary(trace, public, controls, lifecycle, stages)
+            report["force"] = check_primary(trace, public, controls, lifecycle, stages, evm)
         else:
             report["regular"] = check_regular(trace, public, lifecycle)
         public_path = args.output / "public-replay.json"
