@@ -17,8 +17,9 @@ pub use poc_types::domain::{
     SessionId, VirtualBlock, Window,
 };
 pub use publications::{
-    BodyEvidence, ProofEvidence, ProofVerdict, PublicationDiagnostic, PublicationIndex,
-    ResultEvidence, ResultExclusion, interval_unexpired,
+    BodyEvidence, CompletenessInvalid, CompletenessOutcome, ProofEvidence, ProofVerdict,
+    PublicCompleteness, PublicationDiagnostic, PublicationIndex, ResultEvidence, ResultExclusion,
+    interval_unexpired, public_completeness,
 };
 pub use reader::FixtureL1Reader;
 pub use replay::{advance_global, init};

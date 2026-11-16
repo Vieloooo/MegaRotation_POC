@@ -1,0 +1,9 @@
+# Additional source-derived harness checks
+
+No candidate implementation has been inspected or built. The harness is prepared against the frozen APIs; compilation and all behavior remain NOT_RUN until a named revision arrives.
+
+**Late valid public proof:** v10 09 §3.2 requires existence of at least one valid target proof; a public false proof does not establish completeness or permanently invalidate all later proof variants for the ResultKey. Therefore06 verify_recorded maps helper Invalid(FinalProof) to NotYetPublic, retaining the task. With bodies already public, a later valid proof permits Recorded at that later proof's position. Invalid known ancestry remains a rejection. The independent harness includes this sequence.
+
+**Sealed internal cache versus fresh public helper:** accepted07's private `verify_proofs` returns without requesting an optional binding when every relevant proof already has a trusted verdict. Source rule09 §3.4 requires inputs actually needed for the next transition, not redundant historical revalidation. After q0 verifies and accepts a result, an empty q1 introduces no new candidate proof/extension; the sealed state may advance q1 while the binding is temporarily absent, preserving the accepted public projection. Cache reuse is confined to the same immutable config/profile/descriptor/target and public evidence. Fresh `public_completeness` has no such trusted verdict and must rebuild/recheck the public cut, returning WAIT without the binding. No external mutable PublicationIndex or fixture checkpoint may supply a trusted verdict. The harness explicitly tests both sides on the same bytes.
+
+These focused additions preserve the original slice expectations and do not turn absent H1 cryptographic artifacts into a blanket coding gate. Synthetic exact-tuple proof callbacks remain noncryptographic even though they exercise the production Native profile route.
