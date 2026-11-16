@@ -302,7 +302,12 @@
       "handoff": "poc/docs/milestones/H1-healthy-session-program-zh.md",
       "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
       "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
-      "actual_turn_configuration": null
+      "actual_turn_configuration": {
+        "turn_id": "01a1e218-7ff3-7cf1-93bf-69210efaab23",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
+      }
     },
     {
       "id": "H2",
