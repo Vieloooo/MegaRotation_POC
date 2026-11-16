@@ -529,7 +529,7 @@ def formal_projection(path, independent):
     governance = project_governance(bundle, trace, report, control, profile)
     public = project_public(bundle, trace, profile, config, control, report, oracle, headers, old_floor)
     provenance = {"candidate": bundle.manifest["candidate"], "manifest SHA-256": bundle.manifest_hash,
-                  "bundle": path.name, "independent": independent.name,
+                  "运行配置": bundle.manifest["schema"] + " · " + bundle.manifest["scenario"],
                   **{f"{name} SHA-256": hash for name, hash in hashes.items()},
                   "T_init 来源": "冻结 M3-AUTO-FORCE-1 · 3 s", "checker": "AF01 PASS"}
     return assemble("sealed", [*l1_events, *governance, *public], profile, provenance)

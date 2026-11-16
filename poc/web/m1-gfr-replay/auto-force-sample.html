@@ -291,7 +291,7 @@ function drawTimeline() {
       let near = 0;
       let prev = -1_000_000;
       const buttons = events.flatMap((entry, index) => {
-        if (!index || entry.lane !== name) return [];
+        if (!index || entry.lane !== name || (entry.signer && !entry.stage)) return [];
         const marked = foreground.has(entry.stage) || entry.stage === "old-accepted" || entry.stage === "old-result";
         near = entry.tick_us - prev < 330_000 ? near + 1 : 0;
         prev = entry.tick_us;
