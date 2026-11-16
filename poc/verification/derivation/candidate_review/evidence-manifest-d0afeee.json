@@ -1,0 +1,759 @@
+{
+  "schema": "derivation-independent-verification-manifest-v1",
+  "date": "2026-11-16",
+  "candidate": "d0afeee9363ef6703f51eecfd742915f83aa27f2",
+  "baseline": "37b4f2b8a6d67b303ba90b1d4d1981c93ed8dd12",
+  "interface": "3b1b34fce6f3a3bac5099d53bdf5f7df56079f80",
+  "expectations_commit": "4a86f8d5c6f2d39e52994bb7c862fcc7313ccf8c",
+  "worktree": "/home/jy/.codex/worktrees/29df/megaroation_poc",
+  "branch": "codex/poc-derivation",
+  "role": "bft_verifier",
+  "configured_model": "gpt-6-astra",
+  "configured_effort": "xhigh",
+  "status": "PASS_STAGE_A_COMPONENT",
+  "full_feature_status": "INCONCLUSIVE_STAGE_B_AND_INTEGRATION_PENDING",
+  "seed": "none (explicit scripts)",
+  "raw_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1",
+  "raw_file_count": 124,
+  "raw_bytes": 31622390,
+  "raw_files": [
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/anvil-command.json",
+      "bytes": 540,
+      "sha256": "4c6257b26b9289cdb6c3383ac00fbaa50e83f1556f45597206da54d57c6bd3e1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/d-a.json",
+      "bytes": 341976,
+      "sha256": "5a8bbd732b958fbbca10d1b730c01650915058d938fabb2ae08efdf1e7be5f58"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/d-b.json",
+      "bytes": 342166,
+      "sha256": "188754c68ba8a242f765e38ff621eba0dba0703e64e44ca2a6c25240d5629c39"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/driver-trace.json",
+      "bytes": 1138623,
+      "sha256": "3252926abd147c80f1941fed702e2fe262e1b03abc6431eb3fe8dd48774c5569"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/raw-rpc-bundle.json",
+      "bytes": 145282,
+      "sha256": "f02d0c552263142e1f3e638e97bed0a98b9eba9bb3fd0c6cb3cb5bf3c0752c9c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/result.json",
+      "bytes": 1482,
+      "sha256": "6839a29f5b028b6d95c2a50190d2018d5aac95689d9779c85139532a8ad664f8"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300/virtual-trace.json",
+      "bytes": 701566,
+      "sha256": "130869af9e6fc196fa403ebb100ff60434b37e4599ca6666a0cef98d83019636"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/anvil-command.json",
+      "bytes": 540,
+      "sha256": "4f10449586c2e1a5c067e4a3a75125df262181b8186e7484a208bc9e25cb1447"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/d-a.json",
+      "bytes": 341976,
+      "sha256": "5a8bbd732b958fbbca10d1b730c01650915058d938fabb2ae08efdf1e7be5f58"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/d-b.json",
+      "bytes": 342166,
+      "sha256": "188754c68ba8a242f765e38ff621eba0dba0703e64e44ca2a6c25240d5629c39"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/driver-trace.json",
+      "bytes": 1138623,
+      "sha256": "3252926abd147c80f1941fed702e2fe262e1b03abc6431eb3fe8dd48774c5569"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/raw-rpc-bundle.json",
+      "bytes": 145282,
+      "sha256": "f02d0c552263142e1f3e638e97bed0a98b9eba9bb3fd0c6cb3cb5bf3c0752c9c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/result.json",
+      "bytes": 1482,
+      "sha256": "60c80503be0d1e8e2939a370b483a7c9e97b2a43da6e45c7a022cd79a45f3fb1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650/virtual-trace.json",
+      "bytes": 701566,
+      "sha256": "130869af9e6fc196fa403ebb100ff60434b37e4599ca6666a0cef98d83019636"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/anvil-command.json",
+      "bytes": 532,
+      "sha256": "de86076d724e71d14b72da44ff06952fa6796dc9fa79add77d5f24b0c8ebd65d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/checkpoint-first-45.json",
+      "bytes": 37194,
+      "sha256": "5f3877c2baa699b8ff31a836f014cfd1bfcdeb9974f357bb1e3758460e1fed41"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/d-a-resumed.json",
+      "bytes": 1163095,
+      "sha256": "57299f5177eae7136d483536fc8907c0c27e067dc7918f9f33981ba5a8ad3976"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/d-a.json",
+      "bytes": 1163096,
+      "sha256": "9805fdf63fb8dcf18447f54bb1bc33689a44f6af3fdf07968e301acaf152df71"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/d-b.json",
+      "bytes": 1163963,
+      "sha256": "f83335a2b06aba8489ef66ce8017676856695ee6f3cb8569e9ff73313b61b812"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/driver-trace.json",
+      "bytes": 1262992,
+      "sha256": "0fc7a557e420348db95ad9aef695553325436d00cbb37a65f556092d2eea3275"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/raw-rpc-bundle.json",
+      "bytes": 159424,
+      "sha256": "6243fed8e1a47a9fa84f753d75fac7e98120200788ad5ab180cfb7f60f5b3495"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/result.json",
+      "bytes": 1619,
+      "sha256": "3daaa42e2677a7c01376db0aeecb267cd9a422d344be728a9910a9c01bb1cc47"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-300/virtual-trace.json",
+      "bytes": 785770,
+      "sha256": "be0af8399528bea45fb55150b0c1bcdee148e9d6117f25d6f40edd23cd28882d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/anvil-command.json",
+      "bytes": 532,
+      "sha256": "ffc04b8047ac7257c3d688ae18f34083d19a04426d3c2ab4ffaeac57f4c1b8f6"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/checkpoint-first-45.json",
+      "bytes": 37194,
+      "sha256": "5f3877c2baa699b8ff31a836f014cfd1bfcdeb9974f357bb1e3758460e1fed41"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/d-a-resumed.json",
+      "bytes": 1163095,
+      "sha256": "57299f5177eae7136d483536fc8907c0c27e067dc7918f9f33981ba5a8ad3976"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/d-a.json",
+      "bytes": 1163096,
+      "sha256": "9805fdf63fb8dcf18447f54bb1bc33689a44f6af3fdf07968e301acaf152df71"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/d-b.json",
+      "bytes": 1163963,
+      "sha256": "f83335a2b06aba8489ef66ce8017676856695ee6f3cb8569e9ff73313b61b812"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/driver-trace.json",
+      "bytes": 1262992,
+      "sha256": "0fc7a557e420348db95ad9aef695553325436d00cbb37a65f556092d2eea3275"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/raw-rpc-bundle.json",
+      "bytes": 159424,
+      "sha256": "6243fed8e1a47a9fa84f753d75fac7e98120200788ad5ab180cfb7f60f5b3495"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/result.json",
+      "bytes": 1619,
+      "sha256": "96c50e2f2fa3aa7f39bc8912a3d2c9a5b47f2faf1bcfde6f023a563a661ffa77"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/ahead-650/virtual-trace.json",
+      "bytes": 785770,
+      "sha256": "be0af8399528bea45fb55150b0c1bcdee148e9d6117f25d6f40edd23cd28882d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/binary-sha256.txt",
+      "bytes": 317,
+      "sha256": "321440c6db773613f007336f35b9f0496ab22cc1feff2b03a1a84bb838420162"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/anvil-command.json",
+      "bytes": 530,
+      "sha256": "e09c2f7e306994cf4f0d344a8ef5b84dc5b8e02c74452a656c045e62caadae70"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/d-a.json",
+      "bytes": 830175,
+      "sha256": "e1a6a01a2050f475fb1d096020a1c462b75b550579de8b0e2e2b9990f50f1194"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/d-b.json",
+      "bytes": 831141,
+      "sha256": "8bfa937c42ebf14b6f36e364f87e9f81ec79f8596b0dde0ec5fbd5352793dd80"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/driver-trace.json",
+      "bytes": 541973,
+      "sha256": "03a727bc0a042c2e734cd51480293bce85e653be6f91b46cdefe9d581597e3fa"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/raw-rpc-bundle.json",
+      "bytes": 76834,
+      "sha256": "38d9d5b0b927a332021c624afe6c5f4a0779c1da914f4ec42d175ce958ee9712"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/result.json",
+      "bytes": 1326,
+      "sha256": "e5e7f88167bc9d325a140addf51d6c65edf5a451b6faaf8c3e849ad6ceda25fd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-300/virtual-trace.json",
+      "bytes": 320176,
+      "sha256": "8e1814a15cc676d2b2a99b5d1a2b4b3f50a305e6383a9e834bd514eaa6c2c77f"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/anvil-command.json",
+      "bytes": 530,
+      "sha256": "d777d59859d3ebe3c93dfd3e2bfb45334e461caa78509d5a87f92b990b26a4ed"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/d-a.json",
+      "bytes": 830175,
+      "sha256": "e1a6a01a2050f475fb1d096020a1c462b75b550579de8b0e2e2b9990f50f1194"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/d-b.json",
+      "bytes": 831141,
+      "sha256": "8bfa937c42ebf14b6f36e364f87e9f81ec79f8596b0dde0ec5fbd5352793dd80"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/driver-trace.json",
+      "bytes": 541973,
+      "sha256": "03a727bc0a042c2e734cd51480293bce85e653be6f91b46cdefe9d581597e3fa"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/raw-rpc-bundle.json",
+      "bytes": 76834,
+      "sha256": "38d9d5b0b927a332021c624afe6c5f4a0779c1da914f4ec42d175ce958ee9712"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/result.json",
+      "bytes": 1326,
+      "sha256": "e43bfbcc7d45768c93b8b22bfa711485921d374679020920fcf62fe92267748f"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/cap-650/virtual-trace.json",
+      "bytes": 320176,
+      "sha256": "8e1814a15cc676d2b2a99b5d1a2b4b3f50a305e6383a9e834bd514eaa6c2c77f"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/evidence-sha256.txt",
+      "bytes": 18255,
+      "sha256": "19b0a25e1a7eb6d118e052eba8dba0d9f4350a4121431feff39fc7846385e46d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-cache/solidity-files-cache.json",
+      "bytes": 3084,
+      "sha256": "645eb465c5a36636c628670bf5ff2042434877ecccd9c71f5fc9c3adf801c1ea"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/BatchInbox.sol/BatchInbox.json",
+      "bytes": 84251,
+      "sha256": "f20a07a1c344ae38518809c99d6c2483afee54886fabc13583b940e651c9e27c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/ControlAuthority.sol/ControlAuthority.json",
+      "bytes": 81172,
+      "sha256": "ad39aa553d8806be949609bef6fe93026f615def3101ce797221c4e13066ba3e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/L1ABI.sol/IBatchInbox.json",
+      "bytes": 24209,
+      "sha256": "65794f7cdc02d0a1bfd0621055c51d9228dc6545c8d1a1f04fe5b8e24e04438a"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/L1ABI.sol/IControlAuthority.json",
+      "bytes": 20065,
+      "sha256": "536577ddfc7052e04e6a794f889ce57942f91274ad7322198d3935bab89fc6a9"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/RollbackFixture.sol/RollbackFixture.json",
+      "bytes": 35512,
+      "sha256": "9b610a471b04419f1eb96811746ed1f9e5bdc8da1a289651f6a2d19456531403"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/TypedData.sol/TypedData.json",
+      "bytes": 2701,
+      "sha256": "b88fa957f332856174f01f086f7c82ae9e600030b2d4efad5cfe825a6cb4ad5a"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/forge-out/build-info/224b3665844996ba0a26e1e321706032.json",
+      "bytes": 216,
+      "sha256": "7e8fdead28f658d02b10352e5c594e39cc8a989e16f1c1fb95d4fe88f2e3373b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/revision.txt",
+      "bytes": 41,
+      "sha256": "3cc892c8b4004d00d385b16913eb15109db0ae8e1db1211d566c71c839c8d26e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/toolchain.txt",
+      "bytes": 1035,
+      "sha256": "1ea4eba053be68827304f3accc37fc703ff56e49a3943e7c945266cc9964f35c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/validation.log",
+      "bytes": 22330,
+      "sha256": "1d9a8d2ff763432a77f4767f96b5942d46674c77485530e956088031167faf6b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/anvil-command.json",
+      "bytes": 533,
+      "sha256": "e987478719b60ab927b4a6d266b9719b16b21cc67a286675843afa12bb7d0b72"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/d-a.json",
+      "bytes": 1149263,
+      "sha256": "2bc8e07c870f9abc364281a7efd2cdca739e941acd4986062d6ef6ef42eda398"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/d-b.json",
+      "bytes": 1149984,
+      "sha256": "858b67503315b15bcc6b8ea7941ec265ae798d3c6f0a4ccff75b3c1f281e74bb"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/driver-trace.json",
+      "bytes": 1254005,
+      "sha256": "eca5e73ff83f8e21425a0a7dcf529d026ed78a584204b0992bbf32cdaf7ccbb1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/raw-rpc-bundle.json",
+      "bytes": 156286,
+      "sha256": "3f7b95723ab6de95197b7ce3ab1384a13fe2b5747f47d45eb09e0c69ebc6db57"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/receipt-gap-replay.json",
+      "bytes": 131812,
+      "sha256": "a13de625581e9cf0627801a3ffcf7dcb18068233e632600f84187b57340064f9"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/result.json",
+      "bytes": 1307,
+      "sha256": "3ee627caf9af0c3998f9f92632a6ebc1538b099a18e97d7f298988ceb5dc58f0"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-300/virtual-trace.json",
+      "bytes": 778596,
+      "sha256": "e5b033998afcecdb841e7f286c9fca832089ed21adf6fe3fa1fe53b2ca153654"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/anvil-command.json",
+      "bytes": 533,
+      "sha256": "0c8afe768f002e952bf23c5a132408327cfaa037851c02a3bf55958aa6abf969"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/anvil-genesis.json",
+      "bytes": 597,
+      "sha256": "44146b9c55a2a7cd8a8c42b2e0a449d080517f00ff6474810e44554897c9b22e"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/d-a.json",
+      "bytes": 1149263,
+      "sha256": "2bc8e07c870f9abc364281a7efd2cdca739e941acd4986062d6ef6ef42eda398"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/d-b.json",
+      "bytes": 1149984,
+      "sha256": "858b67503315b15bcc6b8ea7941ec265ae798d3c6f0a4ccff75b3c1f281e74bb"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/derivation-profile.json",
+      "bytes": 6068,
+      "sha256": "dee522705259df955b5a2be3e4b2e9fd3aeb4e551475cf5f748658a4e5019e26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/diagnostic-rpc.json",
+      "bytes": 679,
+      "sha256": "5d976e3e972ab529e7d2354e47b885bd4780d6dbbdd27fc67256e95f18585911"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/driver-config.json",
+      "bytes": 491,
+      "sha256": "fcb6c60aea6cac561e20833b7bc75cb45c450dee96a1e5a25b7e070ff14c3c3c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/driver-trace.json",
+      "bytes": 1254005,
+      "sha256": "eca5e73ff83f8e21425a0a7dcf529d026ed78a584204b0992bbf32cdaf7ccbb1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/driver.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/raw-rpc-bundle.json",
+      "bytes": 156286,
+      "sha256": "3f7b95723ab6de95197b7ce3ab1384a13fe2b5747f47d45eb09e0c69ebc6db57"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/receipt-gap-replay.json",
+      "bytes": 131812,
+      "sha256": "a13de625581e9cf0627801a3ffcf7dcb18068233e632600f84187b57340064f9"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/result.json",
+      "bytes": 1307,
+      "sha256": "224306cc7ddb2a9b628016a2b607deaa2a61cf0fa83b86e07c7bb5514d5d92d5"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/window-650/virtual-trace.json",
+      "bytes": 778596,
+      "sha256": "e5b033998afcecdb841e7f286c9fca832089ed21adf6fe3fa1fe53b2ca153654"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12/artifacts/derivation-verifier-d0afeee-run1/worktree-status.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "verification_support": [
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/api-check-d0afeee.json",
+      "bytes": 1069,
+      "sha256": "364ed3fbd62971e76412d9663d295f6309faced70e69364f5d18d999a16c82df"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/api_harness/Cargo.lock",
+      "bytes": 29289,
+      "sha256": "6c096b9e3aa6e08ef9a438157fca57f6ec9324c6484544517eaf5ab1f799b008"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/api_harness/Cargo.toml",
+      "bytes": 371,
+      "sha256": "fe724920edf0850c689c5c70952267a2e11d049ac7cc11072774e3a436aa1673"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/api_harness/src/main.rs",
+      "bytes": 13173,
+      "sha256": "39564e80ba5dee586396c039af9401e5b1034b1f2bfaf31d6b100cb7f6592709"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/check_raw.py",
+      "bytes": 10887,
+      "sha256": "010b3bc8e3f31b1458767aa316aff91e89c1d675f577d4c79ea5d4ced26d6ea6"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/raw-check-d0afeee.json",
+      "bytes": 5050,
+      "sha256": "f5b3933c3470028a03c6faccf8bdfe769f4c70383b2fa67bbb9bf8ec1681c6bc"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/candidate_review/review-d0afeee.md",
+      "bytes": 11854,
+      "sha256": "ffc8a558291ec2c2e6c5b56e5f907fe7d375be4c411307de3fdb8c6871c77757"
+    }
+  ],
+  "candidate_source": [
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/Cargo.lock",
+      "bytes": 29120,
+      "sha256": "abbfad2dd2f5dd88ad4b4d8b7ee1e8e2f27f0b4c413d76563243bd205775f153"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/Cargo.toml",
+      "bytes": 322,
+      "sha256": "f91c018b99e4c9df946a290fd34a859ea3e851402c8fa78f5ecd2d3a4919346e"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/README.md",
+      "bytes": 3537,
+      "sha256": "d5722b9f428224b77e0908129bb0a55fd7bc603d37ab446399ddce6546fd18b8"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/bin/derivation-replay.rs",
+      "bytes": 21886,
+      "sha256": "e13e53c391b9b6d0d061b90ff29f2d0118c6f59c46f19040639010ed2ef366d1"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/derive.rs",
+      "bytes": 31698,
+      "sha256": "617c3bb35a6e280b92827535685a3b339bdb499e8deaefab54b3b39889e52524"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/lib.rs",
+      "bytes": 276,
+      "sha256": "a4cbdabf207c84875d26766c85853d81145f439a4c0e5b09a72ed3160824b166"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/model.rs",
+      "bytes": 7411,
+      "sha256": "1c6d69c1664f1d0b11c612ab3b4bb3b1debc263ffcfd22885a58bcb332f3b0cc"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/source.rs",
+      "bytes": 15924,
+      "sha256": "20a18df269de5ed027c18246e3348c987bb26ac3158f4015ceea831f55fbe2ea"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/src/tests.rs",
+      "bytes": 14581,
+      "sha256": "dc5a8a920440ef26db5800267579766b36cae11635e8a9bc4fe17a0ff6e45426"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/tests/check_real_cases.py",
+      "bytes": 5261,
+      "sha256": "d3d813c18e17bfa5ef25c8d996956e436f8d56704b924783209114a4dccc9181"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/tests/run_anvil.py",
+      "bytes": 6084,
+      "sha256": "47a4f1bab35ecc364f63c6f9bbda5c9ed3d10e43fcc9d43f2d7e3d6b0f6bb77f"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/crates/derivation/tests/validate.sh",
+      "bytes": 2760,
+      "sha256": "64a3752a31f84ef95f507f238acf0fc19c5dbc7df5a649d7cfa10c9d76bd8c83"
+    }
+  ],
+  "binaries": [
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/.build/target/derivation/debug/derivation-replay",
+      "bytes": 38665568,
+      "sha256": "b2346331a386a4ed823a79c4d3346af58f804fc2fb1c06abf595b86fda88186d"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/.build/target/derivation/debug/derivation-independent-api-checks",
+      "bytes": 38563112,
+      "sha256": "4c011f6e4f74604ddd9a28208b27c30bc9249a3080d7666459fd44f3a5bb768b"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/.build/target/derivation/debug/l1-adapter",
+      "bytes": 13386904,
+      "sha256": "365c88bb5b9ac777bded01cd1a5265022acfda1448ce02988601cf1281b3c6c7"
+    }
+  ],
+  "source_and_frozen_expectations_unchanged": true,
+  "implementation_finding_count": 0
+}
