@@ -1,0 +1,439 @@
+{
+  "status": "PASS",
+  "artifact_dir": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/artifacts/tester-2340f9c-v1-3",
+  "candidate": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+  "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80",
+  "prior_verified_production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80",
+  "contract": "H2-REDUCER-1",
+  "profile": "pure in-memory reducer; trusted-input fixture; Cargo default test profile; locked and offline; jobs 2; single test thread",
+  "seed": "N/A — fixed hand-written inputs",
+  "environment_overrides_non_sensitive": {
+    "RUSTC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "RUSTDOC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustdoc",
+    "PATH": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/usr/bin:/bin",
+    "CARGO_HOME": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/cargo",
+    "CARGO_TARGET_DIR": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/target",
+    "CARGO_BUILD_JOBS": "2"
+  },
+  "environment_policy": "Inherited base environment; explicit non-sensitive overrides are recorded.",
+  "toolchain": {
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "rustdoc": "rustdoc 1.95.0 (59807616e 2026-04-14)"
+  },
+  "git_before": {
+    "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+    "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+    "branch": "codex/h2-session-manager-implementation",
+    "dirty": "",
+    "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+  },
+  "git_after": {
+    "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+    "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+    "branch": "codex/h2-session-manager-implementation",
+    "dirty": "",
+    "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+  },
+  "clean_candidate_throughout": true,
+  "independent_verifier_manifest": {
+    "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/artifacts/independent-2340f9c-v1/manifest.json",
+    "sha256": "c351fdfbbea1f318d99fbe113e3e0bf49fe7bead8e7a3904c33398aeaaf2b566"
+  },
+  "input_hash_algorithm": "SHA-256",
+  "input_hashes_before": {
+    "poc/crates/session-manager/Cargo.lock": "1ee10b1e5492e1668e0288322a91584ae712d8bf1c8d553ed90e7ba76ffe00c3",
+    "poc/crates/session-manager/Cargo.toml": "adedc7a23d3e464b56afd02a4aa8918e9d7cb9b40656bdd6f5dad6a04890e7c2",
+    "poc/crates/session-manager/README.md": "b615e893d7612bbd28c43b157a2c33969086203574638f6374781e529fa192a5",
+    "poc/crates/session-manager/src/actions.rs": "c7cb31bfd33b0df689c4cab7a69431f863d8053221508466fcf85709b51fd8a7",
+    "poc/crates/session-manager/src/api.rs": "f85c95565040fa8e20c69078f973fa67be3b5e1decbde8f82130bf790b619a18",
+    "poc/crates/session-manager/src/lib.rs": "4743db5af5a46d9aea06f695c3609d30cb0c8d80016ca2c25ce1f4c3db5d67c8",
+    "poc/crates/session-manager/src/replay.rs": "ec9993b817eebaf9dbbff8494cffc080a3ac603f51d5be5b6f6e90b8a0a0238d",
+    "poc/crates/session-manager/src/state.rs": "44de509d27a0dbb5d1d6394b7b7e98e666693f8c4b5b5153ea49a7a934581f33",
+    "poc/crates/session-manager/tests/reducer.rs": "c71dee079687efdabc4b7f5e5cf95c03d5fb14b117887d630c06b7eda29063dc",
+    "poc/docs/contracts/h2-session-manager-reducer-v1.md": "fe2f962d8480a0cb6b5d0bbb26ff6748d3e7149dfa6e6b05a9732c3c91c70a96",
+    "poc/verification/session-manager-healthy/reducer-v1/case-matrix-v1.md": "4d78b0c12f65f7be5f0c5a2da0048b7815f3ef9e027290e942960ac39cd87395",
+    "poc/verification/session-manager-healthy/reducer-v1/contract-review-v1.md": "cd67a6e6e387bc347a9e8458406b190dd5f2376a8e746c097b0cff07b66983d9",
+    "poc/verification/session-manager-healthy/reducer-v1/harness-preparation-manifest-v1.json": "1b409efaeba2ff5676e3e407f24562ff307668b896dcfaaa900493fa01d649e5",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/COVERAGE.md": "35baa17626267422e97adbe587eb3e1a87aca1c72451cd5c57760ba547c850ef",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.lock": "4c3c65a917b537a1fa3c941122db46c833c5c7d3e1846a09c52faeff6ade607d",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml": "e7eca5c426b567ef9d9585d2249a1a1cfc4b18cfccdc8341273ade7d806e7f5b",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/README.md": "9674631bf08aeeb5b5c31bc9b5f0ef96e606989beb86f355887eb7c9d8f43932",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/src/fixtures.rs": "39b2b698b7cfde2116c7e89e11b3abbe0d1182d92a650ef0a10c5a96f4d2b2bf",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/src/lib.rs": "7c6ceb56e944ff68debfc3a64e6135537b722366a9a21f5fde4b8a0d512bba43",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/capacity_edges.rs": "c98f3a81cac0b81ccaa32a5304c2b3708e92a9debd02274903432d6f251af46a",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/independent.rs": "d5178e8c262efb2c04f6301fa64094be5f9978fee68babbf31712ebcecbdba20",
+    "poc/verification/session-manager-healthy/reducer-v1/source-first-expectations-v1.md": "9ad71186b41e85a5e30100a7fd63d9a009435e12e4459046e3056ad8cd7965e5"
+  },
+  "input_hashes_after": {
+    "poc/crates/session-manager/Cargo.lock": "1ee10b1e5492e1668e0288322a91584ae712d8bf1c8d553ed90e7ba76ffe00c3",
+    "poc/crates/session-manager/Cargo.toml": "adedc7a23d3e464b56afd02a4aa8918e9d7cb9b40656bdd6f5dad6a04890e7c2",
+    "poc/crates/session-manager/README.md": "b615e893d7612bbd28c43b157a2c33969086203574638f6374781e529fa192a5",
+    "poc/crates/session-manager/src/actions.rs": "c7cb31bfd33b0df689c4cab7a69431f863d8053221508466fcf85709b51fd8a7",
+    "poc/crates/session-manager/src/api.rs": "f85c95565040fa8e20c69078f973fa67be3b5e1decbde8f82130bf790b619a18",
+    "poc/crates/session-manager/src/lib.rs": "4743db5af5a46d9aea06f695c3609d30cb0c8d80016ca2c25ce1f4c3db5d67c8",
+    "poc/crates/session-manager/src/replay.rs": "ec9993b817eebaf9dbbff8494cffc080a3ac603f51d5be5b6f6e90b8a0a0238d",
+    "poc/crates/session-manager/src/state.rs": "44de509d27a0dbb5d1d6394b7b7e98e666693f8c4b5b5153ea49a7a934581f33",
+    "poc/crates/session-manager/tests/reducer.rs": "c71dee079687efdabc4b7f5e5cf95c03d5fb14b117887d630c06b7eda29063dc",
+    "poc/docs/contracts/h2-session-manager-reducer-v1.md": "fe2f962d8480a0cb6b5d0bbb26ff6748d3e7149dfa6e6b05a9732c3c91c70a96",
+    "poc/verification/session-manager-healthy/reducer-v1/case-matrix-v1.md": "4d78b0c12f65f7be5f0c5a2da0048b7815f3ef9e027290e942960ac39cd87395",
+    "poc/verification/session-manager-healthy/reducer-v1/contract-review-v1.md": "cd67a6e6e387bc347a9e8458406b190dd5f2376a8e746c097b0cff07b66983d9",
+    "poc/verification/session-manager-healthy/reducer-v1/harness-preparation-manifest-v1.json": "1b409efaeba2ff5676e3e407f24562ff307668b896dcfaaa900493fa01d649e5",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/COVERAGE.md": "35baa17626267422e97adbe587eb3e1a87aca1c72451cd5c57760ba547c850ef",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.lock": "4c3c65a917b537a1fa3c941122db46c833c5c7d3e1846a09c52faeff6ade607d",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml": "e7eca5c426b567ef9d9585d2249a1a1cfc4b18cfccdc8341273ade7d806e7f5b",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/README.md": "9674631bf08aeeb5b5c31bc9b5f0ef96e606989beb86f355887eb7c9d8f43932",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/src/fixtures.rs": "39b2b698b7cfde2116c7e89e11b3abbe0d1182d92a650ef0a10c5a96f4d2b2bf",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/src/lib.rs": "7c6ceb56e944ff68debfc3a64e6135537b722366a9a21f5fde4b8a0d512bba43",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/capacity_edges.rs": "c98f3a81cac0b81ccaa32a5304c2b3708e92a9debd02274903432d6f251af46a",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/independent.rs": "d5178e8c262efb2c04f6301fa64094be5f9978fee68babbf31712ebcecbdba20",
+    "poc/verification/session-manager-healthy/reducer-v1/source-first-expectations-v1.md": "9ad71186b41e85a5e30100a7fd63d9a009435e12e4459046e3056ad8cd7965e5"
+  },
+  "inputs_identical_before_and_after": true,
+  "initial_aborted_attempt": {
+    "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/artifacts/tester-2340f9c-v1",
+    "status": "INCOMPLETE",
+    "runner_exit_code": 130,
+    "reason": "Interrupted when the PATH rustup shim attempted to sync/download during the first component doc-test.",
+    "observed_component_tests_passed_before_interrupt": 8,
+    "other_cases_started": 0,
+    "local_wall_elapsed_ns": null,
+    "argv": [
+      "flock",
+      "/tmp/megaroation-poc-heavy.lock",
+      "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+      "test",
+      "--manifest-path",
+      "poc/crates/session-manager/Cargo.toml",
+      "--locked",
+      "--offline",
+      "--",
+      "--test-threads=1"
+    ],
+    "environment_overrides_non_sensitive": {
+      "RUSTC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+      "CARGO_HOME": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/cargo",
+      "CARGO_TARGET_DIR": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/target",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "stdout_sha256": "5c0fa38f42c4d5ade7ee20cf06b44b5321d8a0d695a39f88fdf9cbdf70f45a44",
+    "stderr_sha256": "6d3a78bd8e450765f769323ae198b9fcfe7e138bcfc0b67a22aa3471dafd92a6",
+    "correction": "Point RUSTDOC at the installed 1.95.0 toolchain alongside RUSTC and cargo; preserve the test argv."
+  },
+  "lock_queue_aborted_attempt": {
+    "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/artifacts/tester-2340f9c-v1-2",
+    "status": "INCOMPLETE",
+    "runner_exit_code": 130,
+    "reason": "Interrupted while waiting on the shared heavy-task lock to add the lead-directed PATH. The H3 tester held the lock. Cargo and tests did not start.",
+    "start_metadata_sha256": "5d43bd1d254d568fe586f9e434466e2358b64297e1c45f857f70f8876b36346f",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "other_cases_started": 0,
+    "local_wall_elapsed_ns": null,
+    "environment_overrides_non_sensitive": {
+      "RUSTC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+      "RUSTDOC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustdoc",
+      "CARGO_HOME": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/cargo",
+      "CARGO_TARGET_DIR": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/target",
+      "CARGO_BUILD_JOBS": "2"
+    }
+  },
+  "runs": [
+    {
+      "name": "component",
+      "argv": [
+        "flock",
+        "/tmp/megaroation-poc-heavy.lock",
+        "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--manifest-path",
+        "poc/crates/session-manager/Cargo.toml",
+        "--locked",
+        "--offline",
+        "--",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+      "git_before": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "expected_nonempty_test_groups": [
+        8
+      ],
+      "timeout_seconds": null,
+      "started_utc": "2026-11-16T03:56:05.369446+00:00",
+      "local_wall_elapsed_ns": 46575091854,
+      "finished_utc": "2026-11-16T03:56:51.944810+00:00",
+      "status": "PASS",
+      "exit_code": 0,
+      "git_after": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "raw_stdout_sha256": "7c1c62d41f0902e3ffd8c551c500ca64d4a1fb2478607fbd9b9148f4dfd76507",
+      "stderr_sha256": "839f2a382f987f3277fc3c7822167b4a0cb219e2c335a637a74cdfb6ea4d6061",
+      "canonical_stdout_sha256": "585b502866e6266c6c0839b11a178aa30d6c5e05cd46bb42465ea6303567f98c",
+      "normalized_test_result_lines": 3,
+      "test_summary": {
+        "running_counts": [
+          0,
+          8,
+          0
+        ],
+        "groups": [
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 8,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          }
+        ],
+        "totals": {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0
+        },
+        "handwritten_pass_lines": 0
+      },
+      "expected_test_shape_matched": true
+    },
+    {
+      "name": "independent-first",
+      "argv": [
+        "flock",
+        "/tmp/megaroation-poc-heavy.lock",
+        "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--manifest-path",
+        "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml",
+        "--locked",
+        "--offline",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+      "git_before": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "expected_nonempty_test_groups": [
+        5,
+        22
+      ],
+      "timeout_seconds": null,
+      "started_utc": "2026-11-16T03:56:51.985025+00:00",
+      "local_wall_elapsed_ns": 486942562,
+      "finished_utc": "2026-11-16T03:56:52.472600+00:00",
+      "status": "PASS",
+      "exit_code": 0,
+      "git_after": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "raw_stdout_sha256": "f7e7941e8438818856096a5cdd1eede1577a896fe1a4d2bb81329a85d676af3d",
+      "stderr_sha256": "934aa576c79158078aaa99e050b43ea2a987612c55e88de1bff50690e831ba68",
+      "canonical_stdout_sha256": "44086f0bf26c72a9d9e052cc14603a5b0aa216c8e75aba914694a2963e0355a0",
+      "normalized_test_result_lines": 4,
+      "test_summary": {
+        "running_counts": [
+          0,
+          5,
+          22,
+          0
+        ],
+        "groups": [
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 22,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          }
+        ],
+        "totals": {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0
+        },
+        "handwritten_pass_lines": 28
+      },
+      "expected_test_shape_matched": true
+    },
+    {
+      "name": "independent-repeat",
+      "argv": [
+        "flock",
+        "/tmp/megaroation-poc-heavy.lock",
+        "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--manifest-path",
+        "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml",
+        "--locked",
+        "--offline",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+      "git_before": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "expected_nonempty_test_groups": [
+        5,
+        22
+      ],
+      "timeout_seconds": null,
+      "started_utc": "2026-11-16T03:56:52.518245+00:00",
+      "local_wall_elapsed_ns": 543508033,
+      "finished_utc": "2026-11-16T03:56:53.062032+00:00",
+      "status": "PASS",
+      "exit_code": 0,
+      "git_after": {
+        "head": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+        "head_tree": "ee23f56be7408a1c630644c08f136e9ed547bb39",
+        "branch": "codex/h2-session-manager-implementation",
+        "dirty": "",
+        "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80"
+      },
+      "raw_stdout_sha256": "f7e7941e8438818856096a5cdd1eede1577a896fe1a4d2bb81329a85d676af3d",
+      "stderr_sha256": "f99bce309a1d7f6174a67abe6f46ab7257dc1d44e01866901f8a8ec65f301a8e",
+      "canonical_stdout_sha256": "44086f0bf26c72a9d9e052cc14603a5b0aa216c8e75aba914694a2963e0355a0",
+      "normalized_test_result_lines": 4,
+      "test_summary": {
+        "running_counts": [
+          0,
+          5,
+          22,
+          0
+        ],
+        "groups": [
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 5,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 22,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          },
+          {
+            "status": "ok",
+            "passed": 0,
+            "failed": 0,
+            "ignored": 0,
+            "measured": 0,
+            "filtered_out": 0
+          }
+        ],
+        "totals": {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0
+        },
+        "handwritten_pass_lines": 28
+      },
+      "expected_test_shape_matched": true
+    }
+  ],
+  "timeout_count": 0,
+  "incomplete_count": 0,
+  "replay_comparison": {
+    "status": "MATCH",
+    "first_sha256": "44086f0bf26c72a9d9e052cc14603a5b0aa216c8e75aba914694a2963e0355a0",
+    "repeat_sha256": "44086f0bf26c72a9d9e052cc14603a5b0aa216c8e75aba914694a2963e0355a0",
+    "byte_identical": true
+  },
+  "normalization": "Remove only '; finished in ...s' on test result lines; preserve all other stdout bytes.",
+  "timing": {
+    "virtual_time": "No native virtual-time simulation or event trace. Fixture timestamps are hand-written inputs.",
+    "local_wall_time": "Monotonic elapsed time for flock + Cargo invocation. For local diagnostics.",
+    "real_network": "Not measured."
+  },
+  "limitations": [
+    "No real worker, native protocol simulation, cryptographic validation, grant/Ack, or durability evidence.",
+    "No H1/H3 integration, H3 publication, M1 end-to-end, or M0 rerun.",
+    "Independent harness does not reach action ledger4096, descriptor/lifecycle byte totals, or dependencies64."
+  ]
+}

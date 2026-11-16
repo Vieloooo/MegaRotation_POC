@@ -1,0 +1,45 @@
+{
+  "candidate": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+  "production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80",
+  "prior_production_tree": "78a9250a93da0c5db78578f19951bad5c04f6b80",
+  "dirty_before": "",
+  "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+  "command": [
+    "flock",
+    "/tmp/megaroation-poc-heavy.lock",
+    "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml",
+    "--",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "environment": {
+    "RUSTC": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "CARGO_HOME": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/cargo",
+    "CARGO_TARGET_DIR": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/h2-manager/target",
+    "CARGO_BUILD_JOBS": "2"
+  },
+  "versions": {
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)"
+  },
+  "input_hashes": {
+    "poc/docs/contracts/h2-session-manager-reducer-v1.md": "fe2f962d8480a0cb6b5d0bbb26ff6748d3e7149dfa6e6b05a9732c3c91c70a96",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.toml": "e7eca5c426b567ef9d9585d2249a1a1cfc4b18cfccdc8341273ade7d806e7f5b",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/Cargo.lock": "4c3c65a917b537a1fa3c941122db46c833c5c7d3e1846a09c52faeff6ade607d",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/src/fixtures.rs": "39b2b698b7cfde2116c7e89e11b3abbe0d1182d92a650ef0a10c5a96f4d2b2bf",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/independent.rs": "d5178e8c262efb2c04f6301fa64094be5f9978fee68babbf31712ebcecbdba20",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/tests/capacity_edges.rs": "c98f3a81cac0b81ccaa32a5304c2b3708e92a9debd02274903432d6f251af46a",
+    "poc/verification/session-manager-healthy/reducer-v1/independent-harness/COVERAGE.md": "35baa17626267422e97adbe587eb3e1a87aca1c72451cd5c57760ba547c850ef"
+  },
+  "profile": "trusted-input fixture; no native runtime or cryptographic conformance",
+  "expected_test_count": 27,
+  "exit_code": 0,
+  "dirty_after": "",
+  "stdout.txt_sha256": "f7e7941e8438818856096a5cdd1eede1577a896fe1a4d2bb81329a85d676af3d",
+  "stderr.txt_sha256": "0d1c313f355611a5160ffa78b344539152e08fd414311162ca36c65645ac3d15"
+}
