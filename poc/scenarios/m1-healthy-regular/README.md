@@ -98,12 +98,12 @@ python3 -B poc/verification/m1-healthy-regular/check.py \
 ## 证据文件
 
 - `manifest.json` 采用 `M1-RUN-1`，最终由 `manifest.sha256` 封存。版本拒绝保留已采集的 revision、argv 和 stdout/stderr。无法解析或绑定输入时保存 `rejection.json`。
-- 输入和预期封装中的 FileRefs 相对各自 JSON 所在目录。原始输入封存在包的 `input/`，候选源码快照封存在 `source/`。`source_files` 为相对包根的 FileRef 数组。准备阶段的候选源码快照涵盖实际 harness/checker、冻结合同、决议和来源预期、候选 Cargo manifests/lockfiles 与 protobuf。候选 Git tree 及版本命令的原始输出在 `commands/`。
+- 输入和预期封装中的 FileRefs 相对各自 JSON 所在目录。原始输入封存在包的 `input/`，候选源码快照封存在 `source/`。`source_files` 为相对包根的 FileRef 数组。准备阶段的候选源码快照涵盖实际 harness/checker、冻结合同、决议和来源预期、候选 Cargo manifests/lockfiles 与 protobuf。候选原始 Git commit、根目录及 `poc/` 的 NUL 分隔 Git tree 清单和版本命令输出在 `commands/`。
 - `revision_before` 和 `revision_after` 各包含 Git `head`、`branch`、`status`。组件映射键为 `h1/h2/h3`。工具记录包含绝对 `path`、`version` 和实际 binary `sha256`。`tool_versions` 也记录 gitlink 和 lockfile 中的 Commonware pin。决议经过 cherry-pick 时按冻结来源 commit 的文档字节核对。
 - `artifacts` 使用扁平的 `role/producer/schema` 与 FileRef。命令输出分别索引为 `command_stdout` 和 `command_stderr`，包括全部固定只读 Git 探针及工具版本探针。`invocation.json` 保存 launcher 原始 argv。
 - `M1-CHECK-1` 的 `checker` 记录实际 checker 与共享机械校验源码 hash，以及输入和输出包的读取根。`bundles` 依读取根顺序引用 manifest。报告写在包外。
 
-离线 checker 复核封存文件和命令记录，并从 Git tree 记录重算已复制源码的 Git blob 身份。签名与交付、独立执行、公共重放、官方读回和规范 trace 比较依赖待接线 oracle。非空 binding 当前只校验文件完整性。已提供的 config/profile/virtual cut 也需后续生产适配器核对语义。准备阶段仅执行固定工具探针，worker 数为零。
+离线 checker 从封存证据重算候选 commit ID、根 Git tree 及 `poc/` 子树 ID，再核验源码的 Git blob ID 和 BFT gitlink。`--bundle` 和 `--compare` 的候选源码核验需要包含这组对象证明的准备包。H09 的源报告和源 manifest 复用机械结构校验，直接引用的源 manifest、报告和原始消息/结果按 FileRef 核对。报告记录的绝对根仅作诊断。签名与交付、独立执行、公共重放、官方读回和规范 trace 比较依赖待接线 oracle。非空 binding 当前只校验文件完整性。已提供的 config/profile/virtual cut 也需后续生产适配器核对语义。准备阶段仅执行固定工具探针，worker 数为零。
 
 ## 机械拒绝测试
 

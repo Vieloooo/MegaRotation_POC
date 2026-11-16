@@ -53,7 +53,8 @@ GIT_OPTIONS = ("-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false")
 GIT_REVISION = ("rev-parse", "--show-toplevel", "HEAD")
 GIT_BRANCH = ("branch", "--show-current")
 GIT_STATUS = ("status", "--porcelain=v1", "--untracked-files=all", "--ignore-submodules=none")
-GIT_TREE = ("ls-tree", "-r", "-z", "--full-tree")
+GIT_ROOT_TREE = ("ls-tree", "-z", "--full-tree")
+GIT_POC_TREE = ("ls-tree", "-r", "-t", "-z", "--full-tree")
 
 
 class Invalid(ValueError):
@@ -132,6 +133,22 @@ def file_ref(value):
     integer(value["bytes"], "FileRef.bytes")
     require(value["bytes"] <= MAX_BYTES, "FileRef exceeds maximum raw bytes")
     return value
+
+
+def unique_paths(refs, where):
+    require(len(refs) == len({ref["path"] for ref in refs}), f"{where}: duplicate path")
+
+
+def file_refs(values, where):
+    refs = [file_ref(value) for value in array(values, where)]
+    unique_paths(refs, where)
+    return refs
+
+
+def absolute_path(value, where):
+    string(value, where)
+    path = Path(value)
+    require(path.is_absolute() and ".." not in path.parts, f"{where}: expected absolute path")
 
 
 @contextmanager
@@ -259,30 +276,33 @@ def expectations(store, name, scenario=None):
     return actual, value
 
 
-def components(store, values, base):
+def component_refs(values):
     closed(values, COMPONENTS, "components")
+    refs = []
     for key, value in values.items():
         if value is not None:
             closed(value, "owner delivery_sha review contract", f"components.{key}")
             string(value["owner"], f"components.{key}.owner")
             hex_id(value["delivery_sha"], 40, f"components.{key}.delivery_sha")
-            store.ref(value["review"], base)
-            store.ref(value["contract"], base)
+            refs.extend(file_ref(value[field]) for field in ("review", "contract"))
+    return refs
 
 
-def ports(store, values, base, *, input_only):
+def port_refs(values, *, input_only):
     ids = []
+    refs = []
     for port in array(values, "ports"):
         keys = "port_id owner binding" + ("" if input_only else " status")
         closed(port, keys, "ports[]")
         string(port["port_id"], "port_id")
         string(port["owner"], "port owner")
         if port["binding"] is not None:
-            store.ref(port["binding"], base)
+            refs.append(file_ref(port["binding"]))
         if not input_only:
             require(port["status"] in ("Ready", "NotReady"), "invalid port status")
         ids.append(port["port_id"])
     exactly_ids(ids, PORTS, "ports")
+    return refs
 
 
 def scenario_fields(value):
@@ -307,27 +327,154 @@ def input_limits(value):
         integer(value["max_virtual_tick_us"], "limits.max_virtual_tick_us")
 
 
+def check_reason(reason):
+    require(isinstance(reason, dict), "reason: expected object")
+    string(reason.get("code"), "reason.code")
+    if reason["code"] == "NotReady":
+        ports = array(reason.get("missing_ports"), "reason.missing_ports")
+        inputs = array(reason.get("missing_inputs"), "reason.missing_inputs")
+        require(ports or inputs, "NotReady requires a missing capability or input")
+        require(all(port in PORTS for port in ports), "unknown missing port")
+        for field in inputs:
+            string(field, "missing input")
+
+
+def gate_refs(values, scenario):
+    seen = set()
+    refs = []
+    for gate in array(values, "gates"):
+        closed(gate, "id status reason evidence_refs", "gate")
+        ident = gate["id"]
+        require(ident in required_gates(scenario) and ident not in seen, "unknown or duplicate gate")
+        seen.add(ident)
+        require(gate["status"] in STATUS, "invalid gate status")
+        check_reason(gate["reason"])
+        refs.extend(file_ref(ref) for ref in array(gate["evidence_refs"], "gate.evidence_refs"))
+    return refs
+
+
+def validate_commands(values):
+    refs = []
+    fields = ("argv cwd binary_sha256 started_wall_ns elapsed_wall_ns exit_code "
+              "timeout lock_owner stdout stderr")
+    for item in array(values, "commands"):
+        closed(item, fields, "command")
+        argv = array(item["argv"], "command.argv")
+        require(argv, "empty command argv")
+        for arg in argv:
+            string(arg, "command argument")
+        absolute_path(argv[0], "command executable")
+        absolute_path(item["cwd"], "command.cwd")
+        hex_id(item["binary_sha256"], 64, "command binary SHA-256")
+        for field in ("started_wall_ns", "elapsed_wall_ns"):
+            integer(item[field], f"command.{field}")
+        require(item["exit_code"] is None or type(item["exit_code"]) is int,
+                "invalid command exit code")
+        require(type(item["timeout"]) is bool, "invalid command timeout flag")
+        if item["lock_owner"] is not None:
+            string(item["lock_owner"], "command.lock_owner")
+        refs.extend(file_ref(item[stream]) for stream in ("stdout", "stderr"))
+    unique_paths(refs, "command streams")
+
+
+def tool_version_fields(tools):
+    closed(tools, "git python rustc cargo commonware bft_gitlink", "tool_versions")
+    for name in ("git", "python", "rustc", "cargo"):
+        tool = tools[name]
+        if tool is not None:
+            closed(tool, "path sha256 version", f"tool_versions.{name}")
+            absolute_path(tool["path"], f"{name} path")
+            hex_id(tool["sha256"], 64, f"{name} binary")
+            string(tool["version"], f"{name} version")
+    if tools["commonware"] is not None:
+        string(tools["commonware"], "tool_versions.commonware")
+    if tools["bft_gitlink"] is not None:
+        hex_id(tools["bft_gitlink"], 40, "tool_versions.bft_gitlink")
+
+
+def run_fields(value):
+    closed(value, RUN_FIELDS, "manifest")
+    require(value["schema"] == "M1-RUN-1", "unsupported run schema")
+    require(value["operation"] in ("preflight", "run"), "invalid run operation")
+    require(value["status"] in STATUS, "invalid run status")
+    valid_readiness = ("Ready", "NotReady", "Reject") if value["operation"] == "preflight" else (None,)
+    require(value["readiness"] in valid_readiness, "invalid run readiness")
+    check_reason(value["reason"])
+    absolute_path(value["worktree"], "worktree")
+    hex_id(value["candidate"], 40, "manifest candidate")
+    require(value["contract_sha256"] == CONTRACT_SHA, "wrong manifest contract pin")
+    scenario_fields(value)
+    input_limits(value["limits"])
+    for field in ("revision_before", "revision_after"):
+        revision = value[field]
+        if revision is not None:
+            closed(revision, "head branch status", field)
+            hex_id(revision["head"], 40, f"{field}.head")
+            if revision["branch"] != "":
+                string(revision["branch"], f"{field}.branch")
+            for line in array(revision["status"], f"{field}.status"):
+                string(line, f"{field}.status line")
+    cutoff = value["cutoff"]
+    closed(cutoff, "virtual_tick_us event_id reader_pc reason", "cutoff")
+    closed(cutoff["reader_pc"], "a b", "cutoff.reader_pc")
+    string(cutoff["reason"], "cutoff.reason")
+    for unit in ("virtual_tick_us", "event_id"):
+        if cutoff[unit] is not None:
+            integer(cutoff[unit], f"cutoff.{unit}")
+    require(value["pending"] is None or isinstance(value["pending"], (dict, list)), "invalid pending evidence")
+    file_ref(value["input"])
+    component_refs(value["components"])
+    port_refs(value["ports"], input_only=False)
+    file_refs(value["source_files"], "source_files")
+    tool_version_fields(value["tool_versions"])
+    validate_commands(value["commands"])
+    gate_refs(value["gates"], value["scenario"])
+    return artifact_refs(value["artifacts"])
+
+
+def check_report_fields(value, scenario):
+    closed(value, "schema operation bundles expected checker commands gates status reason", "checker report")
+    require(value["schema"] == "M1-CHECK-1", "unsupported checker report schema")
+    require(value["operation"] in ("check", "compare"), "invalid checker operation")
+    require(value["status"] in STATUS, "invalid checker status")
+    check_reason(value["reason"])
+    file_ref(value["expected"])
+    bundles = array(value["bundles"], "checker bundles")
+    count = 1 if value["operation"] == "check" else 2
+    require(len(bundles) == count, "incorrect checker bundle count")
+    for ref in bundles:
+        file_ref(ref)
+    checker = value["checker"]
+    closed(checker, "scope source_root source_files bundle_roots expected_root", "checker")
+    string(checker["scope"], "checker scope")
+    absolute_path(checker["source_root"], "checker source root")
+    absolute_path(checker["expected_root"], "checker expected root")
+    roots = array(checker["bundle_roots"], "checker bundle roots")
+    require(len(roots) == count, "incorrect checker bundle root count")
+    for root in roots:
+        absolute_path(root, "checker bundle root")
+    file_refs(checker["source_files"], "checker source files")
+    validate_commands(value["commands"])
+    gate_refs(value["gates"], scenario)
+
+
 def source_run(store, value, base):
     closed(value, "manifest checker_report public_messages regional_results", "source_run")
     manifest = json_object(store.ref(value["manifest"], base, read=True), "source_run.manifest")
     report = json_object(store.ref(value["checker_report"], base, read=True),
                          "source_run.checker_report")
-    closed(manifest, RUN_FIELDS, "source_run.manifest")
-    require(manifest["schema"] == "M1-RUN-1" and manifest["operation"] == "run"
-            and manifest["scenario"] == SCENARIOS[0], "source_run requires a full-window run")
-    scenario_fields(manifest)
+    artifacts = run_fields(manifest)
+    require(manifest["operation"] == "run" and manifest["scenario"] == SCENARIOS[0],
+            "source_run requires a full-window run")
     require((manifest["seed"], manifest["start_order"], manifest["wall_pause_ms"])
             == (7, "forward", 0), "source_run requires seed 7, forward, pause 0")
-    closed(report, "schema operation bundles expected checker commands gates status reason",
-           "source_run.checker_report")
-    require(report["schema"] == "M1-CHECK-1" and report["operation"] == "check",
-            "source_run requires a source checker report")
-    require(any(file_ref(ref)["sha256"] == value["manifest"]["sha256"]
-                and ref["bytes"] == value["manifest"]["bytes"]
-                for ref in array(report["bundles"], "source_run.checker_report.bundles")),
+    check_report_fields(report, manifest["scenario"])
+    require(report["operation"] == "check", "source_run requires a source checker report")
+    source_ref, = report["bundles"]
+    require(source_ref["path"] == relative(value["manifest"]["path"]).name
+            and same_bytes(source_ref, value["manifest"]),
             "source checker report does not reference the source manifest")
 
-    artifacts = artifact_refs(manifest["artifacts"])
     source_base = base / relative(value["manifest"]["path"]).parent
     indexed = {(source_base / ref["path"]).as_posix(): ref for ref in artifacts}
     for field in ("public_messages", "regional_results"):
@@ -359,8 +506,8 @@ def input_document(store, name):
     hex_id(value["candidate"], 40, "candidate")
     require(value["m0"] == M0 and value["dispatch"] == DISPATCH_SHA, "incorrect M0 or dispatch pin")
     scenario_fields(value)
-    components(store, value["components"], base)
-    ports(store, value["ports"], base, input_only=True)
+    for ref in component_refs(value["components"]) + port_refs(value["ports"], input_only=True):
+        store.ref(ref, base)
     closed(value["fixtures"], FIXTURES, "fixtures")
     for ref in list(value["fixtures"].values()) + [value["profile"]]:
         if ref is not None:
@@ -411,38 +558,75 @@ def dependency_versions(data, path):
         raise Invalid(f"{path}: malformed Cargo.lock: {error}") from error
 
 
-def candidate_sources(tree):
-    sources = {}
-    bft_seen = False
-    for row in tree.split(b"\0"):
-        if not row:
-            continue
+def git_object_id(kind, data):
+    digest = hashlib.sha1(f"{kind} {len(data)}\0".encode("ascii"))
+    digest.update(data)
+    return digest.hexdigest()
+
+
+def tree_entries(data):
+    modes = {b"040000": b"tree", b"100644": b"blob", b"100755": b"blob",
+             b"120000": b"blob", b"160000": b"commit"}
+    require(data.endswith(b"\0"), "invalid candidate tree record terminator")
+    entries = {}
+    for row in data[:-1].split(b"\0"):
         try:
-            prefix, raw_path = row.split(b"\t", 1)
-            mode, kind, object_id = prefix.decode("ascii").split()
+            prefix, path = row.split(b"\t", 1)
+            mode, kind, raw_id = prefix.split(b" ")
+            object_id = raw_id.decode("ascii")
         except (ValueError, UnicodeError) as error:
             raise Invalid("invalid candidate tree record") from error
+        require(mode in modes and modes[mode] == kind, "invalid candidate tree entry mode/type")
+        require(path not in entries and all(part not in (b"", b".", b"..") for part in path.split(b"/")),
+                "invalid or duplicate candidate tree path")
+        hex_id(object_id, 40, "candidate tree entry")
+        entries[path] = (mode.lstrip(b"0"), object_id)
+    return entries
+
+
+def verify_tree(entries, object_id, path):
+    # Git sorts names as bytes and compares a directory as its name plus '/'.
+    ordered = sorted(entries.items(), key=lambda item: item[0] + (b"/" if item[1][0] == b"40000" else b""))
+    body = b"".join(mode + b" " + name + b"\0" + bytes.fromhex(target)
+                    for name, (mode, target) in ordered)
+    require(git_object_id("tree", body) == object_id, f"Git tree object ID mismatch: {path}")
+
+
+def candidate_sources(candidate, commit, root_tree, poc_tree):
+    require(git_object_id("commit", commit) == candidate, "Git commit object ID mismatch")
+    header = re.fullmatch(rb"tree ([0-9a-f]{40})", commit.partition(b"\n")[0])
+    require(header is not None, "Git commit is missing its root tree ID")
+    root = tree_entries(root_tree)
+    require(all(b"/" not in name for name in root), "root tree lists a non-root path")
+    verify_tree(root, header[1].decode("ascii"), "/")
+    require(root.get(b"regional_BFT_sim") == (b"160000", BFT), "wrong Regional BFT gitlink")
+    poc = tree_entries(poc_tree)
+    require(b"poc" in root and root[b"poc"][0] == b"40000" and poc.get(b"poc") == root[b"poc"],
+            "poc tree ID is not bound to the candidate root")
+    directories = {path: {} for path, (mode, _) in poc.items() if mode == b"40000"}
+    for path, entry in poc.items():
+        if path == b"poc":
+            continue
+        parent, _, name = path.rpartition(b"/")
+        require(path.startswith(b"poc/") and parent in directories,
+                "poc tree entry is missing its parent directory")
+        directories[parent][name] = entry
+    for directory_path, entries in directories.items():
+        verify_tree(entries, poc[directory_path][1], os.fsdecode(directory_path))
+
+    sources = {}
+    for raw_path, (mode, object_id) in poc.items():
         path = os.fsdecode(raw_path)
-        if path == "regional_BFT_sim":
-            require(not bft_seen and (mode, kind, object_id) == ("160000", "commit", BFT),
-                    "wrong Regional BFT gitlink")
-            bft_seen = True
-        elif path.startswith("poc/") and (path in SOURCES
-                or PurePosixPath(path).name in ("Cargo.toml", "Cargo.lock")
-                or path.endswith(".proto")):
+        if path in SOURCES or PurePosixPath(path).name in ("Cargo.toml", "Cargo.lock") or path.endswith(".proto"):
             relative(path)
-            require(kind == "blob" and mode in ("100644", "100755") and path not in sources,
-                    f"{path}: expected unique tracked regular source")
-            hex_id(object_id, 40, "candidate tree blob")
+            require(mode in (b"100644", b"100755"), f"{path}: expected tracked regular source")
             sources[path] = object_id
-    require(bft_seen, "missing Regional BFT gitlink")
     require(set(SOURCES + LOCKS) <= sources.keys(), "missing required candidate source")
     return sources
 
 
 def check_source(path, data, sha256, object_id):
-    blob = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
-    require(object_id == blob, f"{path}: differs from candidate blob")
+    require(object_id == git_object_id("blob", data), f"{path}: differs from candidate blob")
     if path.endswith("/Cargo.lock"):
         versions = dependency_versions(data, path)
         if versions or path in LOCKS:

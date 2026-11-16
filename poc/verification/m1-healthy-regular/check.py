@@ -15,77 +15,18 @@ sys.path.insert(0, str(ROOT / "poc/scenarios/m1-healthy-regular"))
 import evidence as ev
 
 
-def check_reason(reason):
-    ev.require(isinstance(reason, dict), "reason: expected object")
-    ev.string(reason.get("code"), "reason.code")
-    if reason["code"] == "NotReady":
-        ports = ev.array(reason.get("missing_ports"), "reason.missing_ports")
-        inputs = ev.array(reason.get("missing_inputs"), "reason.missing_inputs")
-        ev.require(ports or inputs, "NotReady requires a missing capability or input")
-        ev.require(all(port in ev.PORTS for port in ports), "unknown missing port")
-        for field in inputs:
-            ev.string(field, "missing input")
-
-
-def validate_gates(values, scenario, store):
-    seen = set()
-    for gate in ev.array(values, "gates"):
-        ev.closed(gate, "id status reason evidence_refs", "gate")
-        ident = gate["id"]
-        ev.require(ident in ev.required_gates(scenario) and ident not in seen,
-                   "unknown or duplicate gate")
-        seen.add(ident)
-        ev.require(gate["status"] in ev.STATUS, "invalid gate status")
-        check_reason(gate["reason"])
-        for ref in ev.array(gate["evidence_refs"], "gate.evidence_refs"):
-            ev.require(ev.file_ref(ref)["path"] in store.refs, "unindexed gate evidence")
-            store.ref(ref)
-
-
-def checked_index(store, refs, label):
-    paths = set()
-    for ref in ev.array(refs, label):
-        path = ev.file_ref(ref)["path"]
-        ev.require(path not in paths, f"{label}: duplicate path {path}")
-        paths.add(path)
-        store.ref(ref)
-    return paths
-
-
-def command_records(manifest, store, indexed):
-    streams = set()
-    fields = ("argv cwd binary_sha256 started_wall_ns elapsed_wall_ns exit_code "
-              "timeout lock_owner stdout stderr")
-    for item in ev.array(manifest["commands"], "commands"):
-        ev.closed(item, fields, "command")
-        argv = ev.array(item["argv"], "command.argv")
-        ev.require(argv, "empty command argv")
-        for arg in argv:
-            ev.string(arg, "command argument")
-        ev.require(Path(argv[0]).is_absolute(), "command executable must be absolute")
-        ev.string(item["cwd"], "command.cwd")
-        ev.require(Path(item["cwd"]).is_absolute(), "command cwd must be absolute")
-        ev.hex_id(item["binary_sha256"], 64, "command binary SHA-256")
-        for field in ("started_wall_ns", "elapsed_wall_ns"):
-            ev.integer(item[field], f"command.{field}")
-        ev.require(item["exit_code"] is None or type(item["exit_code"]) is int,
-                   "invalid command exit code")
-        ev.require(type(item["timeout"]) is bool, "invalid command timeout flag")
-        if item["lock_owner"] is not None:
-            ev.string(item["lock_owner"], "command.lock_owner")
+def check_command_index(commands, store, indexed):
+    for item in commands:
         for stream in ("stdout", "stderr"):
-            ref = ev.file_ref(item[stream])
-            ev.require(ref["path"] in indexed and ref["path"] not in streams,
-                       f"{ref['path']}: missing or reused command stream index")
-            ev.require(indexed[ref["path"]]["role"] == f"command_{stream}",
-                       f"{ref['path']}: wrong command stream role")
+            ref = item[stream]
+            ev.require(ref["path"] in indexed and indexed[ref["path"]]["role"] == f"command_{stream}",
+                       f"{ref['path']}: missing command stream index or wrong role")
             store.ref(ref)
-            streams.add(ref["path"])
 
 
 def check_provenance(manifest, request, store, sources):
     tools = manifest["tool_versions"]
-    ev.closed(tools, "git python rustc cargo commonware bft_gitlink", "tool_versions")
+    ev.require(tools["python"] is not None, "missing Python version record")
     if tools["git"] is None:
         ev.require(manifest["revision_before"] is None and manifest["revision_after"] is None
                    and not manifest["commands"] and not any(path.startswith("source/") for path in sources)
@@ -115,11 +56,6 @@ def check_provenance(manifest, request, store, sources):
         if tool is None and name in ("rustc", "cargo"):
             missing.append(f"tool_versions.{name}")
             continue
-        ev.closed(tool, "path sha256 version", f"tool_versions.{name}")
-        ev.string(tool["path"], f"{name} path")
-        ev.require(Path(tool["path"]).is_absolute(), f"{name}: tool path must be absolute")
-        ev.hex_id(tool["sha256"], 64, f"{name} binary")
-        ev.string(tool["version"], f"{name} version")
         if name != "python":
             version, = probe(name, ("--version",))
             ev.require(version.decode().strip() == tool["version"], f"{name}: version evidence mismatch")
@@ -128,9 +64,8 @@ def check_provenance(manifest, request, store, sources):
 
     before, after = manifest["revision_before"], manifest["revision_after"]
     ev.require(before == after, "revision changed during preflight")
-    ev.closed(before, "head branch status", "revision")
-    ev.require(before["head"] == manifest["candidate"] and before["status"] == []
-               and isinstance(before["branch"], str), "candidate is stale or dirty")
+    ev.require(before is not None and before["head"] == manifest["candidate"] and before["status"] == [],
+               "candidate is stale or dirty")
     for args, output in (
         (ev.GIT_REVISION, [manifest["worktree"], manifest["candidate"]]),
         (ev.GIT_BRANCH, [before["branch"]] if before["branch"] else []),
@@ -151,8 +86,10 @@ def check_provenance(manifest, request, store, sources):
                "incorrect dispatch source bytes")
     index, = probe("git", (*ev.GIT_OPTIONS, "ls-files", "-v", "-z"))
     ev.check_git_index(index)
-    tree, = probe("git", (*ev.GIT_OPTIONS, *ev.GIT_TREE, candidate, "--", "poc", "regional_BFT_sim"))
-    candidate_paths = ev.candidate_sources(tree)
+    commit, = probe("git", (*ev.GIT_OPTIONS, "cat-file", "commit", candidate))
+    root_tree, = probe("git", (*ev.GIT_OPTIONS, *ev.GIT_ROOT_TREE, candidate))
+    poc_tree, = probe("git", (*ev.GIT_OPTIONS, *ev.GIT_POC_TREE, candidate, "--", "poc"))
+    candidate_paths = ev.candidate_sources(candidate, commit, root_tree, poc_tree)
     ev.require({path for path in sources if path.startswith("source/")}
                == {f"source/{path}" for path in candidate_paths}, "candidate source inventory mismatch")
     for path, object_id in candidate_paths.items():
@@ -185,28 +122,8 @@ def bundle(root, expected_ref, expected, reports):
     _, seal = store.inspect("manifest.sha256", read=True)
     ev.require(seal == f"{manifest_ref['sha256']}  manifest.json\n".encode(), "invalid manifest seal")
     value = ev.json_object(data, "manifest.json")
-    ev.closed(value, ev.RUN_FIELDS, "manifest")
-    ev.require(value["schema"] == "M1-RUN-1", "unsupported run schema")
-    ev.require(value["operation"] in ("preflight", "run"), "invalid run operation")
-    ev.require(value["status"] in ev.STATUS, "invalid run status")
-    valid_readiness = ("Ready", "NotReady", "Reject") if value["operation"] == "preflight" else (None,)
-    ev.require(value["readiness"] in valid_readiness, "invalid run readiness")
-    check_reason(value["reason"])
-    ev.string(value["worktree"], "worktree")
-    ev.require(Path(value["worktree"]).is_absolute(), "worktree must be absolute")
-    ev.require(value["contract_sha256"] == ev.CONTRACT_SHA, "wrong manifest contract pin")
-    ev.scenario_fields(value)
-    ev.input_limits(value["limits"])
-    ev.closed(value["cutoff"], "virtual_tick_us event_id reader_pc reason", "cutoff")
-    ev.closed(value["cutoff"]["reader_pc"], "a b", "cutoff.reader_pc")
-    ev.string(value["cutoff"]["reason"], "cutoff.reason")
-    for unit in ("virtual_tick_us", "event_id"):
-        if value["cutoff"][unit] is not None:
-            ev.integer(value["cutoff"][unit], f"cutoff.{unit}")
-    ev.require(value["pending"] is None or isinstance(value["pending"], (dict, list)),
-               "invalid pending evidence")
-
-    ref = ev.file_ref(value["input"])
+    artifact_refs = ev.run_fields(value)
+    ref = value["input"]
     path = PurePosixPath(ref["path"])
     ev.require(len(path.parts) == 2 and path.parts[0] == "input", "input must be under input/")
     actual, request = ev.input_document(store, ref["path"])
@@ -214,7 +131,6 @@ def bundle(root, expected_ref, expected, reports):
     input_paths = {name for name in store.refs if name.startswith("input/")}
     for key in ("candidate", "components", "scenario", "seed", "start_order", "wall_pause_ms", "limits"):
         ev.require(value[key] == request[key], f"manifest {key}: differs from input")
-    ev.ports(store, value["ports"], path.parent, input_only=False)
     port_inputs = {item["port_id"]: item for item in request["ports"]}
     for port in value["ports"]:
         ev.require({key: port[key] for key in ("port_id", "owner", "binding")}
@@ -224,17 +140,21 @@ def bundle(root, expected_ref, expected, reports):
         ev.require(ev.same_bytes(request["expectations"], expected_ref),
                    "--expected differs from the run's frozen expectations")
 
-    sources = checked_index(store, value["source_files"], "source_files")
+    sources = {item["path"] for item in value["source_files"]}
     ev.require({name for name in sources if name.startswith("input/")} == input_paths
                and all(name.startswith(("input/", "source/")) for name in sources),
                "input source inventory mismatch")
-    artifact_refs = ev.artifact_refs(value["artifacts"])
-    artifacts = checked_index(store, artifact_refs, "artifacts")
+    artifacts = {item["path"] for item in artifact_refs}
     ev.require(not (artifacts & (sources | {"manifest.json", "manifest.sha256"})),
                "overlapping bundle indexes")
-    command_records(value, store, {item["path"]: item for item in value["artifacts"]})
+    for item in value["source_files"] + artifact_refs:
+        store.ref(item)
+    check_command_index(value["commands"], store, {item["path"]: item for item in value["artifacts"]})
     missing = check_provenance(value, request, store, sources)
-    validate_gates(value["gates"], value["scenario"], store)
+    for gate in value["gates"]:
+        for item in gate["evidence_refs"]:
+            ev.require(item["path"] in store.refs, "unindexed gate evidence")
+            store.ref(item)
     bundle_inventory(store)
     return request, missing
 
@@ -307,6 +227,7 @@ def main():
             *[gate(ident, "NOT_RUN", reason) for ident in ev.GATES[1:]
               if ident in expected["required_gates"]],
         ]
+        ev.check_report_fields(report, requests[0][0]["scenario"])
     except (ev.Invalid, OSError, UnicodeError) as error:
         reason = {"code": "InvalidEvidence", "detail": str(error)}
         report.update(status="FAIL", reason=reason,

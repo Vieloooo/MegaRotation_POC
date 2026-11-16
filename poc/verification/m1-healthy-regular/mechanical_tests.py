@@ -4,6 +4,7 @@
 import hashlib
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 import shutil
 import subprocess
@@ -36,6 +37,19 @@ def seal(bundle, manifest):
     write_json(path, manifest)
     (bundle / "manifest.sha256").write_text(
         f"{ref(path, bundle)['sha256']}  manifest.json\n", encoding="ascii")
+
+
+def replace_indexed_bytes(bundle, manifest, name, data):
+    path = bundle / name
+    path.write_bytes(data)
+    fresh = ref(path, bundle)
+    for item in manifest["source_files"] + manifest["artifacts"]:
+        if item["path"] == name:
+            item.update(fresh)
+    for command in manifest["commands"]:
+        for stream in ("stdout", "stderr"):
+            if command[stream]["path"] == name:
+                command[stream] = fresh
 
 
 class MechanicalTests(unittest.TestCase):
@@ -144,6 +158,88 @@ class MechanicalTests(unittest.TestCase):
         self.assertIn("source_run", report["reason"]["missing_inputs"])
         self.assertEqual((report["gates"][-1]["id"], report["gates"][-1]["status"]),
                          ("OfficialSameBytes", "NOT_RUN"))
+
+    def test_h09_validates_copied_source_report_and_manifest_structure(self):
+        source = self.launch("h01-source", 3, operation="run")
+        prior = self.inputs / "prior-run"
+        shutil.copytree(source, prior)
+        manifest_path = prior / "manifest.json"
+        manifest = json.loads(manifest_path.read_bytes())
+        source_run = {}
+        for role in ("public_messages", "regional_results"):
+            path = prior / f"{role}.fixture"
+            path.write_bytes(b"Mechanical fixture bytes")
+            manifest["artifacts"].append({"role": role, "producer": "self-test", "schema": "raw",
+                                          **ref(path, prior)})
+            source_run[role] = [ref(path, self.inputs)]
+        seal(prior, manifest)
+        source_report = self.check("source-checked.json", 3, "--bundle", prior)
+        report_path = self.inputs / "source-report.json"
+
+        self.data["scenario"] = ev.SCENARIOS[3]
+        self.expected_data["required_gates"] = list(ev.GATES)
+        write_json(self.expected, self.expected_data)
+        self.data["expectations"] = ref(self.expected, self.inputs)
+        for name, change, exit_code, error in (
+            ("control", None, 3, None),
+            ("report-bool-status", lambda run, report: report.update(status=True), 2,
+             "invalid checker status"),
+            ("report-expected-escape", lambda run, report: report["expected"].update(path="../outside.json"),
+             2, "relative evidence path"),
+            ("report-expected-bool-size", lambda run, report: report["expected"].update(bytes=False),
+             2, "FileRef.bytes"),
+            ("manifest-bool-status", lambda run, report: run.update(status=True), 2, "invalid run status"),
+            ("manifest-command-escape", lambda run, report: run["commands"][0]["stdout"].update(path="../out"),
+             2, "relative evidence path"),
+        ):
+            with self.subTest(name=name):
+                copied_manifest, copied_report = deepcopy(manifest), deepcopy(source_report)
+                if change is not None:
+                    change(copied_manifest, copied_report)
+                seal(prior, copied_manifest)
+                copied_report["bundles"] = [ref(manifest_path, prior)]
+                write_json(report_path, copied_report)
+                self.data["source_run"] = {**source_run, "manifest": ref(manifest_path, self.inputs),
+                                           "checker_report": ref(report_path, self.inputs)}
+                write_json(self.input, self.data)
+                output = self.launch(name, exit_code)
+                if error is not None:
+                    rejection = json.loads((output / "rejection.json").read_bytes())
+                    self.assertIn(error, rejection["reason"]["detail"])
+
+    def test_resealed_listing_and_source_cannot_change_candidate_members(self):
+        original = self.launch("original-candidate", 3)
+        mutated = self.scratch / "forged-source"
+        shutil.copytree(original, mutated)
+        manifest = json.loads((mutated / "manifest.json").read_bytes())
+        source_name = f"source/{RUNNER.as_posix()}"
+        modified_source = (mutated / source_name).read_bytes() + b"\n# Not in candidate\n"
+        replace_indexed_bytes(mutated, manifest, source_name, modified_source)
+
+        listing = next(item["stdout"]["path"] for item in manifest["commands"]
+                       if "ls-tree" in item["argv"] and "-r" in item["argv"])
+        original_listing = (mutated / listing).read_bytes()
+        original_blob = self.git("rev-parse", f"{self.candidate}:{RUNNER.as_posix()}").strip().encode()
+        new_blob = ev.git_object_id("blob", modified_source).encode()
+        old_entry = original_blob + b"\t" + RUNNER.as_posix().encode() + b"\0"
+        self.assertIn(old_entry, original_listing)
+        modified_listing = original_listing.replace(old_entry, new_blob + old_entry[40:])
+        replace_indexed_bytes(mutated, manifest, listing, modified_listing)
+        seal(mutated, manifest)
+        report = self.check("forged-source.json", 2, "--bundle", mutated)
+        self.assertIn("Git tree object ID mismatch", report["reason"]["detail"])
+
+        modified_commit = self.scratch / "forged-commit"
+        shutil.copytree(original, modified_commit)
+        manifest = json.loads((modified_commit / "manifest.json").read_bytes())
+        command = next(item for item in manifest["commands"] if "cat-file" in item["argv"]
+                       and item["argv"][-2:] == ["commit", self.candidate])
+        commit_name = command["stdout"]["path"]
+        commit = (modified_commit / commit_name).read_bytes() + b"\nmodified commit message\n"
+        replace_indexed_bytes(modified_commit, manifest, commit_name, commit)
+        seal(modified_commit, manifest)
+        report = self.check("forged-commit.json", 2, "--bundle", modified_commit)
+        self.assertIn("Git commit object ID mismatch", report["reason"]["detail"])
 
     def test_stale_and_dirty_checkout(self):
         stale = self.git("rev-parse", "HEAD^").strip()

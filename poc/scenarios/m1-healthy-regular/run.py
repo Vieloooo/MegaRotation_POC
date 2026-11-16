@@ -167,9 +167,11 @@ class Preparation:
         ev.require(hashlib.sha256(original).hexdigest() == ev.DISPATCH_CONTENT_SHA,
                    "wrong original dispatch")
         ev.check_git_index(self.git("ls-files", "-v", "-z"))
-        tree = self.git(*ev.GIT_TREE, candidate, "--", "poc", "regional_BFT_sim")
+        commit = self.git("cat-file", "commit", candidate)
+        root_tree = self.git(*ev.GIT_ROOT_TREE, candidate)
+        poc_tree = self.git(*ev.GIT_POC_TREE, candidate, "--", "poc")
         repo = ev.Inventory(ROOT)
-        for path, object_id in ev.candidate_sources(tree).items():
+        for path, object_id in ev.candidate_sources(candidate, commit, root_tree, poc_tree).items():
             ref, data = self.snapshot(repo, "source", path, read=True)
             ev.check_source(path, data, ref["sha256"], object_id)
         self.manifest["tool_versions"]["bft_gitlink"] = ev.BFT
