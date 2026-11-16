@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+
+[package]
+name = "m2-force-independent"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[dependencies]
+commonware-codec = "=2026.10.0"
+commonware-consensus = { version = "=2026.10.0", features = ["native-recovery"] }
+commonware-cryptography = "=2026.10.0"
+commonware-parallel = "=2026.10.0"
+poc-types = { path = "../../../crates/types" }
+poc-authorization = { path = "../../../crates/authorization" }
+sim-espresso = { path = "../../../crates/sim-espresso" }
+rand_chacha = "=0.10.0"
+rand_core = "=0.10.1"
+serde = "=1.0.229"
+serde_json = "=1.0.154"
+sha2 = "=0.11.1"
+
+[patch.crates-io]
+commonware-runtime = { path = "../../../vendor/commonware-runtime" }
+commonware-consensus = { path = "../../../vendor/commonware-consensus" }
+
+[profile.dev]
+debug = "line-tables-only"
