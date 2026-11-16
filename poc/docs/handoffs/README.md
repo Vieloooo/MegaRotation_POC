@@ -1,5 +1,7 @@
 # Sequencer Rotation PoC v2 分任务交接
 
+> **2026-11-16 最新优先级：** 近期只推进15健康节点的Regular+Espresso+GFR（M1），再做健康节点主动Force（M2）。以[两个里程碑计划](../milestones/README.md)及其中per-feature交接为准；旧恢复/批次/D/RESUME/Web计划保留，暂不作为这两个里程碑的前置。
+
 2026-11-15。每项工作对应一份中文启动文档。交给新会话时，附上目标任务的 Markdown 和[共用工作约定](workflow-zh.md)，并在启动消息中填入该任务的集成基线 SHA。可直接复制任务开头的启动段。新会话使用自己的 Codex managed worktree。讨论和验收可以按任务分开，主线集成由总协调收口。
 
 用户现已授权[总协调批次调度](../commander/README.md)：最多五个并发 job，每完成三个功能创建独立合并到 main 的 chat。实际派发基线以总协调消息和登记为准；下文 `36eff1c` 是实现基线，其上的文档提交可作为启动基线。

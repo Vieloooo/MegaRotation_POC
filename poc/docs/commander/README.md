@@ -1,5 +1,7 @@
 # PoC v2 总协调与批次集成
 
+> **2026-11-16 最新优先级：** 近期只推进15健康节点的Regular+Espresso+GFR（M1），再做健康节点主动Force（M2）。以[两个里程碑计划](../milestones/README.md)及其中per-feature交接为准；旧恢复/批次/D/RESUME/Web计划保留，暂不作为这两个里程碑的前置。
+
 2026-11-15。用户授权本会话管理功能 chat：各 chat 使用 Astra / ultra 和独立 managed worktree，最多并发五个 job；每完成三个新功能，创建一个新的 merge-to-main chat。功能范围沿用[16 项交接索引](../handoffs/README.md)。本文是调度合同，不改变协议或功能完成标准。
 
 ## 执行约定

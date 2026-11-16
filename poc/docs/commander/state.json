@@ -1,5 +1,5 @@
 {
-  "schema": 2,
+  "schema": 3,
   "date": "2026-11-16",
   "source_checkout": "/mnt/reth/jy/megaroation_poc",
   "project_id": "ccb826e2-d47a-4623-9b20-2632ac96d8e3",
@@ -18,8 +18,8 @@
   "jobs": [
     {
       "feature": "01",
-      "status": "active",
-      "phase_authorized": "full-feature",
+      "status": "checkpoint-requested",
+      "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
       "thread_id": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
       "candidate_sha": null,
       "client_thread_id": "client-new-thread:a9d7dc91-4ca5-4871-ba48-908e01a76230",
@@ -147,7 +147,7 @@
     },
     {
       "feature": "07",
-      "status": "active",
+      "status": "component-delivered-for-milestones",
       "phase_authorized": "20261116-independent-wave",
       "thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
       "candidate_sha": null,
@@ -160,12 +160,13 @@
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
       },
-      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "788291735ce6db3c3eb78b4594a28d730cce71cd"
     },
     {
       "feature": "11",
-      "status": "active",
-      "phase_authorized": "20261116-independent-wave",
+      "status": "checkpoint-requested",
+      "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
       "thread_id": "01a1e1cc-4bbd-75b3-8c75-0c9745613cde",
       "candidate_sha": null,
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11",
@@ -181,7 +182,7 @@
     },
     {
       "feature": "12",
-      "status": "active",
+      "status": "deferred-saved",
       "phase_authorized": "20261116-independent-wave",
       "thread_id": "01a1e1cc-a0b6-7161-afe5-881d30b01f4f",
       "candidate_sha": null,
@@ -194,11 +195,12 @@
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/29df/megaroation_poc"
       },
-      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "1f6d1b3b4076ff16908dc59f272a06686b1d1ea5"
     },
     {
       "feature": "16",
-      "status": "active",
+      "status": "component-delivered-for-milestones",
       "phase_authorized": "20261116-independent-wave",
       "thread_id": "01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2",
       "candidate_sha": null,
@@ -211,7 +213,8 @@
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/d2be/megaroation_poc"
       },
-      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "5c34b400ba5245d7775a281566e21bf59708b147"
     }
   ],
   "remaining_features": [
@@ -224,7 +227,7 @@
     "15"
   ],
   "merge_batches": [],
-  "dispatch_note": "Self-contained restart-free notices sent to all five active chats via standard tool; exact target and prompt hashes verified. Idle02/06/09 notices prepared but not sent to avoid a sixth active job. Next normal-running02/04 contract preparation is underway.",
+  "dispatch_note": "User narrowed primary goal to two healthy-node milestones. Seven feature/merge handoffs drafted. 01/11 asked to checkpoint gracefully; 12 preserved. No implementation merge performed in commander checkout.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
@@ -233,17 +236,15 @@
   "last_status_check": "2026-11-16 Asia/Shanghai",
   "observed_active_parent_chats": 5,
   "next_actions": [
-    "Complete 01 continuation R1-R18 on a named verified revision.",
-    "Run 07/11/12/16 independent work within five active feature chats; publish minimal interfaces promptly.",
-    "After three complete accepted features, create a merge-to-main chat and verify the actual integrated SHA."
+    "Receive safe checkpoints from 01/11; preserve 12 and all original worktrees/artifacts.",
+    "Dispatch remote M0 merge with exact existing component SHAs.",
+    "Prepare H1/H2/H3 contracts/interfaces in parallel, then implement on the verified M0 SHA.",
+    "Delegate M1 and M2 integration to dedicated remote chats."
   ],
   "status_evidence_scope": "Current chat snapshots and actual turn_context checked. Commander independent acceptance of exact 03 SHA completed; 06/09 component evidence hashes and tested-vs-delivery source identity rechecked. Full 01 and integrated component gates remain OPEN.",
   "active_features": [
-    "01",
-    "07",
-    "11",
-    "12",
-    "16"
+    "01-checkpoint",
+    "11-checkpoint"
   ],
   "restart_free_handoff_policy": "poc/docs/commander/restart-free-handoff-track-20261116.md",
   "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates.",
@@ -265,5 +266,49 @@
       "09"
     ],
     "deferred_source": "poc/docs/commander/notifications/restart-free-deferred-20261116.json"
-  }
+  },
+  "primary_scope": "healthy-15-regular-then-force",
+  "primary_plan": "poc/docs/milestones/README.md",
+  "espresso_choice": "SimEspresso deterministic primary plus same real regional results published/read back on official local dev-node",
+  "merge_policy": "Delegate all substantive integration to separate remote chats at M0/M1/M2; user-authorized M0 does not wait for the legacy three-full-feature counter.",
+  "milestone_jobs": [
+    {
+      "id": "M0",
+      "status": "ready-to-dispatch",
+      "handoff": "poc/docs/milestones/M0-foundation-merge-zh.md"
+    },
+    {
+      "id": "H1",
+      "status": "preparation-ready",
+      "reuse_thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
+      "handoff": "poc/docs/milestones/H1-healthy-session-program-zh.md"
+    },
+    {
+      "id": "H2",
+      "status": "queued",
+      "handoff": "poc/docs/milestones/H2-session-manager-zh.md"
+    },
+    {
+      "id": "H3",
+      "status": "queued",
+      "reuse_thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "handoff": "poc/docs/milestones/H3-publication-gfr-zh.md"
+    },
+    {
+      "id": "M1",
+      "status": "waiting-H1-H2-H3",
+      "handoff": "poc/docs/milestones/M1-regular-merge-zh.md"
+    },
+    {
+      "id": "H4",
+      "status": "waiting-M1",
+      "reuse_thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
+      "handoff": "poc/docs/milestones/H4-healthy-force-zh.md"
+    },
+    {
+      "id": "M2",
+      "status": "waiting-H4",
+      "handoff": "poc/docs/milestones/M2-force-merge-zh.md"
+    }
+  ]
 }

@@ -1,5 +1,7 @@
 # MegaETH Sequencer Rotation PoC v2
 
+> **2026-11-16 最新优先级：** 近期只推进15健康节点的Regular+Espresso+GFR（M1），再做健康节点主动Force（M2）。以[两个里程碑计划](poc/docs/milestones/README.md)及其中per-feature交接为准；旧恢复/批次/D/RESUME/Web计划保留，暂不作为这两个里程碑的前置。
+
 这是 Sequencer Rotation PoC 的独立 Git checkout。目标是在单机运行三个地区、每区五个等权 replica，并用可重放的场景验证 regular、Force 和 RESUME。先看 [PoC v2 设计](formalization_v10/poc_design_zh_v2.md) 和 [v10 协议规范](formalization_v10/README.md)。
 
 ## 当前进展
