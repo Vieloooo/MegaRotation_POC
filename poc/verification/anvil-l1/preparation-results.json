@@ -1,0 +1,96 @@
+{
+  "phase": "pre-implementation independent interface expectations",
+  "baseline": "0a951c482a9712678ab9de34765b781b9c3c9f42",
+  "worktree": "/home/jy/.codex/worktrees/65ef/megaroation_poc",
+  "role": "bft_verifier",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "commands": [
+    "python3 poc/verification/anvil-l1/independent_codec.py --self-test --cast /mnt/reth/jy/megaroation_poc/.build/tools/foundry-1.0.0/cast",
+    "python3 poc/verification/anvil-l1/golden_vectors.py check --cast /mnt/reth/jy/megaroation_poc/.build/tools/foundry-1.0.0/cast"
+  ],
+  "seed": "none (fixed public inputs; public signatures frozen after test-only key generation)",
+  "python": "3.12.8",
+  "castVersion": "cast Version: 1.0.0-stable\nCommit SHA: e144b82070619b6e10485c38734b4d4d45aebe04\nBuild Timestamp: 2025-02-13T20:03:31.026474817Z (1739477011)\nBuild Profile: maxperf",
+  "castSha256": "2d902a06e36ea4d59dc2a68699d094a99c9cad2f2485c60dbb5bbb05bad6a31c",
+  "sourceSha256": {
+    "formalization_v10/00_arch_zh_v0_1.md": "2de0929fc2f75fda51802c7c354146849a285a247283ca1d8fc7338b2a8e8871",
+    "formalization_v10/01_l1_authority_zh_v0_1.md": "e95c0cbc8c8daa05b9ee60cba342793ebb85d0c9e37afa972f34259676ad84b6",
+    "formalization_v10/06_certifier_zh_v0_1.md": "66e59d3db662021eb9c109114c2c423673d46a620eeed8ee3f599c6033e13167",
+    "formalization_v10/07_batch_inbox_zh_v0_1.md": "666b5a3735f677da4a5b087e9da96d66b30524898eac7688a678b3ec59c410cf",
+    "formalization_v10/08_da_zh_v0_1.md": "cb3a81091a8b45070e79ab8f0ae49df39e624e4595ea12248d3079e98114d788",
+    "formalization_v10/09_finality_rules_zh_v0_1.md": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc",
+    "formalization_v10/poc_design_zh_v2.md": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+    "poc/docs/commander/dependency-plan-v2.md": "4dcaca52eda5c680151e9d2c06c69d2ad7af9d96dba8ab3b14033605625f6762",
+    "poc/docs/contracts/task-contract-anvil-l1-v1.md": "49163f772ab9a6ca5865ce853754b20718a003825da06e5759305b7d360a9b6a"
+  },
+  "reviewedContractState": "REVIEW-CANDIDATE; conditional approval pending lead static-policy/freeze clarification edits",
+  "artifactSha256": {
+    "README.md": "2e5a378710ec7c10a69003018cb3a14e07dd26f60fa5646b1e5760ee24976744",
+    "contract-review.md": "3e77b5fb99aa920cc0a29fadb1dcf0d051e9c1d3243517f21a5e22bf44a0f463",
+    "golden-vectors.json": "c189ae0c36df64bb60ee565c45c0f85cd23bb2a87500e17110c37cadc68d24d5",
+    "golden_vectors.py": "aff8b4fd74b324e4109e7a7162fef08c126553b9a7d9c788b7416bf1954e9ce8",
+    "independent_codec.py": "fe230c5a95a8ba726e36af795e672c326cadaf8e1f8d4d9b12ca6a830e0bab4d",
+    "semantic-vectors.json": "102844622a67e84631b954f11b2ab7505f59df8ae9880f6f06a165d0537f7c40",
+    "source-expectations.md": "3ec484bf07a03b1aef48ed4cc854de54c122b98fdb262f811e2774bab350b664"
+  },
+  "codecCheck": {
+    "tool": "independent-spec-codec-v1",
+    "coincurve": "20.0.0",
+    "keccak_fixed_vectors": 2,
+    "cast_keccak_lengths": [
+      0,
+      1,
+      31,
+      32,
+      64,
+      135,
+      136,
+      137,
+      271,
+      272,
+      273,
+      1024
+    ],
+    "cast_abi_shapes": [
+      "f(uint64,bytes)",
+      "f((uint64,uint64,bytes32,uint8,bytes),bytes)",
+      "f((uint64,uint64),(bytes,string))"
+    ],
+    "secp256k1": [
+      "recover-original",
+      "reject-changed-digest-identity",
+      "deterministic-sign",
+      "reject-high-s"
+    ],
+    "private_key_output": false,
+    "status": "PASS"
+  },
+  "goldenCheck": {
+    "status": "PASS",
+    "profile": "ANVIL-L1-ABI-v1",
+    "signedMessages": 4,
+    "fieldAndDomainMutations": 57,
+    "malformedSignatureCases": 40,
+    "castCrossChecks": 34,
+    "goldenSha256": "c189ae0c36df64bb60ee565c45c0f85cd23bb2a87500e17110c37cadc68d24d5",
+    "privateKeysRequiredForCheck": false,
+    "candidateCodeImported": false
+  },
+  "status": {
+    "interfaceVectors": "PASS",
+    "contractReview": "CONDITIONAL_PASS",
+    "EVM": "INCONCLUSIVE_NOT_RUN",
+    "driver": "INCONCLUSIVE_NOT_RUN",
+    "component": "INCONCLUSIVE",
+    "fullFeature09": "INCONCLUSIVE"
+  },
+  "limits": [
+    "No candidate source imported or read",
+    "No real EVM/Anvil receipts or driver evidence in this preparation",
+    "Opaque gpos fixture does not establish canonical ReplayPosition validity",
+    "34 Cast cross-checks cover actual business calldata, hashes, selectors and topics",
+    "Private test-only keys are outside repository, never printed and not required for check",
+    "Canonical public types, Clock/transport grant/ack, actual DA and ResumeCut consumers remain integration gates"
+  ]
+}

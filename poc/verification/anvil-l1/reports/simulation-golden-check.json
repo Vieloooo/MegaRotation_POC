@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "profile": "ANVIL-L1-ABI-v1",
+  "signedMessages": 4,
+  "fieldAndDomainMutations": 57,
+  "malformedSignatureCases": 40,
+  "castCrossChecks": 34,
+  "goldenSha256": "c189ae0c36df64bb60ee565c45c0f85cd23bb2a87500e17110c37cadc68d24d5",
+  "privateKeysRequiredForCheck": false,
+  "candidateCodeImported": false
+}
