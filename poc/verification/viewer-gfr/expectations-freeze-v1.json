@@ -1,0 +1,14 @@
+{
+  "phase": "source_expectations_frozen_before_candidate",
+  "baseline": "335553359cd39a3a7494fbd9760436cdb2c41a33",
+  "candidate_inspected": false,
+  "builds_run": false,
+  "role": "bft_verifier",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "files": {
+    "source-first-expectations-v1.md": "6410b0f2e7276c94e27bbd098cbfe93ad485f665fbaab5a01ef11c14b7bd0059",
+    "literal-vectors-v1.json": "b6c7fa3ab77bbe2e1e56d191ad45e80517c8ebc16de761611abec43c6eb2d6f2"
+  },
+  "limits": "JSON parse and independent sort arithmetic checked; no candidate conformance result yet."
+}
