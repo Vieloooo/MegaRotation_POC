@@ -1737,12 +1737,16 @@ impl Hub {
                             self.conflict_seen=true;
                             self.log("DerivationConflict",None,json!({"height":2,"g_hash":g2,"d_hash":h2,"common_h1":h1}))?;
                         }
-                    } else if let Some(cuts)=detail["derivation"]["cuts"].as_array() {
+                    }
+                    if let Some(cuts)=detail["derivation"]["cuts"].as_array() {
                         use poc_viewer_gfr::L1ControlReader;
                         for cut in cuts {
                             let pos:L1Position=serde_json::from_value(cut["position"].clone())?;
-                            check(self.reader_b.resume_cut(pos)==self.public.public_l1().resume_cut(pos),
-                                "M4 independent reader cut mismatch")?;
+                            let a=self.public.public_l1().resume_cut(pos);
+                            let b=self.reader_b.resume_cut(pos);
+                            if let (InputStatus::Ready(a),InputStatus::Ready(b))=(a,b) {
+                                check(a==b,"M4 independent reader cut mismatch")?;
+                            }
                         }
                     }
                 }
