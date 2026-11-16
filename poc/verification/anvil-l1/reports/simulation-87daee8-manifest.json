@@ -1,0 +1,579 @@
+{
+  "artifactSha256": {
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/driver-sha256.txt": "1ee2c1a75d3845b60b8a8779e17cf59d802c55991706bdd83e856d3f28984d3a",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/evidence-sha256.txt": "406246bc0c2992e08308dab2e797d9c61e2ead269f0042082d4cca8436e3e744",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-cache/solidity-files-cache.json": "44f336d5a285b5bf120f880aa3966ef2824000d05ad8310413ac223398fd05cb",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/BatchInbox.sol/BatchInbox.json": "f20a07a1c344ae38518809c99d6c2483afee54886fabc13583b940e651c9e27c",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/ControlAuthority.sol/ControlAuthority.json": "ad39aa553d8806be949609bef6fe93026f615def3101ce797221c4e13066ba3e",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/L1ABI.sol/IBatchInbox.json": "65794f7cdc02d0a1bfd0621055c51d9228dc6545c8d1a1f04fe5b8e24e04438a",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/L1ABI.sol/IControlAuthority.json": "536577ddfc7052e04e6a794f889ce57942f91274ad7322198d3935bab89fc6a9",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/RollbackFixture.sol/RollbackFixture.json": "9b610a471b04419f1eb96811746ed1f9e5bdc8da1a289651f6a2d19456531403",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/TypedData.sol/TypedData.json": "b88fa957f332856174f01f086f7c82ae9e600030b2d4efad5cfe825a6cb4ad5a",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/forge-out/build-info/837614c0ee21e4752ba54ccc89a61023.json": "7da7c2e1f271757fe6a7721b198c9abf5a48c93868356ad227c5a2c0f7bb0b43",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/anvil-command.json": "39e91312951df05d57e772c589e89e1f6ac63d78c078d3d6d826e0ef5193acb7",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/anvil-genesis.json": "557bcfa9da7d3b493c264dc162f2fb90a98ed568958bf9f07345798b7dc94865",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/anvil.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/diagnostic-rpc.json": "71c0784ee4345f4b877533b3e2c645e474a0b9191a2864647d29576ffb4f2cfd",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/driver-config.json": "185b8b465e4e0f25b20d12fa64f5fd487a849a77f9140fe118e8732009b3ca63",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/driver-trace.json": "4729922497f770808b8088f596546c13b4ac5ca15ebefd77e8c589586e818561",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/driver.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/raw-rpc-bundle.json": "c4eee3e00c96b524e31802d71ab883764aa6733beb0686f2ec8b86194eb5426c",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/result.json": "a54991e73100fc4bbc7dc6cc91e2fb05d2a80212bd9023772ccd989905a6333b",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-300/virtual-trace.json": "114bb15dc6c444da432ab5841dde21792ab8aa97032d0a7c42eb48a85b20b025",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/anvil-command.json": "2620248480de6ef3e0b666f157ec34e4056991d5264a9b404c39742a5ff4c37b",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/anvil-genesis.json": "557bcfa9da7d3b493c264dc162f2fb90a98ed568958bf9f07345798b7dc94865",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/anvil.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/diagnostic-rpc.json": "71c0784ee4345f4b877533b3e2c645e474a0b9191a2864647d29576ffb4f2cfd",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/driver-config.json": "185b8b465e4e0f25b20d12fa64f5fd487a849a77f9140fe118e8732009b3ca63",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/driver-trace.json": "4729922497f770808b8088f596546c13b4ac5ca15ebefd77e8c589586e818561",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/driver.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/raw-rpc-bundle.json": "c4eee3e00c96b524e31802d71ab883764aa6733beb0686f2ec8b86194eb5426c",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/result.json": "4f1212b10fd4b8c138c00dc855f89e03f0e5aba00bf44790ee0df5587a6fd611",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/pause-650/virtual-trace.json": "114bb15dc6c444da432ab5841dde21792ab8aa97032d0a7c42eb48a85b20b025",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/revision.txt": "58895f08a261498c74816e847eff5dfdc52e8c05e97f4bdc33ae50954f392c00",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/toolchain.txt": "1ea4eba053be68827304f3accc37fc703ff56e49a3943e7c945266cc9964f35c",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/validation.log": "7eb26f66560a93c4f51e3712e651bf62bd1068a01e9700d609c5cf2cbd945718",
+    "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1/worktree-status.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "branch": "codex/poc-anvil-l1",
+  "candidate": "87daee8e9e77bbe27c337383d873a5eaf4a694ba",
+  "caseStatus": {
+    "A01": "PASS",
+    "A02": "PASS",
+    "A03": "PASS",
+    "A04": "PASS",
+    "A05": "PASS",
+    "A06": "PASS",
+    "A07": "PASS",
+    "A08": "PASS",
+    "A09": "PASS",
+    "A10": "PASS",
+    "A11": "PASS",
+    "A12": "PASS",
+    "A13": "PASS",
+    "A14": "PASS",
+    "A15": "PASS",
+    "A16": "PASS",
+    "A17": "PASS",
+    "A18": "INCONCLUSIVE",
+    "A19": "INCONCLUSIVE"
+  },
+  "completeFeature09": "INCONCLUSIVE",
+  "configuration": {
+    "announcement_seconds": 6,
+    "authority": "0x28d5cad17734d0ac631273dcaae7d810b7332266",
+    "chain_id": 31337,
+    "config_ref": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "finality_delay_us": 2000000,
+    "genesis_height": 0,
+    "genesis_origin": 0,
+    "genesis_timestamp_seconds": 1700000000,
+    "inbox": "0x6dca7cc6c56bea1bc0aad0d10d8c4706f2fd54ed",
+    "readers": [
+      "A",
+      "B"
+    ],
+    "slot_seconds": 2,
+    "submitter": "0x49a9f2604de8fdf31f40f71aa6db5ce1c38ea6f2"
+  },
+  "contract": "ANVIL-L1-ABI-v1 r1",
+  "driverExecutableSha256": "7bf99a50f6f9035e609f5e0df6ea2bb5e2bca8f7447f5119da796fca79126c9e",
+  "evidenceDirectory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09/artifacts/anvil-l1-simulator-87daee8-run1",
+  "fixtureLimits": [
+    "Fresh local Anvil with in-memory command custody and simulated finality.",
+    "Component read gateway sees only explicit script grants. Real 02/03 wiring remains A18.",
+    "Opaque gpos source binding. Delivery of real 11 DA/G input, 12 ResumeCut and 13 recovery is A19.",
+    "No cross-process restart, Ethereum proof validation, or public-network measurement was exercised."
+  ],
+  "frozenInterfaceCommit": "daad412e46eeecd64ef9b8af8175e64ec40edc53",
+  "golden": {
+    "candidateCodeImported": false,
+    "castCrossChecks": 34,
+    "fieldAndDomainMutations": 57,
+    "goldenSha256": "c189ae0c36df64bb60ee565c45c0f85cd23bb2a87500e17110c37cadc68d24d5",
+    "malformedSignatureCases": 40,
+    "privateKeysRequiredForCheck": false,
+    "profile": "ANVIL-L1-ABI-v1",
+    "signedMessages": 4,
+    "status": "PASS"
+  },
+  "independentCheckSha256": {
+    "/tmp/anvil-l1-simulator-87daee8-driver-check.json": "ff4f5de705235e0ef7d0258a131f7a029df816da19da077f6b6894a70c9e127d",
+    "/tmp/anvil-l1-simulator-87daee8-golden.json": "6ee9cbd2acd61c317758bf343ad185f5e27230e194a624761e1298ed95f62445",
+    "/tmp/anvil-l1-simulator-87daee8-receipts-300.json": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa",
+    "/tmp/anvil-l1-simulator-87daee8-receipts-650.json": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa"
+  },
+  "initialAndFinalClean": true,
+  "localDate": "2026-11-16",
+  "networkMeasurement": null,
+  "replayFilesByteIdentical": [
+    "virtual-trace.json",
+    "driver-trace.json",
+    "raw-rpc-bundle.json"
+  ],
+  "result": "PASS",
+  "role": {
+    "effort": "high",
+    "model": "gpt-6.1-sol",
+    "name": "bft_simulator"
+  },
+  "runs": [
+    {
+      "blockHeights": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "blockTimestampsSeconds": [
+        1700000000,
+        1700000002,
+        1700000004,
+        1700000006,
+        1700000008,
+        1700000010,
+        1700000012,
+        1700000014
+      ],
+      "cachedReplayNoRpc": [
+        5
+      ],
+      "commands": 195,
+      "finalPrefix": 7,
+      "finalReferenceUs": 16000000,
+      "fixturePort": 52201,
+      "historicalCursorReads": 6,
+      "idempotentProtocolRequests": 5,
+      "lostCompletedMineCommand": [
+        152
+      ],
+      "mineRpcCount": 7,
+      "pauseMs": 300,
+      "preMineHead": 0,
+      "preMineReceipt": null,
+      "protocolEvents": [
+        {
+          "cursor": [
+            0,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            0,
+            "0x"
+          ],
+          "kind": "CursorInitialized",
+          "position": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "act": 1700000010,
+          "kind": "ForceRecorded",
+          "position": [
+            2,
+            0,
+            0
+          ],
+          "seq": 0
+        },
+        {
+          "commitment": "0x154d1b7645e114f6ef0a5a8d3ac694fb6d173433627fa72b8b5bccce037c8d37",
+          "cursor": [
+            2,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x01020304"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            2,
+            1,
+            0
+          ]
+        },
+        {
+          "commitment": "0x0f0c34b0888adf8b61ee0e28c71b1aaaf1f31e0e90caae8aded1ff94189bf440",
+          "cursor": [
+            3,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x05"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            2,
+            2,
+            0
+          ]
+        },
+        {
+          "act": 1700000014,
+          "kind": "ForceRecorded",
+          "position": [
+            4,
+            0,
+            0
+          ],
+          "seq": 2
+        },
+        {
+          "cursor": [
+            8,
+            4,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            2,
+            "0x0000000000000000000000000000000000000000000000000000000000000004"
+          ],
+          "kind": "CursorSet",
+          "position": [
+            4,
+            1,
+            0
+          ],
+          "resumePosition": [
+            4,
+            1,
+            1
+          ],
+          "seq": 4
+        },
+        {
+          "act": 1700000014,
+          "kind": "ResumeRecorded",
+          "position": [
+            4,
+            1,
+            1
+          ],
+          "seq": 4,
+          "setPosition": [
+            4,
+            1,
+            0
+          ]
+        },
+        {
+          "cursor": [
+            11,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            2,
+            "0x0000000000000000000000000000000000000000000000000000000000000005"
+          ],
+          "kind": "CursorSet",
+          "position": [
+            4,
+            2,
+            0
+          ],
+          "resumePosition": [
+            4,
+            2,
+            1
+          ],
+          "seq": 5
+        },
+        {
+          "act": 1700000014,
+          "kind": "ResumeRecorded",
+          "position": [
+            4,
+            2,
+            1
+          ],
+          "seq": 5,
+          "setPosition": [
+            4,
+            2,
+            0
+          ]
+        },
+        {
+          "commitment": "0xf13f8f48f784339836074bca589b438c6e583d5a28900901e1cb2141728a9248",
+          "cursor": [
+            12,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x61667465722d726573756d65"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            5,
+            10,
+            0
+          ]
+        },
+        {
+          "act": 1700000018,
+          "kind": "ForceRecorded",
+          "position": [
+            6,
+            0,
+            0
+          ],
+          "seq": 18446744073709551615
+        }
+      ],
+      "readyReaderQueries": 8,
+      "receiptCount": 145,
+      "receiptStatusCounts": {
+        "0": 129,
+        "1": 16
+      },
+      "reconciledWithoutMutation": [
+        152
+      ],
+      "seed": "none (explicit script)",
+      "status": "PASS"
+    },
+    {
+      "blockHeights": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "blockTimestampsSeconds": [
+        1700000000,
+        1700000002,
+        1700000004,
+        1700000006,
+        1700000008,
+        1700000010,
+        1700000012,
+        1700000014
+      ],
+      "cachedReplayNoRpc": [
+        5
+      ],
+      "commands": 195,
+      "finalPrefix": 7,
+      "finalReferenceUs": 16000000,
+      "fixturePort": 37455,
+      "historicalCursorReads": 6,
+      "idempotentProtocolRequests": 5,
+      "lostCompletedMineCommand": [
+        152
+      ],
+      "mineRpcCount": 7,
+      "pauseMs": 650,
+      "preMineHead": 0,
+      "preMineReceipt": null,
+      "protocolEvents": [
+        {
+          "cursor": [
+            0,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            0,
+            "0x"
+          ],
+          "kind": "CursorInitialized",
+          "position": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "act": 1700000010,
+          "kind": "ForceRecorded",
+          "position": [
+            2,
+            0,
+            0
+          ],
+          "seq": 0
+        },
+        {
+          "commitment": "0x154d1b7645e114f6ef0a5a8d3ac694fb6d173433627fa72b8b5bccce037c8d37",
+          "cursor": [
+            2,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x01020304"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            2,
+            1,
+            0
+          ]
+        },
+        {
+          "commitment": "0x0f0c34b0888adf8b61ee0e28c71b1aaaf1f31e0e90caae8aded1ff94189bf440",
+          "cursor": [
+            3,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x05"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            2,
+            2,
+            0
+          ]
+        },
+        {
+          "act": 1700000014,
+          "kind": "ForceRecorded",
+          "position": [
+            4,
+            0,
+            0
+          ],
+          "seq": 2
+        },
+        {
+          "cursor": [
+            8,
+            4,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            2,
+            "0x0000000000000000000000000000000000000000000000000000000000000004"
+          ],
+          "kind": "CursorSet",
+          "position": [
+            4,
+            1,
+            0
+          ],
+          "resumePosition": [
+            4,
+            1,
+            1
+          ],
+          "seq": 4
+        },
+        {
+          "act": 1700000014,
+          "kind": "ResumeRecorded",
+          "position": [
+            4,
+            1,
+            1
+          ],
+          "seq": 4,
+          "setPosition": [
+            4,
+            1,
+            0
+          ]
+        },
+        {
+          "cursor": [
+            11,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            2,
+            "0x0000000000000000000000000000000000000000000000000000000000000005"
+          ],
+          "kind": "CursorSet",
+          "position": [
+            4,
+            2,
+            0
+          ],
+          "resumePosition": [
+            4,
+            2,
+            1
+          ],
+          "seq": 5
+        },
+        {
+          "act": 1700000014,
+          "kind": "ResumeRecorded",
+          "position": [
+            4,
+            2,
+            1
+          ],
+          "seq": 5,
+          "setPosition": [
+            4,
+            2,
+            0
+          ]
+        },
+        {
+          "commitment": "0xf13f8f48f784339836074bca589b438c6e583d5a28900901e1cb2141728a9248",
+          "cursor": [
+            12,
+            0,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            1,
+            "0x61667465722d726573756d65"
+          ],
+          "kind": "CursorAdvanced",
+          "position": [
+            5,
+            10,
+            0
+          ]
+        },
+        {
+          "act": 1700000018,
+          "kind": "ForceRecorded",
+          "position": [
+            6,
+            0,
+            0
+          ],
+          "seq": 18446744073709551615
+        }
+      ],
+      "readyReaderQueries": 8,
+      "receiptCount": 145,
+      "receiptStatusCounts": {
+        "0": 129,
+        "1": 16
+      },
+      "reconciledWithoutMutation": [
+        152
+      ],
+      "seed": "none (explicit script)",
+      "status": "PASS"
+    }
+  ],
+  "timezone": "Asia/Shanghai",
+  "toolchain": {
+    "cargo": "1.95.0 (f2d3ce0bd 2026-03-21)",
+    "coincurve": "20.0.0",
+    "foundry": "1.0.0-stable e144b82070619b6e10485c38734b4d4d45aebe04",
+    "python": "3.12.8",
+    "rustc": "1.95.0 (59807616e 2026-04-14)",
+    "sha256": {
+      "anvil": "839d5ed3c99ce527bbb0d68c91839b8d1fddb5e8e94fe5d716747b7b89bfea5f",
+      "cast": "2d902a06e36ea4d59dc2a68699d094a99c9cad2f2485c60dbb5bbb05bad6a31c",
+      "forge": "bced57e0ad861bf45cee877cefc39347342205da60d38b238956eeb732a7f115",
+      "solc": "0479d44fdf9c501c25337fdc540419f1593b884a87b47f023da4f1c700fda782"
+    },
+    "solc": "0.8.20+commit.a1b79de6.Linux.g++"
+  },
+  "unexpectedFailures": [],
+  "unexpectedTimeouts": [],
+  "wallClock": {
+    "insertedPauseMilliseconds": [
+      300,
+      650
+    ],
+    "localElapsedValidationSeconds": 12.649
+  },
+  "worktree": "/home/jy/.codex/worktrees/65ef/megaroation_poc"
+}

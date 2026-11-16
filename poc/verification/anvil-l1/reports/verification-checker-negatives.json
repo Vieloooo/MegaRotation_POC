@@ -1,0 +1,27 @@
+[
+  {
+    "case": "missing_last_receipt",
+    "status": "PASS_REJECTED",
+    "reason": "missing receipt"
+  },
+  {
+    "case": "wrong_parent",
+    "status": "PASS_REJECTED",
+    "reason": "header parent mismatch"
+  },
+  {
+    "case": "global_log_index_as_local",
+    "status": "PASS_REJECTED",
+    "reason": "block-global logIndex gap/conflict"
+  },
+  {
+    "case": "mismatched_resume_seq",
+    "status": "PASS_REJECTED",
+    "reason": "Resume calldata/event mismatch"
+  },
+  {
+    "case": "wrong_original_written_at",
+    "status": "PASS_REJECTED",
+    "reason": "historical written_at mismatch"
+  }
+]
