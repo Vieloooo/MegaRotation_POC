@@ -1,6 +1,6 @@
 # 功能11：Batcher、Certifier、DA 独立组件合同 v1
 
-日期：2026-11-16。版本：`BS-COMPONENT-v1 / r1`。状态：**FROZEN：独立 Verifier 来源先行审查 PASS，11 lead 批准按本合同实现。** 基线为按顺序正常合并03 `e9c15e04bc83b335668f3ecd837367aa87344a89` 和09 `c443ae925ed549b046731c2d8ef3dd9ce0311d24` 后的 `c9805f7a818bc23d30018ce4dc6f1ee45f92e3ac`。工作目录 `/home/jy/.codex/worktrees/f025/megaroation_poc`，分支 `codex/poc-batch-services`。
+日期：2026-11-16。版本：`BS-COMPONENT-v1 / r2`。状态：**FROZEN：独立 Verifier 来源先行审查 PASS，11 lead 批准按本合同实现。** r2只澄清固定gpos区间投影与最新RESUME覆盖条件，BS-FRAME-v1/BS-CRYPTO-v1字节和M1接口保持不变。基线为按顺序正常合并03 `e9c15e04bc83b335668f3ecd837367aa87344a89` 和09 `c443ae925ed549b046731c2d8ef3dd9ce0311d24` 后的 `c9805f7a818bc23d30018ce4dc6f1ee45f92e3ac`。工作目录 `/home/jy/.codex/worktrees/f025/megaroation_poc`，分支 `codex/poc-batch-services`。
 
 本合同只冻结可独立消费的服务组件。真实 DA 持久化、真实 secp256k1 签名和真实 Anvil 接纳可在本阶段验收；公共 G/GFR 来源仍为显式受限 fixture。组件 PASS 不代表完整11、G′、D、RESUME 或受控系统接线 accepted。
 
@@ -114,6 +114,8 @@ Batcher与Certifier各有独立source snapshot/replay readiness、L1 reader id�
 source snapshot至少绑定：来源身份和gpos bytes/typed引用、配置/规则版本、区间之前的实际03ExecutionState和native parent、连续VirtualBlock raw输入、实际metadata、配置绑定DEP来源，以及已处理RESUME引用。Certifier从同一父状态逐height调用03 Apply，核对每个pre_state_root、得到Kept/post-state；不得仅比较Batcher提交的记录与自己复制来的记录。padding由来源的空raw普通交易表现，仍照常Apply DEP，编码其空Kept。
 
 最新相关RESUME由Certifier自己的完整finalized Inbox历史确定：取不晚于当前cursor written_at的最后CursorSet所配对RESUME。source须已处理该**具体位置/序号**；只比较branch高度、gpos时间戳或sourceKind不够。即使current cursor已经是GLOBAL且接在RESUME之后，也仍需检查最近RESUME。缺位置完整性或处理证明则Wait；不能猜测“不存在RESUME”。fixture必须显式给出它可覆盖的控制历史和处理集合。
+
+**r2来源解释（独立审查PASS）。** 固定gpos的快照可以覆盖比本批更长的前缀：例如已有G[1..4]，可依次编码[1,2]与[3,4]而不等新gpos。来源从快照的实际parent逐height执行并验证连续性/pre-state root，直到当前prev再投影请求区间；不得把第二批直接从genesis重新执行，也不能要求快照parent恰好是本批prev。当前完整09历史负责证明最近相关RESUME存在或不存在。不存在时，普通cursor推进不要求source控制coverage推进到新receipt written_at；存在时，source必须精确处理其配对Resume位置/序号，且declared coverage覆盖该Resume。09的Set日志在Resume之前，按Set<=written_at选择后仍须检查后面的paired Resume，GLOBAL后继也不清除此条件。独立预期见[source-projection-review](../../verification/batch-services/source-projection-review.md)的SP01–SP06。11 lead接受该来源解释并冻结r2。
 
 ## 5. Batcher与Certifier状态转换
 

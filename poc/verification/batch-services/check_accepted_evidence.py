@@ -61,7 +61,7 @@ def check(bundle, index, root):
                 accepted.append({**record,'status':'VERIFIED_PAYLOAD','payload_length':len(payload),'payload_sha256':hashlib.sha256(payload).hexdigest(),'records':f.json_records(frame),'da_certificate':c.hx(da),'certifier_signature':c.hx(signature)})
     expected_count=sum(x['kind']=='CursorAdvanced' for x in baseline['events'])
     r.need(len(accepted)+len(missing)==expected_count,'accepted event coverage mismatch')
-    return {'status':'PASS' if not missing else 'INCONCLUSIVE','scope':'offline raw receipt/ABI/signature replay plus BS-FRAME-v1 DA opening; source_mode remains fixture','accepted_count':expected_count,'payloads_verified':len(accepted),'accepted':accepted,'missing':missing,'failed_receipts':baseline['failedReceipts'],'no_new_event_retries':baseline['idempotentRetries'],'not_established':['artifact live-run provenance','driver finalized and reader delivery discipline','DA write-before-receipt durability','Certifier independent G replay','full GFR/G-prime/D/ResumeCut']}
+    return {'status':'PASS' if not missing else 'INCONCLUSIVE','scope':'offline raw receipt/ABI/signature replay plus BS-FRAME-v1 DA opening; source_mode remains fixture','configuration':{'chain_id':bundle['config']['chainId'],'inbox':bundle['config']['inbox'],'config_ref':bundle['config']['configRef']},'accepted_count':expected_count,'payloads_verified':len(accepted),'accepted':accepted,'missing':missing,'failed_receipts':baseline['failedReceipts'],'no_new_event_retries':baseline['idempotentRetries'],'not_established':['artifact live-run provenance','driver finalized and reader delivery discipline','DA write-before-receipt durability','Certifier independent G replay','full GFR/G-prime/D/ResumeCut']}
 
 
 def main():
