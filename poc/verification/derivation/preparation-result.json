@@ -1,0 +1,38 @@
+{
+  "status": "PASS_SOURCE_PREPARATION_ONLY",
+  "candidate_status": "NOT_RUN",
+  "seed": "none (explicit fixtures)",
+  "commands": [
+    "python3 poc/verification/derivation/independent_reference.py --write",
+    "python3 poc/verification/derivation/independent_reference.py --check"
+  ],
+  "semantic_case_count": 14,
+  "stage_b": "PENDING_FEATURE11",
+  "files": [
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/source-expectations.md",
+      "sha256": "65c27858f709f98dba4f3bc307f721c6f6adfae1bf04daef18ff471297ce8db7",
+      "bytes": 11064
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/vectors.json",
+      "sha256": "a34962d6af614a8eeaa75c25d9b52e8fd33d1094715025ce68c2faf49d90d9f7",
+      "bytes": 21343
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/independent_reference.py",
+      "sha256": "c2d6dbfb9932e516b26680f16e7af7fd5329d5800b31a0f93fe41f13c3f8441d",
+      "bytes": 13100
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/reference-results.json",
+      "sha256": "2c8ff2371f77b2b816c4e3af74038584cc13789cc8ae71e1cd93e4e094536429",
+      "bytes": 213157
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/29df/megaroation_poc/poc/verification/derivation/source-manifest.json",
+      "sha256": "213167b6ee32a94a74285dc09e462a01d50abae669789ed051264c5d36770d54",
+      "bytes": 4470
+    }
+  ]
+}

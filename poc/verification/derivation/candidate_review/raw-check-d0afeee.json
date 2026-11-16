@@ -1,0 +1,154 @@
+{
+  "status": "PASS",
+  "candidate": "d0afeee9363ef6703f51eecfd742915f83aa27f2",
+  "scope": "raw receipt/signature checks plus independent Stage-A derivation and 03 bytes",
+  "seed": "none (explicit scripts)",
+  "runs": [
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/window-300",
+      "status": "PASS",
+      "headers": 52,
+      "receipts": 6,
+      "derived": 24,
+      "cuts": 1,
+      "frontier": 51,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "3f7b95723ab6de95197b7ce3ab1384a13fe2b5747f47d45eb09e0c69ebc6db57",
+      "head_native_hash": "f5929d2ec343402ebe9ae48f66ed64548477b489c47c0bbce253f52e9ee3e4ea"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/window-650",
+      "status": "PASS",
+      "headers": 52,
+      "receipts": 6,
+      "derived": 24,
+      "cuts": 1,
+      "frontier": 51,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "3f7b95723ab6de95197b7ce3ab1384a13fe2b5747f47d45eb09e0c69ebc6db57",
+      "head_native_hash": "f5929d2ec343402ebe9ae48f66ed64548477b489c47c0bbce253f52e9ee3e4ea"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/ahead-300",
+      "status": "PASS",
+      "headers": 47,
+      "receipts": 8,
+      "derived": 14,
+      "cuts": 3,
+      "frontier": 46,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "6243fed8e1a47a9fa84f753d75fac7e98120200788ad5ab180cfb7f60f5b3495",
+      "head_native_hash": "6b9fda919294574c113bd0a7053d83ca925b9f44a47b262d599e0e521cf61866"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/ahead-650",
+      "status": "PASS",
+      "headers": 47,
+      "receipts": 8,
+      "derived": 14,
+      "cuts": 3,
+      "frontier": 46,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "6243fed8e1a47a9fa84f753d75fac7e98120200788ad5ab180cfb7f60f5b3495",
+      "head_native_hash": "6b9fda919294574c113bd0a7053d83ca925b9f44a47b262d599e0e521cf61866"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/cap-300",
+      "status": "PASS",
+      "headers": 5,
+      "receipts": 6,
+      "derived": 30,
+      "cuts": 1,
+      "frontier": 4,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "38d9d5b0b927a332021c624afe6c5f4a0779c1da914f4ec42d175ce958ee9712",
+      "head_native_hash": "8ed248c872be6061aa37e7c635a35f447474744dc40015bbfab462b78dc9c981"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/cap-650",
+      "status": "PASS",
+      "headers": 5,
+      "receipts": 6,
+      "derived": 30,
+      "cuts": 1,
+      "frontier": 4,
+      "blocked_at": null,
+      "checker_negative_controls": [
+        "changed_native_hash_rejected",
+        "changed_cut_target_rejected",
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "38d9d5b0b927a332021c624afe6c5f4a0779c1da914f4ec42d175ce958ee9712",
+      "head_native_hash": "8ed248c872be6061aa37e7c635a35f447474744dc40015bbfab462b78dc9c981"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-300",
+      "status": "PASS",
+      "headers": 42,
+      "receipts": 7,
+      "derived": 0,
+      "cuts": 0,
+      "frontier": 39,
+      "blocked_at": [
+        40,
+        0,
+        0
+      ],
+      "checker_negative_controls": [
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "f02d0c552263142e1f3e638e97bed0a98b9eba9bb3fd0c6cb3cb5bf3c0752c9c",
+      "head_native_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "run": ".build/artifacts/derivation-verifier-d0afeee-run1/accepted_wait-650",
+      "status": "PASS",
+      "headers": 42,
+      "receipts": 7,
+      "derived": 0,
+      "cuts": 0,
+      "frontier": 39,
+      "blocked_at": [
+        40,
+        0,
+        0
+      ],
+      "checker_negative_controls": [
+        "missing_receipt_rejected"
+      ],
+      "source_sha256": "f02d0c552263142e1f3e638e97bed0a98b9eba9bb3fd0c6cb3cb5bf3c0752c9c",
+      "head_native_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  ],
+  "limits": [
+    "trusted private Anvil RPC; no Ethereum proof verification",
+    "accepted opaque payload tests Stage-A gate only",
+    "no feature-11 decoding or DA persistence",
+    "no BFT process recovery"
+  ]
+}
