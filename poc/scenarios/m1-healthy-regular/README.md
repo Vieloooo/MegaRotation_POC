@@ -2,6 +2,18 @@
 
 本目录实现冻结合同 M1-HARNESS-1 的机械准备阶段。当前 `preflight` 和 `run` 对有效准备包返回退出码 3 与 `NOT_RUN`。离线 checker 可给出 `BundleIntegrity=PASS`，协议 gates 和总状态保持 `NOT_RUN`。 [冻结合同](../../docs/contracts/m1-healthy-regular-harness-v1.md)
 
+## 运行健康满窗口 smoke
+
+在干净的 `codex/poc-m1-regular` 候选上，从现有 M1 worktree 执行。固定 seed 42，使用 M1 数据盘 Cargo 缓存。每次指定新的输出目录。
+
+```bash
+/home/jy/miniconda3/bin/python3 -B poc/scenarios/m1-healthy-regular/run.py smoke \
+  --candidate "$(git rev-parse HEAD)" \
+  --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/healthy-smoke-seed42-repro
+```
+
+`smoke` 构建锁定版本并运行 15 个独立 worker，记录源版本、二进制 hash、命令和原始事件。证据包入口为 `manifest.json`、`manifest.sha256`、`raw/trace.jsonl` 和 `raw/frames.bin`。运行退出码与独立检查结果分开记录。健康路径的成功终点是 h21 经 Publisher 和 SimEspresso 进入 G。 [健康 smoke 合同](../../docs/contracts/m1-healthy-smoke-v1.md)
+
 ## 准备输入并运行
 
 在干净的命名候选 checkout 根目录执行。需要 Python 3.11+ 和 Git。默认版本探针使用 xuelab 上固定的 Rust 1.95.0 工具目录。可用 `REGIONAL_BFT_RUST_BIN` 指定另一个安装同版本的目录。正式准备数据位于合同指定的数据盘。本例使用 `/tmp`。

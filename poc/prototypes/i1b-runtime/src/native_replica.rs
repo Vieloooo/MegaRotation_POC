@@ -2,7 +2,7 @@ use crate::{
     ControlledDriver, Error, Event, Id, Result,
     driver::ArchiveAuthority,
     native_application::{App, AppAudit, Archive, Block},
-    native_config::{Launch, NativeScheme, PARTITION, RecoveryLaunch, Resolved},
+    native_config::{Launch, NativeScheme, RecoveryLaunch, Resolved},
     native_elector::MemberElector,
     native_network::{self, Ingress, NativeRx, Network, NetworkAudit, PacketFactory},
     native_recovery::{
@@ -37,6 +37,8 @@ use commonware_runtime::{
 };
 use commonware_utils::{NZDuration, NZUsize};
 use prost::Message;
+use rand_chacha::ChaCha20Rng;
+use rand_core::SeedableRng;
 use serde::Serialize;
 use std::{
     fs::File,
@@ -67,7 +69,7 @@ struct RecoveryGrant<'a> {
     )>,
 }
 
-struct Replica {
+pub(crate) struct Replica {
     config: Arc<Resolved>,
     node: u32,
     incarnation: u64,
@@ -81,6 +83,7 @@ struct Replica {
     out: Arc<Mutex<Vec<Envelope>>>,
     audit: Arc<Mutex<Vec<NetworkAudit>>>,
     sign: Arc<Mutex<Vec<SignAudit>>>,
+    prepared_ack: bool,
 }
 #[derive(Serialize)]
 struct ApplicationEvents {
@@ -90,7 +93,7 @@ struct ApplicationEvents {
 }
 
 impl Replica {
-    fn new(config: Arc<Resolved>, node: u32, native: NativeScheme) -> Result<Self> {
+    pub(crate) fn new(config: Arc<Resolved>, node: u32, native: NativeScheme) -> Result<Self> {
         let keys = config.public_keys()?;
         let (ingress, receive) = native_network::channels();
         Ok(Self {
@@ -107,7 +110,11 @@ impl Replica {
             out: Arc::default(),
             audit: Arc::default(),
             sign: Arc::default(),
+            prepared_ack: false,
         })
+    }
+    pub(crate) fn prepare_normal(&mut self, material: crate::m1_smoke::profile::ReadyMaterial) {
+        self.archive.lock().unwrap().prepare_normal(material);
     }
     fn start(&mut self, driver: &mut ControlledDriver) -> Result<()> {
         self.start_engine(driver, None)
@@ -143,6 +150,11 @@ impl Replica {
                 config.members[node as usize].signer_index,
                 sign,
             );
+            let scheme = if config.m1_region.is_some() {
+                scheme.with_m1_bounds()
+            } else {
+                scheme
+            };
             let recovery_store = recovery.as_ref().map(|hooks| hooks.store.clone());
             let application = App::new(context.child("application"), archive, network.clone())
                 .with_recovery(recovery_store);
@@ -157,7 +169,7 @@ impl Replica {
                 relay: application.clone(),
                 reporter: application.clone(),
                 strategy: Sequential,
-                partition: PARTITION.into(),
+                partition: config.partition(),
                 mailbox_size: NZUsize!(64),
                 epoch: Epoch::new(config.base.epoch),
                 floor: Floor::Genesis(Digest(config.genesis)),
@@ -253,6 +265,30 @@ impl Replica {
         });
         if channel == Channel::Body {
             return self.deliver_body(authority, envelope);
+        }
+        if self.config.m1_region.is_some()
+            && channel == Channel::Vote
+            && let Ok(native_network::RawVote::Notarize(vote)) =
+                native_network::decode_vote(&envelope.payload_bytes)
+        {
+            let view = vote.proposal.round.view().get();
+            let claimed = envelope.src_member_id;
+            if (1..=crate::m1_smoke::profile::VIEW_MAX).contains(&view)
+                && vote.proposal.round.epoch().get() == self.config.base.epoch
+                && u64::from(claimed) == (view - 1) % 5
+                && vote.attestation.signer.get()
+                    == self.config.members[claimed as usize].signer_index
+                && vote.verify(
+                    &mut ChaCha20Rng::from_seed(self.config.namespace),
+                    &self.config.verifier()?,
+                    &Sequential,
+                )
+            {
+                self.archive
+                    .lock()
+                    .unwrap()
+                    .note_proposal(view, vote.proposal.payload.0);
+            }
         }
         if channel == Channel::Certificate {
             let verifier = self.config.verifier()?;
@@ -406,7 +442,11 @@ impl Replica {
         }
         Ok(())
     }
-    async fn step(&mut self, driver: &mut ControlledDriver, grant: &proto::Grant) -> Result<Ack> {
+    pub(crate) async fn step(
+        &mut self,
+        driver: &mut ControlledDriver,
+        grant: &proto::Grant,
+    ) -> Result<Ack> {
         self.step_controlled(driver, grant, None).await
     }
     async fn step_controlled(
@@ -461,6 +501,7 @@ impl Replica {
         };
         let mut rejected = false;
         let mut started = false;
+        let mut prepared = false;
         self.archive.lock().unwrap().tick = grant.tick_us;
         let step = driver
             .grant_async(
@@ -471,9 +512,16 @@ impl Replica {
                 input,
                 |driver| {
                     let authority = driver.archive_authority(cid);
+                    if self.config.m1_region.is_some() {
+                        let local = driver.native_manager_time(cid).ok();
+                        self.archive.lock().unwrap().normal_clock(local)?;
+                    }
                     match action {
                         Some(input::Kind::Start(start)) => {
-                            if start != self.config.start() || !driver.native_clock_ready() {
+                            if start != self.config.start()
+                                || !driver.native_clock_ready()
+                                || (self.config.m1_region.is_some() && !self.prepared_ack)
+                            {
                                 return Err(Error(
                                     "native start before calibrated readiness or wrong fixture",
                                 ));
@@ -530,6 +578,9 @@ impl Replica {
                                 recovery.as_ref().and_then(|r| r.release)
                             {
                                 fence.release(writer, receipt)?;
+                            } else if self.config.m1_region.is_some() && !self.prepared_ack {
+                                self.prepared_ack = true;
+                                prepared = true;
                             } else {
                                 self.stage_stress(grant.tick_us)?;
                             }
@@ -544,6 +595,15 @@ impl Replica {
             )
             .await?;
         let mut effects = Vec::new();
+        if prepared {
+            effects.push(Effect {
+                kind: Some(effect::Kind::Lifecycle(Lifecycle {
+                    cid: cid.to_vec(),
+                    event: "prepared".into(),
+                    reason: "verified_execution_anchor".into(),
+                })),
+            });
+        }
         if started {
             effects.push(Effect {
                 kind: Some(effect::Kind::Lifecycle(Lifecycle {
@@ -1466,7 +1526,7 @@ mod recovery_tests {
         assert!(initial_step.events.iter().any(|event| matches!(event,
             Event::TimerArmed {timer} if timer.deadline_us == original_deadline)));
         assert!(directory.is_dir());
-        assert!(!directory.join(PARTITION).exists());
+        assert!(!directory.join(crate::native_config::PARTITION).exists());
         let opened = RecoveryLedger::open(&root, identity, receipt, None).unwrap();
         let names = opened
             .records()

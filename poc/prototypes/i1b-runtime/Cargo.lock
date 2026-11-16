@@ -2201,6 +2201,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "poc-authorization"
+version = "0.1.0"
+dependencies = [
+ "commonware-codec",
+ "commonware-cryptography",
+ "commonware-utils",
+ "curve25519-dalek",
+ "poc-types",
+]
+
+[[package]]
+name = "poc-core"
+version = "0.1.0"
+dependencies = [
+ "poc-types",
+]
+
+[[package]]
 name = "poc-native-runtime"
 version = "0.1.0"
 dependencies = [
@@ -2216,6 +2234,13 @@ dependencies = [
  "commonware-utils",
  "futures",
  "governor",
+ "poc-authorization",
+ "poc-core",
+ "poc-publication-bridge",
+ "poc-publisher",
+ "poc-session-manager",
+ "poc-types",
+ "poc-viewer-gfr",
  "prost",
  "prost-build",
  "protoc-bin-vendored",
@@ -2225,11 +2250,65 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sim-espresso",
  "tokio",
  "tokio-stream",
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
+]
+
+[[package]]
+name = "poc-publication-bridge"
+version = "0.1.0"
+dependencies = [
+ "poc-core",
+ "poc-publisher",
+ "poc-types",
+ "poc-viewer-gfr",
+ "sim-espresso",
+ "sim-transport",
+]
+
+[[package]]
+name = "poc-publisher"
+version = "0.1.0"
+dependencies = [
+ "sim-espresso",
+]
+
+[[package]]
+name = "poc-session-manager"
+version = "0.1.0"
+dependencies = [
+ "poc-core",
+ "poc-types",
+ "poc-viewer-gfr",
+]
+
+[[package]]
+name = "poc-types"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-build",
+ "protoc-bin-vendored",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+]
+
+[[package]]
+name = "poc-viewer-gfr"
+version = "0.1.0"
+dependencies = [
+ "poc-authorization",
+ "poc-core",
+ "poc-types",
+ "sim-espresso",
 ]
 
 [[package]]
@@ -2924,6 +3003,19 @@ checksum = "28d567dcbaf0049cb8ac2608a76cd95ff9e4412e1899d389ee400918ca7537f5"
 dependencies = [
  "digest 0.11.3",
  "rand_core 0.10.1",
+]
+
+[[package]]
+name = "sim-espresso"
+version = "0.1.0"
+
+[[package]]
+name = "sim-transport"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

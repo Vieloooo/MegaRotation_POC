@@ -139,10 +139,13 @@ pub(crate) fn validate_envelope(config: &Resolved, envelope: &Envelope) -> Resul
     let hash32 = |bytes: &[u8]| bytes.len() == 32;
     let valid = match provenance {
         Provenance::Scripted(p) => {
-            envelope.src_member_id >= 2 && hash32(&p.transcript_id) && hash32(&p.entry_id)
+            config.m1_region.is_none()
+                && envelope.src_member_id >= 2
+                && hash32(&p.transcript_id)
+                && hash32(&p.entry_id)
         }
         Provenance::LocalWitness(p) => {
-            envelope.src_member_id < 2
+            (config.m1_region.is_some() || envelope.src_member_id < 2)
                 && matches!(channel, Channel::Vote | Channel::Certificate)
                 && !p.witness_ids.is_empty()
                 && p.witness_ids.iter().all(|v| hash32(v))
@@ -152,7 +155,7 @@ pub(crate) fn validate_envelope(config: &Resolved, envelope: &Envelope) -> Resul
                     .is_some_and(|r| r.sequence > 0 && hash32(&r.hash))
         }
         Provenance::Resolver(p) => {
-            envelope.src_member_id < 2
+            (config.m1_region.is_some() || envelope.src_member_id < 2)
                 && channel == Channel::Resolver
                 && hash32(&p.source_record_id)
         }

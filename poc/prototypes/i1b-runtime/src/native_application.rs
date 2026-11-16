@@ -1,3 +1,4 @@
+use crate::m1_smoke::profile::ReadyMaterial;
 use crate::{
     Error, Id, Result, SimContext, hash_parts,
     native_config::Resolved,
@@ -21,6 +22,7 @@ use commonware_consensus::{
 use commonware_cryptography::{ed25519::PublicKey, sha256::Digest};
 use commonware_p2p::Recipients;
 use commonware_runtime::{Blob, ReadOptions, Spawner, Storage, Supervisor, WriteOptions};
+use poc_types::domain::{CanonicalObject, Hash32, InputStatus, PhysicalBlock};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -55,7 +57,26 @@ impl Block {
             bytes,
         }
     }
+    pub fn from_physical(physical: &PhysicalBlock) -> Result<Self> {
+        use crate::m1_smoke::profile::domain;
+        Ok(Self {
+            digest: physical.digest().map_err(domain)?.into_bytes(),
+            parent: physical.parent.into_bytes(),
+            height: physical.metadata.height,
+            bytes: physical.encode_checked().map_err(domain)?,
+        })
+    }
     pub fn read(config: &Resolved, bytes: &[u8]) -> Result<Self> {
+        if config.m1_region.is_some() {
+            let physical =
+                PhysicalBlock::decode(bytes).map_err(crate::m1_smoke::profile::domain)?;
+            if physical.metadata.height > config.base.height_limit
+                || physical.metadata.height < config.base.height_limit - 9
+            {
+                return Err(Error("physical block outside M1 window"));
+            }
+            return Self::from_physical(&physical);
+        }
         if bytes.len() != 333
             || bytes[0] != 1
             || bytes[1..33] != config.cid
@@ -108,6 +129,11 @@ pub(crate) enum AppAudit {
     Persisted {
         digest: Id,
         height: u64,
+    },
+    ProposalReceived {
+        view: u64,
+        digest: Id,
+        local_time_us: i64,
     },
     BlockReceived {
         digest: Id,
@@ -172,6 +198,7 @@ enum Target {
     Certify { digest: Id },
 }
 enum Availability {
+    Wait,
     Pending(Id),
     Invalid,
     Ready(Block),
@@ -193,6 +220,10 @@ pub(crate) struct Archive {
     work_generation: u64,
     pub events: Vec<AppAudit>,
     pub effects: Vec<Effect>,
+    normal: Option<ReadyMaterial>,
+    local_now: Option<i64>,
+    first_received: BTreeMap<(u64, Id), i64>,
+    start_height: u64,
 }
 
 impl Archive {
@@ -213,7 +244,83 @@ impl Archive {
             work_generation: 0,
             events: vec![],
             effects: vec![],
+            normal: None,
+            local_now: None,
+            first_received: BTreeMap::new(),
+            start_height: 1,
         }
+    }
+    pub fn prepare_normal(&mut self, material: ReadyMaterial) {
+        self.height = material.execution.anchor.block.height;
+        self.start_height = self.height + 1;
+        self.normal = Some(material);
+    }
+
+    pub fn normal_clock(&mut self, local_now: Option<i64>) -> Result<()> {
+        self.local_now = local_now;
+        if let Some(material) = self.normal.as_mut() {
+            material.refresh(self.tick)?;
+            self.deliver_ready();
+        }
+        Ok(())
+    }
+
+    pub fn note_proposal(&mut self, view: u64, digest: Id) {
+        if self.normal.is_some()
+            && let Some(local_time_us) = self.local_now
+            && let std::collections::btree_map::Entry::Vacant(entry) =
+                self.first_received.entry((view, digest))
+        {
+            entry.insert(local_time_us);
+            self.events.push(AppAudit::ProposalReceived {
+                view,
+                digest,
+                local_time_us,
+            });
+        }
+    }
+
+    fn physical_ancestry(&self, mut digest: Id) -> Result<Vec<PhysicalBlock>> {
+        let mut chain = Vec::new();
+        while digest != self.config.genesis {
+            let block = self
+                .blocks
+                .get(&digest)
+                .ok_or(Error("M1 ancestry body unavailable"))?;
+            chain.push(
+                PhysicalBlock::decode(&block.bytes).map_err(crate::m1_smoke::profile::domain)?,
+            );
+            digest = block.parent;
+        }
+        chain.reverse();
+        Ok(chain)
+    }
+
+    fn decision(&self, pending: &Pending) -> Availability {
+        let availability = self.availability(&pending.target);
+        if let (Some(normal), Target::Verify { digest, .. }, Availability::Ready(body)) =
+            (&self.normal, &pending.target, &availability)
+        {
+            let Some(first) = self
+                .first_received
+                .get(&(pending.binding.view, *digest))
+                .copied()
+            else {
+                return Availability::Wait;
+            };
+            let timestamp = normal.timestamp(body.height).expect("M1 bounded height") as i64;
+            let deadline = normal
+                .timestamp(body.height + 1)
+                .expect("M1 bounded height") as i64
+                + normal.metadata_window_us();
+            if first < timestamp - 2_000 || first >= deadline || first >= self.config.base.stop {
+                return Availability::Invalid;
+            }
+            if self.local_now.is_none_or(|now| now < timestamp) {
+                return Availability::Wait;
+            }
+        }
+        availability
     }
     pub(crate) fn live_recovered_work(&self, id: Id) -> bool {
         self.pending
@@ -256,7 +363,7 @@ impl Archive {
         match target {
             Target::Build { parent, .. } => {
                 let parent_height = if *parent == self.config.genesis {
-                    0
+                    self.start_height - 1
                 } else {
                     match self.ancestry(*parent) {
                         Availability::Ready(b) => b.height,
@@ -265,6 +372,31 @@ impl Archive {
                 };
                 if parent_height >= self.config.base.height_limit {
                     return Availability::Invalid;
+                }
+                if let Some(normal) = &self.normal {
+                    let height = parent_height + 1;
+                    let timestamp = normal.timestamp(height).expect("M1 bounded height") as i64;
+                    let Some(now) = self.local_now else {
+                        return Availability::Wait;
+                    };
+                    if now < timestamp {
+                        return Availability::Wait;
+                    }
+                    if now >= self.config.base.stop
+                        || now >= normal.timestamp(height + 1).expect("M1 bounded height") as i64
+                    {
+                        return Availability::Invalid;
+                    }
+                    let ancestry = self
+                        .physical_ancestry(*parent)
+                        .expect("available M1 parent chain");
+                    return match normal.build(&ancestry, Hash32::new(*parent), height) {
+                        InputStatus::Ready(physical) => Availability::Ready(
+                            Block::from_physical(&physical).expect("canonical M1 build"),
+                        ),
+                        InputStatus::Wait(_) => Availability::Wait,
+                        InputStatus::Reject(_) => Availability::Invalid,
+                    };
                 }
                 Availability::Ready(Block::new(self.config.cid, parent_height + 1, *parent))
             }
@@ -281,12 +413,21 @@ impl Archive {
         };
         let mut cursor = tip;
         loop {
-            if cursor.height == 1 {
-                return if cursor.parent == self.config.genesis {
-                    Availability::Ready(tip.clone())
-                } else {
-                    Availability::Invalid
-                };
+            if cursor.height == self.start_height {
+                if cursor.parent != self.config.genesis {
+                    return Availability::Invalid;
+                }
+                if let Some(normal) = &self.normal {
+                    let chain = self
+                        .physical_ancestry(digest)
+                        .expect("connected M1 ancestry");
+                    return match normal.execution(&chain) {
+                        InputStatus::Ready(_) => Availability::Ready(tip.clone()),
+                        InputStatus::Wait(_) => Availability::Wait,
+                        InputStatus::Reject(_) => Availability::Invalid,
+                    };
+                }
+                return Availability::Ready(tip.clone());
             }
             let Some(parent) = self.blocks.get(&cursor.parent) else {
                 return Availability::Pending(cursor.parent);
@@ -305,6 +446,9 @@ impl Archive {
         target: Target,
         complete: oneshot::Sender<Option<Block>>,
     ) -> WorkBinding {
+        if let Target::Verify { digest, .. } = &target {
+            self.note_proposal(round.view().get(), *digest);
+        }
         let zero = [0; 32];
         let (parent_view, parent_digest, requested_payload) = match target {
             Target::Build { parent, view } => (view, parent, zero),
@@ -377,8 +521,8 @@ impl Archive {
                 let p = self.pending.remove(&id).unwrap();
                 self.discarded(p, "abandoned_consumer");
             } else if p.due.is_none() {
-                let (body_digest, body_parent) = match self.availability(&p.target) {
-                    Availability::Pending(_) => continue,
+                let (body_digest, body_parent) = match self.decision(p) {
+                    Availability::Pending(_) | Availability::Wait => continue,
                     Availability::Ready(block) => (Some(block.digest), Some(block.parent)),
                     Availability::Invalid => (None, None),
                 };
@@ -444,10 +588,12 @@ impl Archive {
             self.discarded(p, "inactive_or_abandoned");
             return Ok(());
         }
-        let value = match self.availability(&p.target) {
+        let value = match self.decision(&p) {
             Availability::Ready(block) => Some(block),
             Availability::Invalid => None,
-            Availability::Pending(_) => return Err(Error("ready work lost required input")),
+            Availability::Pending(_) | Availability::Wait => {
+                return Err(Error("ready work lost required input"));
+            }
         };
         let native_parent_view = value.as_ref().and_then(|body| {
             self.native_parents
@@ -499,6 +645,12 @@ impl Archive {
             return;
         };
         let digest = finalized.proposal.payload.0;
+        if self.normal.is_some()
+            && !(1..=crate::m1_smoke::profile::VIEW_MAX)
+                .contains(&finalized.proposal.round.view().get())
+        {
+            return;
+        }
         let proof = ProofObserved {
             cid: self.config.cid.to_vec(),
             epoch: finalized.proposal.round.epoch().get(),
@@ -792,8 +944,16 @@ impl App {
         if self.archive.lock().unwrap().durable.contains(&block.digest) {
             return;
         }
+        let partition = {
+            let archive = self.archive.lock().unwrap();
+            if archive.normal.is_some() {
+                format!("normal-v1-body-{}", poc_types::hex(&archive.config.cid))
+            } else {
+                "body-fixture".into()
+            }
+        };
         let (blob, len) = context
-            .open("body-fixture", &block.digest)
+            .open(&partition, &block.digest)
             .await
             .expect("open fixture body");
         if len == 0 {

@@ -30,6 +30,7 @@ pub(crate) struct GuardedScheme {
     cid: Id,
     epoch: u64,
     signer: u32,
+    last_view: u64,
     cache: Arc<Mutex<BTreeMap<Coordinates, Signed>>>,
     audits: Arc<Mutex<Vec<SignAudit>>>,
 }
@@ -58,9 +59,14 @@ impl GuardedScheme {
             cid,
             epoch,
             signer,
+            last_view: 8,
             cache: Arc::default(),
             audits,
         }
+    }
+    pub fn with_m1_bounds(mut self) -> Self {
+        self.last_view = crate::m1_smoke::profile::VIEW_MAX;
+        self
     }
     fn native_attestation(a: &Attestation<Self>) -> Attestation<NativeScheme> {
         Attestation {
@@ -149,7 +155,7 @@ impl Scheme for GuardedScheme {
         let (action, value) = if access.is_err()
             || key.1 != self.epoch
             || self.scope.cid != self.cid
-            || !(1..=8).contains(&key.2)
+            || !(1..=self.last_view).contains(&key.2)
         {
             reason = "unsafe_clock_scope_or_round";
             (SignAction::Denied, None)
@@ -190,7 +196,7 @@ impl Scheme for GuardedScheme {
             local_stop_us: snapshot.local_stop_us.unwrap_or_default(),
             reason: reason.into(),
         });
-        if reason == "conflicting_subject" || !(1..=8).contains(&key.2) {
+        if reason == "conflicting_subject" || !(1..=self.last_view).contains(&key.2) {
             panic!("native signing fixture violated: {reason}");
         }
         value.map(Self::guarded)

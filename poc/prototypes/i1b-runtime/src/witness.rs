@@ -150,6 +150,57 @@ impl WitnessPolicy {
         })
     }
 
+    pub(crate) fn new_m1(
+        config: WitnessConfig,
+        members: &[WitnessMember],
+        registry_hash: Id,
+        namespace_hash: Id,
+        local_signer: u32,
+    ) -> Result<Self> {
+        require(
+            config.epoch == 1
+                && config.generation == 1
+                && config
+                    .sections
+                    .iter()
+                    .copied()
+                    .eq(1..=crate::m1_smoke::profile::VIEW_MAX)
+                && config.partition == format!("normal-v1-voter-{}", poc_types::hex(&config.cid))
+                && config.worker < 15
+                && config.worker % 5 == config.member
+                && members.iter().map(|member| member.member).eq(0..5),
+            "invalid M1 witness scope",
+        )?;
+        let mut entries = Vec::new();
+        for member in members {
+            ops::verify_proof_of_possession::<MinSig>(
+                &member.bls_key,
+                poc_authorization::POP_NAMESPACE,
+                &member.pop,
+            )
+            .map_err(|_| Error("invalid M1 witness proof of possession"))?;
+            entries.push((member.key.clone(), member.bls_key.clone()));
+        }
+        let registry = BiMap::try_from(entries).map_err(|_| Error("duplicate M1 witness key"))?;
+        let index = registry
+            .keys()
+            .index(&members[config.member as usize].key)
+            .ok_or(Error("missing M1 witness local key"))?;
+        require(
+            index.get() == local_signer,
+            "M1 witness signer-order mismatch",
+        )?;
+        Ok(Self {
+            seal: PolicySeal {
+                config,
+                registry_hash,
+                namespace_hash,
+                local_signer,
+            },
+            scheme: NativeScheme::verifier(&namespace_hash, registry),
+        })
+    }
+
     pub fn seal(&self) -> &PolicySeal {
         &self.seal
     }

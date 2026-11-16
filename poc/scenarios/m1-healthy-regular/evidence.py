@@ -592,7 +592,7 @@ def verify_tree(entries, object_id, path):
     require(git_object_id("tree", body) == object_id, f"Git tree object ID mismatch: {path}")
 
 
-def candidate_sources(candidate, commit, root_tree, poc_tree):
+def candidate_sources(candidate, commit, root_tree, poc_tree, *, additional=()):
     require(git_object_id("commit", commit) == candidate, "Git commit object ID mismatch")
     header = re.fullmatch(rb"tree ([0-9a-f]{40})", commit.partition(b"\n")[0])
     require(header is not None, "Git commit is missing its root tree ID")
@@ -617,11 +617,12 @@ def candidate_sources(candidate, commit, root_tree, poc_tree):
     sources = {}
     for raw_path, (mode, object_id) in poc.items():
         path = os.fsdecode(raw_path)
-        if path in SOURCES or PurePosixPath(path).name in ("Cargo.toml", "Cargo.lock") or path.endswith(".proto"):
+        if (path in SOURCES or path in additional or
+                PurePosixPath(path).name in ("Cargo.toml", "Cargo.lock") or path.endswith(".proto")):
             relative(path)
             require(mode in (b"100644", b"100755"), f"{path}: expected tracked regular source")
             sources[path] = object_id
-    require(set(SOURCES + LOCKS) <= sources.keys(), "missing required candidate source")
+    require(set(SOURCES + LOCKS + tuple(additional)) <= sources.keys(), "missing required candidate source")
     return sources
 
 

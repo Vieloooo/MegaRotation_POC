@@ -3,6 +3,7 @@
 mod clock;
 mod context;
 mod driver;
+pub mod m1_smoke;
 mod native_application;
 mod native_config;
 mod native_elector;

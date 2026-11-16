@@ -23,6 +23,7 @@ pub(crate) type NativeScheme = bls12381_multisig::Scheme<PublicKey, MinSig>;
 pub(crate) const START: u64 = 1_000_000;
 pub(crate) const STOP: i64 = 1_800_000;
 pub(crate) const CUTOFF: u64 = 1_900_000;
+pub(crate) const M1_PROFILE: &str = "m1-healthy-native-v1";
 pub(crate) const PROFILE: &str = "native-engine-fresh-v1";
 pub(crate) const RECOVERY_PROFILE: &str = "native-recovery-v1";
 pub(crate) const WORK_US: u64 = 5_000;
@@ -106,6 +107,8 @@ pub(crate) struct Resolved {
     pub namespace: Id,
     pub native_config_hash: Id,
     pub app_fixture_hash: Id,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub m1_region: Option<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -284,7 +287,92 @@ impl Resolved {
             namespace,
             native_config_hash,
             app_fixture_hash,
+            m1_region: None,
         })
+    }
+
+    pub fn normal(
+        plans: &poc_authorization::StaticScheduleProvider,
+        descriptor: &poc_types::domain::Descriptor,
+    ) -> Result<Self> {
+        use crate::m1_smoke::profile as m1;
+        use poc_types::domain::{CanonicalObject, Pid};
+        plans.validate_descriptor(descriptor).map_err(err)?;
+        let registry = plans.registry();
+        let region = descriptor.plan.region.get();
+        let config_ref = plans.config_ref();
+        let mut members = Vec::new();
+        for member in 0..5u8 {
+            let pid = Pid::new(region * 5 + member).map_err(err)?;
+            let entry = registry.entry(pid);
+            members.push(PublicMember {
+                member: u32::from(member),
+                identity: entry.identity_key.to_vec(),
+                bls_key: entry.vote_key.to_vec(),
+                pop: entry.pop.to_vec(),
+                signer_index: u32::from(registry.signer_index(pid).get()),
+            });
+        }
+        let (old, _) = Self::generate("healthy", m1::SEED)?;
+        let mut base = old.base;
+        base.scenario = "full-window".into();
+        base.profile = M1_PROFILE.into();
+        base.registry_hash = registry.digest().into_bytes();
+        base.start = m1::START_US;
+        base.height_limit = descriptor.plan.window.h_max;
+        base.stop = i64::try_from(
+            poc_core::metadata::l2_timestamp_us(plans.config(), base.height_limit + 1)
+                .map_err(err)?,
+        )
+        .map_err(err)?;
+        base.cutoff = m1::CUT_US;
+        base.scripted = false;
+        base.link_delay = m1::LINK_US;
+        base.refresh = m1::REFRESH_US;
+        base.lease = m1::LEASE_US;
+        base.clock_transit = m1::CLOCK_TRANSIT_US;
+        base.work_us = m1::WORK_US;
+        base.startup_skew = m1::STARTUP_SKEW_US;
+        base.fetch_retry = 30_000;
+        base.leader_timeout = 1_500_000;
+        base.certification_timeout = 1_600_000;
+        base.timeout_retry = 1_500_000;
+        base.view_retention = m1::VIEW_MAX;
+        base.quota_per_second = 1024;
+        let config_hash = hash_parts(b"PoC/M1/runtime/v1", &[config_ref.as_bytes()]);
+        let run_id = hash_parts(b"PoC/M1/run/v1", &[&config_hash, &m1::SEED.to_be_bytes()]);
+        let cid = *descriptor.cid.as_bytes();
+        let namespace = m1::namespace(descriptor);
+        let native_config_hash =
+            hash_parts(b"PoC/M1/native-config/v1", &[&config_hash, &namespace]);
+        let app_fixture_hash = hash_parts(
+            b"PoC/M1/app/v1",
+            &[&descriptor.encode_checked().map_err(err)?, &config_hash],
+        );
+        Ok(Self {
+            base,
+            members,
+            config_hash,
+            run_id,
+            genesis: descriptor.anchor.block.block_id.into_bytes(),
+            cid,
+            namespace,
+            native_config_hash,
+            app_fixture_hash,
+            m1_region: Some(region),
+        })
+    }
+
+    pub fn partition(&self) -> String {
+        match self.m1_region {
+            Some(_) => format!("normal-v1-voter-{}", poc_types::hex(&self.cid)),
+            None => PARTITION.into(),
+        }
+    }
+
+    pub fn public_pid(&self, member: u32) -> u32 {
+        self.m1_region
+            .map_or(member, |region| u32::from(region) * 5 + member)
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -369,6 +457,25 @@ impl Resolved {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        if self.m1_region.is_some() {
+            return WitnessPolicy::new_m1(
+                WitnessConfig {
+                    run_id: self.run_id,
+                    config_hash: self.config_hash,
+                    cid: self.cid,
+                    worker: self.public_pid(node),
+                    member: node,
+                    epoch: self.base.epoch,
+                    generation: 1,
+                    partition: self.partition(),
+                    sections: (1..=crate::m1_smoke::profile::VIEW_MAX).collect(),
+                },
+                &members,
+                self.base.registry_hash,
+                self.namespace,
+                self.members[node as usize].signer_index,
+            );
+        }
         WitnessPolicy::new(
             WitnessConfig {
                 run_id: self.run_id,
@@ -389,9 +496,12 @@ impl Resolved {
             run_id: self.run_id,
             config_hash: self.config_hash,
             run_seed: self.base.seed,
-            node,
+            node: self.public_pid(node),
             incarnation: 1,
-            epsilon_us: self.base.epsilon[node as usize],
+            epsilon_us: self.m1_region.map_or_else(
+                || self.base.epsilon[node as usize],
+                |_| [-1000, -500, 0, 500, 1000][node as usize],
+            ),
         }
     }
     pub fn binding(&self, node: u32) -> Binding {
@@ -399,7 +509,7 @@ impl Resolved {
             schema_version: 1,
             run_id: self.run_id.to_vec(),
             config_hash: self.config_hash.to_vec(),
-            worker_id: node,
+            worker_id: self.public_pid(node),
             member_id: node,
             incarnation: 1,
         }
