@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "source_revision": "75b574d40930b7c9c748a4c6b6e381117c937537",
+  "random_seed": 1112753713,
+  "positive_frames": 70,
+  "negative_frames": 19,
+  "all_truncated_prefixes_rejected": 9011,
+  "max_payload": 47175,
+  "signature_mutations": 22,
+  "malformed_signature_checks": 13,
+  "production_signatures_independently_recovered": 2,
+  "calldata_bytes_independently_matched": 1060,
+  "consumer_output_sha256": "c8b63a6427ec5fe0e8fb1660712426582e75f67bc7889a22ee28fc5d27ad9217",
+  "signer": "0x02ceca79a23029a1ce53653599a45cfc6b0b0436"
+}
