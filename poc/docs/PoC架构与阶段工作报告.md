@@ -1,160 +1,199 @@
-# Sequencer Rotation PoC：架构与阶段工作报告
+# Sequencer Rotation PoC v2 架构与实验报告
 
-> **后续验收更新。** 2026-11-16 已验证 seed 42 健康满窗口轮转。15 个真实 worker 完成两次 GFR 接棒，R2 的 h21 进入 `G`。下文记录验收前的工作快照。[M1 结果](milestones/results/M1-healthy-smoke-result-zh.md)
+2026-11-16 · 运行实现与 M2 复跑以 `ea4d853bd8b62ee04c4e8e470550648242073950` 为准。本地 `main` 在审阅期间前进到 `8a80e5a051fed08d92979c506ed4d634f369555e`，该提交增加 M2 离线回放。每项结果保留原运行提交。时间表用秒显示，原始记录以整数微秒保存。
 
-**状态快照：2026-11-16。** 本文供项目负责人了解阶段成果，也供开发者理解系统如何运行。文中“目标”表示设计或近期验收目标；“组件已交付”表示已有独立实现和有限验证；“端到端通过”必须有完整场景证据。三者不能互相替代。
+## 1. 阶段成果
 
-## 1. 给负责人的一页说明
+单机 PoC 已用 **15 个真实 OS worker** 跑通两条基于真实 Simplex 证书的路径。**M1 健康满窗口**在 R0 的 h10 和 R1 的 h20 被全局链 `G` 接纳时完成两次 Regular 接棒，R2 的 h21 在虚拟 **31.085 s** 进入 `G`。**M2 健康主动 Force**在 15 个 worker 持续运行时，经真实 Anvil 合约收录控制交易，在公开键 **22.000 s** 激活并保留 h10，R2 的首个实体块 h16 在虚拟 **26.041 s** 进入 `G`。两个场景均有从原始记录独立验签和执行复算的证据。[M1 结果](milestones/results/M1-healthy-smoke-result-zh.md) · [M2 合并版独立报告](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01-independent/report.json)
 
-我们正在构建一个**可重复运行、可注入故障的 Sequencer 轮转验证环境**。目标是在一台服务器上启动 15 个独立节点，分成三个地区、每区五个节点，以区域 BFT 产生的结果驱动跨区轮转。系统同时模拟消息延迟、节点时钟偏差、外部公共日志及控制链，最终验证正常轮转 Regular、治理触发的 Force 和恢复流程 RESUME。
+本阶段把原先双进程的受控运行基础扩到三地区，并接通了真实区域结果、公共发布和职责切换。M1 Regular 和 M2 Force 的离线回放均已合入，Force 页面已通过浏览器验收。M3 自动 Force 已冻结合同和独立预期，历史 policy 向量及 M2 回归入口已提交，正式集成验收待补。M4 和 M5 将加入独立派生链 `D` 与 RESUME。完整 M1 的 SessionEnd、多 seed、错时候选与官方 Espresso 同字节读回继续跟踪，完整 I1/I1b 跨崩溃恢复验收仍开放。[M1–M5 实现与验收计划](milestones/M1-M5-implementation-plan-zh.md)
 
-这一阶段的主要工作是先把底座做成可控制、可检查的系统：
+已记录的时间点来自固定场景的虚拟时间，可以在同一条轨迹里计算阶段间隔。正式的 handoff 延迟、吞吐和真实跨地区网络 benchmark 尚未执行，本报告不提供这类数据。
 
-1. 建立统一的虚拟时间和消息调度，让独立进程的输入、输出、计时器和持久化都有可审计的顺序。
-2. 将真实 Commonware Simplex 引擎接入受控环境，完成小规模真实进程与脚本成员混合的重复运行。
-3. 完成静态授权与执行、模拟传输、Publisher/SimEspresso、GFR、L1 接入及官方 Espresso 本地 API 适配等组件，并合并为 M0 基础；各组件的验证范围不同。
-4. 正在将组件接成 15 个真实健康节点的 Regular 全链路（M1）；下一步是健康节点下由可信治理方主动触发的 Force（M2）。
+## 2. 单机运行架构
 
-**当前还没有 15 真实节点轮转的端到端通过证据，也没有 handoff 延迟或吞吐 benchmark。** 已有的有限实验支持“底座和部分组件具备可重放性”，不能推出跨区交接已经完成，更不能作为生产性能结论。完整 I1/I1b 和崩溃恢复验收仍开放；为加快 M1/M2，恢复、D/RESUME、批次/DA 和 Web 暂不作为这两个里程碑的前置。
+三区各有五个等权 replica，节点编号分别为 R0 的 0–4、R1 的 5–9、R2 的 10–14。每个区域证书需要四个不同的合法 BLS signer。节点以独立子进程运行，各自持有签名身份、Simplex、协议时钟和本地持久记录。M1/M2 用静态授权模拟 staking。选区按 `(β+r) mod 3`，区内 leader 按 `(view−1) mod 5` 轮转。Session 的十个连续高度与 Simplex 的 view 分别计数。[PoC v2 设计](../../formalization_v10/poc_design_zh_v2.md)
 
-## 2. 我们要验证什么
-
-Sequencer 需要在不同地区的委员会之间接续区块生产。PoC 关注的不是比较 BFT 算法性能，而是验证：在节点进入时间不同、消息延迟及外部公开进度不同的情况下，系统能否按公共规则决定哪个 session 生效，并从一个地区安全地接续到下一个地区。
-
-- **Regular**：按既定窗口和公开结果正常轮转，例如 R0 → R1 → R2。
-- **Force**：由可信治理方提交控制动作，按公开规则结束旧分支并启动新分支；近期 M2 先验证健康节点下主动触发，不要求自动检测故障。
-- **RESUME**：基于符合规则的恢复切面重新开始；属于后续工作，不能等同于普通 Force。
-
-每个 session 以 **10 个高度的固定窗口**为基础；窗口有十个高度不意味着故障或延迟下必然产生十个实体区块。P0 使用公开静态规则和等权身份模拟授权，不实现 staking/slashing，也不声称完成形式化证明或生产部署。[设计依据](../../formalization_v10/poc_design_zh_v2.md)
-
-## 3. 目标环境：15 个节点和两类外部系统
-
-```mermaid
-flowchart TB
-    H["SimHub：统一虚拟时间、事件调度和受控通信"]
-    subgraph P["单机：15 个独立 worker 进程（目标）"]
-      R0["地区 R0：5 个节点"]
-      R1["地区 R1：5 个节点"]
-      R2["地区 R2：5 个节点"]
-    end
-    H -. "grant / Ack、时间、消息" .-> R0
-    H -. "grant / Ack、时间、消息" .-> R1
-    H -. "grant / Ack、时间、消息" .-> R2
-    R0 & R1 & R2 --> PUB["Publisher：提交区域结果"]
-    PUB --> E["SimEspresso：确定性公共日志"]
-    E --> G["独立 GFR reader：重放并接纳到 G"]
-    G --> M["Session Manager：驱动 session 生命周期"]
-    M -. "下一个地区的准备与进入" .-> R1
-    L["L1 driver + Anvil：控制交易与可见性"] --> G
-    GOV["可信治理方 M"] --> L
-```
-
-**图是目标架构，不是已经运行的完整拓扑。** 近期 M1 使用受控的 finalized L1 fixture，重点接通 Regular、SimEspresso 和 GFR；M2 才把真实 Anvil 控制交易接入 Force。目标系统保留每个节点独立的协议状态、BFT 实例和日志，不能把 15 份共享内存对象当作 15 个进程验收。
-
-| 部分 | 设计与作用 | 当前边界 |
-| --- | --- | --- |
-| 15 个节点 | R0、R1、R2 各 5 个等权 replica；各节点独立准备和进入，不使用“全部同时启动”掩盖时差。 | 15 个真实 worker 的整体场景仍在实现。 |
-| Regional BFT | 使用固定版本 Commonware Simplex 和 BLS 多签；每个五成员委员会采用 4 个不同合法 signer 的 quorum。Regional BFT 子模块提供参考实现和实验基础。 | 现有 native Fresh 是 2 个真实 worker 加最多 3 个脚本签名者；子模块原有 15 成员 benchmark 不等于这里的 3 个独立五成员委员会。 |
-| L1 | 用 Anvil 执行真实 EVM 交易，由 driver 手动出块，并单独建模 finalized 与各观察者的可见性；控制交易支持后续 Force。 | Anvil 手动出块 smoke 已通过；L1 driver/合约已有组件交付，尚未证明完整 Force 联调。 |
-| Espresso | 主验收使用 SimEspresso：由固定输入生成可重放的有序公开日志、时间与覆盖信息。 | Publisher/SimEspresso 等已有组件；尚未用 15 worker 完成主链路。官方本地 dev-node API 已有独立兼容 profile；M1 还需发布并读回该场景真实结果。官方节点的墙钟行为不混入确定性 trace，也不宣称已验证 QC/VID 或完整时序。 |
-
-可把 L1 理解为控制和授权事实的来源，把 Espresso 理解为区域结果的公共发布渠道；GFR 则依据已验证的公共输入，决定全局链 `G` 接纳什么。区域 BFT 最终证明、结果公开完整和进入 `G` 是不同事件，不能把其中一个当成整个 handoff 成功。
-
-## 4. 实现架构：从节点到全局结果
+下面是 **已运行的 smoke 拓扑**。图中 Region 是逻辑划分，15 个子进程都在同一台机器上。
 
 ```mermaid
 flowchart LR
-    A["静态授权与计划\n地区 / 委员会 / leader"] --> S["Session Program\n区域 Simplex + 轻量执行"]
-    S --> F["区域最终证明与完整结果"]
-    F --> P["Publisher"]
-    P --> E["SimEspresso 公共日志"]
-    L["L1 公共控制输入"] --> G["GFR 公共规则重放"]
-    E --> G
-    G --> C["G：已接纳的全局链"]
-    G --> M["Session Manager"]
-    M --> S
+    W["15 个 OS worker<br/>3 区 × 5、Session Program / Simplex"]
+    subgraph H["m1-smoke 父进程"]
+        S["Hub<br/>虚拟时间、调度、模拟链路"]
+        P["Publisher"]
+        E["SimEspresso + 本地 reader"]
+        G["现场 GFR → 全局链 G"]
+        M["按 worker 保存的 15 份 Manager 状态"]
+        L["公共 L1 reader"]
+        P --> E --> G --> M
+        L --> G
+        M --> S
+        S --> P
+    end
+    S -->|"管道 Grant"| W
+    W -->|"持久化后回 Ack，包含区域证明和交付"| S
+    F["M1：finalized L1 fixture"] --> L
+    A["M2：真实 Anvil + L1 driver<br/>模拟 finality / 交付"] --> L
+    G -. "封存原始证据" .-> C["独立 checker / 离线回放"]
 ```
 
-各层的职责如下：
-
-1. **授权与计划**：P0 使用公开固定规则，而不是读 staking。设计中 `region=(β+r) mod 3`，区内 leader 按 `(v−1) mod 5` 轮转；其中 `β/r` 标识 session，`v` 是 view。各方使用同一 registry、身份和规则，不按“谁先启动”选 leader。静态授权、公共对象及轻量执行已有组件，仍需与真实运行链路接线。
-2. **Session Program / 区域 BFT**：地区内节点运行 Simplex，对区块产生投票和最终证明。原生引擎已在有限 fixture 中运行；面向 15 真实进程的正常运行适配、完整准入和真实证明接线正在实施。
-3. **Publisher 与 SimEspresso**：Publisher 把区域结果与证明送入模拟公共日志；日志提供确定性排序和公开进度，供各 reader 消费。这些已有组件，但仍需连接实际区域结果。
-4. **GFR（Global Finality Rules）**：根据 L1 和 Espresso 公共输入重放规则，决定全局链 `G` 的接纳、结束与下一 session 事件。纯规则组件已交付；真实证明验证及系统接线进行中。缺少必要的公共覆盖或材料时，应等待，而不是由节点本地时钟单方面宣布全局结束。
-5. **Session Manager**：把公开生命周期事件转为各节点创建、准备、进入、暂停或关闭候选 session 的本地动作。M1 所需的最小 Manager 和跨组件连接正在开发。
-6. **后续派生 D 与观察界面**：设计中 D 从 L1/DA 等独立输入派生，而非直接复制 G；Web 用于只读展示状态和轨迹。这些不是 M1/M2 前置，完整链路仍待实现和验收。
-
-## 5. 受控通信：一个节点的一步如何发生
-
-核心做法是把真实进程放在统一的离散事件调度之下。以已验证的 I1a 双进程 fixture 为例：
-
-```mermaid
-sequenceDiagram
-    participant H as SimHub 调度器
-    participant A as Worker A
-    participant B as Worker B
-    H->>A: Grant：交付一个输入或到期事件
-    A->>A: 执行一步，记录状态、签名意图和待输出
-    A->>A: 持久化 step / committed head
-    A-->>H: 完整 Ack：本步效果，如发送或注册 timer
-    H->>H: 校验并提交 Ack，将消息放入受控队列
-    Note over H: 根据场景规则决定虚拟送达时间和顺序
-    H->>B: Grant：交付该消息
-    B-->>H: 持久化后返回完整 Ack
-```
-
-- **输入受控**：Hub 决定哪些消息、计时器、时钟回复和工作完成事件何时交给哪个节点。节点不是各自推进一个互不相干的模拟世界。
-- **输出受控**：节点通过完整 Ack 报告一步产生的效果；Hub 校验并提交之后才安排后续交付。受控路径不允许协议输出绕过 grant/Ack 直接发送。
-- **网络可配置**：根据场景设定链路延迟、抖动、队列、丢失、重复与故障；原生 fixture 区分 BODY、VOTE、CERTIFICATE、RESOLVER 通道，定向队列按其 FIFO 规则处理。请求和响应的延迟可以分开设置。
-- **可恢复和去重**：worker 有自己的持久化记录；重复 grant/Ack 有明确处理，避免同一已提交效果重复生效。真实原生同 `cid` 跨进程恢复还只有有限场景，完整恢复验收仍开放。
-- **可核对**：保存固定 seed、场景配置、虚拟事件轨迹、消息帧、持久化记录和进程诊断。独立检查器检查结果；同一输入在指定的墙钟扰动和启动顺序变化下比较轨迹。
-
-这里的实际 RPC/loopback 是进程之间的承载通道；**仿真网络延迟由调度模型决定**，不能把本机 socket 耗时当作目标网络延迟，也不能把组件通过等同于真实跨地域网络实验。[I1a 实现](i1a-implementation.md) · [原生引擎实现](native-engine-fresh-implementation.md)
-
-## 6. 全局时钟：可重放的时间，不是机器墙钟
-
-| 时间概念 | 含义与使用 |
+| 模块 | 实际职责与接线 |
 | --- | --- |
-| 虚拟参考时间 `τ` | SimHub 维护的仿真时间，也是场景中事件排序和推进的基准。 |
-| 节点协议时钟 `C_m(τ)` | 每个节点根据受控样本维护本地 ClockView；正常 profile 下相对参考时间误差不超过 1 ms。两个节点各在相反边界时，彼此可相差 2 ms。 |
-| RPC 延迟 | 取时请求、响应和网络传递的模拟延迟，是独立变量；RPC 花了多久不能作为时钟同步精度的证明。 |
-| 公共时间/位置 | L1、Espresso 公共输入中的时间和排序位置，用于公共规则；不能与某个节点的本地计时混为一谈。 |
-| 墙钟时间 | 机器实际运行时间，用于进程诊断和测试超时；人为暂停机器执行不应偷偷推进虚拟时间。 |
+| **Session Program / Regional BFT** | 使用 Commonware Simplex 2026.10.0 和 BLS 多签。节点在实际窗口、父链和执行状态上 Build/Accept，签名前核对本地 Clock、租约、stop 与 terminal。区域 Final 与区块正文分别到达，Hub 拿到足够材料后构造完整区域结果。Regional BFT 子模块固定在 `691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6`，历史 15 成员 benchmark 与这里的三个独立委员会使用不同拓扑。 |
+| **Session Manager** | smoke 把 15 份绑定各逻辑 worker 的 Manager 实例放在 **Hub 父进程**。GFR 提交 `ReplayRecord` 后，Hub 按节点调度应用，Manager 持久化对应决定和动作，再经受控步骤送出 Prepare、Enter、Close 等动作。子进程在收到本节点的动作后运行或关闭实际引擎。每节点自己的 Ready/Enter 分开记录。 |
+| **Publisher、SimEspresso、GFR** | 同在 Hub 进程内。持久发布任务携带完整区域证明和正文，SimEspresso 给它确定的 `(q,index,θ)`。本地 reader 收到 finalized 块后，GFR 按公共键重放并验签、验父链和执行。区域 Final、公开完整和进入 `G` 是不同的事件。公共材料缺失时规则返回 `WAIT`。健康 smoke runner 要求预设路径的重放返回 `Ready`，WAIT 后补齐的行为另用规则向量验收。单个节点的本地计时到期只约束该节点，公共 SessionEnd 由 GFR 重放。 |
+| **L1** | M1 的公共 GFR 读取已达到 fixture finalized 时刻的 header 和空控制覆盖。M2 由 Hub 调用 L1 driver，driver 经 loopback 调用真实 Anvil，手动出块并按虚拟时程交付 finalized 前缀。现场 GFR 消费 reader A，reader B 有独立、较慢的 L1 交付。worker 的执行元数据仍使用按 Grant tick 暴露的高度/时间戳 fixture 投影，M2 在 Hub 核对投影可见上界的高度与时间戳在 A 的真实前缀中可读。 |
+| **worker 怎样读公共输入** | 已跑通的版本由 Hub 读取公共 L1/Espresso、执行一份现场 GFR，并把生命周期记录应用到 Hub 中各 worker 的 Manager。子进程收到由此派生的受控动作，使用自己的 L1 元数据视图。每节点独立下载、重放与现场位置一致性属于完整 M1 的后续接线和验收范围。 |
+| **独立派生 `D`** | M4/M5 的数据路径是 finalized L1、Inbox 接纳和可验证 DA → 批次读取/回退 → 在自己的 parent 上执行 → `D`。已接纳批次暂缺 DA 时在原位 `WAIT`；完整窗口确认缺批次时走 deposit-only。RESUME 按具体 L1 `(block,tx,log)` 取历史 `ResumeCut`，用该前缀对齐 `G`，再把恢复 anchor/state 交给 Manager。批次/DA、派生切面已有独立组件；完整接线待 M4。 |
 
-SimHub 是虚拟时间权威。节点通过 Clock RPC 获取带身份、序号和有效期限的样本，本地 ClockView 为同步读取接口提供时间；timer 由受控调度器安排到期。延迟、过期、重复或乱序回复需要按规则处理；普通 grant 不会免费刷新时钟租约，租约失效时节点须按规则停止相关 session。节点分别获得 Create/Ready/Enter，因此即便时钟误差受限，进入时间仍可相差很大。
+合入版代码入口为 `poc/prototypes/i1b-runtime/src/m1_smoke/{hub,worker,public,profile,l1}.rs`。公共组件可从 `main:poc/crates/` 中的 `session-manager`、`authorization`、`publication-bridge`、`publisher`、`sim-espresso`、`viewer-gfr`、`l1-adapter` 查看。使用 `git show main:<路径>` 可在当前分支读取合入源码。D 和批次组件见各自交付记录。[批次/DA](handoffs/11-batch-services-zh.md) · [派生 D](handoffs/12-derivation-zh.md)
 
-例如，场景可让两个节点分别比 `τ` 快 1 ms 和慢 1 ms，同时给它们配置不同 RPC 延迟；它们各自何时进入 session 是另一组输入。对同一个 seed 重跑时，再加入本机墙钟暂停，预期受控的虚拟事件轨迹不变。这验证的是**模型及已覆盖场景的确定性**，不是对真实机器时钟同步精度或公网时延的测量。[时钟设计](../../formalization_v10/poc_design_zh_v2.md#4-时间设计rpc-服务是时间权威)
+## 3. 受控通信和时钟
 
-## 7. 已有证据与尚不能声称的结论
+### 受控一步
 
-| 证据 | 实际运行与结果 | 不能推出 |
+1. Hub 从同一事件队列取出下一项，按虚拟 tick、因果波次、seed 派生的顺序键和事件 ID 定序。输入可以是 Clock 样本、timer、入站消息、工作完成或生命周期动作。
+2. Hub 经 stdin/stdout 管道传递带长度的 protobuf frame。Grant 含 worker/session 绑定、事件身份、虚拟 tick 和输入。子进程运行受控 executor，提交该步 journal 和见证后，返回完整 Ack。
+3. Hub 校验 Grant/Ack 身份、哈希、序号和 worker 持久化的 head，再释放 Ack 中的 send、timer、工作和发布等效果。消息进入对应方向和通道的队列，出队后用新的 Grant 交付。BODY、VOTE、CERTIFICATE、RESOLVER 分通道；队列键为 `(src,dst,channel)`，同条队列保序。
+4. Hub 根据下一事件推进虚拟时间。处理 RPC、磁盘或 Anvil 时可以等待墙钟，等待本身不推进虚拟时间。
+
+此路径复用 **I1b 原生运行时和 native wire**。原来的 I1a 双进程 SignedIntent 测试是受控模型的早期证据。02 的 transport kernel 已有组件验收，当前 smoke 的证据来自 `m1_smoke/hub.rs` 自身的调度、路由和 Ack 路径，普通运行的通用接线不能由此视为已验收。M2 对旧分支 h11 注入的是**公开发布延迟**，并对同候选复跑单独注入墙钟暂停。M3 计划让旧区五进程离线，M5 计划停止 finalized 或冻结 Espresso 水位。[I1a 有限验收](i1a-gate-result.md) · [原生 Fresh 有限验收](native-engine-fresh-result.md)
+
+### Clock RPC 和公共时间
+
+| 量 | 用途与边界 |
+| --- | --- |
+| 虚拟参考 `τ` | 唯一由 Hub 推进，用于消息、故障、工作、出块和交付调度。 |
+| 节点时钟 `C_m(τ)` | 在当前固定速率 profile 中等于 `τ+ε_m`，每节点偏移绝对值 ≤1 ms，两台节点的读数可相差 2 ms。用来判定本地窗口、timeout 和签名门禁。 |
+| Clock RPC 延迟 | Grant/Ack 内的逻辑取时服务。请求去程和样本回程分别排队各 250 µs，正常设定的往返为 500 µs。样本带 request、sequence、as-of tick 和 lease；同步 `Clock::current()` 读取投影后的本地 ClockView。只有新收到且通过校验的样本续租，Grant 本身不续租。 |
+| 公共键 `x`、`θ_q` | `θ_q` 是 Espresso 日志的公开时间键，`q` 和消息 index 标识序列位置。Force 的 `x=ts_L1+M_a` 由实际收录时间戳推出，完整水位追上后才能处理。典型同键顺序为 L1 控制 → Expire → SessionEnd → Espresso。 |
+| 实际墙钟 | 用于进程耗时、watchdog 和复跑扰动。相同虚拟 trace 可对应不同墙钟耗时。 |
+
+M2 的 L1 收录在 12.000 s，`M_a=10 s`，所以公开激活键是 22.000 s。携带同键的 Espresso q10 在虚拟 22.001 s finalized、交付并形成水位，GFR 在该虚拟 tick 执行激活。trace 的 `seq` 保留同一 tick 内的实际事件顺序。
+
+## 4. 已运行 profile 与待测配置
+
+### M1 与 M2 的实际共同参数
+
+| 参数 | 两条已封存运行的取值 |
+| --- | --- |
+| 进程与证书 | 15 个独立 OS worker，3 区×5，q=4，固定十高度窗口，seed 42，正向拉起，无脚本签名者 |
+| 基准与场景范围 | L2 genesis timestamp 10 s，L2 slot 1 s，L1 slot 2 s；`start_us=10.800 s`，`cutoff_us=33 s`；主运行分别在 h21/h16 接纳后结束 |
+| 节点时钟 | 每区按成员序号取 −1000、−500、0、+500、+1000 µs；RPC 单向 250 µs；样本 lease 180 ms、refresh 80 ms |
+| 链路和执行 | 区域消息 4 ms，按路由键队列上限 64；工作完成延迟 5 ms；错时 Enter 步长 3 ms |
+| Simplex | leader timeout 1.5 s，certification timeout 1.6 s，timeout retry 1.5 s，fetch retry 30 ms，view 范围 1–128 |
+| 公共发布 | Publisher 链路 5 ms，SimEspresso finalize 1 ms；健康路径使用 0 timestamp offset / 1 µs 量化。M2 对旧 h11 单独延迟到公开键 22.000 s。 |
+| 公共时间预算 | `T_grace=3 s`，`W_exp=8 s`；M2 另使用 `M_a=10 s`、`T_init=3 s` |
+| 轻量执行 | Genesis 账户 1 的余额 100、nonce 0。已配置的 `dep[h]` 向账户 2 注入 credit `h`（h1–h40），每个实体块含一笔账户 1→2 的转账，金额 `1+(42+h) mod 3`。 |
+
+数据来自两个封存的 `raw/profile.json` 与同场景的 `profile.rs`、`hub.rs`、`native_config.rs`。Hub 事件上限 100,000，worker Ack 墙钟 watchdog 20 s，runner 单命令上限 1800 s。4 ms、5 ms 等值是模型的延迟配置。PoC v2 设计中的 20/100 ms 是较早的区域内/跨区初始设计值，本表以实际 profile 为准。[M1 profile](../../.build/commander-jobs/m1-regular/artifacts/healthy-smoke-91547857-seed42-run01/raw/profile.json) · [M2 profile](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01/raw/profile.json)
+
+### 分场景参数与运行层级
+
+| 场景 | 本次差异或计划输入 | 运行状态 |
 | --- | --- | --- |
-| I1a 受控基础 | 2 个真实 worker、SignedIntent fixture；8 个场景 × 3 个 seed × 2 种墙钟/启动条件，共 48 次，24 对完整虚拟轨迹逐字节一致。[结果](i1a-gate-result.md) | 这不是原生 Simplex、15 节点或 handoff 测试。 |
-| 原生运行时、存储、见证 | 受控任务、时钟和随机数、存储桥接、持久化见证分别有有限子项验收。[运行时](i1b-runtime-slice-result.md) · [存储](native-storage-result.md) · [见证](native-witness-result.md) | 各子项通过不等于完整 I1/I1b 通过。 |
-| Native Simplex Fresh | 五成员、quorum 4；2 个真实 native worker 加最多 3 个脚本签名者。66 次运行、33 对完整结果一致；健康场景中两个真实 worker 各交付两块。[结果](native-engine-fresh-result.md) | 脚本签名者不是活进程；实际 resolver 消息为零，不能证明跨进程修复或 15 节点轮转。 |
-| 同 `cid` 恢复 | 已复跑 seed 7 的等待区块体场景：杀掉 worker 后以新进程恢复原工作及原认证截止时间；场景在零交付处结束。[记录](native-recovery-implementation.md) | 并非完整 R1–R18 恢复验收，也不是恢复后端到端交接成功。 |
-| M0 组件基础 | 2026-11-16 将可复用组件合并到本地 `main`，基线 `35d382ac445cc8bc779f0d18fd23cb57e54680da`；包含静态授权/执行、传输、发布、SimEspresso、GFR、L1 及官方 Espresso 适配等组件；集成矩阵 7 组、43 条命令通过。 | 组件整合及各自有限检查不等于 M1 Regular 或 M2 Force 已通过；历史 Fresh 矩阵也不自动转移为 M0 的系统验收。 |
+| **M1 满窗** | finalized L1 fixture、虚拟链路、SimEspresso；`[1,10] → [11,20] → [21,30]`，截至 h21 | seed 42 单次 15-worker smoke PASS |
+| **完整 M1 扩展** | 计划 seed 7/42/99、墙钟 0/2 ms、启动顺序对照；额外发布延迟构造 SessionEnd，官方 dev-node 另做同字节提交/读回 | SessionEnd 仅有规则向量证据；其余按完整系统矩阵跟踪 |
+| **M2 合并版及原候选** | 真 Anvil/Forge 1.0.0-stable、solc 0.8.20；11.500 s 主动提交目标 β0 的单签控制；L1 slot 2 s、模拟 finality 1.5 s；A 同 tick、B 延后 10 ms，worker L1 fixture 投影滞后参数 1 µs。原候选同 seed 增加 650 ms 墙钟暂停。 | 合并版 seed 42、0 ms PASS；原候选主运行与暂停复跑均 PASS |
+| **M3 自动 Force** | 合同固定 seed 42、15 进程、2/3 治理多签；R0 五进程在虚拟 11.250 s 离线，Espresso heartbeat 250 ms、finalize 1 ms、三 signer reader 交付 0/10/20 ms；`T_stall=2 s`，轮询 100 ms、签名/广播各 10 ms，`W_exp=30 s`、`M_a=10 s`、`T_init=3 s` | 合同参数，未录入正式运行结果 |
+| **M4 固定 RESUME** | 计划用真实 Anvil/Inbox、确定性 DA、`dep[h]`、有限执行及固定合法 RESUME；预计以错过原生 L1 接纳窗口产生 G/D 可核对分歧 | 尚未冻结端到端运行 profile；待测 |
+| **M5 自动 RESUME** | 计划分别注入 finalized 停止与 θ 冻结，保留 L1/Clock/D 推进；v2 给出的预算初值含 `M_a=6 s`、`T_prep=10 s`、`T_ready=3 s`、`T_drift=15 s`，实际故障长度、seed 和收录窗口待冻结 | 设计初值；待测 |
 
-已有记录中的采集墙钟耗时包含本机运行和检查器工作，**不是交接时延**。当前没有可报告的 handoff benchmark；真实网络、生产容量和安全证明也不在这些结果的覆盖范围。
+M3 具体配置和验收以 `git show 27fd202:poc/docs/milestones/M3-auto-force-task-contract-zh.md` 为准。M4/M5 计划值随冻结合同与实际 manifest 更新。[M1–M5 计划](milestones/M1-M5-implementation-plan-zh.md)
 
-## 8. 下一步和验收终点
+## 5. 实测结果
 
-**M1：15 健康节点 Regular。** 15 个真实 worker、3×5 委员会和四个不同合法签名者；R0 → R1 → R2，真实区域最终结果经 Publisher 和 SimEspresso，由两个独立 GFR reader 重放，直到 R2 首个合格结果进入 `G`。另测 SessionEnd 而后继固定窗口不变。官方本地 Espresso 节点单独提交、读回同一场景的真实结果字节。单独记录 Ready/Enter、区域最终证明、公开完整和 `G` 接纳。[M1/M2 计划](milestones/README.md)
+### M1 健康满窗
 
-**M2：健康节点主动 Force。** 基于 M1，由可信治理方提交 Force，通过本地 Anvil 真实交易及公共规则驱动新分支；旧分支候选关闭、保留已接纳的 `G`，直到新分支首个合格结果进入 `G`。自动停滞检测和故障恢复不是本里程碑的前置。
+所有 15 个 worker 正常退出。独立检查复算了 **21 份原生 Final 和 21 个 G 条目**，核对 **4,571 对持久化 Grant/Ack** 与 **2,040 个在 Ack 提交后释放的输出**。运行候选 `9154785732d803c1f2f69aee3b2af67220a12f58` 已在合入版本的历史中。
 
-**之后**再推进恢复、独立 D/DA、RESUME、Web 和更全面故障矩阵；等端到端链路稳定、测量定义和条件固定后，再设计并报告 handoff 性能实验。
+| 观测事件 | 公共位置与键 | 虚拟时间 | trace seq |
+| --- | --- | ---: | ---: |
+| h10 接纳，R0→R1，anchor h10，窗口 [11,20] | q9 / 20.044 s | 20.045 s | 7426 / 7428 |
+| h20 接纳，R1→R2，anchor h20，窗口 [21,30] | q19 / 30.090 s | 30.091 s | 15174 / 15176 |
+| R2 的 h21 接纳，parent 连接 h20 | q20 / 31.084 s | 31.085 s | 16038 |
 
-## 9. 阅读代码与版本说明
+这条运行覆盖健康满窗。完整 M1 另需让 h10 未及时公开，SessionEnd 取 h9 为 anchor，窗口仍保持 [11,20]，由后继的合格结果补足 padding；同时覆盖候选切换/选回、错时 reader 及多 seed 矩阵。[M1 结果](milestones/results/M1-healthy-smoke-result-zh.md) · [完整 M1 验收](milestones/M1-regular-merge-zh.md)
 
-本报告所在 checkout 为 `/mnt/reth/jy/megaroation_poc`，记录时分支 `codex/poc-v2-i1` 的基线为 `3c0df2a`；它并不包含另一个本地 `main` 上的 M0 全部组件。M1 计划以 `35d382ac` 为集成基础，相关实现也可能继续在独立 worktree 开发。请按具体提交确认代码和测试，不把不同版本的验收结果直接叠加。
+### M2 健康主动 Force
 
-| 想了解什么 | 从哪里开始 |
+合并提交 `ea4d853bd8b62ee04c4e8e470550648242073950` 的主运行使用 seed 42。独立检查验证了 **12 份原生 Final、16 个 G 条目（11 个实体块和 5 个 padding）、3,205 对持久化 Grant/Ack、1,286 个 Ack 后输出**及 53 个 Hub/driver 操作。15 个进程在 Force 与 h16 接纳时持续存活，全部正常退出。EVM 执行和收据来自真实 Anvil，finality 和交付由虚拟场景控制。
+
+| 观测事件 | 公开位置或含义 | 虚拟时间 | trace seq |
+| --- | --- | ---: | ---: |
+| 提交合法 Force | target β0，R0 正在生产 | 11.500 s | 760 |
+| Anvil 收录 | L1 (6,0,0)，timestamp 12.000 s | 12.000 s | 943 |
+| 模拟 finalized、A 收取、B 收取 | 同一 L1 h6 | 13.500 / 13.500 / 13.510 s | 2294–2296 |
+| 在途 Regular | h10/q9 接纳，R0→R1，仍为 β0 | 20.045 s | 7503 / 7505 |
+| Force 激活 | 键 22.000 s，保留 h10，关闭旧 β0，分配 (β=1,r=1) 的 R2 | 22.001 s | 8765 |
+| 排除旧 R1 实体 h11 | q10 同键公开，Force 优先，G 头仍为 h10 | 22.001 s | 8767 |
+| R2 各节点 Ready/Enter | 窗口 [16,25]，全部早于准备截止 25.999 s | 22.0025–22.0145 s | 8845–8926 |
+| 新区域交付 h16 | 实体 parent 为 h10 | 26.035 s | 11020 |
+| h16 进入 G | q11 / 26.040 s，同次追加 padding h11–h15，早于 h11 的 29.000 s Expire | 26.041 s | 11152 |
+
+窗口从实际激活状态推导。由于 R1 尚无已接纳实体贡献，沿用 `r=1`，`β` 增为 1。用 `h_min=max(A.h+1,slot(act+T_init)+1)` 得 h16，末高 h25。旧 R1 的实体 h11 和随后补入的 padding h11 各有自己的来源和哈希。
+
+原 M2 候选 `e97681e81cbff73b1252cd31b0a1c9e2c2534ff5` 的 HF01–HF14 按以下层级覆盖。650 ms 暂停对照属于该候选；合并版证据是单次 0 ms 复跑。
+
+| 验收范围 | 实际证据 |
 | --- | --- |
-| 总体设计及协议 | [v2 设计](../../formalization_v10/poc_design_zh_v2.md)、[v10 协议索引](../../formalization_v10/README.md) |
-| 已有 I1a 运行时 | [sim-hub](../crates/sim-hub/src/main.rs)、[sim-runtime](../crates/sim-runtime/src/lib.rs)、[replica-worker](../crates/replica-worker/src/main.rs)、[I1 RPC 定义](../proto/i1.proto) |
-| 真实 Simplex 适配 | [native-hub](../prototypes/i1b-runtime/src/native_hub.rs)、[native replica](../prototypes/i1b-runtime/src/native_replica.rs)、[受控网络](../prototypes/i1b-runtime/src/native_network.rs)、[时钟](../prototypes/i1b-runtime/src/clock.rs)、[native RPC 定义](../proto/native.proto) |
-| 新近组件与交付 | [里程碑计划和组件精确版本](milestones/README.md)、[M1 实施说明](milestones/M1-implementation-dispatch-20261116.md)。M0 验收报告封存在提交 `ca1b3d7`，可用 `git show ca1b3d7:poc/docs/milestones/results/M0-result-20261116.md` 阅读。M0 中的 `poc/crates/authorization`、`core`、`sim-transport`、`publisher`、`sim-espresso`、`viewer-gfr`、`l1-adapter` 和 `espresso-compatibility` 可用 `git ls-tree -r --name-only 35d382ac poc/crates` 查阅。 |
-| 实验记录及复现 | [项目 README](../../README.md)、[历史进度和命令](POC进度报告.md)、[I1a 验收](i1a-gate-result.md)、[Fresh 验收](native-engine-fresh-result.md)。原始 artifacts 依记录位置保存，是否在本机可用取决于运行环境。 |
+| HF01、HF03、HF09 | 同一 15-worker 主运行验证有效控制、在途 Regular、同键旧结果排除，以及新 R2 的首块进入 G。 |
+| HF02 | 同提交、同 seed，650 ms 墙钟暂停。去除已声明的进程墙钟/PID 诊断后，完整规范化虚拟 trace 与原生 frames、原始 L1 RPC bundle 逐字节相同。 |
+| HF04–HF07、HF10、HF11、HF14 | 11 个独立 GFR 向量通过，覆盖 r/floor/PENDING、同键排序、重复和 WAIT、A/B 同位置一致、HALT/stale、SessionEnd h9→padding10+h11。HF14 是生产规则入口向量。 |
+| HF08 | 现场旧委员会关闭之后的工作探针无新签名。Manager 与 native signer 的专项测试补充 Running/Preparing/Paused、迟到动作和签名守卫。 |
+| HF12 | 真实 EVM 收据确认错误 signer、过期序号和冲突请求回滚且零新增控制日志；同内容合法重试成功，只有首次产生控制日志。 |
+| HF13 | 同候选 15-worker M1 回归与独立重放通过，核对 21 个 G 条目和 h10/h20/h21。 |
 
-旧 README 和历史进度报告记载的是当时 checkout 的状态，部分“尚未实现”描述早于 M0 的组件交付；涉及优先级和集成范围时，以 2026-11-16 里程碑文档和各准确提交的证据为准。
+[合并版独立报告](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01-independent/report.json) · [原候选逐项独立验收](../../.build/commander-jobs/m2-healthy-force/artifacts/independent-review-e97681e8/verdict.md) · [同候选复跑比较](../../.build/commander-jobs/m2-healthy-force/artifacts/tester-e97681e8-repeat-compare.json)
+
+## 6. M1–M5 用例矩阵与补录位置
+
+| 里程碑 | 主用例的可观察成功条件 | 进度与后续证据 |
+| --- | --- | --- |
+| **M1 Regular** | R0 h10、R1 h20 驱动两次接棒，R2 h21 用正确 parent 和状态经真实 Final/公开发布进入 `G`。SessionEnd 对照保持后继固定窗口，并核对真实 padding。 | 满窗 PASS。**补录** SessionEnd 端到端、错时候选、完整重放矩阵、A/B 各自下载/重放和官方读回。 |
+| **M2 Healthy Force** | 健康 worker 持续运行，真实控制收录及公共覆盖到位，旧分支终止、G 保留、新窗口算对、新分支首个合格结果进入 `G`。 | 主运行、限定复跑与向量 PASS。Force 回放已随 `8a80e5a` 合入。 |
+| **M3 自动 Force** | R0 离线而排序服务仍推进。达到阈值后，至少两个独立 signer 用各自已验证的公共视图对同一 payload 签名。真实 L1 收录后，历史 policy 排除 R0，选择合格地区并让首个合法块进入 `G`。健康、reader 落后、Espresso 停滞、阈值边界等作为对照。 | 合同 `27fd202`、独立预期 `035f8ec`，开发分支已有历史 policy 向量和 M2 回归入口（`1b8179b`）。**补录** AF01–AF12、逐 signer 观察及签名、交易/激活位置、policy/Plan、故障 PID、新块接纳、M2 回归。 |
+| **M4 从 D 恢复** | 独立 D 产生可核验的分歧和位置绑定的 `ResumeCut`。真实 RESUME 与 Inbox CursorSet 原子记账，GFR 等到对应切面并替换 G 后缀；新 session 的 h_res+1 连接指定的 D(h_res) 并进入 `G`。另测缺 DA、不同 L1 位置、切面历史稳定。 | 待集成。**补录** D 原始输入、分歧 hash、交易/切面位置、对齐区间、状态根和首块接纳。 |
+| **M5 停滞后自动 RESUME** | Espresso 停滞期间 GFR 在原位等水位，L1/D 继续。排序恢复且公开恢复条件成立后，在预算内完成独立多签提交、正确选目标高度并对齐。新 session 的首块经公开接纳进入 `G`。短停、普通 lag、只增高无分歧、目标无解与迟到收录作为对照。 | 待实现。**补录** 停滞和恢复水位、`t_eligible`、签名/提交/收录/激活、准备截止和首个新 `GAccepted`。 |
+
+每次补录至少给出实测候选 SHA、seed、实际 profile、命令、manifest 和原始 trace、独立检查、适用范围及回放链接。计划中的虚拟时点随真实收录和公开进度重新核对。
+
+## 7. 证据与复现入口
+
+证据根在本机 `.build/commander-jobs/`，该目录属于运行数据。运行命令应从对应的干净候选 checkout 执行，使用本机配置的 Python 3.11+ 和锁定工具链，新运行和新报告各用新目录。
+
+| 证据 | M1 seed 42 | M2 合并版 seed 42 |
+| --- | --- | --- |
+| 运行 manifest | [manifest.json](../../.build/commander-jobs/m1-regular/artifacts/healthy-smoke-91547857-seed42-run01/manifest.json) | [manifest.json](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01/manifest.json) |
+| 原始 trace | [16,085 行](../../.build/commander-jobs/m1-regular/artifacts/healthy-smoke-91547857-seed42-run01/raw/trace.jsonl) | [11,199 行](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01/raw/trace.jsonl) |
+| 独立检查和复算 | [Verifier](../../.build/commander-jobs/m1-regular/artifacts/independent-verification-91547857-seed42-run01/report.json) · [Tester](../../.build/commander-jobs/m1-regular/artifacts/healthy-smoke-91547857-seed42-run01-tester/tester.json) | [报告](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01-independent/report.json) · [逐步公共复算](../../.build/commander-jobs/m2-healthy-force/artifacts/merge-ea4d853b-seed42-force-run01-independent/public-replay.json) |
+| 回放 | `main:poc/web/m1-gfr-replay/index.html` | `main:poc/web/m1-gfr-replay/force.html`，浏览器验收已通过 |
+
+M1 manifest / trace SHA-256 分别为 `4e76e4eeb8e41e801db9689441b6fd82b94b7060b6ad2dbb47034e695e9f78ca`、`359f4c6f366d69cc406c07fc9071faff01e26ddf9c0c6fa9c1946f412d2fe1b8`。M2 合并版分别为 `33a4c9d22845fe1150119113d04a56cb3a78759543b50a73064b963dd6561f9c`、`0d79366c15169f580c08351883baaed92a53bbfd6e3561ddbd56c7aba5297cca`。
+
+```sh
+# 在 M1 smoke 候选 checkout，runner 固定 seed 42。
+python3 -B poc/scenarios/m1-healthy-regular/run.py smoke \
+  --candidate 9154785732d803c1f2f69aee3b2af67220a12f58 --output "$M1_NEW_OUTPUT"
+
+# 在 M2 合并候选 checkout。
+python3 -B poc/scenarios/m2-healthy-force/run.py \
+  --candidate ea4d853bd8b62ee04c4e8e470550648242073950 \
+  --seed 42 --wall-pause-ms 0 --output "$M2_NEW_OUTPUT"
+```
+
+实际 launcher 和构建/执行 argv 在 M1 的 `invocation.json` 与两份 manifest 的 `commands`。离线复核使用下面的入口，变量分别指向上表的运行目录、独立检查目录、对应 checkout 或新的报告目录。M2 用原候选构建的封存 `m2-force-independent` 复核合并包。核对过两个提交之间的差异只涉及离线回放，运行和 checker 源码相同。
+
+```sh
+bash "$M1_INDEPENDENT/checker/reproduce.sh" \
+  "$M1_RUN/raw" "$M1_NEW_REPORT" "$M1_CHECKOUT"
+
+python3 -B "$M2_CHECKOUT/poc/verification/m2-healthy-force/check.py" \
+  --repository "$M2_CHECKOUT" --candidate ea4d853bd8b62ee04c4e8e470550648242073950 \
+  --raw "$M2_RUN/raw" --receipts "$M2_RUN/raw/l1/raw-rpc-bundle.json" \
+  --driver-rpc "$M2_RUN/raw/l1/driver-trace.json" --hub-l1 "$M2_RUN/raw/l1/hub-l1.jsonl" \
+  --public-checker "$M2_PUBLIC_CHECKER" --output "$M2_NEW_REPORT"
+```
+
+本次报告复核了 manifest 的候选、seed、参数、命令与关键 trace 行。M1 的独立公共复算、受控检查与 Tester 输出均与封存文件逐字节一致。M2 用同一个封存 checker 复查合并运行、原候选 650 ms 对照及原候选 Regular 回归，结果也逐字节一致。复核复用原始运行证据。原候选的暂停比较需要对应的 `--repeat-raw`，参数与哈希见 Tester 和 Verifier 的封存记录。[原 M2 Tester 命令与证据](../../.build/commander-jobs/m2-healthy-force/artifacts/tester-e97681e8-report-zh.md)
