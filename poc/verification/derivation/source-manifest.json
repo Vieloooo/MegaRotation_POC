@@ -1,0 +1,101 @@
+{
+  "schema": "derivation-source-manifest-v1",
+  "date": "2026-11-16",
+  "baseline": "37b4f2b8a6d67b303ba90b1d4d1981c93ed8dd12",
+  "worktree": "/home/jy/.codex/worktrees/29df/megaroation_poc",
+  "role": "bft_verifier",
+  "configured_model": "gpt-6-astra",
+  "configured_effort": "xhigh",
+  "implementation_read": false,
+  "native_specs_pin": "a738f9b14c7880953d8cff8788db14e8e3e79124",
+  "regional_bft_gitlink": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+  "commonware_version": "2026.10.0",
+  "local_sources": [
+    {
+      "path": "formalization_v10/poc_design_zh_v2.md",
+      "sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+      "bytes": 49018,
+      "delivered_manifest_sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "formalization_v10/poc_design_zh.md",
+      "sha256": "6ab88fe8bba42b18e826ec04f91b69861dc4a984422adc85aa328f38d021ca07",
+      "bytes": 51795,
+      "delivered_manifest_sha256": "6ab88fe8bba42b18e826ec04f91b69861dc4a984422adc85aa328f38d021ca07",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "formalization_v10/09_finality_rules_zh_v0_1.md",
+      "sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc",
+      "bytes": 56015,
+      "delivered_manifest_sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "megaeth_specs/specs/rollup/derivation.md",
+      "sha256": "ba73e945918d935fef3e3e34c07da0f798589fcb1e550d2eae97859d00dbe140",
+      "bytes": 32758,
+      "delivered_manifest_sha256": "ba73e945918d935fef3e3e34c07da0f798589fcb1e550d2eae97859d00dbe140",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "megaeth_specs/specs/block-certification/activation.md",
+      "sha256": "2522bf7243124f7f90d7a88f39f43bd8f7cd7e5e62a37d599b2f86ecb9ab505b",
+      "bytes": 27020,
+      "delivered_manifest_sha256": "2522bf7243124f7f90d7a88f39f43bd8f7cd7e5e62a37d599b2f86ecb9ab505b",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "megaeth_specs/specs/block-certification/derivation-pipeline.md",
+      "sha256": "b5ef11bb70cdfb50b54766f38463decf16858d17712c637080eb4f062b2b6a25",
+      "bytes": 49799,
+      "delivered_manifest_sha256": "b5ef11bb70cdfb50b54766f38463decf16858d17712c637080eb4f062b2b6a25",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "megaeth_specs/specs/block-certification/batch-inbox.md",
+      "sha256": "e150f038b2bf2473aace803f20edba011731b851a9513c8bde7d176816787710",
+      "bytes": 98597,
+      "delivered_manifest_sha256": "e150f038b2bf2473aace803f20edba011731b851a9513c8bde7d176816787710",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "megaeth_specs/specs/rollup/data-availability.md",
+      "sha256": "d2782bd7fac9f7df23dc8db3b7e3ec97ebe839ce2ce280824dde52fd5b7e9ed2",
+      "bytes": 7490,
+      "delivered_manifest_sha256": "d2782bd7fac9f7df23dc8db3b7e3ec97ebe839ce2ce280824dde52fd5b7e9ed2",
+      "matches_delivered_manifest": true
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-derivation-v1.md",
+      "sha256": "4c39571f1107ee9938aea8298902d5ca81c46f0fb58926f61c4be54fad772f30",
+      "bytes": 29208,
+      "delivered_manifest_sha256": null,
+      "matches_delivered_manifest": null
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-mock-plan-execution-v2.md",
+      "sha256": "a18d2b33f9c541abc81b4fead601c3ccaead6221c90dc43345d52a850429cc15",
+      "bytes": 28826,
+      "delivered_manifest_sha256": null,
+      "matches_delivered_manifest": null
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-anvil-l1-v1.md",
+      "sha256": "dd727cee5de9ab33579f62d0747717d6bfafae749d3c1a3c1559c35345b3ce81",
+      "bytes": 29682,
+      "delivered_manifest_sha256": null,
+      "matches_delivered_manifest": null
+    }
+  ],
+  "op_source": {
+    "url": "https://raw.githubusercontent.com/ethereum-optimism/specs/42b446f5891dd5a232cfc346201a613c1bba3f50/specs/protocol/derivation.md",
+    "revision": "42b446f5891dd5a232cfc346201a613c1bba3f50",
+    "provider": "Parallel web_fetch",
+    "extract_id": "extract_6b7cb7b2a87402540d875c006632b73b",
+    "result": "successful relevant excerpts including complete Batch Queue rules",
+    "whole_file_sha256": null,
+    "note": "Do not mistake an excerpt identifier for a whole-file content hash."
+  }
+}

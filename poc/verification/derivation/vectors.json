@@ -1,0 +1,1168 @@
+{
+  "schema": "derivation-independent-v1",
+  "classification": "source-derived semantic fixtures; not verified L1, DA, or candidate execution",
+  "genesis_native_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "accounts": {
+    "1": {
+      "nonce": 0,
+      "balance": 10
+    }
+  },
+  "credits": {
+    "1": [
+      [
+        2,
+        2
+      ]
+    ],
+    "2": [
+      [
+        1,
+        3
+      ]
+    ],
+    "8": [
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  "profiles": {
+    "slot4": {
+      "genesis": [
+        0,
+        100000000,
+        10
+      ],
+      "slot_us": 4000000,
+      "window": 40,
+      "headers": {
+        "10": 100000000,
+        "11": 104000000,
+        "12": 108000000,
+        "13": 112000000
+      }
+    },
+    "slot2": {
+      "genesis": [
+        0,
+        100000000,
+        10
+      ],
+      "slot_us": 2000000,
+      "window": 40,
+      "headers": {
+        "10": 100000000,
+        "11": 104000000,
+        "12": 108000000
+      }
+    },
+    "missing11": {
+      "genesis": [
+        0,
+        100000000,
+        10
+      ],
+      "slot_us": 2000000,
+      "window": 40,
+      "headers": {
+        "10": 100000000
+      }
+    },
+    "poc": {
+      "genesis": [
+        0,
+        10000000,
+        3
+      ],
+      "slot_us": 1000000,
+      "window": 40,
+      "headers": {
+        "3": 6000000,
+        "4": 8000000,
+        "5": 10000000,
+        "6": 12000000,
+        "7": 14000000,
+        "8": 16000000,
+        "9": 18000000,
+        "10": 20000000,
+        "11": 22000000,
+        "12": 24000000
+      }
+    },
+    "cap5": {
+      "genesis": [
+        0,
+        10000000,
+        3
+      ],
+      "slot_us": 1000000,
+      "window": 40,
+      "headers": {
+        "3": 6000000,
+        "4": 8000000,
+        "5": 10000000
+      }
+    },
+    "short_window": {
+      "genesis": [
+        0,
+        10000000,
+        3
+      ],
+      "slot_us": 1000000,
+      "window": 2,
+      "headers": {
+        "3": 6000000,
+        "4": 8000000,
+        "5": 10000000,
+        "6": 12000000,
+        "7": 14000000,
+        "8": 16000000,
+        "9": 18000000,
+        "10": 20000000,
+        "11": 22000000,
+        "12": 24000000
+      }
+    },
+    "real_run_plan": {
+      "genesis": [
+        0,
+        1000000000,
+        0
+      ],
+      "slot_us": 1000000,
+      "window": 40,
+      "header_schedule": {
+        "first": 0,
+        "last": 51,
+        "genesis_us": 1000000000,
+        "slot_us": 2000000
+      },
+      "classification": "synthetic schedule for planning fresh 09 run; never verified L1 evidence"
+    }
+  },
+  "cases": [
+    {
+      "id": "window_49",
+      "profile": "slot4",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 49
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "WAIT_WINDOW",
+        "head": 0,
+        "epoch_has_output": false
+      }
+    },
+    {
+      "id": "header_only_50",
+      "profile": "slot4",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 49,
+          "header_prefetched_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "WAIT_WINDOW",
+        "head": 0,
+        "epoch_has_output": false
+      }
+    },
+    {
+      "id": "slot4_first_output",
+      "profile": "slot4",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            104000000,
+            10
+          ],
+          [
+            2,
+            108000000,
+            11
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 2,
+        "epoch_has_output": true
+      }
+    },
+    {
+      "id": "slot2_time_boundary",
+      "profile": "slot2",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            102000000,
+            10
+          ],
+          [
+            2,
+            104000000,
+            11
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 2,
+        "epoch_has_output": true
+      }
+    },
+    {
+      "id": "new_epoch_boundary",
+      "profile": "slot4",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 51
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            104000000,
+            10
+          ],
+          [
+            2,
+            108000000,
+            11
+          ],
+          [
+            3,
+            112000000,
+            12
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 3,
+        "epoch_has_output": true
+      }
+    },
+    {
+      "id": "missing_next_origin",
+      "profile": "missing11",
+      "actions": [
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "WAIT_NEXT_ORIGIN",
+        "head": 0,
+        "epoch_has_output": false
+      }
+    },
+    {
+      "id": "accepted_blocks_frontier",
+      "profile": "slot4",
+      "actions": [
+        {
+          "kind": "accepted",
+          "position": [
+            50,
+            0,
+            0
+          ],
+          "outer_origin": 0,
+          "arbitrary_bytes": "001122"
+        },
+        {
+          "kind": "override",
+          "set": [
+            50,
+            1,
+            0
+          ],
+          "resume": [
+            50,
+            1,
+            1
+          ],
+          "target": 4,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "WAIT_FEATURE11",
+        "head": 0,
+        "epoch_has_output": false,
+        "blocked_at": [
+          50,
+          0,
+          0
+        ],
+        "cuts": []
+      }
+    },
+    {
+      "id": "override_cap_and_drift",
+      "profile": "cap5",
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            5,
+            0,
+            0
+          ],
+          "resume": [
+            5,
+            0,
+            1
+          ],
+          "target": 30,
+          "cursor_origin": 0
+        }
+      ],
+      "expected": {
+        "origins": [
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "status": "READY",
+        "head": 30,
+        "epoch_has_output": true,
+        "cuts": [
+          {
+            "resume": [
+              5,
+              0,
+              1
+            ],
+            "target": 30,
+            "prefix_head": 30,
+            "anchor_metadata": [
+              30,
+              40000000,
+              5
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "two_same_block_cuts",
+      "profile": "poc",
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            12,
+            0,
+            0
+          ],
+          "resume": [
+            12,
+            0,
+            1
+          ],
+          "target": 2,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "override",
+          "set": [
+            12,
+            1,
+            0
+          ],
+          "resume": [
+            12,
+            1,
+            1
+          ],
+          "target": 4,
+          "cursor_origin": 1
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 12
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            11000000,
+            4
+          ],
+          [
+            2,
+            12000000,
+            5
+          ],
+          [
+            3,
+            13000000,
+            6
+          ],
+          [
+            4,
+            14000000,
+            7
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 4,
+        "epoch_has_output": true,
+        "cuts": [
+          {
+            "resume": [
+              12,
+              0,
+              1
+            ],
+            "target": 2,
+            "prefix_head": 2,
+            "anchor_metadata": [
+              2,
+              12000000,
+              5
+            ]
+          },
+          {
+            "resume": [
+              12,
+              1,
+              1
+            ],
+            "target": 4,
+            "prefix_head": 4,
+            "anchor_metadata": [
+              4,
+              14000000,
+              7
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ahead_of_target",
+      "profile": "short_window",
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            4,
+            0,
+            0
+          ],
+          "resume": [
+            4,
+            0,
+            1
+          ],
+          "target": 5,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 6
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 7
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 8
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 9
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 10
+        },
+        {
+          "kind": "override",
+          "set": [
+            11,
+            0,
+            0
+          ],
+          "resume": [
+            11,
+            0,
+            1
+          ],
+          "target": 8,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 11
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            11000000,
+            4
+          ],
+          [
+            2,
+            12000000,
+            4
+          ],
+          [
+            3,
+            13000000,
+            4
+          ],
+          [
+            4,
+            14000000,
+            4
+          ],
+          [
+            5,
+            15000000,
+            4
+          ],
+          [
+            6,
+            16000000,
+            5
+          ],
+          [
+            7,
+            17000000,
+            6
+          ],
+          [
+            8,
+            18000000,
+            7
+          ],
+          [
+            9,
+            19000000,
+            8
+          ],
+          [
+            10,
+            20000000,
+            9
+          ],
+          [
+            11,
+            21000000,
+            10
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 11,
+        "epoch_has_output": true,
+        "cuts": [
+          {
+            "resume": [
+              4,
+              0,
+              1
+            ],
+            "target": 5,
+            "prefix_head": 5,
+            "anchor_metadata": [
+              5,
+              15000000,
+              4
+            ]
+          },
+          {
+            "resume": [
+              11,
+              0,
+              1
+            ],
+            "target": 8,
+            "prefix_head": 10,
+            "anchor_metadata": [
+              8,
+              18000000,
+              7
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "atomic_missing_dep",
+      "profile": "poc",
+      "pending_dep": 3,
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            12,
+            0,
+            0
+          ],
+          "resume": [
+            12,
+            0,
+            1
+          ],
+          "target": 4,
+          "cursor_origin": 0
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "WAIT_DEP",
+        "head": 0,
+        "epoch_has_output": false,
+        "cuts": []
+      }
+    },
+    {
+      "id": "atomic_exhausted_dep",
+      "profile": "poc",
+      "dep_last": 2,
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            12,
+            0,
+            0
+          ],
+          "resume": [
+            12,
+            0,
+            1
+          ],
+          "target": 4,
+          "cursor_origin": 0
+        }
+      ],
+      "expected": {
+        "metadata": [],
+        "status": "REJECT_DEP_EXHAUSTED",
+        "head": 0,
+        "epoch_has_output": false,
+        "cuts": []
+      }
+    },
+    {
+      "id": "real_plan_window50",
+      "profile": "real_run_plan",
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            12,
+            0,
+            0
+          ],
+          "resume": [
+            12,
+            0,
+            1
+          ],
+          "target": 20,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 49
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 50
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            1001000000,
+            0
+          ],
+          [
+            2,
+            1002000000,
+            1
+          ],
+          [
+            3,
+            1003000000,
+            1
+          ],
+          [
+            4,
+            1004000000,
+            2
+          ],
+          [
+            5,
+            1005000000,
+            2
+          ],
+          [
+            6,
+            1006000000,
+            3
+          ],
+          [
+            7,
+            1007000000,
+            3
+          ],
+          [
+            8,
+            1008000000,
+            4
+          ],
+          [
+            9,
+            1009000000,
+            4
+          ],
+          [
+            10,
+            1010000000,
+            5
+          ],
+          [
+            11,
+            1011000000,
+            5
+          ],
+          [
+            12,
+            1012000000,
+            6
+          ],
+          [
+            13,
+            1013000000,
+            6
+          ],
+          [
+            14,
+            1014000000,
+            7
+          ],
+          [
+            15,
+            1015000000,
+            7
+          ],
+          [
+            16,
+            1016000000,
+            8
+          ],
+          [
+            17,
+            1017000000,
+            8
+          ],
+          [
+            18,
+            1018000000,
+            9
+          ],
+          [
+            19,
+            1019000000,
+            9
+          ],
+          [
+            20,
+            1020000000,
+            10
+          ],
+          [
+            21,
+            1021000000,
+            10
+          ],
+          [
+            22,
+            1022000000,
+            11
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 22,
+        "epoch_has_output": true,
+        "cuts": [
+          {
+            "resume": [
+              12,
+              0,
+              1
+            ],
+            "target": 20,
+            "prefix_head": 20,
+            "anchor_metadata": [
+              20,
+              1020000000,
+              10
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "real_plan_ahead_two_markers",
+      "profile": "real_run_plan",
+      "actions": [
+        {
+          "kind": "override",
+          "set": [
+            3,
+            0,
+            0
+          ],
+          "resume": [
+            3,
+            0,
+            1
+          ],
+          "target": 5,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 42
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 43
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 44
+        },
+        {
+          "kind": "override",
+          "set": [
+            45,
+            0,
+            0
+          ],
+          "resume": [
+            45,
+            0,
+            1
+          ],
+          "target": 8,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "override",
+          "set": [
+            45,
+            1,
+            0
+          ],
+          "resume": [
+            45,
+            1,
+            1
+          ],
+          "target": 11,
+          "cursor_origin": 0
+        },
+        {
+          "kind": "end_block",
+          "complete_through": 45
+        }
+      ],
+      "expected": {
+        "metadata": [
+          [
+            1,
+            1001000000,
+            0
+          ],
+          [
+            2,
+            1002000000,
+            1
+          ],
+          [
+            3,
+            1003000000,
+            1
+          ],
+          [
+            4,
+            1004000000,
+            2
+          ],
+          [
+            5,
+            1005000000,
+            2
+          ],
+          [
+            6,
+            1006000000,
+            3
+          ],
+          [
+            7,
+            1007000000,
+            3
+          ],
+          [
+            8,
+            1008000000,
+            4
+          ],
+          [
+            9,
+            1009000000,
+            4
+          ],
+          [
+            10,
+            1010000000,
+            5
+          ],
+          [
+            11,
+            1011000000,
+            5
+          ],
+          [
+            12,
+            1012000000,
+            6
+          ]
+        ],
+        "status": "WAIT_WINDOW",
+        "head": 12,
+        "epoch_has_output": true,
+        "cuts": [
+          {
+            "resume": [
+              3,
+              0,
+              1
+            ],
+            "target": 5,
+            "prefix_head": 5,
+            "anchor_metadata": [
+              5,
+              1005000000,
+              2
+            ]
+          },
+          {
+            "resume": [
+              45,
+              0,
+              1
+            ],
+            "target": 8,
+            "prefix_head": 10,
+            "anchor_metadata": [
+              8,
+              1008000000,
+              4
+            ]
+          },
+          {
+            "resume": [
+              45,
+              1,
+              1
+            ],
+            "target": 11,
+            "prefix_head": 11,
+            "anchor_metadata": [
+              11,
+              1011000000,
+              5
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "stage_b_rule_vectors": {
+    "execution_status": "PENDING_FEATURE11; predicate/source-reference evaluation is not candidate or integration PASS",
+    "lateness": [
+      {
+        "origin": 10,
+        "window": 40,
+        "inclusion": 49,
+        "download_delay_us": 0,
+        "late": false
+      },
+      {
+        "origin": 10,
+        "window": 40,
+        "inclusion": 50,
+        "download_delay_us": 0,
+        "late": false
+      },
+      {
+        "origin": 10,
+        "window": 40,
+        "inclusion": 51,
+        "download_delay_us": 0,
+        "late": true
+      },
+      {
+        "origin": 10,
+        "window": 40,
+        "inclusion": 50,
+        "download_delay_us": 900000000,
+        "late": false
+      }
+    ],
+    "origin_choices": [
+      {
+        "parent_origin": 10,
+        "next_timestamp_us": 104000000,
+        "next_origin_timestamp_us": 104000000,
+        "epoch_has_output": false,
+        "including_block": 10,
+        "fallback": 10,
+        "substitution": 11,
+        "override": 10
+      },
+      {
+        "parent_origin": 10,
+        "next_timestamp_us": 102000000,
+        "next_origin_timestamp_us": 104000000,
+        "epoch_has_output": true,
+        "including_block": 11,
+        "fallback": 10,
+        "substitution": 10,
+        "override": 10
+      },
+      {
+        "parent_origin": 10,
+        "next_timestamp_us": 104000000,
+        "next_origin_timestamp_us": 104000000,
+        "epoch_has_output": true,
+        "including_block": 11,
+        "fallback": 11,
+        "substitution": 11,
+        "override": 11
+      }
+    ],
+    "actual_parent_transfer_filter": {
+      "metadata": [
+        1,
+        11000000,
+        4
+      ],
+      "transactions": [
+        [
+          1,
+          2,
+          1,
+          4
+        ],
+        [
+          1,
+          2,
+          0,
+          3
+        ]
+      ],
+      "expected_kept_indices": [
+        1
+      ],
+      "expected_accounts": {
+        "1": {
+          "nonce": 1,
+          "balance": 7
+        },
+        "2": {
+          "nonce": 0,
+          "balance": 5
+        }
+      }
+    }
+  },
+  "integration_pending": [
+    "DA01 source/config negatives",
+    "DA05 real reader coverage",
+    "DA06 real CursorAdvanced receipts",
+    "DA07 failed/no-event/wrong-emitter controls",
+    "DA09 overflow and pending input",
+    "DA10-DA13 fresh real Anvil",
+    "DA14 malformed pair/query positions",
+    "DA15 retry/restart atomicity",
+    "DA16 restore tamper matrix",
+    "DA17 A/B reader and idempotence",
+    "all Stage B real payload paths",
+    "13/runtime integration"
+  ]
+}
