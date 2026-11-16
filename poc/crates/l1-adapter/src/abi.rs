@@ -202,14 +202,18 @@ pub struct PolicyWire {
     pub l1_floor: u64,
 }
 
-pub(crate) fn policy_at(data: &[u8], index: usize) -> Option<PolicyWire> {
+pub(crate) fn policy_at(data: &[u8], index: usize, regional: bool) -> Option<PolicyWire> {
     let enabled_mask = u8::try_from(uint_at(data, index)?).ok()?;
     let order = [
         u8::try_from(uint_at(data, index + 1)?).ok()?,
         u8::try_from(uint_at(data, index + 2)?).ok()?,
         u8::try_from(uint_at(data, index + 3)?).ok()?,
     ];
-    if enabled_mask != 7 || order != [0, 1, 2] {
+    let mut sorted = order;
+    sorted.sort_unstable();
+    if (regional && (enabled_mask > 7 || sorted != [0, 1, 2]))
+        || (!regional && (enabled_mask != 7 || order != [0, 1, 2]))
+    {
         return None;
     }
     Some(PolicyWire {

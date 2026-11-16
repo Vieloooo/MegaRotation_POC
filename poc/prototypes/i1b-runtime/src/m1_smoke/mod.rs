@@ -1,3 +1,4 @@
+mod governance;
 mod hub;
 mod l1;
 pub(crate) mod profile;
@@ -23,9 +24,9 @@ fn check(value: bool, message: impl Into<String>) -> M1Result<()> {
 
 pub fn run(args: &[String]) -> M1Result<()> {
     match args {
-        [mode, pid, output] if mode == "--worker" => {
+        [mode, pid, output] if matches!(mode.as_str(), "--worker" | "--auto-force-worker") => {
             let pid = Pid::new(pid.parse()?)?;
-            worker::run(pid, PathBuf::from(output))?;
+            worker::run(pid, PathBuf::from(output), mode == "--auto-force-worker")?;
             Ok(())
         }
         [seed_flag, seed, output_flag, output]
@@ -34,7 +35,7 @@ pub fn run(args: &[String]) -> M1Result<()> {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()?
-                .block_on(hub::run(PathBuf::from(output), false, 0))
+                .block_on(hub::run(PathBuf::from(output), false, 0, None))
         }
         [mode, seed_flag, seed, output_flag, output, pause_flag, pause_ms]
             if mode == "--healthy-force" && seed_flag == "--seed" && seed == "42"
@@ -45,7 +46,18 @@ pub fn run(args: &[String]) -> M1Result<()> {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()?
-                .block_on(hub::run(PathBuf::from(output), true, pause_ms))
+                .block_on(hub::run(PathBuf::from(output), true, pause_ms, None))
+        }
+        [mode, scenario, seed_flag, seed, output_flag, output, pause_flag, pause_ms]
+            if mode == "--auto-force" && seed_flag == "--seed" && seed == "42"
+                && output_flag == "--output" && pause_flag == "--wall-pause-ms" =>
+        {
+            let pause_ms = pause_ms.parse::<u64>()?;
+            check(pause_ms <= 60_000, "wall pause must be at most 60 seconds")?;
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()?
+                .block_on(hub::run(PathBuf::from(output), true, pause_ms, Some(governance::Scenario::parse(scenario)?)))
         }
         _ => Err(problem("usage: m1-smoke --seed 42 --output NEW_DIRECTORY or m1-smoke --healthy-force --seed 42 --output NEW_DIRECTORY --wall-pause-ms N")),
     }

@@ -7,6 +7,7 @@ use poc_types::domain::*;
 use poc_viewer_gfr::{GlobalSource, InputRef, ReplayEffect, lifecycle_projection};
 use prost::Message;
 use serde_json::{Value, json};
+use sim_espresso::{FinalizedBlock, TickUs};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, File},
@@ -22,10 +23,10 @@ use tokio::{
 };
 
 use super::{
-    M1Result, check, checked, l1, problem,
+    M1Result, check, checked, governance::{self as gov, Scenario}, l1, problem,
     profile::*,
     public::{Public, Submitted, initial_descriptor},
-    worker::{Launch, durable_file},
+    worker::{IDLE_RETIRE, Launch, durable_file},
 };
 use crate::{
     Id, Profile, hash_parts,
@@ -62,6 +63,7 @@ struct Worker {
     request_seq: u64,
     steps: u64,
     terminal: bool,
+    offline: bool,
     last_work: Option<p::Work>,
     regional: Regional,
 }
@@ -87,6 +89,18 @@ enum Event {
     CutoffRetire(u32),
     L1(l1::Event),
     CloseProbe(u32, p::Work),
+    OfflineRegion,
+    Heartbeat,
+    FinalizeHeartbeat(u64),
+    GovernancePoll,
+    GovernanceClock(u64),
+    GovernanceEvaluate,
+    GovernanceL1(usize, Arc<Value>),
+    GovernanceEspresso(usize, Arc<FinalizedBlock>),
+    GovernanceSign(usize, gov::Request),
+    GovernanceSubmit(gov::Request),
+    GovernanceResolve,
+    ContrastCutoff,
 }
 
 struct Hub {
@@ -111,12 +125,26 @@ struct Hub {
     wall_pause_ms: u64,
     l1: Option<l1::Port>,
     reader_b: l1::Reader,
+    scenario: Option<Scenario>,
+    governors: Vec<gov::Signer>,
+    advertised_l1: Option<u64>,
+    governance_intent: Option<gov::Request>,
+    governance_signatures: BTreeMap<usize, Value>,
+    pending_control: bool,
+    submitted_control: Option<String>,
+    governance_applied: bool,
+    contrast_complete: bool,
 }
 
-pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64) -> M1Result<()> {
+pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64, scenario: Option<Scenario>) -> M1Result<()> {
     fs::create_dir(&root)?;
     let root = root.canonicalize()?;
-    let public = Public::new(&root, force)?;
+    let public = Public::new(&root, force, scenario.is_some())?;
+    let governors = if scenario.is_some() {
+        (0..3).map(|id| gov::Signer::new(id, &public.replay)).collect::<M1Result<_>>()?
+    } else {
+        Vec::new()
+    };
     let source = Hash32::new(hash_parts(b"PoC/M1/GFR/source/v1", &[SOURCE, public.public_l1().source_id()]));
     let l1 = if force {
         Some(l1::Port::start(&root, Hash32::new(*public.inputs.config.reference()?.as_bytes()))?)
@@ -153,7 +181,16 @@ pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64) -> M1Res
         history: Vec::new(),
         publication_pending: false,
         force, wall_pause_ms, l1,
-        reader_b: l1::Reader::default(),
+        reader_b: if scenario.is_some() { l1::Reader::regional() } else { l1::Reader::default() },
+        scenario,
+        governors,
+        advertised_l1: None,
+        governance_intent: None,
+        governance_signatures: BTreeMap::new(),
+        pending_control: false,
+        submitted_control: None,
+        governance_applied: false,
+        contrast_complete: false,
     };
     let execution = hub.run_inner().await;
     let exits = hub.reap(execution.is_ok()).await;
@@ -229,6 +266,18 @@ impl Hub {
                 "t_pack_us": 50_000, "t_pub_us": 200_000, "t_e_us": SECOND, "delta_ts_us": SECOND,
             });
         }
+        if let Some(scenario) = self.scenario {
+            profile["schema"] = json!("M3-AUTO-FORCE-1");
+            profile["expiry_us"] = json!(30 * SECOND);
+            profile["cutoff_us"] = json!(60 * SECOND);
+            profile["auto_force"] = json!({
+                "scenario":scenario.name(), "outage_us":gov::OUTAGE, "heartbeat_us":gov::HEARTBEAT,
+                "poll_us":gov::POLL, "stall_us":2 * SECOND, "committee":3, "threshold":gov::THRESHOLD,
+                "reader_delays_us":[0,10000,20000], "sign_us":gov::SIGN_US,
+                "broadcast_us":gov::BROADCAST_US,
+            });
+            profile.as_object_mut().expect("profile object").remove("force");
+        }
         durable_file(&self.root.join("profile.json"), &serde_json::to_vec_pretty(&profile)?)?;
         for number in 0..15u8 {
             let pid = Pid::new(number)?;
@@ -258,7 +307,7 @@ impl Hub {
             )?;
             let mut child = Command::new(&binary);
             child
-                .arg("--worker")
+                .arg(if self.scenario.is_some() { "--auto-force-worker" } else { "--worker" })
                 .arg(node.to_string())
                 .arg(&dir)
                 .stdin(Stdio::piped())
@@ -291,6 +340,7 @@ impl Hub {
                 request_seq: 0,
                 steps: 0,
                 terminal: false,
+                offline: false,
                 last_work: None,
                 regional: Regional::default(),
             });
@@ -317,17 +367,24 @@ impl Hub {
     async fn reap(&mut self, healthy: bool) -> M1Result<()> {
         let mut successful = true;
         for node in 0..self.workers.len() {
+            let early_status = self.workers[node].child.try_wait()?;
+            if healthy && self.scenario.is_some() && early_status.is_none()
+                && !self.workers[node].offline && self.workers[node].config.is_none()
+            {
+                self.send(node as u32, IDLE_RETIRE).await?;
+                self.log("IdleRetire", Some(node as u32), json!({"assigned":false}))?;
+            }
             let worker = &mut self.workers[node];
-            let early_status = worker.child.try_wait()?;
             worker.tx.take();
             if !healthy && early_status.is_none() {
                 let _ = worker.child.start_kill();
             }
             let status = tokio::time::timeout(WATCHDOG, worker.child.wait()).await??;
-            successful &= status.success() && early_status.is_none();
+            let expected = healthy && if worker.offline { !status.success() } else { status.success() && early_status.is_none() };
+            successful &= expected;
             let os_pid = worker.os_pid;
             self.log("WorkerExit", Some(node as u32), json!({
-                "os_pid": os_pid, "exit": status.code(), "expected": healthy && early_status.is_none(),
+                "os_pid": os_pid, "exit": status.code(), "expected": expected,
                 "wall_time_ns": wall_time_ns(),
             }))?;
         }
@@ -447,6 +504,12 @@ impl Hub {
     }
 
     async fn manager_actions(&mut self, node: u32) -> M1Result<()> {
+        let worker = &self.workers[node as usize];
+        if worker.offline || (self.scenario.is_some() && node < 5 && worker.config.is_none()
+            && self.now.tick < START_US + u64::from(node) * STARTUP_SKEW_US)
+        {
+            return Ok(());
+        }
         loop {
             let worker = &self.workers[node as usize];
             let intent = worker
@@ -981,7 +1044,11 @@ impl Hub {
         if self.publication_pending || self.workers[node as usize].terminal {
             return Ok(());
         }
-        let selected = initial_descriptor(&self.public.replay)?.clone();
+        let selected = match &self.public.replay.public_state().tail {
+            poc_viewer_gfr::Tail::Next(descriptor) => descriptor.clone(),
+            _ if self.scenario.is_some() => return Ok(()),
+            _ => return Err(problem("M1 expected an assigned session")),
+        };
         let height = (self.public.replay.public_state().entries.len() as u64 + 1)
             .max(selected.plan.window.h_min);
         let worker = &self.workers[node as usize];
@@ -1040,7 +1107,7 @@ impl Hub {
             "action": action_id(id), "height": height, "cid": key.cid, "physical_id": key.block_hash,
             "ack": ack.durable_step_hash, "logical_step_id": ack.logical_step_id,
         }))?;
-        let due = if self.force && selected_branch(&result) == 0 && height == 11 {
+        let due = if self.force && self.scenario.is_none() && selected_branch(&result) == 0 && height == 11 {
             self.log("LatePublicationHeld", Some(node), json!({
                 "cid": key.cid, "physical_id": key.block_hash, "height": height, "until_us": l1::ACT_US,
             }))?;
@@ -1051,7 +1118,17 @@ impl Hub {
         self.schedule(due, Event::Publish(node, id, result))
     }
 
-    fn replay(&mut self, finalized: &BridgeResult) -> M1Result<()> {
+    fn accepted_result(&self, block_id: Hash32) -> M1Result<BridgeResult> {
+        let height = self.public.replay.public_state().entries.iter()
+            .find(|entry| entry.block.physical_digest == Some(block_id))
+            .map(|entry| entry.block.state.metadata.height)
+            .ok_or_else(|| problem("missing G physical anchor"))?;
+        let result = checked(BridgeResult::decode_store(&fs::read(self.root.join("results").join(format!("{height:02}.bin")))?))?;
+        check(result.key().block_hash == block_id, "stored result does not match G")?;
+        Ok(result)
+    }
+
+    fn replay(&mut self, finalized: Option<&BridgeResult>) -> M1Result<()> {
         let (before, records) = self.public.advance()?;
         let rows = self.public.replay.public_state().entries[before..].to_vec();
         if !self.force {
@@ -1060,14 +1137,19 @@ impl Hub {
         for (offset, row) in rows.iter().enumerate() {
             let GlobalSource::Regional(source) = row.source;
             let height = row.block.state.metadata.height;
-            check(source == finalized.key() && height == (before + offset + 1) as u64,
+            check(finalized.is_none_or(|result| self.scenario.is_some() || source == result.key())
+                && height == (before + offset + 1) as u64,
                 "G append identity or height does not match its finalized result")?;
             if let Some(identity) = row.block.physical_digest {
                 check(source.block_hash == identity && !row.block.native_block.kept.is_empty(),
                     "G physical block lost result identity or the fixture transaction")?;
+                let physical = match finalized {
+                    Some(result) if result.key() == source => result.clone(),
+                    _ => self.accepted_result(identity)?,
+                };
                 self.log("GAccepted", None, json!({
                     "height": height, "cid": source.cid, "physical_id": identity,
-                    "parent": finalized.result().block.parent, "native_hash": row.block.native_hash,
+                    "parent": physical.result().block.parent, "native_hash": row.block.native_hash,
                     "state_root": row.block.state.root()?, "position": row.position,
                 }))?;
             } else {
@@ -1082,6 +1164,9 @@ impl Hub {
         for (sequence, delivery) in &records {
             self.record_delivery(*sequence, delivery, finalized)?;
         }
+        if self.scenario.is_some() && records.is_empty() {
+            return Ok(());
+        }
         let records: Arc<[_]> = records.into();
         for node in 0..15 {
             self.schedule(self.now.tick, Event::ApplyRecords(node, Arc::clone(&records)))?;
@@ -1093,7 +1178,7 @@ impl Hub {
         &mut self,
         seq: u64,
         delivery: &RecordDelivery,
-        finalized: &BridgeResult,
+        finalized: Option<&BridgeResult>,
     ) -> M1Result<()> {
         let record = delivery.record();
         let append = record.effects.iter().filter_map(|effect| match effect {
@@ -1121,10 +1206,14 @@ impl Hub {
                 LifecycleBody::SessionAssigned { descriptor },
             ) = (&closed.body, &assigned.body)
         {
-            let prior = finalized.result();
+            let anchored = match finalized {
+                Some(result) if result.key().block_hash == descriptor.anchor.block.block_id => result.clone(),
+                _ => self.accepted_result(descriptor.anchor.block.block_id)?,
+            };
+            let prior = anchored.result();
             check(
                 &prior.descriptor.plan.session == session
-                    && descriptor.anchor.block.block_id == finalized.key().block_hash,
+                    && descriptor.anchor.block.block_id == anchored.key().block_hash,
                 "M1 replay handoff did not bind accepted anchor",
             )?;
             self.history.push(AnchorStep {
@@ -1160,12 +1249,42 @@ impl Hub {
                 .ok_or_else(|| problem("Force anchor is absent from G"))?;
             durable_file(&self.root.join(format!("descriptor-b{}-r{}.bin",
                 descriptor.plan.session.beta, descriptor.plan.session.r)), &descriptor.encode_checked()?)?;
-            self.log("ForceActivated", None, json!({
+            let mut activation = json!({
                 "position": record.position, "old_branch": branch, "new_branch": descriptor.plan.session.beta,
                 "descriptor": descriptor, "anchor_native_hash": anchor.block.native_hash,
                 "l1_floor": state.l1_floor, "head_height": descriptor.anchor.block.height,
                 "espresso_q": self.public.next_q - 1, "record_id": delivery.id(),
-            }))?;
+            });
+            if let Some(basis) = state.plan_bases.get(&descriptor.cid).copied() {
+                activation["policy"] = json!({"enabled_mask":basis.active.policy.enabled_mask,
+                    "order":basis.active.policy.order, "signed_floor":basis.active.policy.signed_floor,
+                    "position":basis.active.force, "control_seq":basis.active.control_seq, "floor":basis.active.floor});
+                activation["plan_basis"] = json!({"height":basis.height, "block_hash":basis.block_hash});
+                let prior = self.accepted_result(descriptor.anchor.block.block_id)?;
+                self.history.push(AnchorStep {
+                    descriptor: prior.result().descriptor.clone(),
+                    chain: prior.result().chain.clone(),
+                    final_proof: prior.result().final_proof.clone(),
+                });
+                self.pending_control = false;
+                self.governance_applied = true;
+                self.journal("Applied", activation.clone())?;
+            }
+            self.log("ForceActivated", None, activation)?;
+        } else if self.scenario.is_some() {
+            if let InputRef::L1(control) = &record.input_ref
+                && self.pending_control
+                && self.governance_intent.as_ref().is_some_and(|request| {
+                    request.control_seq == control.control_seq
+                        && Some(request.target_beta) == control.force_branch()
+                })
+            {
+                let phase = if record.events.is_empty() { "Noop" } else { "Applied" };
+                self.pending_control = false;
+                self.governance_intent = None;
+                self.governance_signatures.clear();
+                self.journal(phase, json!({"position":record.position,"record_id":delivery.id()}))?;
+            }
         } else {
             check(record.events.is_empty(), "unexpected public lifecycle event")?;
         }
@@ -1178,20 +1297,34 @@ impl Hub {
             self.schedule_l1()?;
         }
         fs::create_dir(self.root.join("results"))?;
+        if let Some(scenario) = self.scenario {
+            self.journal("Observing", json!({"scenario":scenario.name()}))?;
+            self.schedule(10 * SECOND, Event::Heartbeat)?;
+            self.schedule(10 * SECOND + gov::POLL, Event::GovernancePoll)?;
+            if scenario != Scenario::Healthy {
+                self.schedule(gov::OUTAGE, Event::OfflineRegion)?;
+            }
+            if matches!(scenario, Scenario::OrderingStopped | Scenario::WatermarkFrozen) {
+                self.schedule(16 * SECOND, Event::ContrastCutoff)?;
+            }
+        }
         let mut cutoff_scheduled = false;
         while let Some((&next, _)) = self.events.first_key_value() {
             let height = self.public.replay.public_state().entries.len();
-            if height == self.stop_height() && next.tick > self.now.tick {
+            if self.reached_cutoff() && next.tick > self.now.tick {
                 if cutoff_scheduled {
                     break;
                 }
                 let active: Vec<_> = self
                     .workers
                     .iter()
-                    .filter(|worker| !worker.terminal)
+                    .filter(|worker| !worker.terminal && !worker.offline && (self.scenario.is_none() || worker.config.is_some()))
                     .map(|worker| u32::from(worker.pid.get()))
                     .collect();
-                check(active.len() == 5, "unexpected live committee at M1 cutoff")?;
+                check(self.scenario.is_some() || active.len() == 5, "unexpected live committee at M1 cutoff")?;
+                if active.is_empty() {
+                    break;
+                }
                 for node in active {
                     self.schedule(self.now.tick, Event::CutoffRetire(node))?;
                 }
@@ -1199,12 +1332,12 @@ impl Hub {
                 continue;
             }
             let (key, event) = self.events.pop_first().expect("peeked M1 next event");
-            if key.tick > CUT_US {
+            if key.tick > if self.scenario.is_some() { 60 * SECOND } else { CUT_US } {
                 return Err(problem(format!("M1 virtual cutoff at G height {height}")));
             }
             self.now = key;
             for worker in &mut self.workers {
-                if let Some(status) = worker.child.try_wait()? {
+                if !worker.offline && let Some(status) = worker.child.try_wait()? {
                     return Err(problem(format!(
                         "unplanned PID {} exit at virtual {}: {status}",
                         worker.os_pid, self.now.tick
@@ -1239,6 +1372,7 @@ impl Hub {
                     self.schedule(self.now.tick + delay, Event::Actions(node))?;
                 }
                 Event::Grant(node, kind) => {
+                    if self.workers[node as usize].offline { continue; }
                     if self.workers[node as usize].terminal
                         && matches!(kind, input::Kind::RequestSample(_) | input::Kind::Sample(_))
                     {
@@ -1247,7 +1381,7 @@ impl Hub {
                     self.grant(node, kind).await?;
                 }
                 Event::Clock(node, request_id) => {
-                    if self.workers[node as usize].terminal {
+                    if self.workers[node as usize].offline || self.workers[node as usize].terminal {
                         continue;
                     }
                     let cfg = self.cfg(node)?;
@@ -1277,6 +1411,7 @@ impl Hub {
                 Event::Timer(node, timer) => {
                     if self.timers.get(&(node, timer.id)) == Some(&timer)
                         && !self.workers[node as usize].terminal
+                        && !self.workers[node as usize].offline
                     {
                         self.timers.remove(&(node, timer.id));
                         self.grant(node, input::Kind::TimerFired(timer)).await?;
@@ -1288,13 +1423,21 @@ impl Hub {
                         .get_mut(&key)
                         .ok_or_else(|| problem("M1 pending route not found"))?;
                     route.1 -= 1;
+                    if self.workers[key.1 as usize].offline || self.workers[key.0 as usize].offline {
+                        self.log("NetworkDroppedOffline", Some(key.1), json!({"src":key.0,"message_id":envelope.message_id}))?;
+                        continue;
+                    }
                     self.log("NetworkDelivered", Some(key.1), json!({
                         "src": key.0, "channel": key.2, "message_id": envelope.message_id, "attempt": envelope.attempt,
                     }))?;
                     self.grant(key.1, input::Kind::Deliver(envelope)).await?;
                 }
                 Event::Publish(node, action, result) => {
-                    if self.force && self.now.tick == l1::ACT_US && self.wall_pause_ms != 0 {
+                    if self.scenario.is_some() && !self.public.espresso_idle() {
+                        self.schedule(self.now.tick + FINALIZE_US, Event::Publish(node, action, result))?;
+                        continue;
+                    }
+                    if self.force && self.scenario.is_none() && self.now.tick == l1::ACT_US && self.wall_pause_ms != 0 {
                         tokio::time::sleep(Duration::from_millis(self.wall_pause_ms)).await;
                     }
                     let staged = self.public.propose(result, self.now.tick)?;
@@ -1312,8 +1455,15 @@ impl Hub {
                     let result = staged.result.clone();
                     let detail = self.public.finalize(staged, self.now.tick)?;
                     self.log("PublisherRecorded", None, detail)?;
-                    self.replay(&result)?;
-                    if self.force && selected_branch(&result) == 0
+                    self.replay(Some(&result))?;
+                    if self.scenario.is_some() {
+                        let block = self.public.finalized_row(self.public.next_q - 1)?;
+                        self.advertise_espresso(block)?;
+                        if self.governance_applied && selected_branch(&result) > 0 {
+                            self.journal("RecoveryObserved", json!({"height":result.result().block.metadata.height,"cid":result.key().cid}))?;
+                        }
+                    }
+                    if self.force && self.scenario.is_none() && selected_branch(&result) == 0
                         && result.result().block.metadata.height == 11
                     {
                         check(self.public.replay.public_state().branch == 1
@@ -1328,6 +1478,39 @@ impl Hub {
                     self.publication_pending = false;
                 }
                 Event::L1(event) => self.run_l1(event)?,
+                Event::OfflineRegion => self.offline_region().await?,
+                Event::Heartbeat => self.heartbeat()?,
+                Event::FinalizeHeartbeat(q) => {
+                    let row = self.public.finalize_heartbeat(q, self.now.tick)?;
+                    self.log("EspressoHeartbeat", None, json!({"q": q, "theta_us": row.proposal.theta_us.0,
+                        "message_count": row.proposal.messages.len()}))?;
+                    self.replay(None)?;
+                    self.advertise_espresso(row)?;
+                }
+                Event::GovernancePoll => {
+                    self.schedule(self.now.tick + CLOCK_TRANSIT_US, Event::GovernanceClock(self.now.tick))?;
+                    self.schedule(self.now.tick + gov::POLL, Event::GovernancePoll)?;
+                }
+                Event::GovernanceClock(sample_us) => {
+                    for signer in &mut self.governors {
+                        signer.sample_clock(sample_us, self.now.tick);
+                    }
+                    self.schedule(self.now.tick, Event::GovernanceEvaluate)?;
+                }
+                Event::GovernanceEvaluate => self.poll_governance()?,
+                Event::GovernanceL1(signer, block) => {
+                    let header = self.governors[signer].l1.receive(&block, &self.public.inputs)?;
+                    self.log("GovernanceL1Available", None, json!({"signer":signer,"height":header.height,"hash":header.hash}))?;
+                }
+                Event::GovernanceEspresso(signer, row) => {
+                    checked(self.governors[signer].espresso.receive_block(SOURCE, (*row).clone(), TickUs(self.now.tick)))?;
+                    self.log("GovernanceEspressoAvailable", None,
+                        json!({"signer":signer,"q":row.proposal.q,"theta_us":row.proposal.theta_us.0}))?;
+                }
+                Event::GovernanceSign(signer, request) => self.sign_governance(signer, request)?,
+                Event::GovernanceSubmit(request) => self.submit_governance(request).await?,
+                Event::GovernanceResolve => self.broadcast_governance(true)?,
+                Event::ContrastCutoff => self.contrast_complete = true,
                 Event::CloseProbe(node, work) => {
                     check(self.workers[node as usize].terminal, "Force probe before Close")?;
                     let ack = self.grant(node, input::Kind::WorkCompleted(work.clone())).await?;
@@ -1373,6 +1556,9 @@ impl Hub {
                 }
             }
         }
+        if self.scenario.is_some() {
+            return check(self.reached_cutoff(), "M3 acceptance cutoff not reached");
+        }
         check(
             self.public.replay.public_state().entries.len() == self.stop_height()
                 && self.history.len() == if self.force { 1 } else { 2 }
@@ -1391,9 +1577,11 @@ impl Hub {
     fn schedule_l1(&mut self) -> M1Result<()> {
         self.schedule(0, Event::L1(l1::Event::Genesis))?;
         self.schedule(5 * SECOND, Event::L1(l1::Event::Deploy))?;
-        self.schedule(l1::SUBMIT_US, Event::L1(l1::Event::Submit))?;
-        self.schedule(13 * SECOND, Event::L1(l1::Event::Retry))?;
-        for height in 1..=13 {
+        if self.scenario.is_none() {
+            self.schedule(l1::SUBMIT_US, Event::L1(l1::Event::Submit))?;
+            self.schedule(13 * SECOND, Event::L1(l1::Event::Retry))?;
+        }
+        for height in 1..=if self.scenario.is_some() { 30 } else { 13 } {
             let inclusion = height * l1::L1_SLOT_US;
             self.schedule(inclusion, Event::L1(l1::Event::Mine(height)))?;
             self.schedule(inclusion + l1::FINALITY_US, Event::L1(l1::Event::Finalize(height)))?;
@@ -1406,6 +1594,10 @@ impl Hub {
         let detail = port.step(event.command(self.now.tick))?;
         match event {
             l1::Event::Genesis => {
+                if self.scenario.is_some() {
+                    self.advertised_l1 = Some(0);
+                    self.advertise_l1(0, detail.clone())?;
+                }
                 let header = self.public.deliver_anvil(&detail)?;
                 self.reader_b.receive(&detail, &self.public.inputs)?;
                 for reader in ["A", "B"] {
@@ -1428,16 +1620,36 @@ impl Hub {
                     self.log("L1Submitted", None, log)?;
                 }
             }
-            l1::Event::Mine(height) => self.log("L1Included", None, json!({
-                "height": height, "timestamp_s": detail["timestamp"], "hash": detail["hash"],
-            }))?,
+            l1::Event::Mine(height) => {
+                self.log("L1Included", None, json!({"height": height, "timestamp_s":detail["timestamp"],"hash":detail["hash"]}))?;
+                if let Some(hash) = self.submitted_control.as_deref()
+                    && let Some(receipt) = detail["receipts"].as_array().and_then(|rows|
+                        rows.iter().find(|row| row["transactionHash"] == hash))
+                {
+                    if receipt["status"] == "0x1" {
+                        self.journal("Included", json!({"height":height,"receipt":receipt}))?;
+                    } else {
+                        self.pending_control = false;
+                        self.journal("Failed", json!({"height":height,"receipt":receipt}))?;
+                    }
+                }
+            },
             l1::Event::Finalize(height) => {
+                if self.scenario.is_some() {
+                    self.advertised_l1 = Some(height);
+                }
                 self.log("L1Finalized", None, json!({"height": height}))?;
                 self.schedule(self.now.tick, Event::L1(l1::Event::Deliver(height, "A")))?;
                 self.schedule(self.now.tick + 10_000, Event::L1(l1::Event::Deliver(height, "B")))?;
             }
             l1::Event::Deliver(height, reader) => {
                 let header = if reader == "A" {
+                    if self.scenario.is_some() {
+                        self.advertise_l1(height, detail.clone())?;
+                        if detail["events"].as_array().is_some_and(|events| events.iter().any(|event|event["event"]=="force")) {
+                            self.journal("Finalized", json!({"height":height,"control":detail["events"]}))?;
+                        }
+                    }
                     self.public.deliver_anvil(&detail)?
                 } else {
                     self.reader_b.receive(&detail, &self.public.inputs)?
@@ -1445,17 +1657,207 @@ impl Hub {
                 self.log("L1ReaderAvailable", None, json!({
                     "reader": reader, "height": height, "hash": header.hash,
                 }))?;
+                if reader == "A" && self.scenario.is_some() {
+                    self.replay(None)?;
+                }
             }
         }
         Ok(())
     }
 
+    fn reached_cutoff(&self) -> bool {
+        let state = self.public.replay.public_state();
+        match self.scenario {
+            None => state.entries.len() == self.stop_height(),
+            Some(Scenario::Healthy) => state.entries.len() >= 11 && self.submitted_control.is_none()
+                && self.governance_signatures.is_empty(),
+            Some(Scenario::OrderingStopped | Scenario::WatermarkFrozen) =>
+                self.contrast_complete && self.submitted_control.is_none() && self.governance_signatures.is_empty(),
+            Some(Scenario::Outage | Scenario::ReaderLag) => {
+                self.governance_applied && state.entries.last().is_some_and(|entry| {
+                    let GlobalSource::Regional(key) = entry.source;
+                    state.selected.values().any(|d| d.cid == key.cid && d.plan.session.beta > 0)
+                })
+            }
+        }
+    }
+
+    async fn offline_region(&mut self) -> M1Result<()> {
+        use std::os::unix::process::ExitStatusExt;
+        let state = self.public.replay.public_state();
+        let selected = initial_descriptor(&self.public.replay)?;
+        check(state.entries.len() == 1 && selected.plan.region.get() == 0, "M3 outage must follow h1 on R0")?;
+        let cid = selected.cid;
+        for node in 0..5 {
+            let worker = &mut self.workers[node];
+            worker.child.start_kill()?;
+            let status = tokio::time::timeout(WATCHDOG, worker.child.wait()).await??;
+            check(status.signal() == Some(9), "unexpected worker outage exit")?;
+            worker.offline = true;
+            worker.tx.take();
+            let info = json!({"os_pid":worker.os_pid,"signal":status.signal(),"cid":cid,"region":0});
+            self.log("WorkerOffline", Some(node as u32), info)?;
+        }
+        Ok(())
+    }
+
+    fn heartbeat(&mut self) -> M1Result<()> {
+        let scenario = self.scenario.expect("M3 heartbeat");
+        if scenario == Scenario::OrderingStopped && self.now.tick >= gov::OUTAGE {
+            return Ok(());
+        }
+        if !self.public.espresso_idle() {
+            self.schedule(self.now.tick + FINALIZE_US, Event::Heartbeat)?;
+            return Ok(());
+        }
+        let frozen = if scenario == Scenario::WatermarkFrozen && self.now.tick >= gov::OUTAGE {
+            self.public.espresso_tip().map(|(_, theta)| theta.0)
+        } else {
+            None
+        };
+        let q = self.public.heartbeat(self.now.tick, frozen)?;
+        self.schedule(self.now.tick + FINALIZE_US, Event::FinalizeHeartbeat(q))?;
+        self.schedule(self.now.tick + gov::HEARTBEAT, Event::Heartbeat)
+    }
+
+    fn advertise_l1(&mut self, _height: u64, block: Value) -> M1Result<()> {
+        let block = Arc::new(block);
+        for id in 0..self.governors.len() {
+            self.schedule(self.now.tick + id as u64 * 10_000, Event::GovernanceL1(id, Arc::clone(&block)))?;
+        }
+        Ok(())
+    }
+
+    fn advertise_espresso(&mut self, row: FinalizedBlock) -> M1Result<()> {
+        let row = Arc::new(row);
+        for id in 0..self.governors.len() {
+            let mut delivery = self.now.tick + id as u64 * 10_000;
+            if self.scenario == Some(Scenario::ReaderLag) && id > 0 && self.now.tick >= gov::OUTAGE {
+                let release = if id == 1 { 13_650_000 } else { 13_800_000 };
+                delivery = delivery.max(release + row.proposal.q * 10 + id as u64);
+            }
+            self.schedule(delivery, Event::GovernanceEspresso(id, Arc::clone(&row)))?;
+        }
+        Ok(())
+    }
+
+    fn advertised(&self) -> gov::Advertised {
+        gov::Advertised { l1: self.advertised_l1, espresso: self.public.espresso_tip() }
+    }
+
+    fn poll_governance(&mut self) -> M1Result<()> {
+        let advertised = self.advertised();
+        for id in 0..self.governors.len() {
+            let (detail, vote) = self.governors[id].poll(
+                &self.public, advertised, self.now.tick, self.pending_control, true,
+            )?;
+            self.log("GovernancePoll", None, detail)?;
+            let Some(vote) = vote else { continue; };
+            if self.governance_intent.as_ref() != Some(&vote) {
+                self.governance_intent = Some(vote.clone());
+                self.governance_signatures.clear();
+                self.journal("Proposed", json!(&vote))?;
+            }
+            if !self.governance_signatures.contains_key(&id) {
+                self.schedule(self.now.tick + gov::SIGN_US, Event::GovernanceSign(id, vote))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn journal(&mut self, phase: &str, detail: Value) -> M1Result<()> {
+        let mut file = File::options().create(true).append(true).open(self.root.join("governance.jsonl"))?;
+        serde_json::to_writer(&mut file, &json!({"phase":phase,"tick_us":self.now.tick,"detail":&detail}))?;
+        file.write_all(b"\n")?;
+        file.sync_all()?;
+        self.log("GovernanceState", None, json!({"phase":phase,"evidence":detail}))
+    }
+
+    fn sign_governance(&mut self, signer: usize, request: gov::Request) -> M1Result<()> {
+        if self.pending_control || self.governance_signatures.contains_key(&signer)
+            || self.governance_intent.as_ref() != Some(&request) {
+            return Ok(());
+        }
+        let advertised = self.advertised();
+        let (_, decision) = self.governors[signer].poll(&self.public, advertised, self.now.tick, false, false)?;
+        if decision.as_ref() != Some(&request) {
+            return Ok(());
+        }
+        let response = self.l1.as_mut().ok_or_else(|| problem("M3 L1 port missing"))?
+            .step(json!({"op":"governance_sign","signer":signer,"request":request,"tick_us":self.now.tick}))?;
+        check(response["signer"] == signer as u64 && response["request"] == json!(&request),
+            "signer output not bound to request")?;
+        self.governance_signatures.insert(signer, response.clone());
+        self.log("GovernanceSignature", None, response)?;
+        if self.governance_signatures.len() == gov::THRESHOLD {
+            self.journal("Signed", json!({"request":request,"signatures":self.governance_signatures}))?;
+            self.schedule(self.now.tick + gov::BROADCAST_US, Event::GovernanceSubmit(request))?;
+        }
+        Ok(())
+    }
+
+    async fn submit_governance(&mut self, request: gov::Request) -> M1Result<()> {
+        if self.pending_control || self.governance_intent.as_ref() != Some(&request) {
+            return Ok(());
+        }
+        let advertised = self.advertised();
+        let mut signers = Vec::new();
+        for (&id, signature) in &self.governance_signatures {
+            let (_, decision) = self.governors[id].poll(&self.public, advertised, self.now.tick, false, false)?;
+            if decision.as_ref() == Some(&request) {
+                signers.push(signature.clone());
+            }
+        }
+        if signers.len() < gov::THRESHOLD {
+            self.governance_intent = None;
+            self.governance_signatures.clear();
+            self.journal("ProposedSuperseded", json!(&request))?;
+            return Ok(());
+        }
+        signers.truncate(gov::THRESHOLD);
+        if self.wall_pause_ms != 0 {
+            tokio::time::sleep(Duration::from_millis(self.wall_pause_ms)).await;
+        }
+        let prepared = self.l1.as_mut().ok_or_else(|| problem("M3 L1 port missing"))?
+            .step(json!({"op":"governance_prepare","request":request,"signers":signers,"tick_us":self.now.tick}))?;
+        let hash = prepared["hash"].as_str().ok_or_else(|| problem("prepared transaction has no hash"))?;
+        self.submitted_control = Some(hash.to_owned());
+        self.pending_control = true;
+        self.journal("Prepared", prepared.clone())?;
+        self.log("GovernanceSubmission", None, prepared)?;
+        self.broadcast_governance(false)
+    }
+
+    fn broadcast_governance(&mut self, reconcile: bool) -> M1Result<()> {
+        let op = if reconcile { "governance_reconcile" } else { "governance_broadcast" };
+        let result = self.l1.as_mut().ok_or_else(|| problem("M3 L1 port missing"))?
+            .step(json!({"op":op,"tick_us":self.now.tick}))?;
+        let hash = self.submitted_control.as_ref().ok_or_else(|| problem("no durable control to broadcast"))?;
+        check(result["hash"] == *hash, "broadcast changed request transaction")?;
+        match result["status"].as_str() {
+            Some("ready") => {
+                self.journal("Submitted", result)?;
+                Ok(())
+            }
+            Some("wait") => {
+                self.journal("SubmittedUnknown", result)?;
+                self.schedule(self.now.tick + 10_000, Event::GovernanceResolve)
+            }
+            _ => {
+                self.pending_control = false;
+                self.journal("Failed", result)?;
+                Err(problem("governance broadcast rejected"))
+            }
+        }
+    }
+
     fn complete(&mut self) -> M1Result<()> {
         let entries = &self.public.replay.public_state().entries;
-        let tip = &entries[self.stop_height() - 1];
+        let height = if self.scenario.is_some() { entries.len() } else { self.stop_height() };
+        let tip = entries.get(height.saturating_sub(1)).ok_or_else(|| problem("no G tip at cutoff"))?;
         let GlobalSource::Regional(result) = tip.source;
         let summary = json!({
-            "status": "Completed", "height": self.stop_height(), "seed": SEED,
+            "status": "Completed", "height": height, "seed": SEED,
             "cid": result.cid, "physical_id": result.block_hash, "native_hash": tip.block.native_hash,
             "state_root": tip.block.state.root()?, "position": tip.position,
             "virtual_cutoff_us": self.now.tick, "worker_count": self.workers.len(),

@@ -111,8 +111,8 @@ impl<'a> NativePublicationVerifier<'a> {
         let descriptor = &result.descriptor;
         let plan = &descriptor.plan;
         let program = ProgramConfig::from_plan(&self.config, plan)?;
-        if plan.authorization_ref
-            != authorization_ref(self.config_ref, self.config.registry_hash, &plan.input())?
+        if (plan.leader_rule.rule_id == 1 && plan.authorization_ref
+            != authorization_ref(self.config_ref, self.config.registry_hash, &plan.input())?)
             || descriptor.cid
                 != regional_cid(&plan.session, descriptor.anchor.block.block_id, &program)?
         {

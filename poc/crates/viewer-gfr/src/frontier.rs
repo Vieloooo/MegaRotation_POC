@@ -342,7 +342,8 @@ fn validate_controls(
 ) -> Result<(), GfrError> {
     let mut previous = None;
     for control in controls {
-        if control.position.block != height
+        if (control.is_policy_force() && control.regional_policy().is_none())
+            || control.position.block != height
             || !matches!(control.kind, ReplayKind::Force | ReplayKind::Resume)
         {
             return Err(GfrError::InvalidSource);

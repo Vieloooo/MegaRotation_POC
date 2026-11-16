@@ -162,10 +162,16 @@ fn record_projection(record: &ReplayRecord) -> Result<Vec<u8>, BridgeError> {
             input.push(&height.to_be_bytes())?;
         }
         InputRef::L1(control) => {
-            input.tag(3)?;
+            let tag = if control.is_policy_force() { 4 } else { 3 };
+            input.tag(tag)?;
             input.frame(&control.position.encode())?;
             input.push(&control.control_seq.to_be_bytes())?;
-            input.push(&control.force_branch().ok_or(BridgeError::InvalidResult)?.to_be_bytes())?;
+            let branch = control.force_branch().ok_or(BridgeError::InvalidResult)?;
+            if tag == 4 {
+                input.frame(&control.source_bytes)?;
+            } else {
+                input.push(&branch.to_be_bytes())?;
+            }
         }
     }
     check_input(&input.bytes, &record.position)?;
@@ -239,6 +245,18 @@ fn check_input(bytes: &[u8], position: &ReplayPosition) -> Result<(), BridgeErro
             input.u64()?; // control sequence
             input.u64()?; // target branch
             encoded == *at
+        }
+        (4, ReplayKind::Force, ReplayIndex::L1(at)) => {
+            let encoded = L1Position::decode(input.frame(MAX_PROJECTION)?)?;
+            let control_seq = input.u64()?;
+            let source_bytes = input.frame(64)?.to_vec();
+            let control = poc_viewer_gfr::ControlRef {
+                position: encoded,
+                kind: ReplayKind::Force,
+                control_seq,
+                source_bytes,
+            };
+            encoded == *at && control.regional_policy().is_some()
         }
         _ => false,
     };

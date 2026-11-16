@@ -10,7 +10,7 @@ use crate::{
     ReplayKind, ReplayPosition, ResultKey, SessionId,
 };
 
-pub use poc_authorization::{PlanError, PlanOutcome, StaticScheduleProvider};
+pub use poc_authorization::{ActivePolicy, HistoricalPlan, PlanError, PlanOutcome, RegionalPolicy, StaticScheduleProvider};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GfrParameters {
@@ -121,12 +121,19 @@ pub struct ReplayServices<'a> {
 
 pub trait PlanProvider {
     fn resolve(&self, input: &PlanInput, references: &dyn PublicReferenceView) -> PlanOutcome;
+    fn resolve_historical(&self, _: &PlanInput, _: &dyn PublicReferenceView, _: &HistoricalPlan) -> PlanOutcome {
+        PlanOutcome::Reject(PlanError::PlanMismatch)
+    }
     fn descriptor(&self, plan: &PlanRecord, anchor: &Anchor) -> Result<Descriptor, PlanError>;
 }
 
 impl PlanProvider for StaticScheduleProvider {
     fn resolve(&self, input: &PlanInput, references: &dyn PublicReferenceView) -> PlanOutcome {
         StaticScheduleProvider::resolve(self, input, references)
+    }
+
+    fn resolve_historical(&self, input: &PlanInput, references: &dyn PublicReferenceView, basis: &HistoricalPlan) -> PlanOutcome {
+        StaticScheduleProvider::resolve_historical(self, input, references, basis)
     }
 
     fn descriptor(&self, plan: &PlanRecord, anchor: &Anchor) -> Result<Descriptor, PlanError> {
@@ -189,6 +196,7 @@ pub struct ControlRef {
 }
 
 impl ControlRef {
+    const POLICY_FORCE: &'static [u8] = b"PoC/PolicyForce/v1";
     const STATIC_FORCE: &'static [u8] = b"PoC/StaticForce/v1";
 
     /// Project a Force from an authenticated, finalized L1 log. The source
@@ -199,9 +207,37 @@ impl ControlRef {
         Self { position, kind: ReplayKind::Force, control_seq, source_bytes }
     }
 
+    pub fn policy_force(position: L1Position, control_seq: u64, branch: u64, policy: RegionalPolicy) -> Self {
+        let mut source_bytes = Self::POLICY_FORCE.to_vec();
+        source_bytes.extend_from_slice(&branch.to_be_bytes());
+        source_bytes.extend_from_slice(&policy.mask_and_order());
+        source_bytes.extend_from_slice(&policy.signed_floor.to_be_bytes());
+        Self { position, kind: ReplayKind::Force, control_seq, source_bytes }
+    }
+
+    pub fn is_policy_force(&self) -> bool {
+        self.source_bytes.starts_with(Self::POLICY_FORCE)
+    }
+
+    pub fn regional_policy(&self) -> Option<RegionalPolicy> {
+        let bytes = self.source_bytes.strip_prefix(Self::POLICY_FORCE)?;
+        if self.kind != ReplayKind::Force || bytes.len() != 20 {
+            return None;
+        }
+        RegionalPolicy::from_parts(
+            bytes[8..12].try_into().ok()?,
+            u64::from_be_bytes(bytes[12..].try_into().ok()?),
+        ).ok()
+    }
+
     pub fn force_branch(&self) -> Option<u64> {
         if self.kind != ReplayKind::Force {
             return None;
+        }
+        if self.is_policy_force() {
+            self.regional_policy()?;
+            let bytes = self.source_bytes.strip_prefix(Self::POLICY_FORCE)?;
+            return Some(u64::from_be_bytes(bytes[..8].try_into().ok()?));
         }
         let branch = self.source_bytes.strip_prefix(Self::STATIC_FORCE)?;
         Some(u64::from_be_bytes(branch.try_into().ok()?))

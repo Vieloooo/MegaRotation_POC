@@ -26,6 +26,12 @@ pub struct Config {
     pub announcement_seconds: u64,
     pub finality_delay_us: u64,
     pub readers: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub regional_policy: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 impl Config {

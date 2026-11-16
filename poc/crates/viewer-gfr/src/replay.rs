@@ -5,13 +5,13 @@ use std::{
 };
 
 use poc_types::domain::{
-    BlockRef, Boundary, BoundaryCause, DomainError, MAX_FIXTURE_ROWS, ProgramConfig,
+    BlockRef, Boundary, BoundaryCause, DomainError, MAX_FIXTURE_ROWS, ProgramConfig, RuleSpec,
     authorization_ref, regional_cid,
 };
 use sim_espresso::MAX_BLOCKS;
 
 use crate::{
-    Anchor, ChainEntry, CloseReason, ControlRef, ExecutionAnchor, GfrError, GfrParameters, GlobalCheckpoint,
+    ActivePolicy, Anchor, ChainEntry, CloseReason, HistoricalPlan, L1ControlReader, InputStatus, ControlRef, ExecutionAnchor, GfrError, GfrParameters, GlobalCheckpoint,
     GlobalSource, InitInput, InitResult, InputRef, LifecycleBody, LifecycleEvent, Missing,
     PlanError, PlanInput, PlanOutcome, PublicConfig, PublicReplayState, ReplayEffect,
     ReplayPosition, ReplayReads, ReplayRecord, ReplayResult, ReplayServices, ReplayState,
@@ -117,6 +117,8 @@ fn genesis_state(
             l1_source: reads.l1.source_id().to_vec(),
             branch: 0,
             l1_floor: genesis.anchor.block.origin,
+            policies: BTreeMap::new(),
+            plan_bases: BTreeMap::new(),
             tail: Tail::Pending(boundary.clone()),
             pc: None,
             selected: BTreeMap::new(),
@@ -130,7 +132,7 @@ fn genesis_state(
         anchors: BTreeMap::from([(genesis.anchor.block.block_id, genesis.clone())]),
         next_q: 0,
     };
-    state.public.tail = match resolve(&state, boundary, services) {
+    state.public.tail = match resolve(&mut state, boundary, services, reads.l1, &Cell::new(None)) {
         Ok(tail) => tail,
         Err(StepError::Reject(error)) => return Err(error),
         Err(StepError::Wait(missing)) => return Ok(init_wait(None, vec![missing])),
@@ -238,11 +240,30 @@ pub(crate) fn verify_profile(
 }
 
 fn resolve(
-    state: &ReplayState,
+    state: &mut ReplayState,
     boundary: Boundary,
     services: &ReplayServices<'_>,
+    l1: &dyn L1ControlReader,
+    used_header: &Cell<Option<u64>>,
 ) -> StepResult<Tail> {
-    let plan = match services.plan.resolve(&boundary.input, state) {
+    let basis = if let Some(active) = state.public.policies.get(&boundary.input.session.beta).copied() {
+        let height = boundary.input.reference_block.origin.max(active.floor);
+        let header = match l1.header(height) {
+            InputStatus::Ready(header) if header.height == height => header,
+            InputStatus::Ready(_) => return Err(GfrError::InvalidSource.into()),
+            InputStatus::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
+            InputStatus::Reject(error) => return Err(GfrError::Input(error).into()),
+        };
+        used_header.set(Some(used_header.get().map_or(height, |old| old.max(height))));
+        Some(HistoricalPlan { active, height, block_hash: header.hash })
+    } else {
+        None
+    };
+    let outcome = match basis.as_ref() {
+        Some(basis) => services.plan.resolve_historical(&boundary.input, state, basis),
+        None => services.plan.resolve(&boundary.input, state),
+    };
+    let plan = match outcome {
         PlanOutcome::Ready(plan) => plan,
         PlanOutcome::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
         PlanOutcome::None => return Ok(Tail::Pending(boundary)),
@@ -250,10 +271,21 @@ fn resolve(
     };
     let config = &state.public.config;
     let config_ref = config.reference()?;
+    let legacy = authorization_ref(config_ref, config.registry_hash, &boundary.input)?;
+    let (expected_ref, expected_rule) = match basis {
+        Some(basis) => {
+            if basis.active.policy.select(boundary.input.source_region)? != Some(plan.region) {
+                return Err(PlanError::PlanMismatch.into());
+            }
+            let reference = basis.bind(legacy, plan.region)?;
+            (reference, RuleSpec::historical_plan(reference))
+        }
+        None => (legacy, RuleSpec::static_schedule()),
+    };
     if plan.input() != boundary.input
         || plan.config_ref != config_ref
-        || plan.authorization_ref
-            != authorization_ref(config_ref, config.registry_hash, &boundary.input)?
+        || plan.authorization_ref != expected_ref
+        || plan.leader_rule != expected_rule
     {
         return Err(PlanError::PlanMismatch.into());
     }
@@ -266,6 +298,9 @@ fn resolve(
         || descriptor.cid != regional_cid(&plan.session, anchor.block.block_id, &program)?
     {
         return Err(PlanError::CidMismatch.into());
+    }
+    if let Some(basis) = basis {
+        state.public.plan_bases.insert(descriptor.cid, basis);
     }
     Ok(Tail::Next(descriptor))
 }
@@ -377,8 +412,8 @@ fn apply_event(
             staged.next_q = add(*q, 1)?;
         }
         InputRef::Expire(_) => expire(&mut staged, &mut record)?,
-        InputRef::SessionEnd(_) => regular(&mut staged, &mut record, services)?,
-        InputRef::L1(control) => force(&mut staged, control, &mut record, services)?,
+        InputRef::SessionEnd(_) => regular(&mut staged, &mut record, services, reads.l1, &used_origin)?,
+        InputRef::L1(control) => force(&mut staged, control, &mut record, services, reads.l1, &used_origin)?,
     }
     sources.support(&mut staged.cuts, event, used_origin.get())?;
     staged.public.pc = Some(record.position.clone());
@@ -412,7 +447,7 @@ fn apply_espresso(
             if append(state, candidate, record)?
                 && state.head_height() == descriptor.plan.window.h_max
             {
-                regular(state, record, evaluation.services)?;
+                regular(state, record, evaluation.services, evaluation.reads.l1, evaluation.used_origin)?;
                 break;
             }
         }
@@ -515,6 +550,8 @@ fn regular(
     state: &mut ReplayState,
     record: &mut ReplayRecord,
     services: &ReplayServices<'_>,
+    l1: &dyn L1ControlReader,
+    used_header: &Cell<Option<u64>>,
 ) -> StepResult<()> {
     let Tail::Next(predecessor) = &state.public.tail else {
         return Err(GfrError::InvalidSource.into());
@@ -537,7 +574,7 @@ fn regular(
         },
         anchor: Some(state.last_anchor().clone()),
     };
-    let successor = resolve(state, boundary, services)?;
+    let successor = resolve(state, boundary, services, l1, used_header)?;
     if !state.public.closed_sessions.insert(session_key(&old)) {
         return Err(GfrError::InvalidSource.into());
     }
@@ -573,6 +610,8 @@ fn force(
     control: &ControlRef,
     record: &mut ReplayRecord,
     services: &ReplayServices<'_>,
+    l1: &dyn L1ControlReader,
+    used_header: &Cell<Option<u64>>,
 ) -> StepResult<()> {
     // M2 uses the fixed, public static-schedule-v1 preparation budget.
     const FORCE_INIT_US: u64 = 3_000_000;
@@ -609,10 +648,18 @@ fn force(
         },
         anchor: Some(anchor),
     };
-    let successor = resolve(state, boundary, services)?;
+    state.public.l1_floor = state.public.l1_floor.max(control.position.block);
+    if let Some(policy) = control.regional_policy() {
+        state.public.policies.insert(beta, ActivePolicy {
+            policy,
+            force: control.position,
+            control_seq: control.control_seq,
+            floor: state.public.l1_floor,
+        });
+    }
+    let successor = resolve(state, boundary, services, l1, used_header)?;
     state.public.closed_branches.insert(branch);
     state.public.branch = beta;
-    state.public.l1_floor = state.public.l1_floor.max(control.position.block);
     lifecycle(record, LifecycleBody::BranchClosed { branch, reason: CloseReason::Force });
     if let Tail::Next(descriptor) = &successor {
         if state.public.selected.insert(session_key(&descriptor.plan.session), descriptor.clone()).is_some() {

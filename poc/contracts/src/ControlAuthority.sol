@@ -86,14 +86,14 @@ contract ControlAuthority is IControlAuthority {
     function accept(bytes32 rid, uint64 seq, Policy calldata policy, bytes32 content, bytes calldata signature)
         private returns (Accepted memory result, bool replay)
     {
-        if (!TypedData.signedBy(TypedData.digest(NAME_HASH, configRef, content), signature, governance)) revert InvalidSignature();
+        checkSignatures(TypedData.digest(NAME_HASH, configRef, content), signature);
         result = requests[msg.sender][rid];
         if (result.exists) {
             if (result.content != content) revert RequestConflict();
             return (result, true);
         }
         if (hasControl && seq <= lastControlSeq) revert InvalidSequence();
-        if (policy.enabledMask != 7 || policy.order0 != 0 || policy.order1 != 1 || policy.order2 != 2) revert InvalidPolicy();
+        checkPolicy(policy);
 
         uint64 timestamp = TypedData.narrow(block.timestamp);
         if (timestamp > type(uint64).max - announcementSeconds) revert Overflow();
@@ -101,6 +101,14 @@ contract ControlAuthority is IControlAuthority {
         hasControl = true;
         lastControlSeq = seq;
         requests[msg.sender][rid] = result;
+    }
+
+    function checkSignatures(bytes32 digest, bytes calldata signatures) internal view virtual {
+        if (!TypedData.signedBy(digest, signatures, governance)) revert InvalidSignature();
+    }
+
+    function checkPolicy(Policy calldata policy) internal pure virtual {
+        if (policy.enabledMask != 7 || policy.order0 != 0 || policy.order1 != 1 || policy.order2 != 2) revert InvalidPolicy();
     }
 
     function forceHash(address caller, bytes32 rid, uint64 seq, uint64 branch, Policy calldata policy)

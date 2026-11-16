@@ -55,9 +55,14 @@ fn io_error(_: std::io::Error) -> Error {
     Error("M1 worker pipe or journal I/O failure")
 }
 
-pub(crate) fn run(pid: Pid, root: PathBuf) -> Result<()> {
+pub(super) const IDLE_RETIRE: &[u8] = b"PoC/M3/idle-retire/v1";
+
+pub(crate) fn run(pid: Pid, root: PathBuf, auto_force: bool) -> Result<()> {
     let mut input = std::io::stdin();
     let frame_bytes = frame(&mut input)?.ok_or(Error("M1 worker exited before assigned"))?;
+    if auto_force && frame_bytes == IDLE_RETIRE {
+        return durable_file(&root.join("idle-retire.bin"), &frame_bytes);
+    }
     let launch: Launch =
         serde_json::from_slice(&frame_bytes).map_err(|_| Error("invalid M1 Launch"))?;
     let plans = launch.inputs.plans()?;

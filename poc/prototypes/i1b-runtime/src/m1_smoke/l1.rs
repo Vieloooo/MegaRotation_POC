@@ -2,7 +2,7 @@ use super::{M1Result, check, problem, profile::PublicInputs};
 use poc_types::domain::{
     FinalizedL1Reader, Hash32, InputMissing, InputStatus, L1BlockRef, L1Header, L1Position,
 };
-use poc_viewer_gfr::{ControlRef, L1ControlReader};
+use poc_viewer_gfr::{ControlRef, L1ControlReader, RegionalPolicy};
 use serde_json::{Value, json};
 use std::{
     env,
@@ -96,9 +96,18 @@ impl Drop for Port {
 pub(super) struct Reader {
     headers: Vec<L1Header>,
     controls: Vec<Vec<ControlRef>>,
+    regional: bool,
 }
 
 impl Reader {
+    pub fn latest_control_seq(&self) -> Option<u64> {
+        self.controls.iter().flatten().map(|control| control.control_seq).max()
+    }
+
+    pub fn regional() -> Self {
+        Self { regional: true, ..Self::default() }
+    }
+
     pub fn receive(&mut self, value: &Value, inputs: &PublicInputs) -> M1Result<L1Header> {
         let height = field(value, "number")?;
         check(
@@ -135,10 +144,8 @@ impl Reader {
                 Some("force") => {
                     let policy = &event["policy"];
                     check(
-                        field(policy, "enabled_mask")? == 7
-                            && policy["order"] == json!([0, 1, 2])
-                            && field(event, "act")? == header.timestamp_s + 10,
-                        "non-static Force or inconsistent activation",
+                        field(event, "act")? == header.timestamp_s + 10,
+                        "inconsistent control activation",
                     )?;
                     let position = &event["position"];
                     let at = L1Position {
@@ -146,11 +153,18 @@ impl Reader {
                         tx: field(position, "tx")?,
                         log: field(position, "log")?,
                     };
-                    controls.push(ControlRef::static_force(
-                        at,
-                        field(event, "seq")?,
-                        field(event, "branch")?,
-                    ));
+                    let seq = field(event, "seq")?;
+                    let branch = field(event, "branch")?;
+                    let mask = u8::try_from(field(policy, "enabled_mask")?)?;
+                    let order: [u8; 3] = serde_json::from_value(policy["order"].clone())?;
+                    if self.regional {
+                        controls.push(ControlRef::policy_force(at, seq, branch, super::checked(
+                            RegionalPolicy::from_parts([mask, order[0], order[1], order[2]], field(policy, "l1_floor")?)
+                        )?));
+                    } else {
+                        check(mask == 7 && order == [0, 1, 2], "non-static Force on M2 stream")?;
+                        controls.push(ControlRef::static_force(at, seq, branch));
+                    }
                 }
                 _ => return Err(problem("unexpected event in healthy Force L1 prefix")),
             }

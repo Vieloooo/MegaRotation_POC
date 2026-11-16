@@ -13,7 +13,7 @@ use commonware_cryptography::{
     sha256::Digest,
 };
 use commonware_parallel::Sequential;
-use poc_authorization::{POP_NAMESPACE, PlanOutcome, StaticScheduleProvider, ValidatedRegistry};
+use poc_authorization::{HistoricalPlan, POP_NAMESPACE, PlanOutcome, StaticScheduleProvider, ValidatedRegistry};
 use poc_core::{
     fixture::{CheckedSetup, check_setup, reg_a_l1_fixture},
     merge::{initial_padding, merge},
@@ -272,6 +272,8 @@ pub(crate) struct Install {
     pub prepared_at_us: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub projected_l1_lag_us: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_basis: Option<Vec<u8>>,
 }
 
 pub(crate) struct ReadyMaterial {
@@ -293,6 +295,8 @@ impl ReadyMaterial {
         let projected_l1_lag_us = install.projected_l1_lag_us.unwrap_or(0);
         inputs.deliver_l1(&setup, &mut l1, install.prepared_at_us.saturating_sub(projected_l1_lag_us))?;
         let metadata = RegionalMetadata::new(&inputs.config, &l1).map_err(domain)?;
+        let basis = install.plan_basis.as_deref().map(HistoricalPlan::decode)
+            .transpose().map_err(|_| Error("malformed historical Plan basis"))?;
         let mut anchor = inputs.genesis.clone();
         let mut prior_initial = inputs.genesis.anchor.clone();
         for (r, step) in install.history.iter().enumerate() {
@@ -303,7 +307,10 @@ impl ReadyMaterial {
                         beta: 0,
                         r: r as u64,
                     })
-                || tip.metadata.height != (r as u64 + 1) * 10
+                || (tip.metadata.height != step.descriptor.plan.window.h_max
+                    && !(basis.is_some() && r + 1 == install.history.len()
+                        && step.descriptor.plan.window.h_min <= tip.metadata.height
+                        && tip.metadata.height < step.descriptor.plan.window.h_max))
                 || !matches!(
                     schedules.validate_plan(&step.descriptor.plan, &Reference(&prior_initial)),
                     PlanOutcome::Ready(_)
@@ -350,15 +357,16 @@ impl ReadyMaterial {
             SessionId { beta: 0, r: install.history.len() as u64 }
         };
         let reference = if force { &anchor.anchor } else { &prior_initial };
+        let validated_plan = match basis {
+            Some(basis) => schedules.validate_historical_plan(&descriptor.plan, &Reference(reference), &basis),
+            None => schedules.validate_plan(&descriptor.plan, &Reference(reference)),
+        };
         if anchor != install.execution
             || descriptor.anchor != anchor.anchor
             || descriptor.plan.session != expected_session
             || descriptor.plan.region != pid.region()
             || schedules.validate_descriptor(descriptor).is_err()
-            || !matches!(
-                schedules.validate_plan(&descriptor.plan, &Reference(reference)),
-                PlanOutcome::Ready(_)
-            )
+            || !matches!(validated_plan, PlanOutcome::Ready(_))
         {
             return Err(Error("M1 exact anchor preparation failed"));
         }

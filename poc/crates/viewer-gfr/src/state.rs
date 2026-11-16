@@ -23,6 +23,8 @@ pub struct PublicReplayState {
     pub l1_source: Vec<u8>,
     pub branch: u64,
     pub l1_floor: u64,
+    pub policies: BTreeMap<u64, crate::ActivePolicy>,
+    pub plan_bases: BTreeMap<poc_types::domain::Cid, crate::HistoricalPlan>,
     pub tail: Tail,
     pub pc: Option<ReplayPosition>,
     pub selected: BTreeMap<(u64, u64), Descriptor>,

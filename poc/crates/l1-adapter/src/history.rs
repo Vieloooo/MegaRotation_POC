@@ -207,7 +207,7 @@ impl Decoder {
                     caller,
                     request_id,
                     seq,
-                    policy: abi::policy_at(data, 1)?,
+                    policy: abi::policy_at(data, 1, config.regional_policy)?,
                     branch: abi::uint_at(data, 0)?,
                     act,
                 })));
@@ -222,7 +222,7 @@ impl Decoder {
                     caller,
                     request_id,
                     seq,
-                    policy: abi::policy_at(data, 0)?,
+                    policy: abi::policy_at(data, 0, config.regional_policy)?,
                     height: abi::uint_at(data, 5)?,
                     origin,
                     act,

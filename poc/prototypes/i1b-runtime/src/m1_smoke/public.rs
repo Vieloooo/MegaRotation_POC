@@ -9,10 +9,10 @@ use poc_publisher::{ConfirmOutcome, Publisher, StoreBinding, Submission};
 use poc_types::domain::*;
 use poc_viewer_gfr::{
     self as gfr, FixtureL1Reader, GlobalSource, InitInput, L1ControlReader, ReplayReads, ReplayServices,
-    ReplayState, ReplayStatus, Tail, VerificationProfile, VerifierBinding,
+    GfrParameters, ReplayResult, ReplayState, ReplayStatus, Tail, VerificationProfile, VerifierBinding,
 };
 use serde_json::{Value, json};
-use sim_espresso::{FinalizedLogReader, ReaderState, SimEspresso, TickUs, TimestampPolicy};
+use sim_espresso::{FinalizedBlock, FinalizedLogReader, ReaderState, SimEspresso, TickUs, TimestampPolicy};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -38,6 +38,8 @@ pub(crate) struct Public {
     stops: StopLedger,
     pub next_q: u64,
     next_commit: u64,
+    parameters: GfrParameters,
+    auto: bool,
 }
 
 pub(crate) struct Submitted {
@@ -100,13 +102,11 @@ impl ContextVerifier for Context<'_> {
             BoundaryCause::Force => &descriptor.anchor,
             _ => return InputStatus::Reject(InputError::InvalidSource),
         };
-        if known != Some(descriptor)
-            || !matches!(
-                self.finality
-                    .0
-                    .validate_plan(&descriptor.plan, &Reference(reference)),
-                poc_authorization::PlanOutcome::Ready(_)
-            )
+        let checked_plan = match public.plan_bases.get(&descriptor.cid) {
+            Some(basis) => self.finality.0.validate_historical_plan(&descriptor.plan, &Reference(reference), basis),
+            None => self.finality.0.validate_plan(&descriptor.plan, &Reference(reference)),
+        };
+        if known != Some(descriptor) || !matches!(checked_plan, poc_authorization::PlanOutcome::Ready(_))
         {
             return InputStatus::Reject(InputError::InvalidSource);
         }
@@ -152,7 +152,7 @@ fn public_anchor(
 }
 
 impl Public {
-    pub fn new(root: &Path, force: bool) -> M1Result<Self> {
+    pub fn new(root: &Path, force: bool, auto: bool) -> M1Result<Self> {
         let inputs = PublicInputs::fixture()?;
         let setup = inputs.setup()?;
         let finality = NativeFinality(inputs.plans()?);
@@ -176,7 +176,11 @@ impl Public {
             source_revision: std::env::var("M1_CANDIDATE")
                 .unwrap_or_else(|_| "commonware-2026.10.0".into()),
         };
-        let anvil_l1 = force.then(super::l1::Reader::default);
+        let mut parameters = parameters();
+        if auto {
+            parameters.expiry_us = 30 * SECOND;
+        }
+        let anvil_l1 = force.then(|| if auto { super::l1::Reader::regional() } else { super::l1::Reader::default() });
         let reader_l1: &dyn L1ControlReader = match &anvil_l1 {
             Some(reader) => reader,
             None => &l1,
@@ -186,7 +190,7 @@ impl Public {
             &InitInput::Genesis {
                 config: config.clone(),
                 genesis: inputs.genesis.clone(),
-                parameters: parameters(),
+                parameters: parameters,
                 expected_verification: verification.clone(),
             },
             &ReplayReads {
@@ -219,7 +223,7 @@ impl Public {
         let publisher = checked(NativePublicationVerifier::new(
             config.clone(),
             verification.clone(),
-            parameters(),
+            parameters,
             SOURCE.to_vec(),
         ))?;
         checked(Publisher::create(
@@ -237,7 +241,7 @@ impl Public {
         let stops = checked(StopLedger::new(StopLedgerBinding {
             config: config.clone(),
             expected: verification.clone(),
-            parameters: parameters(),
+            parameters: parameters,
             espresso_source: SOURCE.to_vec(),
             l1_source: reader_l1.source_id().to_vec(),
             publisher_reader: READER.to_vec(),
@@ -270,6 +274,8 @@ impl Public {
             stops,
             next_q: 0,
             next_commit: 0,
+            parameters,
+            auto,
         })
     }
 
@@ -308,11 +314,19 @@ impl Public {
         self.ensure_worker_l1_projection(now)?;
         let (execution, _) = public_anchor(&self.replay, &descriptor)
             .ok_or_else(|| super::problem("Missing GFR execution anchor"))?;
+        let plan_basis = self.replay.public_state().plan_bases.get(&descriptor.cid).copied()
+            .map(|basis| {
+                check(matches!(self.public_l1().header(basis.height),
+                    InputStatus::Ready(header) if header.hash == basis.block_hash),
+                    "Install historical header commitment disagrees with real L1")?;
+                Ok::<_, Box<dyn std::error::Error>>(basis.encode())
+            }).transpose()?;
         Ok(Install {
             descriptor,
             execution,
             history,
             prepared_at_us: now,
+            plan_basis,
             projected_l1_lag_us: self.anvil_l1.as_ref().map(|_| super::l1::WORKER_VISIBILITY_LAG_US),
         })
     }
@@ -371,7 +385,7 @@ impl Public {
             checked(NativePublicationVerifier::new(
                 self.inputs.config.clone(),
                 self.verification.clone(),
-                parameters(),
+                self.parameters,
                 SOURCE.to_vec(),
             ))?,
             BridgeStateCodec,
@@ -449,30 +463,80 @@ impl Public {
         })
     }
 
-    pub fn finalize(&mut self, submitted: Submitted, tick: u64) -> M1Result<Value> {
-        let block = checked(self.espresso.finalize(submitted.q, TickUs(tick)))?.clone();
+    pub fn espresso_tip(&self) -> Option<(u64, sim_espresso::PublicTimeUs)> {
+        self.reader.tip()
+    }
+
+    pub fn finalized_row(&self, q: u64) -> M1Result<FinalizedBlock> {
+        self.espresso.finalized(q).cloned().ok_or_else(|| super::problem("missing finalized Espresso row"))
+    }
+
+    pub fn espresso_idle(&self) -> bool {
+        self.next_q == self.reader.tip().map_or(0, |(q, _)| q + 1)
+    }
+
+    pub fn heartbeat(&mut self, tick: u64, theta: Option<u64>) -> M1Result<u64> {
+        let q = self.next_q;
+        self.next_q += 1;
+        let intent = Hash32::new(crate::hash_parts(b"PoC/M3/Espresso heartbeat/v1", &[&q.to_be_bytes()]));
+        let plan = checked(self.custody.plan_propose(intent, q, &[]))?;
+        let hash = plan.candidate_hash();
+        let receipt = Self::persist(&self.root, &mut self.next_commit, "propose", hash, plan.candidate_bytes())?;
+        checked(self.custody.confirm(plan, hash.as_bytes(), &receipt))?;
+        if let Some(theta) = theta {
+            self.espresso.set_policy(TimestampPolicy::Fixed { theta_us: theta });
+        }
+        let proposal = self.espresso.propose(TickUs(tick), true, Vec::new()).map(|block| block.q);
+        if theta.is_some() {
+            self.espresso.set_policy(TimestampPolicy::Offset { offset_us: 0, quantum_us: 1 });
+        }
+        check(checked(proposal)? == q, "Espresso heartbeat q mismatch")?;
+        Ok(q)
+    }
+
+    pub fn finalize_heartbeat(&mut self, q: u64, tick: u64) -> M1Result<FinalizedBlock> {
+        self.finalize_row(q, tick).map(|(block, _)| block)
+    }
+
+    fn finalize_row(&mut self, q: u64, tick: u64) -> M1Result<(FinalizedBlock, Hash32)> {
+        let block = checked(self.espresso.finalize(q, TickUs(tick)))?.clone();
         let plan = checked(self.custody.plan_finalize(&block))?;
         let hash = plan.candidate_hash();
-        let receipt = Self::persist(
-            &self.root,
-            &mut self.next_commit,
-            "finalize",
-            hash,
-            plan.candidate_bytes(),
-        )?;
+        let receipt = Self::persist(&self.root, &mut self.next_commit, "finalize", hash, plan.candidate_bytes())?;
         checked(self.custody.confirm(plan, hash.as_bytes(), &receipt))?;
         let bytes = checked(sim_espresso::encode_finalized(SOURCE, &block))?;
-        durable_file(
-            &self
-                .root
-                .join("espresso")
-                .join(format!("{:04}.bin", submitted.q)),
-            &bytes,
-        )?;
-        checked(
-            self.reader
-                .receive_block(SOURCE, block.clone(), TickUs(tick)),
-        )?;
+        durable_file(&self.root.join("espresso").join(format!("{q:04}.bin")), &bytes)?;
+        checked(self.reader.receive_block(SOURCE, block.clone(), TickUs(tick)))?;
+        Ok((block, hash))
+    }
+
+    pub fn advance_reader(
+        &self,
+        state: &ReplayState,
+        reader: &ReaderState,
+        l1: &dyn L1ControlReader,
+        through: &ReplayPosition,
+    ) -> M1Result<ReplayResult> {
+        let metadata = RegionalMetadata::new(&self.inputs.config, l1)?;
+        Ok(gfr::advance_global(state,
+            &ReplayReads { espresso: reader, l1 },
+            &ReplayServices {
+                config: &self.inputs.config,
+                plan: &self.finality.0,
+                metadata: &metadata,
+                dep: self.setup.dep(),
+                finality: Some(VerifierBinding {
+                    verifier: &self.finality,
+                    basis: &self.finality,
+                    profile: self.verification.clone(),
+                }),
+            },
+            Some(through),
+        ))
+    }
+
+    pub fn finalize(&mut self, submitted: Submitted, tick: u64) -> M1Result<Value> {
+        let (block, hash) = self.finalize_row(submitted.q, tick)?;
         if self.anvil_l1.is_none() {
             self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)?;
         }
@@ -482,7 +546,7 @@ impl Public {
             checked(NativePublicationVerifier::new(
                 self.inputs.config.clone(),
                 self.verification.clone(),
-                parameters(),
+                self.parameters,
                 SOURCE.to_vec(),
             ))?,
             BridgeStateCodec,
@@ -526,10 +590,10 @@ impl Public {
     }
 
     pub fn advance(&mut self) -> M1Result<(usize, Vec<(u64, RecordDelivery)>)> {
-        let q = self
-            .next_q
-            .checked_sub(1)
-            .ok_or_else(|| super::problem("no finalized Espresso rows"))?;
+        let Some((q, _)) = self.reader.tip() else {
+            check(self.auto, "no finalized Espresso rows")?;
+            return Ok((self.replay.public_state().entries.len(), Vec::new()));
+        };
         let prefix = checked(self.reader.require_prefix_through(q))?;
         let row = prefix
             .read(q)
@@ -541,28 +605,9 @@ impl Public {
         };
         let old_entries = self.replay.public_state().entries.len();
         let old_records = self.replay.public_state().records.len();
-        let metadata = RegionalMetadata::new(&self.inputs.config, self.public_l1())?;
-        let result = gfr::advance_global(
-            &self.replay,
-            &ReplayReads {
-                espresso: &self.reader,
-                l1: public_l1(&self.anvil_l1, &self.l1),
-            },
-            &ReplayServices {
-                config: &self.inputs.config,
-                plan: &self.finality.0,
-                metadata: &metadata,
-                dep: self.setup.dep(),
-                finality: Some(VerifierBinding {
-                    verifier: &self.finality,
-                    basis: &self.finality,
-                    profile: self.verification.clone(),
-                }),
-            },
-            Some(&bound),
-        );
+        let result = self.advance_reader(&self.replay, &self.reader, self.public_l1(), &bound)?;
         check(
-            result.status == ReplayStatus::Ready,
+            result.status == ReplayStatus::Ready || (self.auto && matches!(result.status, ReplayStatus::Wait { .. })),
             format!("M1 replay failed: {:?}", result.status),
         )?;
         self.replay = result.state;

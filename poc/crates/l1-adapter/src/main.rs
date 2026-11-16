@@ -12,6 +12,8 @@ use std::{
 struct TraceRpc {
     anvil: AnvilRpc,
     mine_count: u64,
+    submit_count: u64,
+    drop_submit_answer: Option<u64>,
     drop_mine_answer: Option<u64>,
 }
 
@@ -25,6 +27,12 @@ impl Rpc for TraceRpc {
                 return Err(RpcError::Transport(
                     "fixture dropped completed mine response".into(),
                 ));
+            }
+        }
+        if method == "eth_sendRawTransaction" {
+            self.submit_count += 1;
+            if self.drop_submit_answer == Some(self.submit_count) && result.is_ok() {
+                return Err(RpcError::Transport("fixture dropped accepted submit response".into()));
             }
         }
         result
@@ -46,6 +54,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let rpc = TraceRpc {
         anvil: AnvilRpc::new(args[1].parse()?)?,
         mine_count: 0,
+        submit_count: 0,
+        drop_submit_answer: std::env::var("M3_DROP_SUBMIT_ANSWER_NUMBER").ok()
+            .map(|value| value.parse()).transpose()?,
         drop_mine_answer: args.get(3).map(|arg| arg.parse()).transpose()?,
     };
     let mut driver = Driver::new(config, rpc).map_err(|error| format!("{error:?}"))?;

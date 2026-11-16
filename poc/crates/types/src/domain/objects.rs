@@ -358,9 +358,16 @@ impl RuleSpec {
             params: vec![],
         }
     }
+    pub fn historical_plan(reference: Hash32) -> Self {
+        Self {
+            rule_id: 2,
+            version: 1,
+            params: reference.as_bytes().to_vec(),
+        }
+    }
     pub fn validate(&self) -> Result<(), DomainError> {
         ensure(
-            self.rule_id == 1 && self.version == 1 && self.params.is_empty(),
+            self.version == 1 && matches!((self.rule_id, self.params.len()), (1, 0) | (2, 32)),
             "unsupported schedule rule",
         )
     }
@@ -370,13 +377,13 @@ impl Raw for RuleSpec {
         self.validate()?;
         self.rule_id.write(out)?;
         self.version.write(out)?;
-        0u32.write(out)
+        write_list(&self.params, 32, out)
     }
     fn read(input: &mut Reader<'_>) -> Result<Self, DomainError> {
         let v = Self {
             rule_id: u16::read(input)?,
             version: u16::read(input)?,
-            params: read_list(input, 0)?,
+            params: read_list(input, 32)?,
         };
         v.validate()?;
         Ok(v)
@@ -499,6 +506,12 @@ impl PlanRecord {
             self.total_weight == 5 && self.committee[0].pid.region() == self.region,
             "plan region/weight",
         )?;
+        if self.leader_rule.rule_id == 2 {
+            ensure(
+                self.leader_rule.params == self.authorization_ref.as_bytes(),
+                "historical Plan reference",
+            )?;
+        }
         self.leader_rule.validate()?;
         self.window.validate()
     }

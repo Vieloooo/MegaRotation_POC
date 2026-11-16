@@ -164,7 +164,7 @@ class L1(Scenario):
                 self.driver.stdout.close()
 
 
-def main():
+def main(port_class=L1):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--anvil", required=True, type=Path)
     parser.add_argument("--driver", required=True, type=Path)
@@ -176,7 +176,7 @@ def main():
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
-    l1 = L1(args, port)
+    l1 = port_class(args, port)
     save(args.output / "driver-config.json", l1.config)
     genesis = args.output / "anvil-genesis.json"
     forks = ("homestead", "eip150", "eip155", "eip158", "byzantium",

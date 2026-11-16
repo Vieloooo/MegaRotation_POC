@@ -118,6 +118,7 @@ fn setup(bundle_path: &str) -> (Driver<ReplayRpc>, Rc<RefCell<Chain>>) {
         announcement_seconds: number("announcementSeconds"),
         finality_delay_us: 2_000_000,
         readers: vec!["A".into(), "B".into()],
+        regional_policy: false,
     };
     let chain = Rc::new(RefCell::new(Chain::default()));
     let driver = Driver::new(
