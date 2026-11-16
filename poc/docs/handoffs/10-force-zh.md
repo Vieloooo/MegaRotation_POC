@@ -1,5 +1,7 @@
 # 10 治理 Force 与生产分支切换
 
+> **2026-11-16普通运行路线修订：** 新增无BFT重启的主动Force场景：合法授权M可在健康委员会运行时提交Force，或旧地区停机后不重新加入。仍须真实L1/act/branch/Tail/关闭旧分支和新结果进入G；它验证控制路径，不代替PublicationStallPolicy自动检测场景。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

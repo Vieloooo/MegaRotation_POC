@@ -1,5 +1,7 @@
 # 02 全局虚拟时钟与仿真通信
 
+> **2026-11-16普通运行路线修订：** 普通运行的native通信/Clock/timer/grant-Ack接线可在已验收Fresh基础上独立推进，不等待完整01。01仍是同cid重启、RecoveredAck/持久outbox恢复的依赖。普通接线须由总协调明确分配新adapter路径和基线，不抢写01恢复文件；新的阶段合同先冻结。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

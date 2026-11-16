@@ -1,5 +1,7 @@
 # 13 治理 RESUME 与历史切面恢复
 
+> **2026-11-16普通运行路线修订：** 可先完成BFT worker持续运行的RESUME：独立D真实fallback/分歧或合规HALT/D推进，恢复输入后按真实L1位置对齐历史cut并启动新cid。无需01，但不能直接G=D；延迟/暂停场景不冒充原U1实际Batcher crash/restart，原完整矩阵另保留。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

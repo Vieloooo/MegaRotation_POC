@@ -1,5 +1,7 @@
 # 04 15-worker Session Program 与 REG-A
 
+> **2026-11-16普通运行路线修订：** 新增无BFT进程重启的REG-A阶段：使用02普通运行接线+03，在15个进程中运行真实五引擎委员会，无需等待完整01。仍需真实签名/证书、受控Clock/grant-Ack、slot-aware准入和错时Enter。原验收中重启后首收/恢复相关项另列OPEN，不能用健康profile关闭全部原验收。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

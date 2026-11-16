@@ -1,5 +1,7 @@
 # 05 Session Manager 与多 cid 生命周期
 
+> **2026-11-16普通运行路线修订：** 无BFT进程重启的Manager阶段可先接入04健康profile：内存内A→B→A必须保留原engine/view/签名历史和timer；不以重建空实例代替Pause/恢复。OS重启后持久终止/同cid恢复另列01依赖，不能阻塞其余生命周期接线。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**
