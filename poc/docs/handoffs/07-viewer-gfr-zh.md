@@ -1,5 +1,7 @@
 # 07 Viewer GFR 与独立公共重放
 
+> **2026-11-16普通运行路线修订：** 当前纯GFR和A/B reader工作不等待01。后续可消费04健康profile的真实证书做无重启交接；04适配未就绪仍保留真证书gate，不能用bool桩关闭。Force/RESUME的公共规则与进程恢复无关；保持当前regular/Expire任务边界，相关扩展由10/13接续。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

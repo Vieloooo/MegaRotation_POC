@@ -1,5 +1,6 @@
 use prost::Message;
 use sha2::{Digest, Sha256};
+pub mod domain;
 pub mod wire {
     tonic::include_proto!("rotation.i1");
 }

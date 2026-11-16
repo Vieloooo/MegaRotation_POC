@@ -1,5 +1,7 @@
 # 06 Publisher 与确定性 SimEspresso
 
+> **2026-11-16普通运行路线修订：** Publisher/日志/reader的普通运行接线不等待完整01；消费02普通调度和03/04接口即可。BFT节点崩溃恢复与Publisher自身持久恢复分别记录，公开关闭/截止/WAIT规则和受控输出不变。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

@@ -1,0 +1,14 @@
+{
+  "phase": "independent_M1_harness_prepared",
+  "candidate_inspected": false,
+  "compiled": false,
+  "parsed_by": "rustfmt 1.95.0 --edition 2024",
+  "library_identity": "poc-viewer-gfr / poc_viewer_gfr (lead-confirmed public API)",
+  "lockfile": "Generate offline at named M1 candidate; no dependency resolution or build performed during preparation",
+  "vector_sha256": "0409be69fad24e8726df7e952cd0919161e943dbfe05b30431343beba7ce1926",
+  "files": {
+    "Cargo.toml": "6fb3908623e635e4c226aeae377c5e75848242d51211de89fd9a06b070ad0d4a",
+    "src/main.rs": "6a54b4763aae9c5e834804ae5dd4467f7875d3a5bb0153776a191fde59f4b51b",
+    "README.md": "993dc578e308b232894b79d66aa33584a304ddd195ff33bab20bd336d4b0b23b"
+  }
+}

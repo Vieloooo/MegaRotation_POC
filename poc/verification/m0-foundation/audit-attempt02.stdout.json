@@ -1,0 +1,12 @@
+{
+  "verdict": "PASS_SOURCE_AND_EVIDENCE_BINDING",
+  "counts": {
+    "identity_and_input_checks": 668,
+    "historical_artifact_checks": 1092,
+    "unique_disk_files_hashed": 1571,
+    "failed_identity_checks": 0,
+    "failed_artifact_checks": 0
+  },
+  "failed": [],
+  "bad_artifacts": []
+}

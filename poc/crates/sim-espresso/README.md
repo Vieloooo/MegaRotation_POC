@@ -1,0 +1,11 @@
+# SimEspresso component
+
+PE-LOG-1 is exposed by `TimestampPolicy`, `SimEspresso::propose/finalize` and the typed public block records. Proposals and finalization receive explicit virtual ticks. Policy replacement affects only later proposals. Duplicate finalization returns the original block and leaves the event tick unchanged. `ProposedBlock::assess_timestamp` uses the proposal tick, live flag and explicit bound.
+
+PE-LOG-WIRE-1 is exposed by `encode_finalized` and `decode_finalized`. The decoder checks structure. Callers verify the source before delivering data. The wire contains opaque publication codec IDs and bytes. `fixtures/pe-log-wire-v1.hex` contains the two literal independent samples from 06's frozen vectors. The selected codec in these samples is a fixture codec.
+
+PE-READER-1 is exposed by `FinalizedLogReader`. Use the reader's `read`, `require_prefix_through` or `require_watermark` to obtain only delivered, complete, contiguous data. A prefix through q ends at q. A watermark returns the currently visible prefix when its tip covers the requested key. A missing result body that has never been published does not affect byte-log coverage. Task 07 resolves publication materials and computes q_avail.
+
+Adapters deliver source-verified headers and message fragments with `ReaderState::receive_header`, `receive_message` or atomic `receive_block`. Use a distinct `ReaderState` per reader. Task 16 can verify official-source finality and the message commitment before delegating to this reader. A receipt stores the first tick covering a complete block. Individual header and message ticks survive duplicate delivery and reader checkpoint recovery. `encode_snapshot` / `decode_snapshot` preserve the reader identity, delivered blocks and buffered fragments in a private local format. Source authentication, checkpoint custody and delivery grants are responsibilities of the integrating adapter.
+
+Each instance retains up to 4096 blocks and 64 MiB of bounded log bytes without eviction. PELG wire bounds apply separately to each block. All times are in integer microseconds, and public keys use `PublicTimeUs` separately from `TickUs`. The library has no background work or networking.

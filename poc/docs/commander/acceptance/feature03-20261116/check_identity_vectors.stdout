@@ -1,0 +1,13 @@
+{
+  "status": "PASS_REFERENCE_MATH",
+  "cases": [
+    "valid-edwards-basepoint",
+    "identity",
+    "small-order-zero-encoding",
+    "noncanonical-identity",
+    "mixed-torsion",
+    "off-curve-y2"
+  ],
+  "seed": null,
+  "limits": "Finite public point vectors only; not a PoP/BLS verifier or timing-safe cryptography implementation"
+}

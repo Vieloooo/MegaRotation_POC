@@ -1,5 +1,7 @@
 # 12 独立 D 派生与历史 ResumeCut
 
+> **2026-11-16普通运行路线修订：** D/fallback/ResumeCut不依赖BFT同cid进程恢复。保持实际D parent、真实窗口与完整输入覆盖；可用批次延迟/暂停构造分歧。11拥有frame/DA编码，本任务不得重复定义。缺已接纳DA时WAIT，不为制造分歧跳过数据补空块。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

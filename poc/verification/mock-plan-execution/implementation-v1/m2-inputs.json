@@ -1,0 +1,340 @@
+{
+  "schema": "mock-plan-execution-production-be-v1-independent-inputs",
+  "seed": null,
+  "codec": "task-contract-mock-plan-execution-v2 sections2-6; no production imports",
+  "anchor": {
+    "metadata": [
+      0,
+      10000000,
+      3
+    ],
+    "accounts": [
+      [
+        0,
+        0,
+        100
+      ],
+      [
+        2,
+        0,
+        7
+      ]
+    ],
+    "physical_id": "1111111111111111111111111111111111111111111111111111111111111111",
+    "native_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "physical_heights": [
+    3
+  ],
+  "steps": [
+    {
+      "metadata": [
+        1,
+        11000000,
+        3
+      ],
+      "credits": [
+        [
+          0,
+          5
+        ]
+      ],
+      "transactions": [],
+      "expected_accounts": [
+        [
+          0,
+          0,
+          105
+        ],
+        [
+          2,
+          0,
+          7
+        ]
+      ],
+      "expected_kept_indices": []
+    },
+    {
+      "metadata": [
+        2,
+        12000000,
+        3
+      ],
+      "credits": [
+        [
+          1,
+          2
+        ]
+      ],
+      "transactions": [],
+      "expected_accounts": [
+        [
+          0,
+          0,
+          105
+        ],
+        [
+          1,
+          0,
+          2
+        ],
+        [
+          2,
+          0,
+          7
+        ]
+      ],
+      "expected_kept_indices": []
+    },
+    {
+      "metadata": [
+        3,
+        13000000,
+        4
+      ],
+      "credits": [
+        [
+          0,
+          10
+        ]
+      ],
+      "transactions": [
+        [
+          0,
+          1,
+          7,
+          1
+        ],
+        [
+          0,
+          1,
+          0,
+          30
+        ],
+        [
+          0,
+          2,
+          1,
+          100
+        ],
+        [
+          1,
+          2,
+          0,
+          12
+        ],
+        [
+          0,
+          1,
+          1,
+          5
+        ],
+        [
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          0,
+          1,
+          10
+        ]
+      ],
+      "expected_accounts": [
+        [
+          0,
+          2,
+          90
+        ],
+        [
+          1,
+          2,
+          15
+        ],
+        [
+          2,
+          0,
+          19
+        ]
+      ],
+      "expected_kept_indices": [
+        1,
+        3,
+        4,
+        6
+      ]
+    }
+  ],
+  "dep_fixture": {
+    "first_height": 1,
+    "credits": [
+      [
+        [
+          0,
+          5
+        ]
+      ],
+      [
+        [
+          1,
+          2
+        ]
+      ],
+      [
+        [
+          0,
+          10
+        ]
+      ]
+    ]
+  },
+  "l1_rows": [
+    {
+      "height": 0,
+      "hash": "4040404040404040404040404040404040404040404040404040404040404040",
+      "parent_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp_s": 0,
+      "finalized_at_us": 1500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 1,
+      "hash": "4141414141414141414141414141414141414141414141414141414141414141",
+      "parent_hash": "4040404040404040404040404040404040404040404040404040404040404040",
+      "timestamp_s": 2,
+      "finalized_at_us": 3500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 2,
+      "hash": "4242424242424242424242424242424242424242424242424242424242424242",
+      "parent_hash": "4141414141414141414141414141414141414141414141414141414141414141",
+      "timestamp_s": 4,
+      "finalized_at_us": 5500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 3,
+      "hash": "4343434343434343434343434343434343434343434343434343434343434343",
+      "parent_hash": "4242424242424242424242424242424242424242424242424242424242424242",
+      "timestamp_s": 6,
+      "finalized_at_us": 7500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 4,
+      "hash": "4444444444444444444444444444444444444444444444444444444444444444",
+      "parent_hash": "4343434343434343434343434343434343434343434343434343434343434343",
+      "timestamp_s": 8,
+      "finalized_at_us": 9500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 5,
+      "hash": "4545454545454545454545454545454545454545454545454545454545454545",
+      "parent_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+      "timestamp_s": 10,
+      "finalized_at_us": 11500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    },
+    {
+      "height": 6,
+      "hash": "4646464646464646464646464646464646464646464646464646464646464646",
+      "parent_hash": "4545454545454545454545454545454545454545454545454545454545454545",
+      "timestamp_s": 12,
+      "finalized_at_us": 13500000,
+      "empty_control_commitment": "25ee90007231126cc58fc409c063b196bfaf5e63b45c143e6199ef1dc2445614"
+    }
+  ],
+  "public_config": {
+    "chain_id": 42,
+    "rule_version": 1,
+    "verifier_version": 1,
+    "registry_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+    "dep_fixture_hash": "427d6566af816495650fc6f7df495397b9676f7a24d3e3c4be7828bc704ae6bc",
+    "l1_fixture_hash": "ac1ad6044b26e461025a005c09aefb4c1d8ad1debaacae9af007b3437f202a65",
+    "genesis": {
+      "height": 0,
+      "origin": 3,
+      "block_id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "timestamp_us": 10000000
+    },
+    "genesis_state_root": "8f6daf7f51c3baeac74fe998a9eb8898ab359ba4cceb08bd8dbffe0683cab758",
+    "genesis_native_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "l2_slot_us": 1000000,
+    "l1_genesis_timestamp_us": 0,
+    "l1_block_us": 2000000,
+    "t_dep_us": 5000000,
+    "t_drift_us": 15000000,
+    "metadata_window_us": 200000,
+    "byte_limit": 65536
+  },
+  "plan": {
+    "input": {
+      "cause": 0,
+      "session": [
+        0,
+        0
+      ],
+      "source_region": null,
+      "window": [
+        1,
+        10
+      ],
+      "reference_block": {
+        "height": 0,
+        "origin": 3,
+        "block_id": "1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    },
+    "committee": [
+      {
+        "pid": 0,
+        "identity_key": "0101010101010101010101010101010101010101010101010101010101010101",
+        "vote_key": "808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080808080",
+        "weight": 1
+      },
+      {
+        "pid": 1,
+        "identity_key": "0202020202020202020202020202020202020202020202020202020202020202",
+        "vote_key": "818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181",
+        "weight": 1
+      },
+      {
+        "pid": 2,
+        "identity_key": "0303030303030303030303030303030303030303030303030303030303030303",
+        "vote_key": "828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282",
+        "weight": 1
+      },
+      {
+        "pid": 3,
+        "identity_key": "0404040404040404040404040404040404040404040404040404040404040404",
+        "vote_key": "838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383838383",
+        "weight": 1
+      },
+      {
+        "pid": 4,
+        "identity_key": "0505050505050505050505050505050505050505050505050505050505050505",
+        "vote_key": "848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484848484",
+        "weight": 1
+      }
+    ],
+    "eligible_proposers": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "leader_rule": [
+      1,
+      1,
+      []
+    ],
+    "total_weight": 5,
+    "fault_bound": 1
+  },
+  "encoding_only_limit": "Plan committee bytes and registry_hash are intentionally unvalidated references for codec/preimage binding tests. They are not a valid cryptographic registry, and must not pass validate_with. Actual registry/PoP uses separately generated public fixture."
+}

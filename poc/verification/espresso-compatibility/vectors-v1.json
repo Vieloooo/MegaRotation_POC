@@ -1,0 +1,777 @@
+{
+  "schema": "EC16-INDEPENDENT-VECTORS-1",
+  "derived_before_candidate": true,
+  "source_commit": "fd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171",
+  "classification": "fixture-noncryptographic",
+  "scope": "Expected adapter behavior under trusted local API assumption. Schema-minimal invented blocks have consistent namespace/transaction bytes but do not carry valid HotShot commitments; this is not a cryptographic vector. Source identity and expected audit bytes were independently calculated before feature16 implementation.",
+  "source_identity": {
+    "schema": "EC16-SOURCE-1",
+    "official_commit": "fd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171",
+    "image_amd64_digest": "sha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66",
+    "protocol_version": "0.3",
+    "api_version": "v1",
+    "namespace": 160016,
+    "run_id": "independent-fixture-v1",
+    "genesis_block_hash": "BLOCK~fixture-genesis"
+  },
+  "source_id_preimage_utf8": "EC16-SOURCE-1\nfd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171\nsha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66\n0.3\nv1\n160016\nindependent-fixture-v1\nBLOCK~fixture-genesis\n",
+  "expected_source_id": "EC16:c3e6b516cf687dbc813d30c0363c2d428f1fec992b6e806edc147ae007cfeac6",
+  "configured_codec": 3960864769,
+  "blocks": [
+    {
+      "q": 0,
+      "block_response": {
+        "header": {
+          "version": {
+            "Version": {
+              "major": 0,
+              "minor": 3
+            }
+          },
+          "fields": {
+            "height": 0,
+            "timestamp": 0,
+            "ns_table": {
+              "bytes": "AAAAAA=="
+            },
+            "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+          }
+        },
+        "payload": {
+          "raw_payload": "",
+          "ns_table": {
+            "bytes": "AAAAAA=="
+          }
+        },
+        "hash": "BLOCK~fixture-genesis",
+        "size": 0,
+        "num_transactions": 0
+      },
+      "leaf_response": {
+        "leaf": {
+          "block_header": {
+            "version": {
+              "Version": {
+                "major": 0,
+                "minor": 3
+              }
+            },
+            "fields": {
+              "height": 0,
+              "timestamp": 0,
+              "ns_table": {
+                "bytes": "AAAAAA=="
+              },
+              "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+            }
+          },
+          "block_payload": null,
+          "view_number": 0
+        },
+        "qc": {
+          "data": {
+            "block_number": 0,
+            "leaf_commit": "COMMIT~fixture-0"
+          },
+          "signatures": null,
+          "view_number": 0
+        }
+      },
+      "transaction_responses": []
+    },
+    {
+      "q": 1,
+      "block_response": {
+        "header": {
+          "version": {
+            "Version": {
+              "major": 0,
+              "minor": 3
+            }
+          },
+          "fields": {
+            "height": 1,
+            "timestamp": 7,
+            "ns_table": {
+              "bytes": "AgAAAAkAAAAPAAAAEHECACEAAAA="
+            },
+            "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+          }
+        },
+        "payload": {
+          "raw_payload": "AQAAAAcAAABmb3JlaWduAwAAAAEAAAACAAAAAgAAAEFB",
+          "ns_table": {
+            "bytes": "AgAAAAkAAAAPAAAAEHECACEAAAA="
+          }
+        },
+        "hash": "BLOCK~fixture-1",
+        "size": 33,
+        "num_transactions": 4
+      },
+      "leaf_response": {
+        "leaf": {
+          "block_header": {
+            "version": {
+              "Version": {
+                "major": 0,
+                "minor": 3
+              }
+            },
+            "fields": {
+              "height": 1,
+              "timestamp": 7,
+              "ns_table": {
+                "bytes": "AgAAAAkAAAAPAAAAEHECACEAAAA="
+              },
+              "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+            }
+          },
+          "block_payload": null,
+          "view_number": 1
+        },
+        "qc": {
+          "data": {
+            "block_number": 1,
+            "leaf_commit": "COMMIT~fixture-1"
+          },
+          "signatures": null,
+          "view_number": 1
+        }
+      },
+      "transaction_responses": [
+        {
+          "transaction": {
+            "namespace": 9,
+            "payload": "Zm9yZWlnbg=="
+          },
+          "hash": "TX~fixture-c455a3920d01062777f12498e2b329ea07b8da37fe5766a3baa65edcdfe65d36",
+          "index": 0,
+          "block_hash": "BLOCK~fixture-1",
+          "block_height": 1,
+          "namespace": 9,
+          "pos_in_namespace": 0
+        },
+        {
+          "transaction": {
+            "namespace": 160016,
+            "payload": "QQ=="
+          },
+          "hash": "TX~fixture-04006f37e9cb947171e46627cc2d5de7daa90d7156c556aba846f1027c2e8c1f",
+          "index": 1,
+          "block_hash": "BLOCK~fixture-1",
+          "block_height": 1,
+          "namespace": 160016,
+          "pos_in_namespace": 0
+        },
+        {
+          "transaction": {
+            "namespace": 160016,
+            "payload": "QQ=="
+          },
+          "hash": "TX~fixture-04006f37e9cb947171e46627cc2d5de7daa90d7156c556aba846f1027c2e8c1f",
+          "index": 2,
+          "block_hash": "BLOCK~fixture-1",
+          "block_height": 1,
+          "namespace": 160016,
+          "pos_in_namespace": 1
+        },
+        {
+          "transaction": {
+            "namespace": 160016,
+            "payload": ""
+          },
+          "hash": "TX~fixture-f11ec7721930afa6957b4402f95a5b1d148228f77971a17e95ce91d9278e4e16",
+          "index": 3,
+          "block_hash": "BLOCK~fixture-1",
+          "block_height": 1,
+          "namespace": 160016,
+          "pos_in_namespace": 2
+        }
+      ]
+    },
+    {
+      "q": 2,
+      "block_response": {
+        "header": {
+          "version": {
+            "Version": {
+              "major": 0,
+              "minor": 3
+            }
+          },
+          "fields": {
+            "height": 2,
+            "timestamp": 7,
+            "ns_table": {
+              "bytes": "AQAAAAkAAAAUAAAA"
+            },
+            "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+          }
+        },
+        "payload": {
+          "raw_payload": "AQAAAAwAAABvbmx5LWZvcmVpZ24=",
+          "ns_table": {
+            "bytes": "AQAAAAkAAAAUAAAA"
+          }
+        },
+        "hash": "BLOCK~fixture-2",
+        "size": 20,
+        "num_transactions": 1
+      },
+      "leaf_response": {
+        "leaf": {
+          "block_header": {
+            "version": {
+              "Version": {
+                "major": 0,
+                "minor": 3
+              }
+            },
+            "fields": {
+              "height": 2,
+              "timestamp": 7,
+              "ns_table": {
+                "bytes": "AQAAAAkAAAAUAAAA"
+              },
+              "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+            }
+          },
+          "block_payload": null,
+          "view_number": 2
+        },
+        "qc": {
+          "data": {
+            "block_number": 2,
+            "leaf_commit": "COMMIT~fixture-2"
+          },
+          "signatures": null,
+          "view_number": 2
+        }
+      },
+      "transaction_responses": [
+        {
+          "transaction": {
+            "namespace": 9,
+            "payload": "b25seS1mb3JlaWdu"
+          },
+          "hash": "TX~fixture-37bea732a06037c0ebaac9b7032f0a49de483422934ae0a38b57d3296b5977d6",
+          "index": 0,
+          "block_hash": "BLOCK~fixture-2",
+          "block_height": 2,
+          "namespace": 9,
+          "pos_in_namespace": 0
+        }
+      ]
+    },
+    {
+      "q": 3,
+      "block_response": {
+        "header": {
+          "version": {
+            "Version": {
+              "major": 0,
+              "minor": 3
+            }
+          },
+          "fields": {
+            "height": 3,
+            "timestamp": 8,
+            "ns_table": {
+              "bytes": "AQAAABBxAgAJAAAA"
+            },
+            "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+          }
+        },
+        "payload": {
+          "raw_payload": "AQAAAAEAAABC",
+          "ns_table": {
+            "bytes": "AQAAABBxAgAJAAAA"
+          }
+        },
+        "hash": "BLOCK~fixture-3",
+        "size": 9,
+        "num_transactions": 1
+      },
+      "leaf_response": {
+        "leaf": {
+          "block_header": {
+            "version": {
+              "Version": {
+                "major": 0,
+                "minor": 3
+              }
+            },
+            "fields": {
+              "height": 3,
+              "timestamp": 8,
+              "ns_table": {
+                "bytes": "AQAAABBxAgAJAAAA"
+              },
+              "fixture_annotation": "NONCRYPTOGRAPHIC schema-minimal fixture; payload commitment not recomputed"
+            }
+          },
+          "block_payload": null,
+          "view_number": 3
+        },
+        "qc": {
+          "data": {
+            "block_number": 3,
+            "leaf_commit": "COMMIT~fixture-3"
+          },
+          "signatures": null,
+          "view_number": 3
+        }
+      },
+      "transaction_responses": [
+        {
+          "transaction": {
+            "namespace": 160016,
+            "payload": "Qg=="
+          },
+          "hash": "TX~fixture-4879553fde63f3813f93f34e7e6896de0c1a7954f35f82614232736fa3c070e3",
+          "index": 0,
+          "block_hash": "BLOCK~fixture-3",
+          "block_height": 3,
+          "namespace": 160016,
+          "pos_in_namespace": 0
+        }
+      ]
+    }
+  ],
+  "expected_projection": [
+    {
+      "q": 0,
+      "theta_us": 0,
+      "native_count": 0,
+      "selected": []
+    },
+    {
+      "q": 1,
+      "theta_us": 7000000,
+      "native_count": 4,
+      "selected": [
+        {
+          "message_index": 0,
+          "source_transaction_index": 1,
+          "pos_in_namespace": 0,
+          "payload_hex": "41"
+        },
+        {
+          "message_index": 1,
+          "source_transaction_index": 2,
+          "pos_in_namespace": 1,
+          "payload_hex": "41"
+        },
+        {
+          "message_index": 2,
+          "source_transaction_index": 3,
+          "pos_in_namespace": 2,
+          "payload_hex": ""
+        }
+      ]
+    },
+    {
+      "q": 2,
+      "theta_us": 7000000,
+      "native_count": 1,
+      "selected": []
+    },
+    {
+      "q": 3,
+      "theta_us": 8000000,
+      "native_count": 1,
+      "selected": [
+        {
+          "message_index": 0,
+          "source_transaction_index": 0,
+          "pos_in_namespace": 0,
+          "payload_hex": "42"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "V01-source-literal",
+      "input": "source_identity",
+      "expected": {
+        "source_id": "EC16:c3e6b516cf687dbc813d30c0363c2d428f1fec992b6e806edc147ae007cfeac6",
+        "preimage_utf8": "EC16-SOURCE-1\nfd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171\nsha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66\n0.3\nv1\n160016\nindependent-fixture-v1\nBLOCK~fixture-genesis\n",
+        "source_id_length": 69
+      }
+    },
+    {
+      "id": "V01-other-run",
+      "mutate": {
+        "source_identity.run_id": "another-run"
+      },
+      "expected": "different source id; a record with original source binding rejected"
+    },
+    {
+      "id": "V02-ack-only",
+      "records": [
+        "POST submit success TX hash"
+      ],
+      "expected": {
+        "tip": null,
+        "publication_status": "Submitted"
+      }
+    },
+    {
+      "id": "V03-gap",
+      "deliver_complete_blocks": [
+        2,
+        0
+      ],
+      "expected_tips": [
+        null,
+        [
+          0,
+          0
+        ]
+      ],
+      "read_q2": "Wait(next_q=1)"
+    },
+    {
+      "id": "V04-normal",
+      "deliver_complete_blocks": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "expected_blocks": [
+        {
+          "q": 0,
+          "theta_us": 0,
+          "native_count": 0,
+          "selected": []
+        },
+        {
+          "q": 1,
+          "theta_us": 7000000,
+          "native_count": 4,
+          "selected": [
+            {
+              "message_index": 0,
+              "source_transaction_index": 1,
+              "pos_in_namespace": 0,
+              "payload_hex": "41"
+            },
+            {
+              "message_index": 1,
+              "source_transaction_index": 2,
+              "pos_in_namespace": 1,
+              "payload_hex": "41"
+            },
+            {
+              "message_index": 2,
+              "source_transaction_index": 3,
+              "pos_in_namespace": 2,
+              "payload_hex": ""
+            }
+          ]
+        },
+        {
+          "q": 2,
+          "theta_us": 7000000,
+          "native_count": 1,
+          "selected": []
+        },
+        {
+          "q": 3,
+          "theta_us": 8000000,
+          "native_count": 1,
+          "selected": [
+            {
+              "message_index": 0,
+              "source_transaction_index": 0,
+              "pos_in_namespace": 0,
+              "payload_hex": "42"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "V04-missing-index",
+      "block": 1,
+      "omit_transaction_indices": [
+        2
+      ],
+      "expected": "Wait with tip0; q1 not complete"
+    },
+    {
+      "id": "V04-extra-index",
+      "block": 1,
+      "extra_transaction_index": 4,
+      "expected": "InvalidSource; preserve any prefix established before offending response"
+    },
+    {
+      "id": "V05-independent-readers",
+      "reader_A_deliver": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reader_B_deliver": [
+        0,
+        2,
+        3
+      ],
+      "expected_A_tip": [
+        3,
+        8000000
+      ],
+      "expected_B_tip": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "V05-empty-block-needs-leaf",
+      "block": 0,
+      "omit": "leaf_response",
+      "expected": {
+        "tip": null,
+        "read0": "Wait"
+      }
+    },
+    {
+      "id": "V06-equal-time",
+      "deliver_complete_blocks": [
+        0,
+        1,
+        2
+      ],
+      "expected_tip": [
+        2,
+        7000000
+      ],
+      "watermark_7000000": "Complete",
+      "watermark_7000001": "Wait"
+    },
+    {
+      "id": "V06-regression",
+      "block": 3,
+      "replace_timestamp": 6,
+      "expected": "InvalidSource; tip2 retained; later original block3 accepted"
+    },
+    {
+      "id": "V06-u64-us-bound",
+      "timestamp_seconds": 18446744073709,
+      "expected_theta_us": 18446744073709000000
+    },
+    {
+      "id": "V06-u64-us-overflow",
+      "timestamp_seconds": 18446744073710,
+      "expected": "reject checked conversion; no prefix change"
+    },
+    {
+      "id": "V07-repeat",
+      "deliver_complete_blocks": [
+        0,
+        1,
+        1
+      ],
+      "expected_tip": [
+        1,
+        7000000
+      ],
+      "expected_selected_count": 3
+    },
+    {
+      "id": "V07-json-order",
+      "block": 1,
+      "change": "JSON whitespace and object key order only",
+      "expected": "idempotent same public projection"
+    },
+    {
+      "id": "V07-conflict",
+      "block": 1,
+      "mutate": "one existing transaction payload to 43 in both comparisons",
+      "expected": "InvalidSource; original q1 remains unchanged"
+    },
+    {
+      "id": "V08-absent-selected",
+      "block": 2,
+      "expected_selected": [],
+      "expected_native_count": 1,
+      "requirement": "must enumerate all N native transactions before empty selected result"
+    },
+    {
+      "id": "V09-offline",
+      "input": "same recording twice with different replay wall pauses",
+      "expected": "exact same public projection/digest; no transport required"
+    },
+    {
+      "id": "V10-response-binding",
+      "mutations": [
+        "wrong query q",
+        "wrong response index",
+        "wrong block_height",
+        "wrong block_hash",
+        "inner namespace differs outer",
+        "namespace=4294967296",
+        "missing JSON field",
+        "invalid base64",
+        "mismatched leaf.block_header",
+        "wrong protocol version"
+      ],
+      "expected": "reject atomically; no fabricated empty data"
+    },
+    {
+      "id": "V10-bundle-integrity",
+      "mutations": [
+        "missing raw file",
+        "SHA256 mismatch",
+        "absolute path",
+        "../ path",
+        "symlink escape",
+        "unknown manifest schema",
+        "truncated JSON"
+      ],
+      "expected": "reject bundle before emitting prefix"
+    },
+    {
+      "id": "V11-unknown-timing",
+      "expected": {
+        "proposed_at": "Unknown",
+        "finalized_at": "Unknown",
+        "live_at_proposal": "Unknown",
+        "pe_log_export": "UnsupportedTimingEvidence",
+        "pe_reader_export": "UnsupportedTimingEvidence"
+      }
+    },
+    {
+      "id": "V12-endpoints",
+      "inputs": [
+        "http://127.0.0.1:18770",
+        "http://example.com:18770",
+        "http://127.0.0.1:18770 redirect to external"
+      ],
+      "expected": [
+        "allowed in task namespace",
+        "reject before request",
+        "reject redirect"
+      ]
+    },
+    {
+      "id": "V13-real-required",
+      "classification": "official-image-native",
+      "required": "actual tagged TX ACK + full q0..publication blocks + leaf + each tx; fresh connection requery; missing-height probe"
+    },
+    {
+      "id": "V14-fixture-classification",
+      "classification": "fixture-noncryptographic",
+      "expected": "never counts as official execution or HotShot proof verification"
+    }
+  ],
+  "expected_audit_prefixes": [
+    {
+      "block_count": 0,
+      "tip": null,
+      "byte_length": 91,
+      "bytes_hex": "454331362d5055424c49432d310045000000454331363a6333653662353136636636383764626338313364333063303336336332643432386631666563393932623665383036656463313437616530303763666561633600000000",
+      "sha256": "69e86a7ce44440ec9de8adc396f247d545d47b977c8bed192000aa00d7722a9a"
+    },
+    {
+      "block_count": 1,
+      "tip": [
+        0,
+        0
+      ],
+      "byte_length": 140,
+      "bytes_hex": "454331362d5055424c49432d310045000000454331363a63336536623531366366363837646263383133643330633033363363326434323866316665633939326236653830366564633134376165303037636665616336010000000000000000000000000000000000000015000000424c4f434b7e666978747572652d67656e657369730000000000000000",
+      "sha256": "34b56467ef402f332dcd741be4bda6531fe5ce821c490b0a371f977cad7e8d0d"
+    },
+    {
+      "block_count": 2,
+      "tip": [
+        1,
+        7000000
+      ],
+      "byte_length": 638,
+      "bytes_hex": "454331362d5055424c49432d310045000000454331363a63336536623531366366363837646263383133643330633033363363326434323866316665633939326236653830366564633134376165303037636665616336020000000000000000000000000000000000000015000000424c4f434b7e666978747572652d67656e6573697300000000000000000100000000000000c0cf6a00000000000f000000424c4f434b7e666978747572652d3104000000000000000900000000000000000000004b00000054587e666978747572652d6334353561333932306430313036323737376631323439386532623332396561303762386461333766653537363661336261613635656463646665363564333607000000666f726569676e010000001071020000000000000000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041020000001071020000000000010000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041030000001071020000000000020000004b00000054587e666978747572652d6631316563373732313933306166613639353762343430326639356135623164313438323238663737393731613137653935636539316439323738653465313600000000030000000000000001000000010016ec01000000410100000002000000010016ec01000000410200000003000000010016ec00000000",
+      "sha256": "7cbf120ae32522adecc17943402c367444f0092c7398999e79956f2e279fbd5f"
+    },
+    {
+      "block_count": 3,
+      "tip": [
+        2,
+        7000000
+      ],
+      "byte_length": 792,
+      "bytes_hex": "454331362d5055424c49432d310045000000454331363a63336536623531366366363837646263383133643330633033363363326434323866316665633939326236653830366564633134376165303037636665616336030000000000000000000000000000000000000015000000424c4f434b7e666978747572652d67656e6573697300000000000000000100000000000000c0cf6a00000000000f000000424c4f434b7e666978747572652d3104000000000000000900000000000000000000004b00000054587e666978747572652d6334353561333932306430313036323737376631323439386532623332396561303762386461333766653537363661336261613635656463646665363564333607000000666f726569676e010000001071020000000000000000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041020000001071020000000000010000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041030000001071020000000000020000004b00000054587e666978747572652d6631316563373732313933306166613639353762343430326639356135623164313438323238663737393731613137653935636539316439323738653465313600000000030000000000000001000000010016ec01000000410100000002000000010016ec01000000410200000003000000010016ec000000000200000000000000c0cf6a00000000000f000000424c4f434b7e666978747572652d3201000000000000000900000000000000000000004b00000054587e666978747572652d333762656137333261303630333763306562616163396237303332663061343964653438333432323933346165306133386235376433323936623539373764360c0000006f6e6c792d666f726569676e00000000",
+      "sha256": "386e795687ea2f091742b780e671e4ae06d33a8fb97cf82aef2664d74efa1cc2"
+    },
+    {
+      "block_count": 4,
+      "tip": [
+        3,
+        8000000
+      ],
+      "byte_length": 952,
+      "bytes_hex": "454331362d5055424c49432d310045000000454331363a63336536623531366366363837646263383133643330633033363363326434323866316665633939326236653830366564633134376165303037636665616336040000000000000000000000000000000000000015000000424c4f434b7e666978747572652d67656e6573697300000000000000000100000000000000c0cf6a00000000000f000000424c4f434b7e666978747572652d3104000000000000000900000000000000000000004b00000054587e666978747572652d6334353561333932306430313036323737376631323439386532623332396561303762386461333766653537363661336261613635656463646665363564333607000000666f726569676e010000001071020000000000000000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041020000001071020000000000010000004b00000054587e666978747572652d303430303666333765396362393437313731653436363237636332643564653764616139306437313536633535366162613834366631303237633265386331660100000041030000001071020000000000020000004b00000054587e666978747572652d6631316563373732313933306166613639353762343430326639356135623164313438323238663737393731613137653935636539316439323738653465313600000000030000000000000001000000010016ec01000000410100000002000000010016ec01000000410200000003000000010016ec000000000200000000000000c0cf6a00000000000f000000424c4f434b7e666978747572652d3201000000000000000900000000000000000000004b00000054587e666978747572652d333762656137333261303630333763306562616163396237303332663061343964653438333432323933346165306133386235376433323936623539373764360c0000006f6e6c792d666f726569676e00000000030000000000000000127a00000000000f000000424c4f434b7e666978747572652d3301000000000000001071020000000000000000004b00000054587e666978747572652d343837393535336664653633663338313366393366333465376536383936646530633161373935346633356638323631343233323733366661336330373065330100000042010000000000000000000000010016ec0100000042",
+      "sha256": "98a1a83ae5f930ef101e6babcec2a28475c855d94c48f9ecf759e5ff3b4c6f39"
+    }
+  ],
+  "capacity_cases": [
+    {
+      "id": "C-native-tx-bytes",
+      "limit": 65536,
+      "at_limit": "accepted if other guards hold",
+      "above_by_one": "Capacity",
+      "also_test_namespace": 9
+    },
+    {
+      "id": "C-native-count",
+      "limit": 1024,
+      "at_limit": "accepted if all 0..1023 responses exist",
+      "above_by_one": "Capacity"
+    },
+    {
+      "id": "C-projected-envelope",
+      "source_id_bytes": 69,
+      "header_bytes": 116,
+      "message_count": 16,
+      "first_15_lengths": 65536,
+      "last_length_at_limit": 65292,
+      "expected_wire_size": 1048576,
+      "last_length_above_by_one": 65293,
+      "expected_above": "Capacity"
+    },
+    {
+      "id": "C-pending-q-count",
+      "limit": 4096,
+      "at_limit": "all pending q values retained; duplicates do not count twice",
+      "above_by_one": "Capacity"
+    },
+    {
+      "id": "C-native-payload-sum",
+      "limit": 67108864,
+      "recipe": "1024 distinct native transactions of 65536 bytes across blocks; namespace9 avoids projection size; no duplicates recount",
+      "at_limit": "accepted subject to block and raw response limits",
+      "above_by_one": "Capacity"
+    },
+    {
+      "id": "C-raw-item",
+      "limit": 16777216,
+      "items": [
+        "request",
+        "response",
+        "manifest"
+      ],
+      "at_limit": "not rejected for capacity (schema/hash still enforced)",
+      "above_by_one": "Capacity before decode"
+    },
+    {
+      "id": "C-recording-bundle",
+      "limit": 268435456,
+      "recipe": "manifest+unique referenced raw file bytes; shared file refs count once",
+      "at_limit": "not rejected for capacity (schema/hash still enforced)",
+      "above_by_one": "Capacity before decode"
+    }
+  ]
+}

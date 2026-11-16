@@ -1,0 +1,28 @@
+[package]
+name = "poc-authorization"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+poc-types.workspace = true
+commonware-codec.workspace = true
+commonware-cryptography.workspace = true
+commonware-utils.workspace = true
+curve25519-dalek.workspace = true
+
+[dev-dependencies]
+commonware-math = "=2026.10.0"
+rand_chacha.workspace = true
+rand_core.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[[test]]
+name = "mock_plan_registry_recipe"
+path = "../../verification/mock-plan-execution/implementation-v1/registry_fixture_recipe.rs"
+
+[[test]]
+name = "mock_plan_auth_independent"
+path = "../../verification/mock-plan-execution/implementation-v1/auth_acceptance.rs"

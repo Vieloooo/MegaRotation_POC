@@ -1,0 +1,1 @@
+Audit tooling stopped before producing a verdict: 03 manifest input keys are basenames, not repository-relative paths. Prefix corrected to poc/verification/mock-plan-execution/implementation-v1/. No candidate or expected hash changed.

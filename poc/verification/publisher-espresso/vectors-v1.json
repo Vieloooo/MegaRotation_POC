@@ -1,0 +1,443 @@
+{
+  "version": "publisher-espresso-independent-vectors-v1",
+  "provenance": "Handwritten from PE-LOG-WIRE-1 fields and source arithmetic before Builder implementation; no candidate encoder used.",
+  "fixture_boundary": "Opaque test payloads and non-cryptographic verifier fixtures; no 03 codec or CheckFINAL claim.",
+  "timestamp_unit": "us",
+  "delta_ts_us": 1000,
+  "timestamp_cases": [
+    {
+      "id": "T01-T02",
+      "entries": [
+        [
+          0,
+          10000,
+          9000
+        ],
+        [
+          1,
+          10000,
+          11000
+        ],
+        [
+          2,
+          11000,
+          11000
+        ]
+      ],
+      "entry_fields": [
+        "q",
+        "proposed_at_us",
+        "theta_us"
+      ],
+      "live_at_proposal": true,
+      "expected": [
+        "WithinBound",
+        "WithinBound",
+        "WithinBound"
+      ],
+      "same_theta_q_order": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "T03",
+      "theta_us": 10000,
+      "proposed_at_us": [
+        10000,
+        11000,
+        11001
+      ],
+      "expected": [
+        "WithinBound",
+        "WithinBound",
+        {
+          "OutsideBound": {
+            "deviation_us": 1001,
+            "bound_us": 1000
+          }
+        }
+      ],
+      "watermark_10001": "Wait"
+    },
+    {
+      "id": "T04-lead",
+      "proposed_at_us": 10000,
+      "theta_us": 11001,
+      "expected": {
+        "OutsideBound": {
+          "deviation_us": 1001,
+          "bound_us": 1000
+        }
+      },
+      "log_valid": true
+    },
+    {
+      "id": "T04-quantum",
+      "offset_us": 0,
+      "quantum_us": 10,
+      "proposed_at_us": [
+        109,
+        110
+      ],
+      "theta_us": [
+        100,
+        110
+      ],
+      "deviation_us": [
+        9,
+        0
+      ]
+    },
+    {
+      "id": "T04-range",
+      "inputs": [
+        {
+          "proposed_at_us": 0,
+          "offset_us": -1,
+          "quantum_us": 1
+        },
+        {
+          "proposed_at_us": 18446744073709551615,
+          "offset_us": 1,
+          "quantum_us": 1
+        },
+        {
+          "proposed_at_us": 10,
+          "offset_us": 0,
+          "quantum_us": 0
+        }
+      ],
+      "expected": [
+        "ArithmeticRange",
+        "ArithmeticRange",
+        "InvalidQuantum"
+      ],
+      "q_consumed": [
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "id": "T05",
+      "accepted_theta_us": 10000,
+      "next_theta_us": 9999,
+      "expected": "Regressed",
+      "q_consumed": false,
+      "prefix_changed": false
+    },
+    {
+      "id": "T06",
+      "proposed_at_us": 10000,
+      "theta_us": 0,
+      "live_at_proposal": false,
+      "finalized_at_us": 100000,
+      "live_at_finalization": true,
+      "expected": "NotAssumedNonLive"
+    }
+  ],
+  "wire": {
+    "field_order": [
+      "magic",
+      "version_le16",
+      "source_len_le32",
+      "source",
+      "q_le64",
+      "theta_le64",
+      "proposal_le64",
+      "live_u8",
+      "finalized_le64",
+      "count_le32",
+      "messages"
+    ],
+    "valid": [
+      {
+        "id": "L03-wire-empty",
+        "hex": "50454c470100010000005300000000000000000a000000000000000900000000000000010b0000000000000000000000",
+        "length_bytes": 48,
+        "decoded": {
+          "source_id_hex": "53",
+          "q": 0,
+          "theta_us": 10,
+          "proposed_at_us": 9,
+          "live_at_proposal": true,
+          "finalized_at_us": 11,
+          "messages": []
+        }
+      },
+      {
+        "id": "L03-wire-messages",
+        "hex": "50454c470100010000005301000000000000000a000000000000000a00000000000000010c00000000000000020000000700000002000000abcd0700000000000000",
+        "length_bytes": 66,
+        "decoded": {
+          "source_id_hex": "53",
+          "q": 1,
+          "theta_us": 10,
+          "proposed_at_us": 10,
+          "live_at_proposal": true,
+          "finalized_at_us": 12,
+          "messages": [
+            {
+              "codec": 7,
+              "bytes_hex": "abcd"
+            },
+            {
+              "codec": 7,
+              "bytes_hex": ""
+            }
+          ]
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "id": "bad-magic",
+        "hex": "50454c480100010000005300000000000000000a000000000000000900000000000000010b0000000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "unknown-version",
+        "hex": "50454c470200010000005300000000000000000a000000000000000900000000000000010b0000000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "bad-bool",
+        "hex": "50454c470100010000005300000000000000000a000000000000000900000000000000020b0000000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "trailing-byte",
+        "hex": "50454c470100010000005300000000000000000a000000000000000900000000000000010b000000000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "truncated-count",
+        "hex": "50454c470100010000005300000000000000000a000000000000000900000000000000010b00000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "empty-source",
+        "hex": "50454c4701000000000000000000000000000a000000000000000900000000000000010b0000000000000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "source-len-257",
+        "hex": "50454c470100010100005300000000000000000a000000000000000900000000000000010b0000000000000000000000",
+        "expected": "Reject-before-allocation"
+      },
+      {
+        "id": "message-count-1025",
+        "hex": "50454c470100010000005300000000000000000a000000000000000900000000000000010b0000000000000001040000",
+        "expected": "Reject-before-allocation"
+      },
+      {
+        "id": "codec-zero",
+        "hex": "50454c470100010000005301000000000000000a000000000000000a00000000000000010c00000000000000020000000000000002000000abcd0700000000000000",
+        "expected": "Reject"
+      },
+      {
+        "id": "message-len-65537",
+        "hex": "50454c470100010000005301000000000000000a000000000000000a00000000000000010c00000000000000020000000700000001000100abcd0700000000000000",
+        "expected": "Reject-before-allocation"
+      },
+      {
+        "id": "finalize-before-proposal",
+        "hex": "50454c470100010000005301000000000000000a000000000000000a00000000000000010900000000000000020000000700000002000000abcd0700000000000000",
+        "expected": "Reject"
+      }
+    ],
+    "size_boundary_recipes": [
+      {
+        "id": "max-message",
+        "single_message_bytes": 65536,
+        "expected": "Allow-if-total-within-bound"
+      },
+      {
+        "id": "max-block-messages",
+        "message_count": 1024,
+        "message_bytes_each": 0,
+        "codec": 7,
+        "expected": "Allow"
+      },
+      {
+        "id": "max-encoded-block",
+        "source_id_bytes": 1,
+        "message_count": 16,
+        "codec": 7,
+        "message_lengths": [
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65360
+        ],
+        "encoded_length": 1048576,
+        "expected": "Allow"
+      },
+      {
+        "id": "encoded-block-over",
+        "source_id_bytes": 1,
+        "message_count": 16,
+        "codec": 7,
+        "message_lengths": [
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65536,
+          65361
+        ],
+        "encoded_length": 1048577,
+        "expected": "Reject"
+      }
+    ]
+  },
+  "reader": {
+    "id": "L02-L05",
+    "source_id_hex": "53",
+    "q_message_counts": [
+      0,
+      2,
+      1
+    ],
+    "delivery_to_B": [
+      "complete q2",
+      "complete q0",
+      "header q1 + message[0]",
+      "message[1] q1"
+    ],
+    "expected_tip_after": [
+      null,
+      0,
+      0,
+      2
+    ],
+    "read_q2_before_last": "Wait",
+    "snapshot_point": "after q1 header + message[0]",
+    "recovery_expected": "same pending bytes, visible tip 0, first receipts retained",
+    "reader_A_may_be_at_q2": true
+  },
+  "material": {
+    "id": "M01-M03",
+    "publications": [
+      {
+        "q": 0,
+        "message_index": 0,
+        "object": "P2(B2)"
+      },
+      {
+        "q": 1,
+        "message_index": 0,
+        "object": "body B2(parent=B1)"
+      },
+      {
+        "q": 2,
+        "message_index": 0,
+        "object": "body B1(parent=A)"
+      }
+    ],
+    "log_tip_after": [
+      0,
+      1,
+      2
+    ],
+    "missing_public_bodies_after": [
+      [
+        "B1",
+        "B2"
+      ],
+      [
+        "B1"
+      ],
+      []
+    ],
+    "source_oracle_for_07_first_complete_q": 2,
+    "six_component_does_not_compute_q_avail": true,
+    "optional_anchor_at_q4_changes_first_complete": false,
+    "second_valid_proof_at_q5_changes_first_complete": false
+  },
+  "publisher": {
+    "id": "P03-P05",
+    "events": [
+      "verified Offer",
+      "prepare committed",
+      "reopen file",
+      "dispatch committed",
+      "service ACK",
+      "server finalized but undelivered",
+      "reader complete + receipt committed"
+    ],
+    "expected_phases": [
+      "QUEUED",
+      "QUEUED",
+      "QUEUED",
+      "SUBMITTED",
+      "SUBMITTED",
+      "SUBMITTED",
+      "RECORDED"
+    ],
+    "prepared_replay_same_id": true,
+    "prepared_replay_same_bytes": true
+  },
+  "stop": {
+    "id": "P06-P08",
+    "deadline_us": 105,
+    "watermark_104_stops": false,
+    "watermark_105_stops": true,
+    "header_only_105_stops": false,
+    "program_TIME_stops": false,
+    "unrelated_session_assigned_stops": false,
+    "recorded_then_stop_phase": "RECORDED",
+    "stopped_then_verified_receipt_phase": "RECORDED",
+    "stop_reason_remains": true,
+    "new_attempt_after_stop": false
+  },
+  "receipt_guards": {
+    "id": "P09-P11",
+    "publication_position": {
+      "q": 1,
+      "message_index": 0
+    },
+    "body_public_at_q": 2,
+    "minimum_complete_through_q": 2,
+    "reader_tip_q": 1,
+    "expected": "Reject-or-Wait-no-receipt",
+    "unverified_offer_task_may_upgrade_from_receipt_alone": false
+  },
+  "wall_replay": {
+    "id": "D01",
+    "seeds": [
+      7,
+      42,
+      99
+    ],
+    "wall_pause_ms": [
+      0,
+      2
+    ],
+    "expected": "equal canonical virtual projection per seed",
+    "wall_is_protocol_input": false
+  }
+}

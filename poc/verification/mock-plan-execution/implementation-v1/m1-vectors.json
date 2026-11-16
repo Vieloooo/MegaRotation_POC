@@ -1,0 +1,890 @@
+{
+  "schema": "mock-plan-public-interface-v1-independent-vectors",
+  "authority": "M1 coordinator-approved BE fixed codec; no new implicit Cid hashing",
+  "baseline": "548cbb24b390fedf2ddfd60f3aab0de770e24491",
+  "seed": null,
+  "codec": {
+    "version": 1,
+    "version_bytes": "u16BE",
+    "identity": "private u8, checked range",
+    "position_fields": "u64BE",
+    "nested_fields": "raw without nested version",
+    "hash_length": 32,
+    "trailing": "reject",
+    "decode_order": [
+      "exact total length",
+      "version",
+      "field bounds"
+    ]
+  },
+  "objects": [
+    {
+      "id": "Pid-0",
+      "type": "Pid",
+      "value": 0,
+      "expected_hex": "000100",
+      "encoding_sha256": "faee935763044f124d7526755a5058a33f9402a595994d59eddd4be8546ff201"
+    },
+    {
+      "id": "Pid-1",
+      "type": "Pid",
+      "value": 1,
+      "expected_hex": "000101",
+      "encoding_sha256": "fbb59ed10e9cd4ff45a12c5bb92cbd80df984ba1fe60f26a30febf218e2f0f5e"
+    },
+    {
+      "id": "Pid-2",
+      "type": "Pid",
+      "value": 2,
+      "expected_hex": "000102",
+      "encoding_sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+    },
+    {
+      "id": "Pid-3",
+      "type": "Pid",
+      "value": 3,
+      "expected_hex": "000103",
+      "encoding_sha256": "b744d600fbe3853702978ec726c166d26274fe7b09b2c600ddf2d7d895667b24"
+    },
+    {
+      "id": "Pid-4",
+      "type": "Pid",
+      "value": 4,
+      "expected_hex": "000104",
+      "encoding_sha256": "3f078d3b7e22c8944e5561909a236ae48b48a7ea42f28dd861c22b6f64d7e97b"
+    },
+    {
+      "id": "Pid-5",
+      "type": "Pid",
+      "value": 5,
+      "expected_hex": "000105",
+      "encoding_sha256": "3d34ed49a201cee28c868b9fe151aefe5ea9647fb5f26009375ef1ec0c0e128c"
+    },
+    {
+      "id": "Pid-6",
+      "type": "Pid",
+      "value": 6,
+      "expected_hex": "000106",
+      "encoding_sha256": "69167f7228d6aaaf4bd72dc810c2a7a105ee3a63a0610844c55bf24410216236"
+    },
+    {
+      "id": "Pid-7",
+      "type": "Pid",
+      "value": 7,
+      "expected_hex": "000107",
+      "encoding_sha256": "cbf21413513743688ab04352762e4321ef9a79a8521961ef574ae117e60240fd"
+    },
+    {
+      "id": "Pid-8",
+      "type": "Pid",
+      "value": 8,
+      "expected_hex": "000108",
+      "encoding_sha256": "5331fed036518120c7f345726537745c5929b8ea1fa37b99b2bb58f702671541"
+    },
+    {
+      "id": "Pid-9",
+      "type": "Pid",
+      "value": 9,
+      "expected_hex": "000109",
+      "encoding_sha256": "e1b2f3a12899afbb2722c8132bf1179a30d468e02686444d0ee1b893ef20090d"
+    },
+    {
+      "id": "Pid-10",
+      "type": "Pid",
+      "value": 10,
+      "expected_hex": "00010a",
+      "encoding_sha256": "f3a958cc1b9248073cfc790ee66d3bb4ab2781096978ebcb1ae95cdfb6264908"
+    },
+    {
+      "id": "Pid-11",
+      "type": "Pid",
+      "value": 11,
+      "expected_hex": "00010b",
+      "encoding_sha256": "bca917d32b52f0d854ac1a4575be15e556c78b2e04a2a2ea5f0b4fd1d97a9cd9"
+    },
+    {
+      "id": "Pid-12",
+      "type": "Pid",
+      "value": 12,
+      "expected_hex": "00010c",
+      "encoding_sha256": "8c3069e898c86349d41d2ed08ef84dcd9c8c29bf4a5682d6fd63da56fbac0c8f"
+    },
+    {
+      "id": "Pid-13",
+      "type": "Pid",
+      "value": 13,
+      "expected_hex": "00010d",
+      "encoding_sha256": "7a75bae3e46bda9d3859da8fd00cd9028b6adaa054fcb910f6b00a61e5b316c7"
+    },
+    {
+      "id": "Pid-14",
+      "type": "Pid",
+      "value": 14,
+      "expected_hex": "00010e",
+      "encoding_sha256": "9c74b8637fb59b6a76cd7b01acf24963cbbb07ee6e44a202771693b4018837c8"
+    },
+    {
+      "id": "RegionId-0",
+      "type": "RegionId",
+      "value": 0,
+      "expected_hex": "000100",
+      "encoding_sha256": "faee935763044f124d7526755a5058a33f9402a595994d59eddd4be8546ff201"
+    },
+    {
+      "id": "RegionId-1",
+      "type": "RegionId",
+      "value": 1,
+      "expected_hex": "000101",
+      "encoding_sha256": "fbb59ed10e9cd4ff45a12c5bb92cbd80df984ba1fe60f26a30febf218e2f0f5e"
+    },
+    {
+      "id": "RegionId-2",
+      "type": "RegionId",
+      "value": 2,
+      "expected_hex": "000102",
+      "encoding_sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+    },
+    {
+      "id": "MemberId-0",
+      "type": "MemberId",
+      "value": 0,
+      "expected_hex": "000100",
+      "encoding_sha256": "faee935763044f124d7526755a5058a33f9402a595994d59eddd4be8546ff201"
+    },
+    {
+      "id": "MemberId-1",
+      "type": "MemberId",
+      "value": 1,
+      "expected_hex": "000101",
+      "encoding_sha256": "fbb59ed10e9cd4ff45a12c5bb92cbd80df984ba1fe60f26a30febf218e2f0f5e"
+    },
+    {
+      "id": "MemberId-2",
+      "type": "MemberId",
+      "value": 2,
+      "expected_hex": "000102",
+      "encoding_sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+    },
+    {
+      "id": "MemberId-3",
+      "type": "MemberId",
+      "value": 3,
+      "expected_hex": "000103",
+      "encoding_sha256": "b744d600fbe3853702978ec726c166d26274fe7b09b2c600ddf2d7d895667b24"
+    },
+    {
+      "id": "MemberId-4",
+      "type": "MemberId",
+      "value": 4,
+      "expected_hex": "000104",
+      "encoding_sha256": "3f078d3b7e22c8944e5561909a236ae48b48a7ea42f28dd861c22b6f64d7e97b"
+    },
+    {
+      "id": "SignerIndex-0",
+      "type": "SignerIndex",
+      "value": 0,
+      "expected_hex": "000100",
+      "encoding_sha256": "faee935763044f124d7526755a5058a33f9402a595994d59eddd4be8546ff201"
+    },
+    {
+      "id": "SignerIndex-1",
+      "type": "SignerIndex",
+      "value": 1,
+      "expected_hex": "000101",
+      "encoding_sha256": "fbb59ed10e9cd4ff45a12c5bb92cbd80df984ba1fe60f26a30febf218e2f0f5e"
+    },
+    {
+      "id": "SignerIndex-2",
+      "type": "SignerIndex",
+      "value": 2,
+      "expected_hex": "000102",
+      "encoding_sha256": "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+    },
+    {
+      "id": "SignerIndex-3",
+      "type": "SignerIndex",
+      "value": 3,
+      "expected_hex": "000103",
+      "encoding_sha256": "b744d600fbe3853702978ec726c166d26274fe7b09b2c600ddf2d7d895667b24"
+    },
+    {
+      "id": "SignerIndex-4",
+      "type": "SignerIndex",
+      "value": 4,
+      "expected_hex": "000104",
+      "encoding_sha256": "3f078d3b7e22c8944e5561909a236ae48b48a7ea42f28dd861c22b6f64d7e97b"
+    },
+    {
+      "id": "Hash32-zero",
+      "type": "Hash32",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_hex": "00010000000000000000000000000000000000000000000000000000000000000000",
+      "encoding_sha256": "3dd67e1f62fd0a9a08a02ab9119e1b45c0c45ff558c40174333f89d9daf0b975"
+    },
+    {
+      "id": "Hash32-range",
+      "type": "Hash32",
+      "value": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "expected_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "encoding_sha256": "a1ad370bf8dfbc15b16ad2f83aeab93c34c4bbc62577d87ac9d1ac5334e4c603"
+    },
+    {
+      "id": "Hash32-max",
+      "type": "Hash32",
+      "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "expected_hex": "0001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "encoding_sha256": "c548dff2a3c0c7fbbaf280b7a34b0df433551875cb26140da21bcd7ca0c7c579"
+    },
+    {
+      "id": "Cid-zero",
+      "type": "Cid",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_hex": "00010000000000000000000000000000000000000000000000000000000000000000",
+      "encoding_sha256": "3dd67e1f62fd0a9a08a02ab9119e1b45c0c45ff558c40174333f89d9daf0b975"
+    },
+    {
+      "id": "Cid-range",
+      "type": "Cid",
+      "value": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "expected_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "encoding_sha256": "a1ad370bf8dfbc15b16ad2f83aeab93c34c4bbc62577d87ac9d1ac5334e4c603"
+    },
+    {
+      "id": "Cid-max",
+      "type": "Cid",
+      "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "expected_hex": "0001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "encoding_sha256": "c548dff2a3c0c7fbbaf280b7a34b0df433551875cb26140da21bcd7ca0c7c579"
+    },
+    {
+      "id": "ConfigRef-zero",
+      "type": "ConfigRef",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_hex": "00010000000000000000000000000000000000000000000000000000000000000000",
+      "encoding_sha256": "3dd67e1f62fd0a9a08a02ab9119e1b45c0c45ff558c40174333f89d9daf0b975"
+    },
+    {
+      "id": "ConfigRef-range",
+      "type": "ConfigRef",
+      "value": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "expected_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "encoding_sha256": "a1ad370bf8dfbc15b16ad2f83aeab93c34c4bbc62577d87ac9d1ac5334e4c603"
+    },
+    {
+      "id": "ConfigRef-max",
+      "type": "ConfigRef",
+      "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "expected_hex": "0001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "encoding_sha256": "c548dff2a3c0c7fbbaf280b7a34b0df433551875cb26140da21bcd7ca0c7c579"
+    },
+    {
+      "id": "L1Position-zero",
+      "type": "L1Position",
+      "value": {
+        "block": 0,
+        "tx": 0,
+        "log": 0
+      },
+      "expected_hex": "0001000000000000000000000000000000000000000000000000",
+      "encoding_sha256": "b015c27672f3feeab9ffd87bcc237279fc7a85580d1f51efb4b1940c1944afd9"
+    },
+    {
+      "id": "L1Position-simple",
+      "type": "L1Position",
+      "value": {
+        "block": 1,
+        "tx": 2,
+        "log": 3
+      },
+      "expected_hex": "0001000000000000000100000000000000020000000000000003",
+      "encoding_sha256": "fb869483852053019140ce3c2369e1957b249956d3255896c15e991191ec3492"
+    },
+    {
+      "id": "L1Position-wide",
+      "type": "L1Position",
+      "value": {
+        "block": 72623859790382856,
+        "tx": 1230066625199609624,
+        "log": 2387509390608836392
+      },
+      "expected_hex": "0001010203040506070811121314151617182122232425262728",
+      "encoding_sha256": "f1982591d9038c8faa2db2e41b9693563faae8c25979f4ce85d7c66e0715d41c"
+    },
+    {
+      "id": "L1Position-max",
+      "type": "L1Position",
+      "value": {
+        "block": 18446744073709551615,
+        "tx": 18446744073709551615,
+        "log": 18446744073709551615
+      },
+      "expected_hex": "0001ffffffffffffffffffffffffffffffffffffffffffffffff",
+      "encoding_sha256": "5f9f2f4dee8cce13b7cc4627d76c8006dc3e373e1ca2ee48fee91cfb1827da82"
+    },
+    {
+      "id": "L1BlockRef-wide",
+      "type": "L1BlockRef",
+      "value": {
+        "height": 72623859790382856,
+        "hash": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+      },
+      "expected_hex": "00010102030405060708000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "encoding_sha256": "9a135aee3f848b91b09a382d34f5e17a88bcba92bd1c723115afcdf94e3e7d94"
+    },
+    {
+      "id": "ResultKey-split",
+      "type": "ResultKey",
+      "value": {
+        "cid": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "block_hash": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+      },
+      "expected_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "encoding_sha256": "2c94e8a3d94fe8a7aa6c44ab2bf1feb7a165d7b93de00ec5623f1c5c92659f69"
+    }
+  ],
+  "invalid_encodings": [
+    {
+      "id": "Pid-version0",
+      "type": "Pid",
+      "encoded_hex": "000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Pid-version2",
+      "type": "Pid",
+      "encoded_hex": "000200",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Pid-truncated",
+      "type": "Pid",
+      "encoded_hex": "0001",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Pid-tail",
+      "type": "Pid",
+      "encoded_hex": "00010000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "RegionId-version0",
+      "type": "RegionId",
+      "encoded_hex": "000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "RegionId-version2",
+      "type": "RegionId",
+      "encoded_hex": "000200",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "RegionId-truncated",
+      "type": "RegionId",
+      "encoded_hex": "0001",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "RegionId-tail",
+      "type": "RegionId",
+      "encoded_hex": "00010000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "MemberId-version0",
+      "type": "MemberId",
+      "encoded_hex": "000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "MemberId-version2",
+      "type": "MemberId",
+      "encoded_hex": "000200",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "MemberId-truncated",
+      "type": "MemberId",
+      "encoded_hex": "0001",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "MemberId-tail",
+      "type": "MemberId",
+      "encoded_hex": "00010000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "SignerIndex-version0",
+      "type": "SignerIndex",
+      "encoded_hex": "000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "SignerIndex-version2",
+      "type": "SignerIndex",
+      "encoded_hex": "000200",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "SignerIndex-truncated",
+      "type": "SignerIndex",
+      "encoded_hex": "0001",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "SignerIndex-tail",
+      "type": "SignerIndex",
+      "encoded_hex": "00010000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Hash32-version0",
+      "type": "Hash32",
+      "encoded_hex": "00000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Hash32-version2",
+      "type": "Hash32",
+      "encoded_hex": "00020000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Hash32-truncated",
+      "type": "Hash32",
+      "encoded_hex": "000100000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Hash32-tail",
+      "type": "Hash32",
+      "encoded_hex": "0001000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Cid-version0",
+      "type": "Cid",
+      "encoded_hex": "00000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Cid-version2",
+      "type": "Cid",
+      "encoded_hex": "00020000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "Cid-truncated",
+      "type": "Cid",
+      "encoded_hex": "000100000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Cid-tail",
+      "type": "Cid",
+      "encoded_hex": "0001000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ConfigRef-version0",
+      "type": "ConfigRef",
+      "encoded_hex": "00000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "ConfigRef-version2",
+      "type": "ConfigRef",
+      "encoded_hex": "00020000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "ConfigRef-truncated",
+      "type": "ConfigRef",
+      "encoded_hex": "000100000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ConfigRef-tail",
+      "type": "ConfigRef",
+      "encoded_hex": "0001000000000000000000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1Position-version0",
+      "type": "L1Position",
+      "encoded_hex": "0000000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "L1Position-version2",
+      "type": "L1Position",
+      "encoded_hex": "0002000000000000000000000000000000000000000000000000",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "L1Position-truncated",
+      "type": "L1Position",
+      "encoded_hex": "00010000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1Position-tail",
+      "type": "L1Position",
+      "encoded_hex": "000100000000000000000000000000000000000000000000000000",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1BlockRef-version0",
+      "type": "L1BlockRef",
+      "encoded_hex": "00000102030405060708000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "L1BlockRef-version2",
+      "type": "L1BlockRef",
+      "encoded_hex": "00020102030405060708000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "L1BlockRef-truncated",
+      "type": "L1BlockRef",
+      "encoded_hex": "00010102030405060708000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1BlockRef-tail",
+      "type": "L1BlockRef",
+      "encoded_hex": "00010102030405060708000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ResultKey-version0",
+      "type": "ResultKey",
+      "encoded_hex": "0000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "ResultKey-version2",
+      "type": "ResultKey",
+      "encoded_hex": "0002000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "expected_error_class": "UnsupportedVersion"
+    },
+    {
+      "id": "ResultKey-truncated",
+      "type": "ResultKey",
+      "encoded_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ResultKey-tail",
+      "type": "ResultKey",
+      "encoded_hex": "0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f00",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Pid-invalid-15",
+      "type": "Pid",
+      "encoded_hex": "00010f",
+      "expected_error_class": "InvalidPid"
+    },
+    {
+      "id": "Pid-invalid-255",
+      "type": "Pid",
+      "encoded_hex": "0001ff",
+      "expected_error_class": "InvalidPid"
+    },
+    {
+      "id": "RegionId-invalid-3",
+      "type": "RegionId",
+      "encoded_hex": "000103",
+      "expected_error_class": "InvalidRegion"
+    },
+    {
+      "id": "RegionId-invalid-255",
+      "type": "RegionId",
+      "encoded_hex": "0001ff",
+      "expected_error_class": "InvalidRegion"
+    },
+    {
+      "id": "MemberId-invalid-5",
+      "type": "MemberId",
+      "encoded_hex": "000105",
+      "expected_error_class": "InvalidMember"
+    },
+    {
+      "id": "MemberId-invalid-255",
+      "type": "MemberId",
+      "encoded_hex": "0001ff",
+      "expected_error_class": "InvalidMember"
+    },
+    {
+      "id": "SignerIndex-invalid-5",
+      "type": "SignerIndex",
+      "encoded_hex": "000105",
+      "expected_error_class": "InvalidSignerIndex"
+    },
+    {
+      "id": "SignerIndex-invalid-255",
+      "type": "SignerIndex",
+      "encoded_hex": "0001ff",
+      "expected_error_class": "InvalidSignerIndex"
+    },
+    {
+      "id": "Pid-empty",
+      "type": "Pid",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Pid-length-before-version",
+      "type": "Pid",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "RegionId-empty",
+      "type": "RegionId",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "RegionId-length-before-version",
+      "type": "RegionId",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "MemberId-empty",
+      "type": "MemberId",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "MemberId-length-before-version",
+      "type": "MemberId",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "SignerIndex-empty",
+      "type": "SignerIndex",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "SignerIndex-length-before-version",
+      "type": "SignerIndex",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Hash32-empty",
+      "type": "Hash32",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Hash32-length-before-version",
+      "type": "Hash32",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Cid-empty",
+      "type": "Cid",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "Cid-length-before-version",
+      "type": "Cid",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ConfigRef-empty",
+      "type": "ConfigRef",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ConfigRef-length-before-version",
+      "type": "ConfigRef",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1Position-empty",
+      "type": "L1Position",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1Position-length-before-version",
+      "type": "L1Position",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1BlockRef-empty",
+      "type": "L1BlockRef",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "L1BlockRef-length-before-version",
+      "type": "L1BlockRef",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ResultKey-empty",
+      "type": "ResultKey",
+      "encoded_hex": "",
+      "expected_error_class": "InvalidLength"
+    },
+    {
+      "id": "ResultKey-length-before-version",
+      "type": "ResultKey",
+      "encoded_hex": "0002",
+      "expected_error_class": "InvalidLength"
+    }
+  ],
+  "raw_digest_lengths": {
+    "accept": [
+      32
+    ],
+    "reject": [
+      0,
+      1,
+      31,
+      33,
+      64
+    ]
+  },
+  "identity_mapping": [
+    {
+      "pid": 0,
+      "region": 0,
+      "member": 0
+    },
+    {
+      "pid": 1,
+      "region": 0,
+      "member": 1
+    },
+    {
+      "pid": 2,
+      "region": 0,
+      "member": 2
+    },
+    {
+      "pid": 3,
+      "region": 0,
+      "member": 3
+    },
+    {
+      "pid": 4,
+      "region": 0,
+      "member": 4
+    },
+    {
+      "pid": 5,
+      "region": 1,
+      "member": 0
+    },
+    {
+      "pid": 6,
+      "region": 1,
+      "member": 1
+    },
+    {
+      "pid": 7,
+      "region": 1,
+      "member": 2
+    },
+    {
+      "pid": 8,
+      "region": 1,
+      "member": 3
+    },
+    {
+      "pid": 9,
+      "region": 1,
+      "member": 4
+    },
+    {
+      "pid": 10,
+      "region": 2,
+      "member": 0
+    },
+    {
+      "pid": 11,
+      "region": 2,
+      "member": 1
+    },
+    {
+      "pid": 12,
+      "region": 2,
+      "member": 2
+    },
+    {
+      "pid": 13,
+      "region": 2,
+      "member": 3
+    },
+    {
+      "pid": 14,
+      "region": 2,
+      "member": 4
+    }
+  ],
+  "l1_position_input": [
+    {
+      "block": 7,
+      "tx": 2,
+      "log": 0
+    },
+    {
+      "block": 6,
+      "tx": 99,
+      "log": 99
+    },
+    {
+      "block": 7,
+      "tx": 1,
+      "log": 1
+    },
+    {
+      "block": 7,
+      "tx": 1,
+      "log": 0
+    },
+    {
+      "block": 7,
+      "tx": 1,
+      "log": 2
+    }
+  ],
+  "l1_position_expected_order_indices": [
+    1,
+    3,
+    2,
+    4,
+    0
+  ],
+  "serde_obligations": {
+    "Identity": "valid integer round-trip and bounds checked on deserialize",
+    "negative_integer": "reject",
+    "integer_256": "reject",
+    "opaque_zero": "accept bytes only; no claim of valid descriptor"
+  },
+  "i1_export_constants": {
+    "SCHEMA_VERSION": 1,
+    "MAX_FRAME_BYTES": 1048576,
+    "MAX_PAYLOAD_BYTES": 65536,
+    "LINK_QUEUE_BOUND": 64
+  }
+}

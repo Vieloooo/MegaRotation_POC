@@ -1,5 +1,7 @@
 # 08 三区 regular 交接集成
 
+> **2026-11-16普通运行路线修订：** 可先完成15-worker持续运行的regular两路径及多地区轮转，不等待完整01。必须真实后继首结果进入G；意外进程退出记失败/中断，不自动空journal重启。候选Pause/选回、state preparation与Close规则仍真实执行。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

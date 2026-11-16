@@ -1,5 +1,7 @@
 # 09 Anvil L1 driver、ControlAuthority 与 BatchInbox
 
+> **2026-11-16普通运行路线修订：** 受控L1普通接线可用02正常运行路径+03对象推进，无须等01。主动Force、RESUME合约操作可用授权M和真实本地EVM测试；不能把合约接纳等同GFR激活，也不能把服务driver自身重启能力与BFT恢复混为一项。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

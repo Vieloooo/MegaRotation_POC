@@ -1,0 +1,13 @@
+[package]
+name = "espresso-compatibility-independent"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+espresso-compatibility = { path = "../../../crates/espresso-compatibility" }
+base64 = "=0.22.1"
+serde_json = "=1.0.154"
+

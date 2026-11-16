@@ -1,0 +1,77 @@
+{
+  "candidate": "87daee8e9e77bbe27c337383d873a5eaf4a694ba",
+  "entries": [
+    {
+      "original": "/tmp/anvil-l1-verifier-87daee8-report.md",
+      "preserved": "poc/verification/anvil-l1/reports/verification-87daee8.md",
+      "sha256": "5adf71c72991ee980c8e9fcc5181109bd2f10773508b2cb8bc3d6b77f3dc6c0a"
+    },
+    {
+      "original": "/tmp/anvil-l1-verifier-87daee8-evidence-sha256.json",
+      "preserved": "poc/verification/anvil-l1/reports/verification-87daee8-manifest.json",
+      "sha256": "53a7bf51a200ec59f40027a02e8a10dfdd2ddec8b26d91fb317dcd415fa86fa8"
+    },
+    {
+      "original": "/tmp/anvil-l1-verifier-receipts-300.json",
+      "preserved": "poc/verification/anvil-l1/reports/verification-receipts-300.json",
+      "sha256": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa"
+    },
+    {
+      "original": "/tmp/anvil-l1-verifier-receipts-650.json",
+      "preserved": "poc/verification/anvil-l1/reports/verification-receipts-650.json",
+      "sha256": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa"
+    },
+    {
+      "original": "/tmp/anvil-l1-verifier-driver-check.json",
+      "preserved": "poc/verification/anvil-l1/reports/verification-driver-check.json",
+      "sha256": "ff4f5de705235e0ef7d0258a131f7a029df816da19da077f6b6894a70c9e127d"
+    },
+    {
+      "original": "/tmp/anvil-l1-driver-check-87daee8.py",
+      "preserved": "poc/verification/anvil-l1/reports/verification-driver-check.py",
+      "sha256": "a51ad9b9e7c9fb97897465a3bed1239c536797c53186256f3de40bed860d1722"
+    },
+    {
+      "original": "/tmp/anvil-l1-verifier-checker-negatives.json",
+      "preserved": "poc/verification/anvil-l1/reports/verification-checker-negatives.json",
+      "sha256": "6cae065bf87f668de0e86eedcbca1a5dcc28b9ae14138496bf99988e4defad73"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-report.md",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-87daee8.md",
+      "sha256": "06a29b4177707726502bd6ae7297c0887cacbd969b5ee853deb12846bf534e0d"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-manifest.json",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-87daee8-manifest.json",
+      "sha256": "10ce07d7922f0c53f579a9f820acf80b28d036666bcc14ae79b9c60ab186bdb9"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-receipts-300.json",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-receipts-300.json",
+      "sha256": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-receipts-650.json",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-receipts-650.json",
+      "sha256": "0446aeab88d7e16f5ec515480601ecbae34a9cd839474569cb832be138d2acfa"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-driver-check.py",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-driver-check.py",
+      "sha256": "9673cc00d77dd9787e586500ba8931aeebc4036367574ca49b7b20c37f00980a"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-driver-check.json",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-driver-check.json",
+      "sha256": "ff4f5de705235e0ef7d0258a131f7a029df816da19da077f6b6894a70c9e127d"
+    },
+    {
+      "original": "/tmp/anvil-l1-simulator-87daee8-golden.json",
+      "preserved": "poc/verification/anvil-l1/reports/simulation-golden-check.json",
+      "sha256": "6ee9cbd2acd61c317758bf343ad185f5e27230e194a624761e1298ed95f62445"
+    }
+  ],
+  "rawArtifactHashesChecked": 34,
+  "independentResultHashesChecked": 4
+}

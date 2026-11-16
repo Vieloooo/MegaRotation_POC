@@ -1,5 +1,7 @@
 # 11 crash-only Batcher、Certifier、DA 与 G′
 
+> **2026-11-16普通运行路线修订：** BFT节点持续运行时，可以暂停/延迟批次提交和恢复服务可用性，为D fallback/RESUME提供输入；无需等待01。服务自己的crash/restart仍按原任务独立验收。已接纳DA缺失必须WAIT，真实G来源尚未接通时不能伪造完整G′或宣布11全通过。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**

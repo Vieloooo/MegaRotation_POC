@@ -1,6 +1,6 @@
 {
-  "schema": 2,
-  "date": "2026-11-15",
+  "schema": 3,
+  "date": "2026-11-16",
   "source_checkout": "/mnt/reth/jy/megaroation_poc",
   "project_id": "ccb826e2-d47a-4623-9b20-2632ac96d8e3",
   "host_id": "remote-ssh-discovered:xuelab_jump",
@@ -12,99 +12,346 @@
   "documentation_base_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
   "main_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
   "heavy_job_lock": "/tmp/megaroation-poc-heavy.lock",
-  "accepted_since_merge": [],
+  "accepted_since_merge": [
+    "03"
+  ],
   "jobs": [
     {
       "feature": "01",
-      "status": "running",
-      "phase_authorized": "full-feature",
-      "thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
+      "status": "deferred-checkpointed",
+      "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
+      "thread_id": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
       "candidate_sha": null,
       "client_thread_id": "client-new-thread:a9d7dc91-4ca5-4871-ba48-908e01a76230",
-      "worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc",
+      "worktree": "/home/jy/.codex/worktrees/2123/megaroation_poc",
       "actual_turn_configuration": {
-        "turn_id": "01a1df9d-7813-7460-bcee-12625752f80f",
+        "turn_id": "01a1e1c6-29b0-7e22-a5da-2f4fd2e0a54e",
         "model": "gpt-6-astra",
         "effort": "ultra",
-        "cwd": "/home/jy/.codex/worktrees/5efa/megaroation_poc"
+        "cwd": "/home/jy/.codex/worktrees/2123/megaroation_poc"
       },
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01"
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01-resume",
+      "last_turn_status": "inProgress",
+      "worktree_head": "0183b401f805e5508ae5fdb20d53457eb4149504",
+      "worktree_dirty": false,
+      "blocker": null,
+      "reported_progress": "Builder final: 26 real-process cases, 14 named crash cuts, native 132 and workspace 20 checks. R16 prior fixed snapshot 24 runs with per-seed byte-identical frames/trace. Complete independent R1-R18 remains OPEN.",
+      "continuation_snapshot_sha": "8a81391c7a0b08be3ce1d2adf3b44e8bf4bbc509",
+      "continuation_branch": "codex/poc-native-recovery-resume",
+      "continuation_handoff": "poc/docs/commander/recovery-continuation-20261116.md",
+      "continuation_thread_id": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
+      "old_child_agents_quiescent_verified": true,
+      "previous_thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
+      "previous_worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc",
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "0183b401f805e5508ae5fdb20d53457eb4149504",
+      "subagents_stopped": true,
+      "checkpoint_report": "/home/jy/.codex/worktrees/2123/megaroation_poc/poc/docs/native-recovery-checkpoint-20261116.md"
     },
     {
       "feature": "02",
-      "status": "ready-to-resume",
+      "status": "reused-for-H1-preparation",
       "phase_authorized": "freeze-and-implement-isolated-transport-component",
       "waits_for": {
-        "native_integration": [
-          "01 accepted recovery interface and file handoff",
-          "03 public identity interface"
+        "restart_free_integration": [
+          "explicit stable Fresh/API baseline and path-owner handoff; no full-01 dependency",
+          "03 accepted public identity interface"
+        ],
+        "same_cid_recovery_integration": [
+          "01 accepted recovery interface and file handoff"
         ]
       },
       "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
-      "candidate_sha": null,
+      "candidate_sha": "4fd6f115bd969b0a8f252d7933edd21c27f00a8f",
       "client_thread_id": "client-new-thread:86e0247d-309e-4ff4-b20d-24ec50ed91a0",
       "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
       "actual_turn_configuration": {
-        "turn_id": "01a1df9d-eef9-7652-be99-3b80befc9cbb",
+        "turn_id": "01a1dfd0-ee35-7f33-987d-f08941e10a19",
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
       },
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02",
-      "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10"
+      "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10",
+      "last_turn_status": "completed",
+      "delivery_sha": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "worktree_dirty": false,
+      "reported_results": "Transport component PASS: builder 10/10, independent 46/46, formal 12/12. Native worker count zero in this slice.",
+      "report": "/home/jy/.codex/worktrees/0b8e/megaroation_poc/poc/docs/sim-transport-kernel-results.md"
     },
     {
       "feature": "03",
-      "status": "ready-to-resume",
+      "status": "accepted",
       "phase_authorized": "freeze-contract-and-implement-feature-03",
       "waits_for": [],
       "thread_id": "01a1df9e-37c7-7a92-ae94-9b195a61c2f7",
-      "candidate_sha": null,
+      "candidate_sha": "e9c15e04bc83b335668f3ecd837367aa87344a89",
       "client_thread_id": "client-new-thread:7dd2fe87-3a90-42d0-a1c5-90084059ca3c",
       "worktree": "/home/jy/.codex/worktrees/1c43/megaroation_poc",
       "actual_turn_configuration": {
-        "turn_id": "01a1df9e-3df7-7203-9e87-77b9b3b68262",
+        "turn_id": "01a1dfd0-e16f-7ba0-81f3-4264f4fd7402",
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1c43/megaroation_poc"
       },
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/03",
-      "preparation_sha": "183430e71e5d61533f54a76b2d7d22c5021f1704"
+      "preparation_sha": "183430e71e5d61533f54a76b2d7d22c5021f1704",
+      "last_turn_status": "completed",
+      "delivery_sha": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "worktree_dirty": false,
+      "reported_results": "Full authorized 03 scope submitted: independent and Tester PASS, 32 feature tests; workspace 52 passed and 11 ignored. Commander acceptance not yet recorded.",
+      "report": "/home/jy/.codex/worktrees/1c43/megaroation_poc/poc/docs/mock-plan-execution-result.md",
+      "commander_acceptance": "Independent commander verifier ACCEPT for e9c15e04bc83b335668f3ecd837367aa87344a89; 79 checks passed and four reference outputs matched. No new implementation changes.",
+      "acceptance_evidence": "poc/docs/commander/acceptance/feature03-20261116/report.md",
+      "accepted_sha": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "acceptance_report_sha256": "efce4a1f4f6de4d080140e189e01a5a0ff86ba4dfb05b7a89c541ff6d6392826"
     },
     {
       "feature": "06",
-      "status": "queued",
+      "status": "waiting-integration",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
-      "thread_id": null,
-      "candidate_sha": null,
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06"
+      "thread_id": "01a1dfd1-e222-7373-a4cf-1b0bb0f0e780",
+      "candidate_sha": "8ba78f1ace3b383caa1c4360401c645d25907326",
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06",
+      "worktree": "/home/jy/.codex/worktrees/1fe1/megaroation_poc",
+      "client_thread_id": "client-new-thread:ca1fa83a-e652-4d87-84af-a11bb8d0bebb",
+      "actual_turn_configuration": {
+        "turn_id": "01a1dfd1-e7a6-7191-aafb-31527a5cce90",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1fe1/megaroation_poc"
+      },
+      "last_turn_status": "completed",
+      "delivery_sha": "4b034dfbb6c3e1c7143208347b546daab8dfe298",
+      "worktree_dirty": false,
+      "reported_results": "Component PASS: 15 component tests, 6 independent API tests, 6 replay runs/3 wall-pause pairs. Full feature OPEN.",
+      "report": "/home/jy/.codex/worktrees/1fe1/megaroation_poc/poc/docs/publisher-espresso-component-handoff-v1.md"
     },
     {
       "feature": "09",
-      "status": "queued",
+      "status": "delivered-reserved-for-H4",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
-      "thread_id": null,
+      "thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
+      "candidate_sha": "87daee8e9e77bbe27c337383d873a5eaf4a694ba",
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09",
+      "worktree": "/home/jy/.codex/worktrees/65ef/megaroation_poc",
+      "client_thread_id": "client-new-thread:d6bc7704-13ab-493a-8a66-e8087e48f967",
+      "actual_turn_configuration": {
+        "turn_id": "01a1dfd2-46a9-7653-bbe5-bac657d8be7b",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/65ef/megaroation_poc"
+      },
+      "last_turn_status": "completed",
+      "delivery_sha": "c443ae925ed549b046731c2d8ef3dd9ce0311d24",
+      "worktree_dirty": false,
+      "reported_results": "Independent component A01-A17 PASS; two wall-pause runs with 145 receipts each. Full feature INCONCLUSIVE.",
+      "report": "/home/jy/.codex/worktrees/65ef/megaroation_poc/poc/docs/anvil-l1-component-delivery-v1.md"
+    },
+    {
+      "feature": "07",
+      "status": "reused-for-H3-preparation",
+      "phase_authorized": "20261116-independent-wave",
+      "thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
       "candidate_sha": null,
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09"
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07",
+      "worktree": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+      "client_thread_id": "client-new-thread:8d4bf9b7-37c8-4dd8-9a5d-12a2700fc68e",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e1cb-de45-7da3-bde3-fc21429c85a5",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "788291735ce6db3c3eb78b4594a28d730cce71cd"
+    },
+    {
+      "feature": "11",
+      "status": "deferred-checkpointed",
+      "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
+      "thread_id": "01a1e1cc-4bbd-75b3-8c75-0c9745613cde",
+      "candidate_sha": null,
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11",
+      "worktree": "/home/jy/.codex/worktrees/f025/megaroation_poc",
+      "client_thread_id": "client-new-thread:f59f562c-f541-48d4-97ca-d27738c61096",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e1cc-4fd7-7843-b3c5-a0c538eba150",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/f025/megaroation_poc"
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "aab8a5180801ed7f97f7e437d147c97f972b4dd8",
+      "worktree_dirty": false,
+      "subagents_stopped": true
+    },
+    {
+      "feature": "12",
+      "status": "deferred-saved",
+      "phase_authorized": "20261116-independent-wave",
+      "thread_id": "01a1e1cc-a0b6-7161-afe5-881d30b01f4f",
+      "candidate_sha": null,
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/12",
+      "worktree": "/home/jy/.codex/worktrees/29df/megaroation_poc",
+      "client_thread_id": "client-new-thread:2d26f6df-81e2-4d5e-8c30-69f9d61c10a2",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e1cc-a99a-7ad0-bcd4-18989dafcd4b",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/29df/megaroation_poc"
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "1f6d1b3b4076ff16908dc59f272a06686b1d1ea5",
+      "worktree_dirty": false,
+      "subagents_stopped": true
+    },
+    {
+      "feature": "16",
+      "status": "delivered-reserved-for-M1-smoke",
+      "phase_authorized": "20261116-independent-wave",
+      "thread_id": "01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2",
+      "candidate_sha": null,
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16",
+      "worktree": "/home/jy/.codex/worktrees/d2be/megaroation_poc",
+      "client_thread_id": "client-new-thread:ac8dad2d-cac8-41fe-80b3-c7ccf986ed41",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e1cb-8d4f-7fc3-91d7-2df6ae2787e4",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/d2be/megaroation_poc"
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "5c34b400ba5245d7775a281566e21bf59708b147"
     }
   ],
   "remaining_features": [
     "04",
     "05",
-    "07",
     "08",
     "10",
-    "11",
-    "12",
     "13",
     "14",
-    "15",
-    "16"
+    "15"
   ],
   "merge_batches": [],
-  "dispatch_note": "User increased active jobs to five. Independent dependency review confirms 01/02/03/06/09: remove 03->01 whole-feature gate, allow isolated 02 kernel and 06/09 components; preserve real-integration and full acceptance gates.",
+  "dispatch_note": "M0 remote merge running; existing02 reused for H1 preparation, new H2 and existing07/H3 preparing interfaces. 01 and11 safely checkpointed/idle;12 saved. No component code merge performed by commander. M0 has not yet delivered an accepted integrated SHA.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
-  "accepted_features_per_merge": 3
+  "accepted_features_per_merge": 3,
+  "policy_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42",
+  "last_status_check": "2026-11-16 Asia/Shanghai",
+  "observed_active_parent_chats": 4,
+  "next_actions": [
+    "Receive safe checkpoints from 01/11; preserve 12 and all original worktrees/artifacts.",
+    "Dispatch remote M0 merge with exact existing component SHAs.",
+    "Prepare H1/H2/H3 contracts/interfaces in parallel, then implement on the verified M0 SHA.",
+    "Delegate M1 and M2 integration to dedicated remote chats."
+  ],
+  "status_evidence_scope": "Current chat snapshots and actual turn_context checked. Commander independent acceptance of exact 03 SHA completed; 06/09 component evidence hashes and tested-vs-delivery source identity rechecked. Full 01 and integrated component gates remain OPEN.",
+  "active_features": [
+    "M0",
+    "H1",
+    "H2",
+    "H3"
+  ],
+  "restart_free_handoff_policy": "poc/docs/commander/restart-free-handoff-track-20261116.md",
+  "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates.",
+  "restart_free_handoff_policy_sha": "0c15aacf0461a0d1ae2bf4718c18a51aaaaa805b",
+  "handoff_scope_update_sha": "32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77",
+  "notifications": {
+    "source": "poc/docs/commander/notifications/restart-free-20261116.json",
+    "delivery": "poc/docs/commander/notifications/restart-free-20261116-delivery.json",
+    "tool_acknowledged": [
+      "01",
+      "07",
+      "11",
+      "12",
+      "16"
+    ],
+    "deferred_idle": [
+      "02",
+      "06",
+      "09"
+    ],
+    "deferred_source": "poc/docs/commander/notifications/restart-free-deferred-20261116.json"
+  },
+  "primary_scope": "healthy-15-regular-then-force",
+  "primary_plan": "poc/docs/milestones/README.md",
+  "espresso_choice": "SimEspresso deterministic primary plus same real regional results published/read back on official local dev-node",
+  "merge_policy": "Delegate all substantive integration to separate remote chats at M0/M1/M2; user-authorized M0 does not wait for the legacy three-full-feature counter.",
+  "milestone_jobs": [
+    {
+      "id": "M0",
+      "status": "integrating",
+      "handoff": "poc/docs/milestones/M0-foundation-merge-zh.md",
+      "thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+      "worktree": "/home/jy/.codex/worktrees/440b/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e217-bcfe-73e2-94e1-6b64b3e51d22",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      }
+    },
+    {
+      "id": "H1",
+      "status": "contract-preparation",
+      "reuse_thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
+      "handoff": "poc/docs/milestones/H1-healthy-session-program-zh.md",
+      "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
+      "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e218-7ff3-7cf1-93bf-69210efaab23",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
+      }
+    },
+    {
+      "id": "H2",
+      "status": "contract-preparation",
+      "handoff": "poc/docs/milestones/H2-session-manager-zh.md",
+      "thread_id": "01a1e219-b02d-7e00-949c-8879580b1a19",
+      "worktree": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e219-b791-7ae2-ad99-41f113128e64",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc"
+      }
+    },
+    {
+      "id": "H3",
+      "status": "contract-preparation",
+      "reuse_thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "handoff": "poc/docs/milestones/H3-publication-gfr-zh.md",
+      "thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "worktree": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e219-b830-7e11-aa88-4ee4a76f3f41",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
+      }
+    },
+    {
+      "id": "M1",
+      "status": "waiting-H1-H2-H3",
+      "handoff": "poc/docs/milestones/M1-regular-merge-zh.md"
+    },
+    {
+      "id": "H4",
+      "status": "waiting-M1",
+      "reuse_thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
+      "handoff": "poc/docs/milestones/H4-healthy-force-zh.md"
+    },
+    {
+      "id": "M2",
+      "status": "waiting-H4",
+      "handoff": "poc/docs/milestones/M2-force-merge-zh.md"
+    }
+  ],
+  "primary_plan_sha": "4a9a6b0a92a11e5778833988bb6524d929f4608e"
 }

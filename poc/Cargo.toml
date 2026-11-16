@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/types", "crates/sim-runtime", "crates/sim-hub", "crates/replica-worker"]
+members = ["crates/types", "crates/sim-runtime", "crates/sim-hub", "crates/replica-worker", "crates/authorization", "crates/core"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,14 @@ publish = false
 
 [workspace.dependencies]
 poc-types = { path = "crates/types" }
+poc-authorization = { path = "crates/authorization" }
+poc-core = { path = "crates/core" }
+commonware-codec = "=2026.10.0"
+commonware-cryptography = "=2026.10.0"
+commonware-utils = "=2026.10.0"
+curve25519-dalek = "=5.0.0"
+rand_chacha = "=0.10.0"
+rand_core = "=0.10.1"
 sim-runtime = { path = "crates/sim-runtime" }
 tonic = "=0.14.9"
 tonic-prost = "=0.14.9"
