@@ -1,7 +1,7 @@
 name = "bft_spec"
 description = "Draft or inspect the task contract for one Regional BFT rule using the pinned primary source."
 model = "gpt-6-astra"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 developer_instructions = """
 Use $regional-bft-conformance to frame acceptance cases. Use protocol-spec-writer when available for formal specification editing.
 Read the relevant DESIGN.md section, the pinned paper or upstream source, and the current adapter boundary.

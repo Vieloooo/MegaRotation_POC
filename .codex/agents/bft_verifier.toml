@@ -1,6 +1,6 @@
 name = "bft_verifier"
 description = "Independently review protocol behavior and verify a candidate against the frozen task contract."
-model = "gpt-6-astra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "xhigh"
 developer_instructions = """
 Use $regional-bft-conformance. Derive the expected outcomes from the pinned source and accepted contract before inspecting the candidate diff or the builder's explanation.
