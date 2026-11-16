@@ -1,0 +1,349 @@
+{
+  "schema": "H3-C-INDEPENDENT-CANDIDATE-RESULT-1",
+  "candidate": "bca02b095bac1e5701eb78e352d605c0ed887e10",
+  "verdict": "PASS_COMPONENT_SCOPE_ONLY",
+  "findings": [],
+  "test_source_fixes": [],
+  "source_integrity": {
+    "HEAD_at_start_and_end": "bca02b095bac1e5701eb78e352d605c0ed887e10",
+    "four_owned_paths_match_candidate": true,
+    "harness_source_matches_candidate": true,
+    "unrelated_dirty_scope": "B contract/source-preparation work only; no C production edit"
+  },
+  "owned_source_hashes": [
+    {
+      "path": "poc/scenarios/espresso-compatibility/capture.py",
+      "sha256": "e4f22a10aa262290361f6ff76e1116d5ad82fa86a4fe3e3b0d41d9420fe43362"
+    },
+    {
+      "path": "poc/scenarios/espresso-compatibility/run-local.sh",
+      "sha256": "45c05b3113ddfc57fed5e56709c8274bce0647d713f09a05c61a1fdf0f0e0a95"
+    },
+    {
+      "path": "poc/scenarios/espresso-compatibility/README.md",
+      "sha256": "e2d0dfa27c52822548411f107e7cf2c8a19948703e00cca074cd6d628c11e75c"
+    },
+    {
+      "path": "poc/verification/espresso-compatibility/check_capture.py",
+      "sha256": "f8763a150127c94f249bc07b276dfb92796c50be239104721be2c8fb2012a3c2"
+    }
+  ],
+  "contract": {
+    "path": "poc/docs/contracts/h3-publication-gfr-slice-c-v1.md",
+    "sha256": "a06e944e8802c269c00b0514db6ca947f625e15ec5145c015b6f511bfdac2783"
+  },
+  "harness_hashes": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/README.md",
+      "sha256": "f356b61bedeae0364a22843ac9e53954dd53ea193c69ff162d7215b37b08865e"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/api-bindings-v1.json",
+      "sha256": "c682e161f5086ae38dbda8d3bdc162941298960d957c12da3c8ec96d9c606081"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/fixture_model.py",
+      "sha256": "f24536e87e5102bf22f4f2320cd5936a2967805801bd1804cda77436ff4ca032"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/preparation.json",
+      "sha256": "d3cbd6cca1c7c57906d77c28ff2611b6ddfbb875d0112ed02f737790580470e3"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/tests.py",
+      "sha256": "c04de4b13aa30b8922a035de050e30945849aa687fb2680ea42aff85cc7f13eb"
+    }
+  ],
+  "environment": {
+    "python_executable": "/home/jy/miniconda3/bin/python3",
+    "python_version": "3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 16:31:09) [GCC 11.2.0]",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "Rust_builds": 0,
+    "real_node_or_Bubblewrap_launches": 0,
+    "heavy_lock": "not required for light stdlib matrix; wrapper launch/lock tools are mocks"
+  },
+  "commands": {
+    "argv": [
+      "/home/jy/miniconda3/bin/python3",
+      "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-c/independent-harness/tests.py",
+      "--repo",
+      "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+      "--candidate",
+      "bca02b095bac1e5701eb78e352d605c0ed887e10",
+      "--output",
+      "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-c-bca02b-independent-v1/cases"
+    ],
+    "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+    "environment_override": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "classification": "SYNTHETIC_OFFLINE_NO_NODE"
+  },
+  "matrix": {
+    "passed": 52,
+    "failed": 0,
+    "exit_code": 0,
+    "classification": "SYNTHETIC_OFFLINE_NO_NODE",
+    "cases": [
+      {
+        "case": "frozen-cli-surface",
+        "status": "PASS"
+      },
+      {
+        "case": "wrapper-guest-input-and-private-tmp",
+        "status": "PASS"
+      },
+      {
+        "case": "legacy-audit-vectors",
+        "status": "PASS"
+      },
+      {
+        "case": "load-one",
+        "status": "PASS"
+      },
+      {
+        "case": "load-eleven-duplicate",
+        "status": "PASS"
+      },
+      {
+        "case": "aggregate-equality",
+        "status": "PASS"
+      },
+      {
+        "case": "manifest-equality",
+        "status": "PASS"
+      },
+      {
+        "case": "native-report-equality-metadata-only",
+        "status": "PASS"
+      },
+      {
+        "case": "immutable-input-copy",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-schema",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-unknown-root-field",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-bool-length",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-float-length",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-bool-codec",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-bool-ordinal",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-wrong-codec",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-ordinal-gap",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-unknown-message-field",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-invalid-run-id",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-uppercase-sha",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-wrong-length",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-wrong-hash",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-absolute-path",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-parent-path",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-missing-path",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-empty-list",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-duplicate-json-key",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-nonfinite",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-symlink",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-twelve",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-manifest-over",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-empty-payload",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-payload-over",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-aggregate-over",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-native-report-over",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-native-unknown-field",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-native-key-version",
+        "status": "PASS"
+      },
+      {
+        "case": "marker-default-observe-and-readback",
+        "status": "PASS"
+      },
+      {
+        "case": "manifest-distinct-observe-and-readback",
+        "status": "PASS"
+      },
+      {
+        "case": "manifest-eleven-duplicates-readback",
+        "status": "PASS"
+      },
+      {
+        "case": "native-metadata-readback-not-crypto",
+        "status": "PASS"
+      },
+      {
+        "case": "exact-input-clone-path-does-not-change-identity",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-copied-payload-rehashed",
+        "status": "PASS"
+      },
+      {
+        "case": "copied-inputs-auto-validated-without-external-flag",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-recorded-manifest-rehashed",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-post-byte-mismatch",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-ordinal-submit-map-swap",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-recorded-duplicate-ordinal",
+        "status": "PASS"
+      },
+      {
+        "case": "missing-flat-position-not-complete",
+        "status": "PASS"
+      },
+      {
+        "case": "requery-gap-cannot-use-first-reader",
+        "status": "PASS"
+      },
+      {
+        "case": "ack-only-not-complete",
+        "status": "PASS"
+      },
+      {
+        "case": "reject-native-report-copy-rehashed",
+        "status": "PASS"
+      }
+    ]
+  },
+  "saved_official_marker_compatibility": {
+    "status": "PASS_SAVED_OFFICIAL_MARKER_COMPATIBILITY_ONLY",
+    "checker_candidate": "bca02b095bac1e5701eb78e352d605c0ed887e10",
+    "recorded_runner_candidate": "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+    "legacy_manifest": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle/manifest.json",
+    "legacy_manifest_sha256": "08bdc1aec6b5735df90ab3ceeab7a6fe13868fd0dc8212c78158ddbf2fe61dfb",
+    "node_launched": false,
+    "H1_native_or_genuine_C07": "NOT_RUN",
+    "readers": [
+      {
+        "reader": "first",
+        "exit_code": 0,
+        "complete_blocks": 6,
+        "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "audit_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "projection_sha256": "c0b466043f122fa83170e32327d4f89c4e8b1b05986c3e22281899cbf3147b6d"
+      },
+      {
+        "reader": "requery",
+        "exit_code": 0,
+        "complete_blocks": 6,
+        "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "audit_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "projection_sha256": "c0b466043f122fa83170e32327d4f89c4e8b1b05986c3e22281899cbf3147b6d"
+      }
+    ]
+  },
+  "bounds": {
+    "synthetic_source_q": "0..1",
+    "input_message_counts": "1 and11 plus rejection at0/12",
+    "manifest_payload_report_bound": "65536 bytes equality and oversize rejection",
+    "legacy_official_prefix_q": "0..5 each first/requery",
+    "seed": "N/A fixed fixtures"
+  },
+  "limits": {
+    "actual_H1_final_proof": "NOT_RUN",
+    "C07_genuine_M1_artifact": "NOT_RUN",
+    "new_official_publication": "NOT_RUN",
+    "actual_namespace_isolation": "NOT_RUN; mock argv test only",
+    "QC_VID": "NOT_VERIFIED",
+    "official_timing": "Unknown/Unsupported",
+    "healthy15worker_M1": "NOT_RUN"
+  },
+  "raw_archive": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-c-bca02b-independent-v1",
+  "raw_seal": {
+    "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-c-bca02b-independent-v1/raw-seal.json",
+    "sha256": "cb051281cb1440f194398d0022e915a73b513b07e7ea9ca534c6752d3622688a",
+    "entries": 679
+  },
+  "review_sha256": "f3f44011e1c485dbe5d13551273de628e1a25e659a134642abdb6a2c9f802625",
+  "handoff": "Tester may run agreed C cases on this exact candidate; production changes require affected reverification"
+}
