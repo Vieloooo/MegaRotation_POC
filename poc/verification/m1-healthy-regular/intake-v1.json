@@ -1,0 +1,33 @@
+{
+  "schema": "m1-merge-intake-v1",
+  "date": "2026-11-16",
+  "timezone": "Asia/Shanghai",
+  "worktree": "/home/jy/.codex/worktrees/5d7a/megaroation_poc",
+  "source_checkout": "/mnt/reth/jy/megaroation_poc",
+  "initial_head": "35d382ac445cc8bc779f0d18fd23cb57e54680da",
+  "initial_dirty": false,
+  "head": "daebb514d4bf1ea596b828e320257bf54b68ceaa",
+  "main": "35d382ac445cc8bc779f0d18fd23cb57e54680da",
+  "branch": "codex/poc-m1-regular",
+  "dispatch_original": "d55d39f73593676325bdc0fbb7ba3845ca93025f",
+  "dispatch_consumed": "daebb514d4bf1ea596b828e320257bf54b68ceaa",
+  "bft_gitlink": "160000 commit 691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6\tregional_BFT_sim",
+  "bft_worktree_local": "uninitialized; unchanged",
+  "read_only_bft_source": "/mnt/reth/jy/megaroation_poc/regional_BFT_sim",
+  "v2_design_sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "python": "Python 3.12.8",
+  "git": "git version 2.34.1",
+  "commonware": "2026.10.0",
+  "data": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular",
+  "heavy_lock": "/tmp/megaroation-poc-heavy.lock",
+  "jobs": 2,
+  "main_runtime_model_visibility": "Project configuration declares gpt-6-astra/ultra; independent runtime model introspection unavailable",
+  "roles": {
+    "m1_contract": "bft_spec gpt-6-astra/xhigh",
+    "m1_verify": "bft_verifier gpt-6-astra/xhigh"
+  },
+  "implementation_candidates_consumed": [],
+  "m1_status": "NOT_RUN"
+}
