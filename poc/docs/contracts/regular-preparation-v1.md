@@ -2,6 +2,8 @@
 
 Date: 2026-11-15. Status: read-only source preparation; implementation is gated on independently verified native recovery R1–R18 and its same-revision simulations. This document does not mark I1b, I2, regular handoff or any BFT liveness property passed.
 
+Scheduling amendment (2026-11-15): [five-chat dependency plan v2](../commander/dependency-plan-v2.md) permits independently contracted pure Plan/execution, transport, public-log and L1 components before recovery is complete. The recovery gate above continues to apply to native REG-A/REG-B integration and its acceptance, not to every independent component. Public interfaces and independent expectations must still be frozen before each implementation slice.
+
 Sources: pinned `formalization_v10/poc_design_zh_v2.md` SHA-256 `95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab`, v10 `00` §§1.3, 2.3, 3.2–3.4, `02` §§3.2–3.10 and 4.3–4.9, `03` §§3.4–3.10 and 4.1–4.4, `09` §§3.1–3.4 and 4.1–4.5, and `11` §§1.1–1.4 and 2.1–2.2. Native code mapping below is from verified `fec7ade1675cb60dd16a16fb28ebe81e3f76f508`, inspected with git show, not the changing recovery implementation.
 
 ## Two increments

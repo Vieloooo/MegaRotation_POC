@@ -1,5 +1,7 @@
 # 04 15-worker Session Program 与 REG-A
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以含 **02 与 03 验收产物**的集成 SHA 建 managed worktree `poc-session-program`，分支 `codex/poc-session-program`。启动 15 个独立 worker 并在一个地区运行五个真实 Simplex 引擎，完成 slot-aware Build/Accept 与真实验签入口。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。遵循[共用工作约定](workflow-zh.md)。

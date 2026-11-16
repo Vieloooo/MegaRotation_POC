@@ -1,0 +1,862 @@
+{
+  "schema": "mock-plan-execution-independent-inputs-v1",
+  "authority": "S for source semantics; all concrete account bytes/root/hash choices use P profile MPX-PREP-LE64-SHA256-v0",
+  "seed": null,
+  "schedule": [
+    {
+      "input": [
+        0,
+        0,
+        1
+      ],
+      "expected": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "input": [
+        0,
+        0,
+        2
+      ],
+      "expected": [
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "input": [
+        0,
+        1,
+        1
+      ],
+      "expected": [
+        1,
+        0,
+        5
+      ]
+    },
+    {
+      "input": [
+        0,
+        2,
+        5
+      ],
+      "expected": [
+        2,
+        4,
+        14
+      ]
+    },
+    {
+      "input": [
+        0,
+        2,
+        6
+      ],
+      "expected": [
+        2,
+        0,
+        10
+      ]
+    },
+    {
+      "input": [
+        1,
+        0,
+        1
+      ],
+      "expected": [
+        1,
+        0,
+        5
+      ]
+    },
+    {
+      "input": [
+        2,
+        1,
+        11
+      ],
+      "expected": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "input": [
+        7,
+        8,
+        9
+      ],
+      "expected": [
+        0,
+        3,
+        3
+      ]
+    },
+    {
+      "input": [
+        18446744073709551615,
+        18446744073709551615,
+        18446744073709551615
+      ],
+      "expected": [
+        0,
+        4,
+        4
+      ],
+      "note": "Mathematical input; adapter width/overflow policy unresolved. Modular result must not rely on wrapping beta+r."
+    }
+  ],
+  "schedule_invalid": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      1
+    ],
+    [
+      0,
+      -1,
+      1
+    ],
+    [
+      0,
+      0,
+      -1
+    ]
+  ],
+  "identity_mapping": {
+    "key_labels_by_member": [
+      "30",
+      "10",
+      "50",
+      "20",
+      "40"
+    ],
+    "labels_are_bls_public_keys": false,
+    "expected_sorted_members": [
+      1,
+      3,
+      0,
+      4,
+      2
+    ],
+    "expected_signer_index_by_member": [
+      2,
+      0,
+      4,
+      1,
+      3
+    ],
+    "expected_signer_pid_by_region": [
+      [
+        1,
+        3,
+        0,
+        4,
+        2
+      ],
+      [
+        6,
+        8,
+        5,
+        9,
+        7
+      ],
+      [
+        11,
+        13,
+        10,
+        14,
+        12
+      ]
+    ],
+    "label_role": "Synthetic participant identity-key sort labels, not BLS vote keys or valid public keys"
+  },
+  "origins": [
+    {
+      "anchor_height": 0,
+      "anchor_origin": 3,
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected": [
+        3,
+        3,
+        4,
+        4,
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "anchor_height": 0,
+      "anchor_origin": 1,
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected": [
+        2,
+        3,
+        4,
+        4,
+        5,
+        5,
+        6
+      ]
+    },
+    {
+      "anchor_height": 0,
+      "anchor_origin": 5,
+      "heights": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "expected": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        6
+      ]
+    }
+  ],
+  "timing": {
+    "genesis_ts_us": 10000000,
+    "slot_us": 1000000,
+    "l1_period_us": 2000000,
+    "dep_lag_us": 5000000
+  },
+  "execution": {
+    "profile": "MPX-PREP-LE64-SHA256-v0",
+    "anchor": {
+      "metadata": [
+        0,
+        10000000,
+        3
+      ],
+      "accounts": [
+        [
+          0,
+          0,
+          100
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          7
+        ]
+      ],
+      "physical_id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "native_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "physical_heights": [
+      3
+    ],
+    "steps": [
+      {
+        "metadata": [
+          1,
+          11000000,
+          3
+        ],
+        "credit": [
+          0,
+          5
+        ],
+        "ordinary_hex": [],
+        "expected_kept_indices": [],
+        "expected_accounts": [
+          [
+            0,
+            0,
+            105
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            7
+          ]
+        ]
+      },
+      {
+        "metadata": [
+          2,
+          12000000,
+          3
+        ],
+        "credit": [
+          1,
+          2
+        ],
+        "ordinary_hex": [],
+        "expected_kept_indices": [],
+        "expected_accounts": [
+          [
+            0,
+            0,
+            105
+          ],
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            2,
+            0,
+            7
+          ]
+        ]
+      },
+      {
+        "metadata": [
+          3,
+          13000000,
+          4
+        ],
+        "credit": [
+          0,
+          10
+        ],
+        "ordinary_hex": [
+          "01000107000000000000000100000000000000",
+          "01000100000000000000001e00000000000000",
+          "01000201000000000000006400000000000000",
+          "01010200000000000000000c00000000000000",
+          "01000101000000000000000500000000000000",
+          "01010000000000000000000100000000000000",
+          "01010001000000000000000a00000000000000"
+        ],
+        "expected_kept_indices": [
+          1,
+          3,
+          4,
+          6
+        ],
+        "expected_accounts": [
+          [
+            0,
+            2,
+            90
+          ],
+          [
+            1,
+            2,
+            15
+          ],
+          [
+            2,
+            0,
+            19
+          ]
+        ]
+      }
+    ],
+    "expected_virtual_heights": [
+      1,
+      2,
+      3
+    ],
+    "expected_anchor_only_virtual_heights": [],
+    "expected_no_speculative_padding_after": 3,
+    "malformed_ordinary_hex": [
+      "",
+      "01",
+      "0100010000000000000000000000000000000000",
+      "ff000100000000000000001e00000000000000"
+    ],
+    "pending_arithmetic": [
+      "unknown account",
+      "self transfer",
+      "zero transfer",
+      "nonce overflow",
+      "balance overflow",
+      "credit overflow",
+      "system error",
+      "maximum byte/list bounds"
+    ]
+  },
+  "regular_boundary": {
+    "old_window": [
+      1,
+      10
+    ],
+    "old_initial_anchor_height": 0,
+    "last_accepted_physical_height": 9,
+    "expected_reference_height": 0,
+    "expected_new_anchor_height": 9,
+    "expected_window": [
+      11,
+      20
+    ],
+    "first_physical_height": 11,
+    "expected_padding": [
+      10
+    ]
+  },
+  "replay_order": {
+    "input": [
+      {
+        "label": "E",
+        "key": 20000000,
+        "kind": "ESPRESSO",
+        "index": [
+          8
+        ]
+      },
+      {
+        "label": "F-later",
+        "key": 20000000,
+        "kind": "FORCE",
+        "index": [
+          7,
+          2,
+          0
+        ]
+      },
+      {
+        "label": "END",
+        "key": 20000000,
+        "kind": "SESSION_END",
+        "index": [
+          0,
+          2
+        ]
+      },
+      {
+        "label": "R-first",
+        "key": 20000000,
+        "kind": "RESUME",
+        "index": [
+          7,
+          1,
+          0
+        ]
+      },
+      {
+        "label": "X",
+        "key": 20000000,
+        "kind": "EXPIRE",
+        "index": [
+          11
+        ]
+      },
+      {
+        "label": "F-middle",
+        "key": 20000000,
+        "kind": "FORCE",
+        "index": [
+          7,
+          1,
+          1
+        ]
+      },
+      {
+        "label": "E-earlier",
+        "key": 19999999,
+        "kind": "ESPRESSO",
+        "index": [
+          7
+        ]
+      }
+    ],
+    "expected": [
+      "E-earlier",
+      "R-first",
+      "F-middle",
+      "F-later",
+      "X",
+      "END",
+      "E"
+    ]
+  },
+  "l1": {
+    "bounded_heights": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "finalized_at_us": [
+      1500000,
+      3500000,
+      5500000,
+      7500000
+    ],
+    "reader_delivered_at_us": {
+      "A": [
+        2000000,
+        4000000,
+        6000000,
+        8000000
+      ],
+      "B": [
+        2000000,
+        4000000,
+        9000000,
+        10000000
+      ]
+    },
+    "queries": [
+      {
+        "id": "L1-READY-A",
+        "reader": "A",
+        "now_us": 8000000,
+        "height": 3,
+        "control": true,
+        "expected": "READY"
+      },
+      {
+        "id": "L1-DELAY-B",
+        "reader": "B",
+        "now_us": 8000000,
+        "height": 3,
+        "control": true,
+        "expected": "WAIT"
+      },
+      {
+        "id": "L1-B-LATER",
+        "reader": "B",
+        "now_us": 10000000,
+        "height": 3,
+        "control": true,
+        "expected": "READY"
+      },
+      {
+        "id": "L1-FUTURE-FINALITY",
+        "reader": "A",
+        "now_us": 7000000,
+        "height": 3,
+        "control": false,
+        "expected": "WAIT"
+      },
+      {
+        "id": "L1-GAP",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 3,
+        "control": false,
+        "missing": [
+          2
+        ],
+        "expected": "WAIT"
+      },
+      {
+        "id": "L1-CONTROL-HOLE",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 3,
+        "control": true,
+        "controls_missing": [
+          2
+        ],
+        "expected": "WAIT"
+      },
+      {
+        "id": "L1-METADATA-WITHOUT-CONTROLS",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 3,
+        "control": false,
+        "controls_missing": [
+          2
+        ],
+        "expected": "READY"
+      },
+      {
+        "id": "L1-CORRUPT",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 3,
+        "control": true,
+        "corrupt": [
+          2
+        ],
+        "expected": "REJECT"
+      },
+      {
+        "id": "L1-OUT-OF-RANGE",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 4,
+        "control": true,
+        "expected": "FIXTURE_EXHAUSTED"
+      },
+      {
+        "id": "L1-PERMANENT-MANIFEST-HOLE",
+        "reader": "A",
+        "now_us": 10000000,
+        "height": 3,
+        "control": false,
+        "permanent_missing": [
+          2
+        ],
+        "expected": "FIXTURE_ERROR"
+      }
+    ]
+  },
+  "certificate_obligations": [
+    {
+      "id": "CERT-4",
+      "signer_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "expected_semantic": "eligible quorum; verify real signature/subject before true"
+    },
+    {
+      "id": "CERT-3",
+      "signer_indices": [
+        0,
+        1,
+        2
+      ],
+      "expected_semantic": "reject insufficient distinct quorum"
+    },
+    {
+      "id": "CERT-DUP",
+      "signer_indices": [
+        0,
+        1,
+        2,
+        2
+      ],
+      "expected_semantic": "reject duplicate; cannot count four"
+    },
+    {
+      "id": "CERT-CROSS-REGION",
+      "signer_indices": [
+        0,
+        1,
+        2,
+        5
+      ],
+      "expected_semantic": "reject index outside region committee"
+    },
+    {
+      "id": "CERT-WRONG-CID",
+      "mutation": "cid",
+      "expected_semantic": "reject target final proof"
+    },
+    {
+      "id": "CERT-WRONG-VIEW",
+      "mutation": "view",
+      "expected_semantic": "reject target final proof"
+    },
+    {
+      "id": "CERT-WRONG-PARENT-VIEW",
+      "mutation": "parent_view",
+      "expected_semantic": "reject target final proof"
+    },
+    {
+      "id": "CERT-WRONG-PARENT",
+      "mutation": "parent_digest",
+      "expected_semantic": "reject target final proof"
+    },
+    {
+      "id": "CERT-WRONG-BODY",
+      "mutation": "body_digest",
+      "expected_semantic": "reject target final proof"
+    },
+    {
+      "id": "CERT-WRONG-KIND",
+      "mutation": "finalize to notarize",
+      "expected_semantic": "reject final-proof entry point"
+    },
+    {
+      "id": "CERT-WRONG-CONFIG",
+      "mutation": "chain/config",
+      "expected_semantic": "reject context binding"
+    },
+    {
+      "id": "CERT-BODY-MISSING",
+      "mutation": "remove body/ancestry",
+      "expected_semantic": "proof observation may succeed; delivery WAIT"
+    }
+  ],
+  "window_cases": [
+    {
+      "anchor": 0,
+      "window": [
+        1,
+        10
+      ],
+      "expected": "VALID"
+    },
+    {
+      "anchor": 9,
+      "window": [
+        11,
+        20
+      ],
+      "expected": "VALID"
+    },
+    {
+      "anchor": 0,
+      "window": [
+        0,
+        9
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "anchor": 0,
+      "window": [
+        10,
+        1
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "anchor": 0,
+      "window": [
+        1,
+        11
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "anchor": 11,
+      "window": [
+        11,
+        20
+      ],
+      "expected": "REJECT"
+    }
+  ],
+  "lifecycle_events": {
+    "position": {
+      "key": 20000000,
+      "kind": "SESSION_END",
+      "index": [
+        0,
+        0
+      ]
+    },
+    "input": [
+      {
+        "kind": "SessionClosed",
+        "body": {
+          "session": [
+            0,
+            0
+          ],
+          "reason": "HANDOFF"
+        }
+      },
+      {
+        "kind": "SessionAssigned",
+        "body": {
+          "descriptor_ref": "D-successor"
+        }
+      },
+      {
+        "kind": "SessionClosed",
+        "body": {
+          "session": [
+            0,
+            0
+          ],
+          "reason": "HANDOFF"
+        }
+      }
+    ],
+    "expected_distinct_count": 2,
+    "note": "Objects only; JSON is not a protocol encoding. First and third are exact duplicate; second must survive although its position is equal."
+  },
+  "registry_obligations": [
+    {
+      "id": "REG-15",
+      "mutation": "none",
+      "expected": "3 regions, 5 registered unique identities each, all weight 1, valid PoPs"
+    },
+    {
+      "id": "REG-MISSING",
+      "mutation": "omit pid 14",
+      "expected": "REJECT"
+    },
+    {
+      "id": "REG-DUP-PID",
+      "mutation": "replace pid 14 with pid 13",
+      "expected": "REJECT"
+    },
+    {
+      "id": "REG-DUP-KEY",
+      "mutation": "pid 14 reuses pid 13 vote key",
+      "expected": "REJECT"
+    },
+    {
+      "id": "REG-WRONG-REGION",
+      "mutation": "pid 14 claims region 1",
+      "expected": "REJECT"
+    },
+    {
+      "id": "REG-WRONG-WEIGHT",
+      "mutation": "pid 14 weight=2",
+      "expected": "REJECT"
+    },
+    {
+      "id": "REG-WRONG-POP",
+      "mutation": "pid 14 carries another key PoP",
+      "expected": "REJECT after genuine PoP verification"
+    },
+    {
+      "id": "REG-POP-MISSING",
+      "mutation": "pid 14 PoP missing",
+      "expected": "REJECT; no valid registry installed"
+    },
+    {
+      "id": "REG-REORDER",
+      "mutation": "permute input rows",
+      "expected": "same logical registry and identity mapping; canonical byte equality requires approved registry codec"
+    },
+    {
+      "id": "REG-OFFLINE",
+      "mutation": "mark leader offline in diagnostic schedule",
+      "expected": "same committee and leader; no implicit replacement"
+    }
+  ]
+}

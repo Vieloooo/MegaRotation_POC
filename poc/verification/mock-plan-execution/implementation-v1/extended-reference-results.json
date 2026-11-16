@@ -1,0 +1,31 @@
+{
+  "status": "PASS_REFERENCE_ONLY",
+  "registry_hash": "82e053c4537f6482bc4b10abcf27882b6abb23bd2f72e012bbb3ded329f285d9",
+  "sorted_signer_pids": [
+    [
+      4,
+      3,
+      1,
+      0,
+      2
+    ],
+    [
+      7,
+      6,
+      5,
+      9,
+      8
+    ],
+    [
+      13,
+      11,
+      14,
+      10,
+      12
+    ]
+  ],
+  "expanded_heights": 4096,
+  "native_hash": "b574146396dc53a3e9099193398887106a874121ed46564d98322c90a9146db3",
+  "seed": null,
+  "limits": "No production imports; cryptographic PoP validity is checked by the separate actual Rust primitive/registry tests"
+}

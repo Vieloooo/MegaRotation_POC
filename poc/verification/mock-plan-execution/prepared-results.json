@@ -1,0 +1,887 @@
+{
+  "case_count": 172,
+  "cases": [
+    {
+      "authority": "P",
+      "case": "sha256-known-answer",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-3",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-4",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-5",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-6",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-7",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-8",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-invalid-0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-invalid-1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-invalid-2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "schedule-invalid-3",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "sort-member-permutation",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "member-to-signer-inverse",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "signer-pids-r0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid3",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid4",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "signer-pids-r1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid5",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid6",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid7",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid8",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid9",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "signer-pids-r2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid10",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid11",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid12",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid13",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "mapping-round-trip-pid14",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "origin-0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "origin-1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "origin-2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "regular-window-retained",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "regular-reference-distinct",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "regular-fallback-padding",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-3",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-4",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "window-5",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "replay-order-controls-mixed",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "lifecycle-same-position-distinct-events",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-READY-A",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-DELAY-B",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-B-LATER",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-FUTURE-FINALITY",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-GAP",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-CONTROL-HOLE",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-METADATA-WITHOUT-CONTROLS",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-CORRUPT",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-OUT-OF-RANGE",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "L1-PERMANENT-MANIFEST-HOLE",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h0:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h0:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h1-manual-state",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h1-manual-kept",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h1-repeat-same-parent",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-0:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-0:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h2-manual-state",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h2-manual-kept",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h2-repeat-same-parent",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h2:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h2:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-0:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-0:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h2:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h2:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h2:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h2:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h3-manual-state",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h3-manual-kept",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "execution-h3-repeat-same-parent",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h3:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h3:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-0:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-0:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h3:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h3:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h3:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h3:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3-only-kept:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3-only-kept:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "filtered-raw-affects-physical",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "filtered-raw-preserves-native",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-pre-root-after-padding",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-parent-distinct-native-parent",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-binding-native-parent",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-binding-metadata",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-binding-DEP",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-binding-Kept",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-binding-post-root",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-0:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-0:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-1:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-1:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-2:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-2:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-3:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-3:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-4:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-4:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-5:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-5:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-6:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-6:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "merge-gap-expansion",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "execution-covers-expanded-heights",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "anchor-only-no-padding",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "S",
+      "case": "merge-stops-at-physical-tip",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "malformed-tx-0",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "malformed-tx-1",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "malformed-tx-2",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "malformed-tx-3",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-11:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-11:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-22:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-22:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-session-changed:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-session-changed:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-config-changed:bytes",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-config-changed:sha256",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-session-config-separation",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h0:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-0:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h1-1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h2:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-0:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h2-1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h2:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h2:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "metadata-h3:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-0:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "dep-h3-1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "state-h3:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "native-h3:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "physical-h3-only-kept:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-11:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-anchor-22:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-session-changed:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "cid-config-changed:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-0:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-1:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-2:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-3:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-4:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-5:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    },
+    {
+      "authority": "P",
+      "case": "ordinary-6:literal-integrity",
+      "status": "PASS_REFERENCE_ONLY"
+    }
+  ],
+  "fixed_golden_record_count": 29,
+  "implementation_status": "INCONCLUSIVE_NOT_RUN",
+  "not_run": [
+    "production implementation",
+    "actual BLS/PoP/native signed subjects",
+    "public registry/config/Plan codec",
+    "native engine/runtime/recovery",
+    "Anvil/ABI/ResumeCut",
+    "candidate verifier/tester matrix",
+    "unknown account",
+    "self transfer",
+    "zero transfer",
+    "nonce overflow",
+    "balance overflow",
+    "credit overflow",
+    "system error",
+    "maximum byte/list bounds"
+  ],
+  "profile": "MPX-PREP-LE64-SHA256-v0",
+  "scope": "PREPARATION_ONLY",
+  "seed": null,
+  "status": "PASS_REFERENCE_VECTORS"
+}
