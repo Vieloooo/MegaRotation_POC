@@ -1,0 +1,71 @@
+{
+  "version": "viewer-gfr-independent-literals-v1",
+  "derived_before_candidate": true,
+  "evidence_class": "non-cryptographic pure-rule fixtures",
+  "time_unit": "microsecond",
+  "sort": {
+    "input": [
+      {"label":"espresso_q9","key_us":14000000,"kind":"ESPRESSO","index":[9]},
+      {"label":"force_l4_t1_g7","key_us":14000000,"kind":"FORCE","index":[4,1,7]},
+      {"label":"end_s0_0","key_us":14000000,"kind":"SESSION_END","index":[0,0]},
+      {"label":"resume_l4_t0_g3","key_us":14000000,"kind":"RESUME","index":[4,0,3]},
+      {"label":"espresso_q8","key_us":14000000,"kind":"ESPRESSO","index":[8]},
+      {"label":"expire_h1","key_us":14000000,"kind":"EXPIRE","index":[1]},
+      {"label":"espresso_q7","key_us":13999999,"kind":"ESPRESSO","index":[7]},
+      {"label":"force_l4_t0_g4","key_us":14000000,"kind":"FORCE","index":[4,0,4]}
+    ],
+    "expected_labels": ["espresso_q7","resume_l4_t0_g3","force_l4_t0_g4","force_l4_t1_g7","expire_h1","end_s0_0","espresso_q8","espresso_q9"],
+    "source": "09 3.3"
+  },
+  "invalid_positions": [
+    {"key_us":1,"kind":"EXPIRE","index_type":"Espresso","expect":"REJECT"},
+    {"key_us":1,"kind":"FORCE","index_type":"Height","expect":"REJECT"},
+    {"key_us":1,"kind":"RESUME","index_type":"Session","expect":"REJECT"}
+  ],
+  "availability": [
+    {"id":"proof_then_body","proof_qs":[0],"body_qs":[1],"expected_q_avail":1},
+    {"id":"body_then_proof","proof_qs":[3],"body_qs":[0,1],"expected_q_avail":3},
+    {"id":"two_valid_proofs","proof_qs":[3,0],"body_qs":[1,2],"expected_q_avail":2},
+    {"id":"optional_anchor_late","proof_qs":[0],"body_qs":[1],"optional_anchor_q":8,"expected_q_avail":1},
+    {"id":"missing_physical_ancestor","proof_qs":[0],"body_qs":[null,1],"expected_q_avail":null},
+    {"id":"cache_has_unpublished_body","proof_qs":[0],"body_qs":[null],"local_cache":true,"expected_q_avail":null},
+    {"id":"invalid_then_valid_proof","invalid_proof_qs":[0],"proof_qs":[4],"body_qs":[1],"expected_q_avail":4},
+    {"id":"padding_no_body_needed","proof_qs":[2],"physical_body_qs":{"1":0,"4":1},"padding_heights":[2,3],"expected_q_avail":2}
+  ],
+  "deadline": [
+    {"id":"before_end","public_key":13999999,"end_key":14000000,"expected_public_deadline_pass":true},
+    {"id":"at_end","public_key":14000000,"end_key":14000000,"expected_public_deadline_pass":false},
+    {"id":"after_end","public_key":14000001,"end_key":14000000,"expected_public_deadline_pass":false}
+  ],
+  "segment_expiry": [
+    {"id":"padding_exact_expiry","acceptance_key":40000000,"heights":[10,11],"expiry_keys":[40000000,41000000],"physical_heights":[11],"expected_pass":false,"expected_append_heights":[]},
+    {"id":"padding_before_expiry","acceptance_key":39999999,"heights":[10,11],"expiry_keys":[40000000,41000000],"physical_heights":[11],"expected_pass":true,"expected_append_heights":[10,11]},
+    {"id":"cached_public_key_not_acceptance_key","public_key":10000000,"acceptance_key":40000000,"heights":[10,11],"expiry_keys":[40000000,41000000],"expected_pass":false,"expected_append_heights":[]}
+  ],
+  "regular": [
+    {"id":"full_window","old_session":[0,0],"old_window":[1,10],"initial_anchor":"A0","accepted_physical_tip":"B10","tip_height":10,"expected_session":[0,1],"expected_window":[11,20],"expected_anchor":"B10","expected_reference":"A0","expected_g_height":10,"expected_close_reason":"COMPLETE"},
+    {"id":"end_at_h9","old_session":[0,0],"old_window":[1,10],"initial_anchor":"A0","accepted_physical_tip":"B9","tip_height":9,"expected_session":[0,1],"expected_window":[11,20],"expected_anchor":"B9","expected_reference":"A0","expected_g_height":9,"expected_close_reason":"COMPLETE"},
+    {"id":"end_without_result","old_session":[0,0],"old_window":[1,10],"initial_anchor":"A0","accepted_physical_tip":null,"tip_height":0,"expected_session":[0,1],"expected_window":[11,20],"expected_anchor":"A0","expected_reference":"A0","expected_g_height":0,"expected_close_reason":"COMPLETE"}
+  ],
+  "same_position_lifecycle": {
+    "position":{"key_us":13000000,"kind":"ESPRESSO","index":[2]},
+    "input_bodies":[
+      {"kind":"SessionClosed","session":[0,0],"reason":"COMPLETE"},
+      {"kind":"SessionAssigned","descriptor":"nu_0_1"},
+      {"kind":"SessionClosed","session":[0,1],"reason":"COMPLETE"},
+      {"kind":"SessionAssigned","descriptor":"nu_0_2"},
+      {"kind":"SessionClosed","session":[0,0],"reason":"COMPLETE"}
+    ],
+    "expected_unique_input_indices":[0,1,2,3],
+    "scope":"Identity-only fixture; does not assert native feasibility of two windows completing at this key."
+  },
+  "reader_schedule": {
+    "public_blocks":[{"q":0,"theta":11000000,"message_count":1},{"q":1,"theta":12000000,"message_count":2},{"q":2,"theta":14000000,"message_count":0}],
+    "reader_a":["block0","block1","block2"],
+    "reader_b":["block2","block0","header1","message1_1","message1_0"],
+    "expected_a_tips":[0,1,2],
+    "expected_b_tips":[null,0,0,0,2],
+    "expected_b_watermark_14000000":[false,false,false,false,true]
+  },
+  "limits":"Rule-level literals, not generated by a candidate; actual raw-object replay fixtures will encode these using exact accepted 03/06 APIs and the frozen 07 contract. Segment-expiry literals isolate the guard and do not assume all preceding timers were bypassed."
+}

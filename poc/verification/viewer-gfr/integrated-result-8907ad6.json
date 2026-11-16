@@ -1,0 +1,38 @@
+{
+  "candidate": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+  "prior_reviewed_candidate": "de628c2e3536c6d7b10ae2f8513b7014623a0e45",
+  "verdict": "PASS_INTEGRATED_IDENTITY_AND_LOCKED_RERUN",
+  "checked_source_files": 19,
+  "all_source_hashes_match": true,
+  "static_review_repeated": false,
+  "cached_locked_runs": 1,
+  "lock_regenerated": false,
+  "lock_unchanged": true,
+  "candidate_after": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+  "working_source_diff_empty": true,
+  "clean_at_run_completion": true,
+  "summary": {
+    "failed": 0,
+    "passed": 117
+  },
+  "trace_byte_identical_to_prior_review": true,
+  "evidence_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/m2-8907ad6-integrated-v1",
+  "raw_files": {
+    "candidate-after.txt": "5bfd6e3fa7df6274ea40f17525da17558d14a07c9cbc22a55e57b35de884e5b6",
+    "candidate-before.txt": "5bfd6e3fa7df6274ea40f17525da17558d14a07c9cbc22a55e57b35de884e5b6",
+    "cargo.txt": "c10ec31b8c6e6e2693cf65fc1971b41edbc3da1ae7db6f9f3f36c4823f8dcab5",
+    "command.sh": "d3fbd17ee1041cdcb1c8f1a29a31ea844fe33ceaf44315bacf60894db62e5b71",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "harness.jsonl": "6084c4ae54d826a177ceb2a4d5eba718a74f5ee9aba3e838d0c28bffd5dbbc6c",
+    "harness.stderr": "737941cdc01b28480fc55605f0374e6925cf6a9884140dbfc346a8b04cf29443",
+    "integrated-source-diff.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lock-after.txt": "8e1f83a8557c1b822583e864d924edb5f7466e898aa6aa930e223cd0d1f279cd",
+    "lock-before.txt": "8e1f83a8557c1b822583e864d924edb5f7466e898aa6aa930e223cd0d1f279cd",
+    "rustc.txt": "f4d034f5660bb49f22bfcba3f3445be67e25b704c193ff421b53863b4faee148",
+    "source-identity.json": "dfc985593bb9388519a8754780ff2ec0988885179ba4a61d5281d4e59008658c",
+    "status-after.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status-before.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "working-source-diff.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": "Prior m2-review scope unchanged. Tester pausematrix pending; nativeV22 and futureRESUMEVG39 gatesopen; full07 notaccepted."
+}

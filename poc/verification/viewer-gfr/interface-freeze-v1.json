@@ -1,0 +1,10 @@
+{
+  "phase": "contract_and_interface_expectations_frozen_before_candidate",
+  "contract_sha256": "0a622d8504f48ad63305b917ee30da0d5e07f366512bd10018345ecedd5bfabb",
+  "candidate_inspected": false,
+  "files": {
+    "interface-vectors-v1.json": "0409be69fad24e8726df7e952cd0919161e943dbfe05b30431343beba7ce1926",
+    "generate-interface-vectors-v1.py": "c64260539a951b59872eacf5a1817aa739544817eab7ee20f17eb54a9fa688d9",
+    "contract-review-v1.md": "10c2836e7a7c130ce58e9b8ed649fb4820437d90391874650419e8f9b3f9eda5"
+  }
+}
