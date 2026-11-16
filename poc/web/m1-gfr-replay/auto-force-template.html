@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<title>M3 自动 Force 回放</title>
+<style>/* INLINE_CSS */</style>
+</head>
+<body>
+<main>
+<header class="masthead">
+  <div>
+    <p class="eyebrow">SEQUENCER ROTATION POC / M3</p>
+    <h1>自动 Force 回放</h1>
+    <p class="subtitle">从治理 signer 的公共观察，到新职责的首块进入 G。</p>
+  </div>
+  <nav aria-label="其他回放"><a href="index.html">M1 Regular</a> · <a href="force.html">M2 Force</a></nav>
+</header>
+<p id="mode" class="mode"></p>
+<section class="dashboard" aria-label="当前状态">
+  <div><span>虚拟时间 τ</span><strong id="clock"></strong></div>
+  <div><span>G head</span><strong id="head"></strong></div>
+  <div><span>当前职责</span><strong id="context"></strong></div>
+  <div><span>已完成公共位置</span><strong id="position"></strong></div>
+</section>
+<section class="console panel" aria-labelledby="timeline-heading">
+  <div class="panel-head">
+    <div><h2 id="timeline-heading">回放时间轴</h2><p>横轴为虚拟秒。同一时刻按 trace seq 单步。细点可点击查看完整事件。</p></div>
+    <div id="filters" class="filter-list"></div>
+  </div>
+  <div class="timeline-scroll"><div id="timeline" class="timeline"></div></div>
+  <div class="transport">
+    <div class="buttons">
+      <button id="reset" aria-label="起点">↺ 起点</button>
+      <button id="previous" aria-label="上一步">‹</button>
+      <button id="play" class="primary" aria-pressed="false">▶ 播放</button>
+      <button id="next" aria-label="下一步">›</button>
+    </div>
+    <div class="scrubber"><input type="range" id="scrub" min="0" value="0" aria-label="时间轴游标"><output id="step-label"></output></div>
+  </div>
+  <div id="stages" class="jump-list"></div>
+</section>
+<section id="inspector" class="inspector panel" aria-label="事件详情"></section>
+<section class="provenance panel" id="governance-evidence">
+  <h2>治理 signer 的独立观察</h2>
+  <p class="subtitle">治理门槛 2/3 · 区域 BLS Final 门槛 4/5</p>
+  <div id="signer-cards" class="signer-cards"></div>
+  <details id="poll-history"><summary>当前游标以前的轮询证据</summary><div id="polls"></div></details>
+</section>
+<section class="provenance panel">
+  <h2>回放证据与时间坐标</h2>
+  <p class="subtitle">虚拟 τ 用于调度。公开 θ / act 用于 GFR 排序。L1 timestamp 来自收录 header。signer 的本地钟采样单独记录。</p>
+  <dl id="source" class="facts"></dl>
+</section>
+</main>
+<script type="application/json" id="replay-data">INLINE_JSON</script>
+<script>/* INLINE_JS */</script>
+</body>
+</html>

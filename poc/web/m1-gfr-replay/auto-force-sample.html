@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<title>M3 自动 Force 回放</title>
+<style>:root {
+  color-scheme: dark;
+  font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --bg: #0c1320;
+  --panel: #121d2d;
+  --panel-soft: #162337;
+  --line: #2d3b51;
+  --text: #f0f5fb;
+  --muted: #a9bacd;
+  --cyan: #73d9ef;
+  --green: #87e2ae;
+  --amber: #ffcf7f;
+  --purple: #c5b5ff;
+  --radius: 13px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+main { width: min(1320px, calc(100% - 64px)); margin: 0 auto; padding: 38px 0 64px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: clamp(30px, 4vw, 52px); font-weight: 720; letter-spacing: -.045em; line-height: 1.12; }
+h2 { font-size: 21px; line-height: 1.25; }
+h3 { font-size: 15px; }
+button, input { font: inherit; }
+button {
+  cursor: pointer; color: var(--text); border: 1px solid var(--line); border-radius: 7px;
+  background: var(--panel-soft); padding: 6px 11px; white-space: nowrap;
+}
+button:hover:not(:disabled) { border-color: var(--cyan); }
+button:disabled { cursor: default; opacity: .4; }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+a { color: var(--cyan); }
+.mono, code { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
+code { font-size: .92em; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.eyebrow { font: 700 11px/1.5 ui-monospace, monospace; color: var(--cyan); letter-spacing: .12em; margin-bottom: 8px; }
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 21px; }
+.subtitle { color: var(--muted); margin-top: 9px; }
+.source-jump { color: var(--muted); text-decoration: none; font-size: 12px; padding: 6px 0; }
+.source-jump span { color: var(--cyan); }
+.dashboard {
+  display: grid; grid-template-columns: 1fr .78fr 1.45fr 1.25fr; gap: 1px;
+  margin-bottom: 16px; overflow: hidden; background: var(--line);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.dashboard div { padding: 11px 15px 13px; background: var(--panel); min-width: 0; }
+.dashboard span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+.dashboard strong { display: block; color: var(--text); font: 650 clamp(13px, 2vw, 20px)/1.3 ui-monospace, monospace; overflow-wrap: anywhere; }
+.dashboard #head { color: var(--green); }
+.panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); margin-bottom: 16px; }
+.panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.panel-head p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.console, .inspector, .provenance { padding: 17px 19px; }
+.filter-list { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: flex-end; font-size: 12px; }
+.filter-list label { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; }
+input { accent-color: var(--cyan); }
+.timeline-scroll { overflow-x: auto; margin: 11px -4px 0; padding: 5px 4px; }
+.timeline { min-width: 840px; }
+.timeline-row { display: grid; grid-template-columns: 142px minmax(0, 1fr); min-height: 37px; align-items: stretch; gap: 12px; }
+.timeline-row[hidden] { display: none; }
+.lane-name { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 12px; white-space: nowrap; }
+.lane-head { color: var(--muted); font-size: 10px; }
+.plot { position: relative; margin: 0 12px 0 10px; }
+.timeline-row[aria-label="刻度"] { min-height: 23px; }
+.ruler-label, .cursor, .guide, .mark, .track { position: absolute; }
+.ruler-label { transform: translateX(-50%); top: 0; color: var(--muted); font: 11px/1.3 ui-monospace, monospace; white-space: nowrap; }
+.guide { width: 1px; top: 0; bottom: 0; background: #2a3a50; opacity: .7; pointer-events: none; }
+.track { left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
+.cursor { top: 0; bottom: 0; width: 1px; border-left: 1px solid var(--cyan); opacity: .63; pointer-events: none; }
+.mark {
+  display: inline-grid; place-items: center; transform: translate(-50%, -50%); top: 50%;
+  min-width: 25px; padding: 0 2px; height: 23px; font: 10px/1 ui-monospace, monospace;
+  border: 1px solid var(--mark-color); color: var(--mark-color); border-radius: 5px; background: var(--panel);
+}
+.mark[hidden] { display: none; }
+.mark[aria-current="true"] { color: var(--bg); background: var(--mark-color); z-index: 1; }
+.mark:hover { z-index: 2; }
+.l1 { --mark-color: var(--purple); }
+.espresso { --mark-color: var(--cyan); }
+.regional { --mark-color: var(--amber); }
+.g { --mark-color: var(--green); }
+.mark.handoff { --mark-color: var(--amber); font-weight: 800; }
+.transport { display: flex; align-items: center; gap: 15px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.buttons { display: flex; align-items: center; gap: 6px; }
+.primary { background: var(--cyan); border-color: var(--cyan); color: #0c1723; font-weight: 740; min-width: 90px; }
+.primary:hover:not(:disabled) { background: #a5e9f8; }
+.buttons button { min-height: 35px; }
+.scrubber { display: flex; flex: 1; align-items: center; gap: 9px; min-width: 0; }
+.scrubber input { flex: 1; min-width: 40px; width: 100%; cursor: pointer; }
+.scrubber output { color: var(--muted); font-size: 11px; min-width: 57px; white-space: nowrap; }
+.jump-list { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.jump-list button { display: flex; align-items: baseline; gap: 9px; font-size: 13px; }
+.jump-list button span { color: var(--muted); font-size: 11px; }
+.jump-list button[aria-current="true"] { border-color: var(--amber); color: var(--amber); }
+.inspector { min-height: 195px; }
+.inspector-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 12px; }
+.inspector-head p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.tag { display: inline-block; border: 1px solid var(--line); color: var(--muted); border-radius: 5px; padding: 3px 7px; font-size: 11px; white-space: nowrap; }
+.handoff-box {
+  display: grid; grid-template-columns: 1.1fr 1fr 1.2fr; gap: 15px; margin: 0 0 15px; border-left: 3px solid var(--amber);
+  padding: 10px 12px; background: var(--panel-soft); border-radius: 6px; font-size: 13px;
+}
+.handoff-box strong { display: block; color: var(--amber); font-size: 13px; }
+.handoff-box small { display: block; color: var(--muted); font-size: 11px; }
+.explanation { display: grid; grid-template-columns: 1.05fr 1.65fr; gap: 18px; }
+.explanation h3 { margin-bottom: 6px; color: var(--cyan); }
+.facts, .guards { margin: 0; padding: 0; font-size: 13px; }
+.facts > div, .guards > div { display: grid; grid-template-columns: minmax(90px, .43fr) 1fr; padding: 7px 0; border-bottom: 1px solid var(--line); gap: 9px; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; }
+.trace-links { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 11px; }
+.trace-links button { font-size: 12px; }
+details { margin-top: 11px; border-top: 1px solid var(--line); padding-top: 8px; }
+details summary { cursor: pointer; font-size: 13px; }
+details summary .muted { margin-left: 5px; }
+.evidence { list-style-type: none; padding: 0; margin: 7px 0 0; font-size: 13px; display: grid; gap: 5px; }
+.evidence li { overflow-wrap: anywhere; }
+.evidence a { margin-right: 4px; }
+.evidence span { color: var(--muted); margin-right: 6px; }
+.manual p { font-size: 13px; margin: 8px 0; color: var(--muted); }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; min-width: 460px; width: 100%; font-size: 12px; text-align: left; }
+td, th { padding: 5px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; }
+.empty { color: var(--muted); padding: 10px 0; font-size: 13px; }
+@media (max-width: 760px) {
+  main { width: calc(100% - 28px); padding-top: 24px; }
+  .masthead, .transport { align-items: stretch; flex-direction: column; gap: 6px; }
+  .source-jump { align-self: flex-start; }
+  .dashboard { grid-template-columns: 1fr 1fr; }
+  .panel-head { flex-direction: column; }
+  .console, .inspector, .provenance { padding: 13px; }
+  .timeline-row { grid-template-columns: 118px minmax(0, 1fr); gap: 8px; }
+  .lane-name { position: sticky; left: 0; z-index: 3; padding-right: 5px; background: var(--panel); }
+  .explanation, .handoff-box { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.masthead-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.scenario-link { font-size: 13px; text-decoration: none; }
+.timeline-row.stacked { min-height: 77px; }
+.mark.excluded { --mark-color: #fda4af; }
+
+.mode { padding: 8px 12px; margin: 0 0 16px; border-left: 3px solid var(--cyan); color: var(--muted); background: var(--panel-soft); font-size: 13px; }
+.mode.sample { border-color: var(--amber); color: var(--amber); }
+.governance { --mark-color: #ffb6cb; }
+.auto-plot .mark.dot { width: 9px; min-width: 9px; height: 9px; padding: 0; border-radius: 50%; }
+.auto-plot .mark { top: var(--mark-top, 50%); }
+.auto-plot .timeline-row { min-height: 64px; }
+.auto-plot .timeline-row[aria-label="刻度"] { min-height: 23px; }
+.signer-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 9px; margin: 13px 0; }
+.signer-card { text-align: left; white-space: normal; background: var(--panel-soft); padding: 11px; border-radius: 9px; }
+.signer-card strong,.signer-card span { display: block; }
+.signer-card span { font-size: 12px; color: var(--muted); }
+.poll-table td { word-break: normal; }
+.pads { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.pads span { border: 1px dashed var(--muted); padding: 4px 7px; border-radius: 5px; font: 11px ui-monospace,monospace; }
+.pads .physical { border-style: solid; border-color: var(--green); color: var(--green); }
+@media (max-width: 650px) {
+  .auto-plot .timeline-row { grid-template-columns: 110px minmax(0,1fr); }
+  .auto-plot .lane-name { position: sticky; left: 0; z-index: 3; padding-right: 4px; background: var(--panel); }
+  .auto-plot .lane-head { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<header class="masthead">
+  <div>
+    <p class="eyebrow">SEQUENCER ROTATION POC / M3</p>
+    <h1>自动 Force 回放</h1>
+    <p class="subtitle">从治理 signer 的公共观察，到新职责的首块进入 G。</p>
+  </div>
+  <nav aria-label="其他回放"><a href="index.html">M1 Regular</a> · <a href="force.html">M2 Force</a></nav>
+</header>
+<p id="mode" class="mode"></p>
+<section class="dashboard" aria-label="当前状态">
+  <div><span>虚拟时间 τ</span><strong id="clock"></strong></div>
+  <div><span>G head</span><strong id="head"></strong></div>
+  <div><span>当前职责</span><strong id="context"></strong></div>
+  <div><span>已完成公共位置</span><strong id="position"></strong></div>
+</section>
+<section class="console panel" aria-labelledby="timeline-heading">
+  <div class="panel-head">
+    <div><h2 id="timeline-heading">回放时间轴</h2><p>横轴为虚拟秒。同一时刻按 trace seq 单步。细点可点击查看完整事件。</p></div>
+    <div id="filters" class="filter-list"></div>
+  </div>
+  <div class="timeline-scroll"><div id="timeline" class="timeline"></div></div>
+  <div class="transport">
+    <div class="buttons">
+      <button id="reset" aria-label="起点">↺ 起点</button>
+      <button id="previous" aria-label="上一步">‹</button>
+      <button id="play" class="primary" aria-pressed="false">▶ 播放</button>
+      <button id="next" aria-label="下一步">›</button>
+    </div>
+    <div class="scrubber"><input type="range" id="scrub" min="0" value="0" aria-label="时间轴游标"><output id="step-label"></output></div>
+  </div>
+  <div id="stages" class="jump-list"></div>
+</section>
+<section id="inspector" class="inspector panel" aria-label="事件详情"></section>
+<section class="provenance panel" id="governance-evidence">
+  <h2>治理 signer 的独立观察</h2>
+  <p class="subtitle">治理门槛 2/3 · 区域 BLS Final 门槛 4/5</p>
+  <div id="signer-cards" class="signer-cards"></div>
+  <details id="poll-history"><summary>当前游标以前的轮询证据</summary><div id="polls"></div></details>
+</section>
+<section class="provenance panel">
+  <h2>回放证据与时间坐标</h2>
+  <p class="subtitle">虚拟 τ 用于调度。公开 θ / act 用于 GFR 排序。L1 timestamp 来自收录 header。signer 的本地钟采样单独记录。</p>
+  <dl id="source" class="facts"></dl>
+</section>
+</main>
+<script type="application/json" id="replay-data">{"events":[{"duty":"R0 · β0/r0","facts":[],"head":0,"label":"起点","lane":"g","refs":[],"seq":0,"stage":"start","tick_us":0},{"facts":[["类型","区域 physical / BLS Final"]],"label":"R0 physical h1","lane":"regional","refs":["合成样本 · 供交互和验证测试"],"seq":1,"stage":"old-result","tick_us":11067000},{"facts":[["公开键 θ","11.072000 s"],["消息","正文 + 证明"]],"label":"q5 publication","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":2,"stage":"old-public","tick_us":11073000,"water":"q5 · 11.072000 s"},{"facts":[],"head":1,"label":"G 接纳 h1","lane":"g","pc":"Espresso q5 · 11.072000 s","refs":["合成样本 · 供交互和验证测试"],"seq":3,"stage":"old-accepted","tick_us":11073000},{"facts":[["PID",[0,1,2,3,4]],["G head","h1"]],"label":"R0 五个 worker 离线","lane":"governance","refs":["M3-auto-force-task-contract-zh.md · 主场景与时间预算"],"seq":4,"stage":"outage","tick_us":11250000},{"facts":[["公开键 θ","11.250000 s"],["消息数",0]],"label":"q6 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":5,"stage":"heartbeat","tick_us":11251000,"water":"q6 · 11.250000 s"},{"facts":[],"label":"处理 q6 · G 保持 h1","lane":"g","pc":"Espresso q6 · 11.250000 s","refs":["合成样本 · 供交互和验证测试"],"seq":6,"stage":null,"tick_us":11251000},{"facts":[["公开键 θ","11.500000 s"],["消息数",0]],"label":"q7 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":7,"stage":null,"tick_us":11501000,"water":"q7 · 11.500000 s"},{"facts":[],"label":"处理 q7 · G 保持 h1","lane":"g","pc":"Espresso q7 · 11.500000 s","refs":["合成样本 · 供交互和验证测试"],"seq":8,"stage":null,"tick_us":11501000},{"facts":[["公开键 θ","11.750000 s"],["消息数",0]],"label":"q8 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":9,"stage":null,"tick_us":11751000,"water":"q8 · 11.750000 s"},{"facts":[],"label":"处理 q8 · G 保持 h1","lane":"g","pc":"Espresso q8 · 11.750000 s","refs":["合成样本 · 供交互和验证测试"],"seq":10,"stage":null,"tick_us":11751000},{"facts":[["公开键 θ","12.000000 s"],["消息数",0]],"label":"q9 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":11,"stage":null,"tick_us":12001000,"water":"q9 · 12.000000 s"},{"facts":[],"label":"处理 q9 · G 保持 h1","lane":"g","pc":"Espresso q9 · 12.000000 s","refs":["合成样本 · 供交互和验证测试"],"seq":12,"stage":null,"tick_us":12001000},{"facts":[["公开键 θ","12.250000 s"],["消息数",0]],"label":"q10 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":13,"stage":null,"tick_us":12251000,"water":"q10 · 12.250000 s"},{"facts":[],"label":"处理 q10 · G 保持 h1","lane":"g","pc":"Espresso q10 · 12.250000 s","refs":["合成样本 · 供交互和验证测试"],"seq":14,"stage":null,"tick_us":12251000},{"facts":[["公开键 θ","12.500000 s"],["消息数",0]],"label":"q11 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":15,"stage":null,"tick_us":12501000,"water":"q11 · 12.500000 s"},{"facts":[],"label":"处理 q11 · G 保持 h1","lane":"g","pc":"Espresso q11 · 12.500000 s","refs":["合成样本 · 供交互和验证测试"],"seq":16,"stage":null,"tick_us":12501000},{"facts":[["公开键 θ","12.750000 s"],["消息数",0]],"label":"q12 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":17,"stage":null,"tick_us":12751000,"water":"q12 · 12.750000 s"},{"facts":[],"label":"处理 q12 · G 保持 h1","lane":"g","pc":"Espresso q12 · 12.750000 s","refs":["合成样本 · 供交互和验证测试"],"seq":18,"stage":null,"tick_us":12751000},{"facts":[["公开键 θ","13.000000 s"],["消息数",0]],"label":"q13 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":19,"stage":null,"tick_us":13001000,"water":"q13 · 13.000000 s"},{"facts":[],"label":"处理 q13 · G 保持 h1","lane":"g","pc":"Espresso q13 · 13.000000 s","refs":["合成样本 · 供交互和验证测试"],"seq":20,"stage":null,"tick_us":13001000},{"facts":[["公开键 θ","13.250000 s"],["消息数",0]],"label":"q14 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":21,"stage":null,"tick_us":13251000,"water":"q14 · 13.250000 s"},{"facts":[],"label":"处理 q14 · G 保持 h1","lane":"g","pc":"Espresso q14 · 13.250000 s","refs":["合成样本 · 供交互和验证测试"],"seq":22,"stage":null,"tick_us":13251000},{"facts":[],"label":"Signer 0 · ELIGIBLE","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":23,"signer":{"branch":0,"cid":"示例 cid R0","clock_good":true,"clock_sample":{"offset_us":0},"clock_sample_us":13300250,"eligible":true,"espresso_advertised":{"q":14,"theta_us":13250000},"espresso_verified":{"q":14,"theta_us":13250000},"expiry_us":42000000,"gap_us":2178000,"head_height":1,"l1_advertised":5,"l1_verified":5,"observation_us":13250000,"policy":{"enabled_mask":6,"order":[0,1,2],"signed_floor":3},"predicted_inclusion_us":14000000,"previous":{"q":13,"theta_us":13000000},"progress_us":11072000,"q_advances":true,"ready":true,"reason":"ELIGIBLE","region":0,"replay_position":{"index":{"Espresso":14},"key_us":13250000,"kind":"Espresso"},"signer":0,"stall_us":2000000,"tail":"NEXT","theta_advances":true},"stage":null,"tick_us":13300250},{"facts":[],"label":"Signer 1 · ELIGIBLE","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":24,"signer":{"branch":0,"cid":"示例 cid R0","clock_good":true,"clock_sample":{"offset_us":0},"clock_sample_us":13300250,"eligible":true,"espresso_advertised":{"q":14,"theta_us":13250000},"espresso_verified":{"q":14,"theta_us":13250000},"expiry_us":42000000,"gap_us":2178000,"head_height":1,"l1_advertised":5,"l1_verified":5,"observation_us":13250000,"policy":{"enabled_mask":6,"order":[0,1,2],"signed_floor":3},"predicted_inclusion_us":14000000,"previous":{"q":13,"theta_us":13000000},"progress_us":11072000,"q_advances":true,"ready":true,"reason":"ELIGIBLE","region":0,"replay_position":{"index":{"Espresso":14},"key_us":13250000,"kind":"Espresso"},"signer":1,"stall_us":2000000,"tail":"NEXT","theta_advances":true},"stage":"decision","tick_us":13300250},{"facts":[],"label":"Signer 2 · INPUTS_NOT_READY","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":25,"signer":{"branch":0,"cid":"示例 cid R0","clock_good":true,"clock_sample":{"offset_us":0},"clock_sample_us":13300250,"eligible":false,"espresso_advertised":{"q":14,"theta_us":13250000},"espresso_verified":{"q":13,"theta_us":13000000},"expiry_us":42000000,"gap_us":1928000,"head_height":1,"l1_advertised":5,"l1_verified":5,"observation_us":13000000,"policy":{"enabled_mask":6,"order":[0,1,2],"signed_floor":3},"predicted_inclusion_us":14000000,"previous":{"q":12,"theta_us":12750000},"progress_us":11072000,"q_advances":true,"ready":false,"reason":"INPUTS_NOT_READY","region":0,"replay_position":{"index":{"Espresso":13},"key_us":13000000,"kind":"Espresso"},"signer":2,"stall_us":2000000,"tail":"NEXT","theta_advances":true},"stage":null,"tick_us":13300250},{"facts":[["signer",0],["address","合同样本地址 0"],["digest","合同样本 digest"],["request",{"enabled_mask":6,"order":[0,1,2],"request_id":1,"signed_floor":3,"target_beta":0}]],"label":"Signer 0 签署","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":26,"signedBy":0,"stage":null,"tick_us":13310250},{"facts":[["signer",1],["address","合同样本地址 1"],["digest","合同样本 digest"],["request",{"enabled_mask":6,"order":[0,1,2],"request_id":1,"signed_floor":3,"target_beta":0}]],"label":"Signer 1 签署","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":27,"signedBy":1,"stage":null,"tick_us":13310250},{"facts":[["Digest","合同样本 digest"],["请求",{"enabled_mask":6,"order":[0,1,2],"request_id":1,"signed_floor":3,"target_beta":0}]],"label":"治理阈值 2/3","lane":"governance","refs":["合成样本 · 供交互和验证测试"],"seq":28,"stage":"signed","tick_us":13310250},{"facts":[["交易","合同样本 · 未生成真实交易"]],"label":"提交 Force","lane":"l1","refs":["合成样本 · 供交互和验证测试"],"seq":29,"stage":"submit","tick_us":13320250},{"facts":[["L1 timestamp","14.000000 s"],["控制位置","(7,0,0)"]],"label":"ℓ7 收录","lane":"l1","refs":["M3-auto-force-task-contract-zh.md · 主场景与时间预算"],"seq":30,"stage":"include","tick_us":14000000},{"facts":[["收录块","ℓ7"]],"label":"ℓ7 finalized","lane":"l1","refs":["合成样本 · 供交互和验证测试"],"seq":31,"stage":"finalized","tick_us":15500000},{"facts":[],"label":"Reader A 收到 ℓ7","lane":"l1","refs":["合成样本 · 供交互和验证测试"],"seq":32,"stage":"reader","tick_us":15500000},{"facts":[],"label":"Reader B 收到 ℓ7","lane":"l1","refs":["合成样本 · 供交互和验证测试"],"seq":33,"stage":null,"tick_us":15510000},{"facts":[["公开键 θ","24.000000 s"],["消息数",0]],"label":"q57 空 heartbeat","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":34,"stage":null,"tick_us":24001000,"water":"q57 · 24.000000 s"},{"duty":"R1 · β1/r1 [18,27]","facts":[["公开 act","24.000000 s"],["Anvil 公共覆盖","ℓ7"],["Espresso 水位","q57 · θ 24.000000 s"],["顺序","同键 Force → SessionEnd → Espresso"],["G","保留 h1"],["生命周期","BranchClosed(β0) + SessionAssigned"]],"label":"Force 激活 · R0 → R1","lane":"g","pc":"Force (7,0,0) · 24.000000 s","plan":[["来源","R0"],["policy mask","0b110"],["循环候选",[1,2,0]],["有效 floor",7],["历史 L1 高度",7],["选择","R1"],["anchor","h1"],["窗口",[18,27]]],"refs":["合同推导 · v10 GFR §4.4 与 Authority 历史 Plan"],"seq":35,"stage":"force","tick_us":24001000},{"facts":[],"label":"处理 q57 · G 保持 h1","lane":"g","pc":"Espresso q57 · 24.000000 s","refs":["合成样本 · 供交互和验证测试"],"seq":36,"stage":null,"tick_us":24001000},{"facts":[["物理父块","h1"],["区域 Final 阈值","4/5"]],"label":"R1 physical h18","lane":"regional","refs":["合成样本 · 供交互和验证测试"],"seq":37,"stage":"new-result","tick_us":28035000},{"facts":[["公开键 θ","28.040000 s"],["消息","正文 + 证明"]],"label":"q74 publication","lane":"espresso","refs":["合成样本 · 供交互和验证测试"],"seq":38,"stage":null,"tick_us":28041000,"water":"q74 · 28.040000 s"},{"appends":[{"height":2,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":3,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":4,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":5,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":6,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":7,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":8,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":9,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":10,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":11,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":12,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":13,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":14,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":15,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":16,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":17,"ref":"合成样本 · 供交互和验证测试","type":"padding"},{"height":18,"ref":"合成样本 · 供交互和验证测试","type":"physical"}],"facts":[["q_avail",74],["接纳公开键","28.040000 s"],["最早过期键","42.000000 s"],["物理父块","h1"],["执行前态","padding h17 的执行后状态"]],"head":18,"label":"G 原子追加 h2–h18","lane":"g","pc":"Espresso q74 · 28.040000 s","refs":["合成样本 · 供交互和验证测试"],"seq":39,"stage":"accepted","tick_us":28041000}],"mode":"sample","profile":{"announcement_us":10000000,"expiry_us":30000000,"force_init_us":3000000,"seed":42,"signer_count":3,"stall_us":2000000,"threshold":2},"provenance":{"contract":"M3-auto-force-task-contract-zh.md · 主场景与时间预算","evidence":"合成样本 · 供交互和验证测试"},"schema":"m3-auto-force-replay-v1"}</script>
+<script>"use strict";
+
+const data = JSON.parse(document.querySelector("#replay-data").textContent);
+const byId = id => document.getElementById(id);
+const events = data.events;
+const lanes = [
+  ["l1", "Anvil L1"], ["espresso", "Espresso"], ["regional", "区域 Final"],
+  ["g", "G / GFR"], ["governance", "故障与治理"],
+];
+const stageLabels = [
+  ["outage", "R0 故障"], ["heartbeat", "水位推进"], ["decision", "Signer 判断"],
+  ["signed", "达到门槛"], ["prepared", "持久准备"], ["submit", "广播尝试"], ["submitted", "提交确认"], ["include", "L1 收录"], ["finalized", "Finalized"],
+  ["reader", "Reader 交付"], ["force", "Force 激活"], ["plan", "历史 Plan"],
+  ["new-result", "新区域 Final"], ["accepted", "新块进入 G"],
+];
+const foreground = new Set(stageLabels.map(([stage]) => stage));
+const last = events.length - 1;
+const end = events[last].tick_us;
+const pct = t => t * 100 / end;
+const tick = value => value == null ? "—" : (value / 1_000_000).toFixed(6) + " s";
+let cursor = 0;
+let timer = null;
+
+function esc(value) {
+  const string = value == null ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  return string.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
+function facts(rows) {
+  return rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd><code>${esc(value)}</code></dd></div>`).join("");
+}
+
+function observedTip(row) {
+  return row ? `q${row.q} · θ ${tick(row.theta_us)}` : "—";
+}
+
+function signerFacts(s) {
+  return [
+    ["结论", s.reason], ["公开 L1 已发布 / 已验证", `${s.l1_advertised ?? "—"} / ${s.l1_verified ?? "—"}`],
+    ["Espresso 已发布", observedTip(s.espresso_advertised)],
+    ["Espresso 已验证", observedTip(s.espresso_verified)], ["上次观测", observedTip(s.previous)],
+    ["q 推进 / θ 推进", `${s.q_advances ? "是" : "否"} / ${s.theta_advances ? "是" : "否"}`],
+    ["GFR replay pc", s.replay_position], ["输入就绪", s.ready],
+    ["Tail / region / branch / G", `${s.tail} / R${s.region ?? "—"} / β${s.branch} / h${s.head_height}`],
+    ["cid", s.cid], ["x_progress", tick(s.progress_us)], ["x_obs", tick(s.observation_us)],
+    ["x_obs − x_progress", tick(s.gap_us)], ["门槛 T_stall", tick(s.stall_us)],
+    ["时钟可用", s.clock_good], ["时钟检查 τ", tick(s.clock_sample_us)],
+    ["独立本地时钟样本", s.clock_sample], ["提议 policy", s.policy],
+    ["预计 L1 收录上界", tick(s.predicted_inclusion_us)], ["下一缺失高度过期键", tick(s.expiry_us)],
+  ];
+}
+
+function inspect(index, showPlan = false) {
+  const entry = events[index];
+  const padding = (entry.appends || []).map(row => `<span class="${row.type}">h${row.height} · ${row.type}</span>`).join("");
+  const rows = entry.signer ? signerFacts(entry.signer) : entry.facts;
+  byId("inspector").innerHTML = `<div class="inspector-head"><div><h2>${esc(entry.label)}</h2><p>虚拟 τ ${tick(entry.tick_us)} · ${data.mode === "sample" ? "样本顺序" : "Trace seq"} ${entry.seq}</p></div></div>
+    <dl class="facts">${facts(rows)}</dl>${padding ? `<div class="pads">${padding}</div>` : ""}
+    ${entry.plan ? `<details ${showPlan ? "open" : ""}><summary>历史 policy 与 Plan</summary><dl class="facts">${facts(entry.plan)}</dl></details>` : ""}
+    ${entry.appends ? `<details><summary>虚拟 G 追加逐高证据</summary><div class="table-wrap"><table><thead><tr><th>高度</th><th>类型</th><th>Native hash / state root</th><th>证据</th></tr></thead><tbody>${entry.appends.map(row =>
+      `<tr><td>h${row.height}</td><td>${esc(row.type)}</td><td><code>${esc(row.native)}</code><br><code>${esc(row.state_root)}</code></td><td><code>${esc(row.ref)}</code></td></tr>`).join("")}</tbody></table></div></details>` : ""}
+    ${entry.refs.length ? `<details open><summary>证据位置</summary><ul>${entry.refs.map(ref => `<li><code>${esc(ref)}</code></li>`).join("")}</ul></details>` : ""}`;
+  document.querySelectorAll("[data-frame]").forEach(node => node.setAttribute("aria-current", String(Number(node.dataset.frame) === index)));
+  document.querySelectorAll("[data-stage]").forEach(node => node.setAttribute("aria-current", String(entry.stage === node.dataset.stage || (showPlan && node.dataset.stage === "plan"))));
+}
+
+function drawTimeline() {
+  byId("filters").innerHTML = lanes.map(([name, label]) => `<label><input type="checkbox" data-filter="${name}" checked> ${label}</label>`).join("");
+  byId("timeline").classList.add("auto-plot");
+  const grid = Array.from({length: Math.floor(end / 5_000_000) + 1}, (_, i) => i * 5_000_000);
+  byId("timeline").innerHTML = `<div class="timeline-row" aria-label="刻度"><div class="lane-name">虚拟 τ</div><div class="plot">${grid.map(time => `<span class="ruler-label" style="left:${pct(time)}%">${time / 1_000_000}s</span>`).join("")}</div></div>`
+    + lanes.map(([name, label]) => {
+      let near = 0;
+      let prev = -1_000_000;
+      const buttons = events.flatMap((entry, index) => {
+        if (!index || entry.lane !== name || (entry.signer && !entry.stage)) return [];
+        const marked = foreground.has(entry.stage) || entry.stage === "old-accepted" || entry.stage === "old-result";
+        near = entry.tick_us - prev < 330_000 ? near + 1 : 0;
+        prev = entry.tick_us;
+        const level = [50, 18, 82][near % 3];
+        const short = entry.stage === "outage" ? "R0 故障" : entry.stage === "accepted" ? "G 追加"
+          : entry.stage === "decision" ? "判定" : entry.stage === "signed" ? "2/3"
+          : entry.stage === "force" ? "Force" : entry.label.split(" · ")[0];
+        return [`<button type="button" class="mark ${name} ${marked ? "" : "dot"}" aria-label="${esc(entry.label)}" title="${esc(entry.label)}" data-frame="${index}" style="left:${pct(entry.tick_us)}%;--mark-top:${level}%">${marked ? esc(short) : ""}</button>`];
+      });
+      return `<div class="timeline-row" data-lane="${name}"><div class="lane-name">${label}<span class="lane-head"></span></div><div class="plot"><div class="track"></div><div class="cursor"></div>${buttons.join("")}</div></div>`;
+    }).join("");
+  byId("stages").innerHTML = stageLabels.flatMap(([stage, label]) => {
+    const index = events.findIndex(entry => entry.stage === stage || (stage === "plan" && entry.plan));
+    return index < 0 ? [] : [`<button type="button" data-stage="${stage}" data-seek="${index}">${label}</button>`];
+  }).join("");
+}
+
+function signerCards(seen) {
+  const polls = seen.flatMap((entry, index) => entry.signer ? [{...entry, index}] : []);
+  const signatures = new Set(seen.filter(entry => entry.signedBy != null).map(entry => entry.signedBy));
+  const cards = Array.from({length: data.profile.signer_count}, (_, id) => {
+    const observations = polls.filter(entry => entry.signer.signer === id);
+    const signed = signatures.has(id);
+    const selection = (signed && observations.findLast(entry => entry.signer.eligible)) || observations.at(-1);
+    const label = `Signer ${id} · ${signed ? "已签署" : selection?.signer.reason ?? "尚无轮询"}`;
+    return selection ? `<button class="signer-card" data-inspect="${selection.index}"><strong>${esc(label)}</strong><span>${esc(observedTip(selection.signer.espresso_verified))}</span><span>停滞差值 ${tick(selection.signer.gap_us)}</span></button>`
+      : `<div class="signer-card"><strong>${esc(label)}</strong></div>`;
+  });
+  byId("signer-cards").innerHTML = cards.join("");
+  if (byId("poll-history").open) drawPolls(polls);
+}
+
+function drawPolls(polls) {
+  byId("polls").innerHTML = `<div class="table-wrap"><table class="poll-table"><thead><tr><th>虚拟 τ</th><th>Signer</th><th>结论</th><th>已验证</th><th>差值</th></tr></thead><tbody>${polls.map(entry =>
+    `<tr><td>${tick(entry.tick_us)}</td><td>${entry.signer.signer}</td><td><button data-inspect="${entry.index}">${esc(entry.signer.reason)}</button></td><td>${esc(observedTip(entry.signer.espresso_verified))}</td><td>${tick(entry.signer.gap_us)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function seek(index, showPlan = false) {
+  cursor = Math.max(0, Math.min(last, index));
+  const seen = events.slice(0, cursor + 1);
+  byId("clock").textContent = tick(events[cursor].tick_us);
+  byId("head").textContent = "h" + seen.findLast(row => row.head != null).head;
+  byId("context").textContent = seen.findLast(row => row.duty != null).duty;
+  byId("position").textContent = seen.findLast(row => row.pc != null)?.pc ?? "Genesis";
+  byId("scrub").value = cursor;
+  byId("step-label").textContent = `${cursor} / ${last}`;
+  byId("previous").disabled = cursor === 0;
+  byId("next").disabled = cursor === last;
+  for (const [lane] of lanes) {
+    const node = document.querySelector(`[data-lane="${lane}"]`);
+    node.querySelector(".cursor").style.left = pct(events[cursor].tick_us) + "%";
+    const latest = seen.findLast(entry => entry.lane === lane);
+    node.querySelector(".lane-head").textContent = lane === "espresso" ? latest?.water?.split(" ")[0] ?? "—" : "";
+    node.querySelectorAll("[data-frame]").forEach(mark => { mark.hidden = Number(mark.dataset.frame) > cursor; });
+  }
+  const scroll = document.querySelector(".timeline-scroll");
+  const line = Array.from(scroll.querySelectorAll(".cursor")).find(node => !node.closest("[hidden]"));
+  if (line && scroll.scrollWidth > scroll.clientWidth) {
+    const left = line.getBoundingClientRect().left - scroll.getBoundingClientRect().left;
+    if (left > scroll.clientWidth - 24 || left < 120) scroll.scrollLeft += left - scroll.clientWidth * .65;
+  }
+  signerCards(seen);
+  inspect(cursor, showPlan);
+}
+
+function pause() {
+  if (timer !== null) clearTimeout(timer);
+  timer = null;
+  byId("play").textContent = "▶ 播放";
+  byId("play").setAttribute("aria-pressed", "false");
+}
+
+function playNext() {
+  if (cursor >= last) return pause();
+  const gap = (events[cursor + 1].tick_us - events[cursor].tick_us) / 1800;
+  timer = setTimeout(() => { seek(cursor + 1); playNext(); }, Math.max(30, Math.min(800, gap)));
+}
+
+const mode = byId("mode");
+mode.textContent = data.mode === "sample"
+  ? "合同样本 · 计划值、推导值与合成诊断记录 · 无真实 L1 收据或验签结论"
+  : "正式封存 AF01 · " + data.provenance.candidate + " · seed " + data.profile.seed;
+mode.classList.toggle("sample", data.mode === "sample");
+byId("source").innerHTML = facts(Object.entries(data.provenance));
+drawTimeline();
+byId("scrub").max = last;
+seek(0);
+byId("scrub").addEventListener("input", e => { pause(); seek(Number(e.target.value)); });
+byId("reset").addEventListener("click", () => { pause(); seek(0); });
+byId("previous").addEventListener("click", () => { pause(); seek(cursor - 1); });
+byId("next").addEventListener("click", () => { pause(); seek(cursor + 1); });
+byId("play").addEventListener("click", () => {
+  if (timer !== null) return pause();
+  if (cursor === last) seek(0);
+  byId("play").textContent = "Ⅱ 暂停";
+  byId("play").setAttribute("aria-pressed", "true");
+  playNext();
+});
+byId("filters").addEventListener("change", e => {
+  document.querySelector(`[data-lane="${e.target.dataset.filter}"]`).hidden = !e.target.checked;
+});
+byId("poll-history").addEventListener("toggle", () => signerCards(events.slice(0, cursor + 1)));
+document.addEventListener("click", e => {
+  const target = e.target.closest("button");
+  if (!target) return;
+  if ("seek" in target.dataset) { pause(); seek(Number(target.dataset.seek), target.dataset.stage === "plan"); }
+  if ("frame" in target.dataset) { pause(); seek(Number(target.dataset.frame)); }
+  if ("inspect" in target.dataset) {
+    pause();
+    inspect(Number(target.dataset.inspect));
+    byId("inspector").scrollIntoView({block: "nearest"});
+  }
+});
+</script>
+</body>
+</html>
