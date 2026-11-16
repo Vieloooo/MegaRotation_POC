@@ -83,6 +83,7 @@ enum Event {
     Deliver(Route, p::Envelope),
     Publish(u32, ActionId, BridgeResult),
     Finalize(Submitted),
+    CutoffRetire(u32),
 }
 
 struct Hub {
@@ -140,14 +141,15 @@ pub(crate) async fn run(root: PathBuf) -> M1Result<()> {
         history: Vec::new(),
         publication_pending: false,
     };
-    let result = hub.run_inner().await;
+    let execution = hub.run_inner().await;
+    let exits = hub.reap(execution.is_ok()).await;
+    let result = execution.and(exits).and_then(|()| hub.complete());
     if let Err(error) = &result {
         hub.log("RunFailed", None, json!({"reason": error.to_string()}))?;
     }
-    let exits = hub.reap(result.is_ok()).await;
     hub.trace.sync_all()?;
     hub.frames.sync_all()?;
-    result.and(exits)
+    result
 }
 
 impl Hub {
@@ -1110,11 +1112,27 @@ impl Hub {
     async fn run_inner(&mut self) -> M1Result<()> {
         self.spawn().await?;
         fs::create_dir(self.root.join("results"))?;
-        while let Some((key, event)) = self.events.pop_first() {
+        let mut cutoff_scheduled = false;
+        while let Some((&next, _)) = self.events.first_key_value() {
             let height = self.public.replay.public_state().entries.len();
-            if height == 21 && key.tick > self.now.tick {
-                break;
+            if height == 21 && next.tick > self.now.tick {
+                if cutoff_scheduled {
+                    break;
+                }
+                let active: Vec<_> = self
+                    .workers
+                    .iter()
+                    .filter(|worker| !worker.terminal)
+                    .map(|worker| u32::from(worker.pid.get()))
+                    .collect();
+                check(active.len() == 5, "unexpected live committee at M1 cutoff")?;
+                for node in active {
+                    self.schedule(self.now.tick, Event::CutoffRetire(node))?;
+                }
+                cutoff_scheduled = true;
+                continue;
             }
+            let (key, event) = self.events.pop_first().expect("peeked M1 next event");
             if key.tick > CUT_US {
                 return Err(problem(format!("M1 virtual cutoff at G height {height}")));
             }
@@ -1231,16 +1249,45 @@ impl Hub {
                     self.replay(&result)?;
                     self.publication_pending = false;
                 }
+                Event::CutoffRetire(node) => {
+                    let cfg = self.cfg(node)?;
+                    let cid = Cid::new(Hash32::new(cfg.cid));
+                    // Retire process-local actors under a committed grant after the observation
+                    // cut. The already accepted GFR position and Manager duty do not change.
+                    self.workers[node as usize].terminal = true;
+                    let ack = self
+                        .grant(
+                            node,
+                            input::Kind::Close(p::Cid {
+                                cid: cfg.cid.to_vec(),
+                            }),
+                        )
+                        .await?;
+                    require_lifecycle(&ack, cid, "terminated")?;
+                    self.log(
+                        "CutoffRetire",
+                        Some(node),
+                        json!({
+                            "cid": cid, "ack": ack.durable_step_hash,
+                            "logical_step_id": ack.logical_step_id, "height": height,
+                        }),
+                    )?;
+                }
             }
         }
-        let entries = &self.public.replay.public_state().entries;
         check(
-            entries.len() == 21
+            self.public.replay.public_state().entries.len() == 21
                 && self.history.len() == 2
-                && self.workers.iter().all(|worker| worker.config.is_some())
-                && self.workers[..10].iter().all(|worker| worker.terminal),
+                && self
+                    .workers
+                    .iter()
+                    .all(|worker| worker.config.is_some() && worker.terminal),
             "incomplete healthy M1 smoke",
-        )?;
+        )
+    }
+
+    fn complete(&mut self) -> M1Result<()> {
+        let entries = &self.public.replay.public_state().entries;
         let height21 = &entries[20];
         let GlobalSource::Regional(result) = height21.source;
         let summary = json!({
