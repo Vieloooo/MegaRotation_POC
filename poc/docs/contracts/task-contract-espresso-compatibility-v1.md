@@ -1,6 +1,6 @@
 # ESPRESSO-COMPATIBILITY v1 — 官方本地来源与录制回放合同
 
-日期：2026-11-16。版本 `espresso-compatibility-v1`。状态：**16 lead 冻结语义 v1，独立 Verifier 已先从来源推导预期；实现须等待独立向量保存并发布接口提交。合同不是运行通过证据。** 06 固定依赖 `4b034dfbb6c3e1c7143208347b546daab8dfe298`；本 worktree 分支 `codex/poc-espresso-compatibility`。
+日期：2026-11-16。版本 `espresso-compatibility-v1`。状态：**16 lead 冻结语义 v1，独立 Verifier 已先从来源推导预期；独立向量已在89925a6提交，类型/来源接口已在9747268提交，随后进入源码阶段。合同不是运行通过证据。** 06 固定依赖 `4b034dfbb6c3e1c7143208347b546daab8dfe298`；本 worktree 分支 `codex/poc-espresso-compatibility`。
 
 ## 1. 权威与所有权
 
@@ -54,6 +54,8 @@
 | 诊断 hash 查找 | `GET /v1/availability/transaction/hash/{hash}/noproof` | 可辅助定位 publication，但同 hash 多次出现时返回哪个 occurrence 不作保证，不能用它枚举或去重完整列表。 |
 | 独立重复读取 | 重新建立 HTTP 连接，再查相同 q/block/leaf/每个 i | 比较解析后的公共对象，不要求 JSON 空白和字段排列相同；保留两次 raw 响应供审计。 |
 | 缺失输入 | 404、超时、断连、尚无某个 q/i | `WAIT`，记录 endpoint/状态及未完位置；不能造空 block、零条交易或人工水位。 |
+
+冻结澄清：lookup HTTP408/429/5xx 表示没有可用内容，按有限墙钟预算内的Unavailable/WAIT记录和重试，保留准确status，不把服务错误称为健康证据；提交4xx/5xx是SubmitRejected而非ACK，重定向拒绝且不跟随。manifest引用文件缺失仍是InvalidRecording，不属于日志WAIT。
 
 S：flat index 的官方实现通过 `block.payload().nth(block.metadata(), index)` 得到 namespace 内部 index，再构造 API 交易。因此按 flat i 查询得到的顺序就是该 block 的公开遍历顺序；不得自行按 namespace、transaction hash、提交时间排序。
 

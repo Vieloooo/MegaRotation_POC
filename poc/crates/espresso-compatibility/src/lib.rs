@@ -1,6 +1,13 @@
 //! EC16-NATIVE-1 observations from the pinned local Espresso API.
 #![forbid(unsafe_code)]
 
+mod bundle;
+mod reader;
+
+pub use bundle::{BUNDLE_SCHEMA, CaptureBundle, Publication, ReplaySession, replay_bundle};
+
+pub use reader::{NativePrefix, OfficialCaptureReader, ReceiveOutcome};
+
 use std::{fmt, sync::Arc};
 
 use serde::{Deserialize, Serialize};
@@ -10,6 +17,8 @@ pub use sim_espresso::{EspressoPosition, LogMessage, PublicTimeUs};
 
 pub const OFFICIAL_RELEASE: &str = "20260918";
 pub const OFFICIAL_COMMIT: &str = "fd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171";
+pub const IMAGE_INDEX_DIGEST: &str =
+    "sha256:af73f55630690caa35aa0bc015d60dc03333791f966fdcc07b0798e33d4f768e";
 pub const IMAGE_AMD64_DIGEST: &str =
     "sha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66";
 pub const PROTOCOL_VERSION: &str = "0.3";
