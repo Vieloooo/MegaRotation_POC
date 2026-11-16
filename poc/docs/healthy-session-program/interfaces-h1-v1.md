@@ -1,6 +1,6 @@
 # H1 v1：生命周期、精确状态准备与真实区域结果接口提案
 
-日期：2026-11-16。状态：**PROPOSAL / NOT FROZEN / NOT IMPLEMENTED**。本文件的名字描述待冻结能力，不声称这些 Rust 函数、wire 字段或 CLI 已存在。配套规则与验收见 [任务合同](task-contract-h1-v1.md)。F 为来源硬规则；P 为工程范围；Q 为 lead/总协调必须给出具体决定的接口。H2/H3 可据此准备独立预期，尚不能把提案当实现 API。
+日期：2026-11-16。状态：**M1分切片接口合同；API切片精确定义见[api-slice-v1.md](api-slice-v1.md)**。正式派发`d55d39f73593676325bdc0fbb7ba3845ca93025f`已选择运输方案A、提交分层与所有权；M0=`35d382ac445cc8bc779f0d18fd23cb57e54680da`已合入。本文伪接口是runtime语义说明，精确可编译DTO/ports以API切片为准，不声称已有实现。未决native问题只阻对应切片，Q-ADMIT不阻API开发。
 
 ## 1. 唯一公共对象与现有消费边界
 
@@ -44,7 +44,9 @@ Observe(handle) -> immutable ProgramObservation
 
 ### 2.2 生命周期原子性与 parking
 
-H3 输出完整 `ReplayRecord` 的有序 `LifecycleEvent`，H2 用原 GFR-LIFE-1 id/position 消费；不能只截取其中的 SessionAssigned 先恢复新实例而遗漏同一步旧候选关闭。提案 `LifecycleBatchRef{source_id, replay_position, ordered_event_ids, complete_record_hash}` 绑定一个完整本地 GFR 重放输出。H2 先计算 affected candidates 和调用序列，H1 在同一 root transition 中安装 terminal/schedule 变化并返回完整观察；失败保留原状态与可重试记录。此原子消费的持久 owner/receipt 格式是 Q-LIFE，不另造 lifecycle 编码。
+H3输出完整`ReplayRecord`的有序`LifecycleEvent`，H2保留每个GFR-LIFE-1身份，不能只按position去重。每worker仅H1拥有持久提交。完整记录的结构/来源预检成功后，H2生成不可变opaque ManagerDelta/action intents；H1把关闭/tombstone、Selected+Preparing、整批cursor与待办义务同root提交，返回`RootCommitted(actions_pending)`；实际动作完成另给`AppliedReceipt/ActionsApplied`。后继状态缺失只使准备WAIT，不延迟已知合法Close；结构或来源未通过时不能冒充已提交。
+
+cursor表示整批义务已持久接受，不等于所有动作完成；H3自己的GFR pc不随Manager滞后回滚。提交前未生效计划可拒绝；durable terminal/tombstone或ClockUnsafe guard安装后失败必须保留事实和待办，不能回滚Running；必要时停当前step/runtime并fail-closed报告。既有guard与root提交失败的精确receipt/错误由API切片表达，真实durability仍由后续runtime证明。不得引入第二套服务数据库事务。
 
 **推荐 P-RUNTIME：** 在已有单 worker ControlledDriver 内新增 cid-scoped 调度状态，按 `(pid,cid)` 保存 engine、签名 cache、witness policy/ledger、storage partition、task/timer/work 归属。manager/reader/Clock/root 任务不依附某个选中 engine 的生命周期。Pause 只停止该 cid 的共识任务 poll/新签名；保持同一 engine future、mailbox、原 timer deadline、原 callback producer 与已授权 I/O 身份。incoming/due timer/work completion 可在受控有界队列记录，不能在 Pause 期间触发协议新签名。SelectBack 先检查 Clock/stop/terminal，再按原有确定性队列交付已到期事件；不能“从现在重新计时”。
 
@@ -119,21 +121,21 @@ H3 的 `PublicationVerifier` 对 `RegionalResult` 再做 exact anchor provenance
 
 ### 4.3 大小、公开前缀与官方读回
 
-06 单条日志消息上限1MiB，02 default payload limit64KiB；03 普通交易上限64KiB也不保证整个 encoded block≤64KiB。H3/H1 应冻结受控 transport 分片/reassembly，或证明某一经批准的窄 profile 上界覆盖完整编码；不能静默截断/提高旧limit/把片段当完整publication。分片是 byte transport，重组后仍使用原 GFR-PUBLIC-1 字节/hash，不产生第二套区域结果编码。
+06单条message上限64KiB、整block上限1MiB；02每packet payload≤64KiB，wrapper也占字节。03普通交易上限64KiB不保证完整encoded object≤64KiB。M1先冻结会改变状态的小交易工作量及完整object/result/attempt真实编码上界；必要分片/reassembly/credits由H3唯一实现，H1提供固定channel/endpoint与受控出口。不能静默截断/提高旧limit/将片段当public对象，也不能把一个不可容纳的完整attempt偷偷分成不同任务。重组保持原06/07字节/hash与原AttemptId，十五reader不能无界fanout挤满02预算。
 
-Q-FRAGMENT 推荐显式 `(source_id,object_hash,total_len,fragment_index,count,byte_offset,fragment_bytes)` 的有界对象组装，整对象 hash/长度/不重叠连续覆盖校验后才释放给现有 reader；每片经 grant/Ack，缺片 WAIT，冲突片 REJECT，重复片幂等。确切 carrier、codec/version、配额/timeout、hash framing 和 owner 由 H3/总协调冻结。真实 proof/body 可分开成为现有 GFR public object；`q_avail` 仍由 H3按实际完整公开前缀重算，不能拿 H1 delivery time 或 submit ACK 代替。
+H3按已移交职责冻结必要的bounded carrier/fragment/credits格式；每片走H1受控出口，完整对象的hash/长度/连续覆盖成立后才交reader，缺片WAIT/冲突REJECT/重复幂等。H1不另实现分片codec。真实proof/body沿现有GFR public object边界，`q_avail`由H3复用07完整性算法按真实前缀重算，不能用H1 delivery time/submit ACK替代。
 
 同一主场景真实 publication bytes 的 artifact 写明 ResultKey、来源 grant/root、对象hash/native证明；H3交16官方本地 dev-node提交/读回 q/index/namespace/payload。官方 wall-clock、PE时间 Unknown/Unsupported 与确定性 SimEspresso trace分开；HTTP读回不能声称 QC/VID 或完整PE时序通过。
 
-## 5. 运行后未知 cid：`Q-TRANSPORT`
+## 5. 运行后未知 cid：已决定 `P-TRANSPORT-A`
 
 ### 5.1 已核对的当前边界
 
 02 `config.rs::{TransportConfig,EndpointRegistration,ChannelPermit}` 将 contexts 固定在 normalized config；`route.rs::RouteCommand` 只有 Send/Drain/Rebind，Rebind只更新 incarnation。`RouteKernel::commit` 与 `from_snapshot` 要求原 config hash 一致。未来 cid 包含真实尚未产生的 anchor，不能运行前预装所有 cid；用新空 kernel替换会丢旧 queue/FIFO/send ordinal/dedupe/custody/history。H1也不能把完整范围缩回 R0。
 
-### 5.2 方案 A（推荐）：单 kernel 的版本化增量 context 准入
+### 5.2 已选方案 A：kernel与mailbox同revision增量准入
 
-总协调移交最小 sim-transport 扩展路径后，提案 `SIMT-CONTEXT-ADMISSION-1`：保持 immutable base transport config/hash，增加单调 `admission_revision` 与按实际安装记录导出的 `admission_state_hash`，新 snapshot/schema显式记录；v1已保存语义不重解释。每次操作仍使用既有 plan/commit、durability边界及 FIFO算法。
+总协调已移交最小sim-transport扩展。`SIMT-CONTEXT-ADMISSION-1`保持immutable base config/hash，增加单调`admission_revision/admission_state_hash`及新snapshot/schema；旧v1语义不重解释。**RouteKernel与所有受影响ReliableMailbox在同一受控root提交内安装相同revision/准入事实**；任何一方preflight失败都不得释放部分权限。提交后的故障保留durable事实/待办并fail-closed，不回退为不同revision继续发送。复用既有plan/commit/FIFO/custody算法，精确字段和向量在transport切片冻结。
 
 ```text
 ContextAdmissionPlan = plan_admit_context(
@@ -143,17 +145,17 @@ ContextAdmissionPlan = plan_admit_context(
 commit_admission(plan, actual_durable_receipt) -> admission_revision, events
 ```
 
-这些是提案，不是现存 API。kernel 不替 Manager验 Plan，不接受 Hub场景脚本的“allow cid=true”；adapter先校验真实 worker Create/Prepare来源及 descriptor重算，再提交准入。区域 votes/certs/resolver权限严格限定五成员；跨区 final/body/state的接收与请求权限独立按角色定义，不给下一区域旧cid签名能力。可由已验证 descriptor 在 Prepare阶段安装 transport 数据能力；签名仍要独立 Enter/Running/Clock/terminal guard。只有公开Assignment后才准入会破坏合法后继提前准备，不作为默认规则。
+上述函数名仍是transport切片待冻结API。kernel不替Manager验Plan，不接受Hub脚本的allow布尔值；adapter先校验真实Create/Prepare来源及descriptor再准入。votes/certs/resolver限定五成员；跨区final/body/state能力按角色区分，不给下一区域旧cid签名能力。真实已验证descriptor可在Prepare阶段安装数据能力；签名仍独立受Enter/Running/Clock/terminal守卫。未知未来anchor/cid不得预装。
 
-安装原子且幂等：相同cid/相同规则重复无新权利；错descriptor/config、相同cid不同权限、未来revision或stale base原子拒绝。未知cid的native frame不得先发再靠晚安装追认；需保留有界等待/重新发送原义务。更新保留所有旧route queues、FIFOfloors、packet/message/attempt counters、fault ordinals、可靠outbox/inbox/custody、scheduled timers及root链；既有在途frames仍按其已记录授权解释，不能改成新context。
+安装原子且幂等：相同cid/相同规则重复无新权利；错descriptor/config、相同cid不同权限、未来revision或stale base原子拒绝。未知cid的native frame不得先发再靠晚安装追认；保留有界等待/重新发送原义务。更新保留所有旧route queues、FIFOfloors、packet/message/attempt counters、fault ordinals、**每个可靠mailbox的outbox/inbox/consume/custody及未释放receipt**、scheduled timers与root链；不能用新mailbox或新kernel清空历史，旧frames不改context。
 
 Close停止生产但不删历史cid的数据权限/持久义务。若需撤权，另分“新共识发送”与“已持久历史proof/body交付”，独立审计；M1可采用仅增准入+本地终止守卫，不能以清空权限取消已承诺交付。测试覆盖H1-20/21和有旧pending队列时安装新cid的字节/ordinal不变。
 
-### 5.3 方案 B（备选）：固定无 cid carrier + normal 层严格准入
+### 5.3 方案 B（历史备选，已不采用）
 
 现有kernel使用 `ContextPolicy::Forbidden` 的固定正常载体channel，公开cid完整放在 normal typed frame；H1在每个受控发送/接收出口维护持久 `NormalContextRegistry` 并验证以上准入，kernel继续只验证固定 endpoint/channel。无 wildcard native cid、无 future cid预装、无kernel重建。
 
-该方案**改变cid权限执行位置**：02本身不验证内层cid，安全证据必须明确由normal adapter负责，任何绕过normal校验的发送能力不得暴露。需新carrier/profile版本、全路径负例、额外封装长度计入64KiB，以及与H3分片接口一致。它可减少02修改，但增加adapter审计面；不能宣称原02的cid权限已自动覆盖未来候选。A/B必须选其一并冻结，不允许Builder暗中混用。本稿推荐A，未获批准前不修改生产。
+该历史备选改变cid权限执行位置；正式派发已选A，Builder不得改走B或混用。此段只保留讨论来源，不是当前实现选项。
 
 ## 6. wire、共享能力和决议清单
 
@@ -170,18 +172,18 @@ root journal必须保存实际新Grant/Ack完整字节，不能仅投影成旧na
 
 | Q | 需冻结的具体决定、owner 与门禁 |
 | --- | --- |
-| Q-M0 | 总协调提供准确已验证M0完整SHA、组件树/patch/lock来源、Fresh组合复验要求；不填future SHA，不从浮动main猜测。 |
+| P-M0 | 已交付`35d382ac445cc8bc779f0d18fd23cb57e54680da`并合入H1基线4741489；现有组合检查不因仅文档/API新增重复，shared行为改变后复验适用Fresh。 |
 | Q-LIFE | H1/H2确认CommandContext/ProgramHandle及operation幂等、LifecycleBatch原子顺序/持久receipt；H2纯Manager，H1runtime执行，07事件codec不变。 |
 | Q-PREP | H1/H2确认StateMaterial/ReadyToken/job generation、exact provenance/WAIT/cancel语义、03输入引用及资源界；禁止Ready bool/仅root。 |
 | Q-RESULT | H1/H3确认§4的原生证明profile/公开FinalVerifier构造与basis、目标未到时的proof observation、完整RegionalResult及消费Ack；03 trait和07 publication codec保持唯一，明确历史配置缺失WAIT与错误证明REJECT。 |
-| Q-RUNTIME | 总协调明确移交 `driver.rs/context.rs` 的最小cid-scoped停车、单Clock、多witness/partition与late policy安装扩展；列签名/guard/diff和Fresh回归，不复制driver/runtime。 |
-| Q-TRANSPORT | A/B选择、snapshot/admission version/receipt/canonical、实际准入依据/权限矩阵及allowlist。推荐A；`poc/crates/sim-transport/`当前不在writer允许路径。 |
+| Q-RUNTIME | `driver.rs/context.rs`最小扩展已移交H1；实现前按切片列cid停车、单Clock、多witness/partition、late安装的精确guard/diff/独立预期与适用Fresh回归，不复制driver/runtime。 |
+| P-TRANSPORT-A | A已选、sim-transport扩展正式移交H1；kernel与mailbox同revision原子准入。transport切片再冻snapshot/receipt/字段/向量，API切片不改其实现。 |
 | Q-DOMAIN | 正常verifier版本/namespace/epoch及黄金bytes；03 PoP匹配，engine/witness/公开verifier共用来源；不得换同cid verifier。 |
-| Q-ADMIT | native hook如何分离全局确定性payload有效性和node-local首收/stop准入；WAIT保持producer，永久本地拒绝拟为受控abstention而非certify(false)。需列精确callback/签名出口及原生继续进展/取消依据，禁止在现有proposal/parent旁路验证；若需要vendor改动须另获路径授权。 |
+| Q-ADMIT | 已按[Q-ADMIT-v1路线A](admission-bridge-v1.md)冻结来源映射：notarize-only本地准入，certify执行确定性V+完整持久数据；producer、真实取消、提议承诺、parent/subject绑定及条件活性有独立来源依据。无新增vendor hook，实际native实现/重放仍待独立验收，不能用API测试代替。 |
 | Q-INGRESS | 首收身份/key、header/body配对、forwarded证明与LOCAL_BUILD、认证队列/预算和永久结论顺序；独立黄金时序先于代码。 |
 | Q-WIRE | schema、proto字段、完整Grant/Ack/root记录版本/hash、NotApplicable/多cidreceipt、errors和bounds；原型build/lib/manifest/lock由lead串行安装。 |
-| Q-SHARED | `native_scheme.rs`显式profile/view守卫；`witness.rs`normal PoP/namespace/section policy；`native_step_journal.rs`profile-neutral绑定；总协调逐项移交后单writer修改，旧构造器/Fresh记录保留。01封存本身不等于移交。 |
-| Q-FRAGMENT | H3与H1确认1MiB/64KiB边界的carrier/分片/bounds/连续组装及owner；07 GFR-PUBLIC-1 bytes保持唯一。 |
+| P-SHARED | d55已正式移交scheme/witness/journal/driver/context最小normal扩展与聚焦测试，单writer按切片修改，旧Fresh语义保留；授权不含01恢复WIP/quorum/lock/vote或全局callback变更。 |
+| Q-FRAGMENT | owner已定H3；H3冻结64KiB message/packet、1MiB block下真实M1编码界与必要carrier/credits，H1给受控出口，07公开字节唯一。 |
 | Q-PARAM | view/section/retention、timer/WAIT/队列/认证/处理预算、逐worker offset/Enter schedule、未知资源与前提失败的分类；五引擎时限实测后才能作进展声明。 |
 
-三组最小接口的实际release需带精确接口提交、contract版本、03/07兼容向量和独立review。上述未决项应回总协调/H2/H3逐项处理，不以“等待整个01”替代具体问题，也不以准备稿放行未授权shared写入。
+三组最小接口release需精确API提交、contract版本、03/07兼容向量与独立review。结构/语义按d55已决项执行，普通字段/错误/局部ID由本owner在API切片冻结；未决native映射不阻API发布。H3有界小payload优先：02每包≤64KiB、06每message≤64KiB、block≤1MiB；必要分片/重组/credits由H3独占，H1提供受控出口，完整attempt真实编码上界需核算。

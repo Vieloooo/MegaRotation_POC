@@ -1,0 +1,179 @@
+{
+  "schema": "healthy-session-api-static-check-v1",
+  "baseline": "4741489ba7a07d2a3f3f194dbd59ae3fd8d17bb9",
+  "status": "STATIC_PASS",
+  "freeze_conclusion": "READY_FOR_SINGLE_BUILDER",
+  "api_candidate": null,
+  "source_first_capture": "independent-capture.json",
+  "golden_derivation": {
+    "command": "python3 - <<'PY'\nimport hashlib,json,pathlib\np=pathlib.Path('poc/verification/healthy-session-program/api-v1')\ndef derive(kind,ordinal,run='11'*32,config='22'*32,pid=7,incarnation=1,subject='33'*32,pid_raw=False,byteorder='big',domain=b'H1/API/ControlId/v1'):\n parts=[(1).to_bytes(2,byteorder),bytes([kind]),bytes.fromhex(run),bytes.fromhex(config),bytes([pid]) if pid_raw else bytes.fromhex('0001')+bytes([pid]),incarnation.to_bytes(8,byteorder),ordinal.to_bytes(8,byteorder),bytes.fromhex(subject)]\n blob=b''.join(len(x).to_bytes(8,'big')+x for x in [domain,*parts])\n return {'preimage_hex':blob.hex(),'preimage_length':len(blob),'expected_hash_hex':hashlib.sha256(blob).hexdigest()}\nprovided={(5,9):'378abd8372b975ca5ec0a7a5d926c1bf9dfe89451ac0969b11ad8cf38500e851',(6,9):'9a3aff0ea2122313497a3f08d601a7c95f4fbfea04778b19b31679447ebdc88f',(5,10):'e19c244383676f7a97329d26ada91933adad80e74651d6c986da51cee3ab96c7'}\nvalid=[]\nfor kind in range(1,9):\n item={'id':f'LOCAL-KIND-{kind}-ORD9','kind':kind,'ordinal':9,'run':'11'*32,'config':'22'*32,'pid':7,'incarnation':1,'subject':'33'*32,**derive(kind,9)}\n if (kind,9) in provided: assert item['expected_hash_hex']==provided[kind,9]\n assert item['preimage_length']==209\n valid.append(item)\nfor label,kw in [('ORD10',dict(ordinal=10)),('PID0',dict(pid=0)),('PID14',dict(pid=14)),('ZERO-CONFIG-OPAQUE',dict(config='00'*32)),('ZERO-SUBJECT-OPAQUE',dict(subject='00'*32))]:\n args=dict(kind=5,ordinal=9,run='11'*32,config='22'*32,pid=7,incarnation=1,subject='33'*32);args.update(kw)\n valid.append({'id':label,**args,**derive(**args)})\nassert valid[8]['expected_hash_hex']==provided[5,10]\nmutations=[]\nfor label,kw in [('PID-RAW',dict(pid_raw=True)),('LE-INTEGERS',dict(byteorder='little')),('WRONG-DOMAIN',dict(domain=b'H1/API/ControlId/v2')),('OTHER-WORKER',dict(pid=8)),('OTHER-CONFIG',dict(config='23'*32)),('OTHER-RUN',dict(run='12'*32))]:\n item={'id':label,'interpretation':'incorrect encoding/domain or changed binding must not equal original Action/9 ID',**derive(5,9,**kw)}\n assert item['expected_hash_hex']!=provided[5,9];mutations.append(item)\ndelta=provided[6,9]\nactions=[{'action_index':i,'ordinal':i+1,'subject_delta_id':delta,**derive(5,i+1,subject=delta)} for i in range(3)]\nsource='44'*32\nbatches=[{'sequence':seq,'subject_source':source,**derive(7,seq,subject=source)} for seq in [1,2]]\nbatches[0]['previous']=None;batches[1]['previous']=batches[0]['expected_hash_hex']\nreport={'schema':'healthy-session-api-independent-goldens-v1','contract_sha256':'c8a3bbad1a27bacc1a672aab1df48ee007a66cc415f9d4da4ac2115242d21cb3','derivation':'Python hashlib with directly specified contract framing; no Rust/candidate helper invoked','runtime_status':'NOT_RUN','local_id_valid':valid,'mutations':mutations,'manager_delta_action_ids':actions,'replay_batch_ids':batches,'negative_shapes':[{'case':'zero run','expected':'InvalidField(run)'},{'case':'incarnation0 or2','expected':'InvalidField(incarnation)'},{'case':'LocalId zero','expected':'InvalidField(local_id)'},{'case':'ordinal0','expected':'REJECT ordinal; exact error field follows frozen contract'},{'case':'base_revision u64MAX','expected':'Overflow'},{'case':'next_revision != base+1','expected':'BindingMismatch(next_revision)'},{'case':'repeat ActionIntent id','expected':'DuplicateId precedence requires lead clarification'}]}\n(p/'goldens.json').write_text(json.dumps(report,indent=2)+'\\n')\nprint(json.dumps({'static_golden_status':'PASS','docer_goldens_matched':3,'valid_local_ids':len(valid),'mutation_cases':len(mutations),'delta_actions':len(actions),'replay_batches':len(batches),'first_preimage_length':valid[4]['preimage_length'],'goldens_sha256':hashlib.sha256((p/'goldens.json').read_bytes()).hexdigest(),'rust_api_execution':'NOT_RUN'},indent=2))\nPY",
+    "exit_code": 0,
+    "result": {
+      "static_golden_status": "PASS",
+      "docer_goldens_matched": 3,
+      "valid_local_ids": 13,
+      "mutation_cases": 6,
+      "delta_actions": 3,
+      "replay_batches": 2,
+      "first_preimage_length": 209,
+      "goldens_sha256": "67c839fd5e881f452c65377d1761c3733a6433f9e97150357e1113594a950e2f",
+      "rust_api_execution": "NOT_RUN"
+    },
+    "note": "Historical first derivation. Lead-accepted shape clarifications were subsequently added as metadata/negative expectations; current hashes below supersede the initial golden file hash."
+  },
+  "execution": {
+    "workdir": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+    "command": "python3 - <<'PY'\nimport pathlib,json,hashlib,subprocess,re\nroot=pathlib.Path('/home/jy/.codex/worktrees/0b8e/megaroation_poc');p=root/'poc/verification/healthy-session-program/api-v1'\ncap=json.loads((p/'independent-capture.json').read_text())\nfor name,digest in cap['files'].items(): assert hashlib.sha256((p/name).read_bytes()).hexdigest()==digest,name\nsrc=json.loads((p/'source-map.json').read_text())\nfor x in src['sources']:\n b=subprocess.check_output(['git','show',x['revision']+':'+x['path']],cwd=root);assert hashlib.sha256(b).hexdigest()==x['sha256'],x['id']\nr=json.loads((p/'source-recipes.json').read_text())\nassert len(r['recipes'])==42 and len({x['id'] for x in r['recipes']})==42\nassert all(x['execution_status']=='NOT_RUN' for x in r['recipes'])\ng=json.loads((p/'goldens.json').read_text())\nfor x in g['local_id_valid']:\n parts=[b'H1/API/ControlId/v1',(1).to_bytes(2,'big'),bytes([x['kind']]),bytes.fromhex(x['run']),bytes.fromhex(x['config']),b'\\x00\\x01'+bytes([x['pid']]),x['incarnation'].to_bytes(8,'big'),x['ordinal'].to_bytes(8,'big'),bytes.fromhex(x['subject'])]\n blob=b''.join(len(a).to_bytes(8,'big')+a for a in parts)\n assert len(blob)==209 and blob.hex()==x['preimage_hex'] and hashlib.sha256(blob).hexdigest()==x['expected_hash_hex'],x['id']\nfor x in g['manager_delta_action_ids']+g['replay_batch_ids']+g['mutations']:\n b=bytes.fromhex(x['preimage_hex']);assert len(b)==x['preimage_length'] and hashlib.sha256(b).hexdigest()==x['expected_hash_hex']\nassert g['lead_shape_clarifications']['status']=='ACCEPTED_BY_LEAD_BEFORE_BUILDER'\nassert next(x for x in g['negative_shapes'] if x['case']=='repeat ActionIntent id')['expected']=='DuplicateId checked before derived Action ID mismatch'\ncontract=root/'poc/docs/healthy-session-program/api-slice-v1.md'\ncontract_hash=hashlib.sha256(contract.read_bytes()).hexdigest()\nassert contract_hash==g['contract_sha256']\nfirst=next(x for x in g['local_id_valid'] if x['id']=='LOCAL-KIND-5-ORD9')\nassert first['preimage_hex'] in contract.read_text()\nchecks=[]\nfor f in sorted(p.iterdir()):\n if not f.is_file(): continue\n b=f.read_bytes();assert b.endswith(b'\\n') and not b.endswith(b'\\n\\n'),f.name\n if f.suffix=='.json': json.loads(b)\n if f.suffix=='.md':\n  lines=b.decode().splitlines();assert all(s==s.rstrip() for s in lines),f.name\n  assert sum(s.startswith('```') for s in lines)%2==0,f.name\n args=['git','diff','--no-index','--check','/dev/null',str(f.relative_to(root))]\n out=subprocess.run(args,cwd=root,text=True,capture_output=True)\n assert out.returncode in (0,1) and not out.stdout and not out.stderr,(f.name,out.returncode,out.stdout,out.stderr)\n checks.append({'argv':args,'exit_code':out.returncode,'stdout':out.stdout,'stderr':out.stderr})\nfor args in [['git','diff','--check','--','poc/verification/healthy-session-program/api-v1'],['git','diff','--cached','--check','--','poc/verification/healthy-session-program/api-v1']]:\n out=subprocess.run(args,cwd=root,text=True,capture_output=True);assert out.returncode==0,(args,out.stdout,out.stderr);checks.append({'argv':args,'exit_code':out.returncode,'stdout':out.stdout,'stderr':out.stderr})\nsubprocess.run(['git','merge-base','--is-ancestor','35d382ac445cc8bc779f0d18fd23cb57e54680da','HEAD'],cwd=root,check=True)\nold_diff=subprocess.check_output(['git','diff','HEAD','--name-only','--','poc/verification/healthy-session-program'],cwd=root,text=True).splitlines()\nassert all(x.startswith('poc/verification/healthy-session-program/api-v1/') for x in old_diff),old_diff\nhashes={f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.iterdir()) if f.is_file() and f.name!='static-check.json'}\nprint(json.dumps({'status':'STATIC_PASS','freeze_conclusion':'READY_FOR_SINGLE_BUILDER','source_hashes_checked':len(src['sources']),'independent_hashes_checked':len(cap['files']),'source_recipes':42,'valid_id_goldens':13,'mutation_goldens':6,'action_id_goldens':3,'batch_id_goldens':2,'contract_base_sha256':contract_hash,'lead_clarifications':'both accepted; parent will synchronize contract text and FROZEN marker','file_hashes':hashes,'git_checks':checks,'tracked_historical_verification_changes':old_diff,'untracked_note':'git diff does not inspect untracked additions; every new file was separately checked with git diff --no-index --check against /dev/null; lead must recheck newly staged content after add.','rust_api_tests':'NOT_RUN','runtime_crypto_durability':'NOT_RUN'},indent=2))\nPY",
+    "exit_code": 0,
+    "result": {
+      "status": "STATIC_PASS",
+      "freeze_conclusion": "READY_FOR_SINGLE_BUILDER",
+      "source_hashes_checked": 9,
+      "independent_hashes_checked": 3,
+      "source_recipes": 42,
+      "valid_id_goldens": 13,
+      "mutation_goldens": 6,
+      "action_id_goldens": 3,
+      "batch_id_goldens": 2,
+      "contract_base_sha256": "c8a3bbad1a27bacc1a672aab1df48ee007a66cc415f9d4da4ac2115242d21cb3",
+      "lead_clarifications": "both accepted; parent will synchronize contract text and FROZEN marker",
+      "file_hashes": {
+        "contract-review.md": "da430196ac97cb8dcfcf89908eec62c58ae72788abfc6f59b10c0f5976be6398",
+        "goldens.json": "a943f8e9135c28057b544d3a72edb41d207bd372b6cc7ce80486a1fd5f35cfc2",
+        "independent-capture.json": "47202f177fbf8d7699cde1bec63742a4c949ffcd5cdbeb72c82e5338a55b8779",
+        "independent-expectations.md": "4ff8c59b95d96f2eacb704357c55dcc75efe30d345675922364f2c8cc3d00593",
+        "prior-review-disposition.md": "f21a7b2519aa8e01fd70df9ed220b4d1e27dbbe6b7013b40aa03ff34b39c4e1e",
+        "source-map.json": "a1046132db443dbb6dc7b1cf1546edc4d5892990bd484de1316d17d84df7ca47",
+        "source-recipes.json": "e2cba4a17d68f395ce7727b6fc8743aad5b169baa9d53b2a884eed7c1fb254f7"
+      },
+      "git_checks": [
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/contract-review.md"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/goldens.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/independent-capture.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/independent-expectations.md"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/prior-review-disposition.md"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/source-map.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--no-index",
+            "--check",
+            "/dev/null",
+            "poc/verification/healthy-session-program/api-v1/source-recipes.json"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check",
+            "--",
+            "poc/verification/healthy-session-program/api-v1"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--cached",
+            "--check",
+            "--",
+            "poc/verification/healthy-session-program/api-v1"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "tracked_historical_verification_changes": [],
+      "untracked_note": "git diff does not inspect untracked additions; every new file was separately checked with git diff --no-index --check against /dev/null; lead must recheck newly staged content after add.",
+      "rust_api_tests": "NOT_RUN",
+      "runtime_crypto_durability": "NOT_RUN"
+    }
+  },
+  "limits": [
+    "No new Rust candidate, build, crypto, actual persistence or runtime execution.",
+    "The reviewed contract base hash plus two explicit lead decisions is the freeze input; parent will synchronize contract wording and FROZEN marker.",
+    "Existing 75+2 runtime recipes and original source-first hashes remain historical unchanged.",
+    "Q-ADMIT is separate and does not block this API slice."
+  ]
+}

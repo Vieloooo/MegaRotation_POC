@@ -1,6 +1,6 @@
 # H1 v1：健康 Session Program 任务合同候选
 
-日期：2026-11-16，Asia/Shanghai。状态：**REVIEWABLE DRAFT / NOT FROZEN / IMPLEMENTATION NOT AUTHORIZED**。本轮只完成来源、接口和验收准备；H1、NR-T、NR-A 均未实现或运行。下列 F 规则来自固定来源，P 是已确定的工程范围，Q 是必须由 lead/总协调冻结的具体接口选择。M0 准确 SHA、共享路径移交及 Q 决议尚未交付时，不把本稿当编码许可。
+日期：2026-11-16，Asia/Shanghai。修订：**M1实施授权后的分切片合同**。正式授权为 `d55d39f73593676325bdc0fbb7ba3845ca93025f` 的 `poc/docs/milestones/M1-implementation-dispatch-20261116.md`。M0已交付 `35d382ac445cc8bc779f0d18fd23cb57e54680da`，当前H1基线 `4741489ba7a07d2a3f3f194dbd59ae3fd8d17bb9` 已正常合入。H1、NR-T、NR-A尚未通过；[API切片合同](api-slice-v1.md)先冻结、形成独立预期并交Builder，其余局部Q只阻塞对应实现，不阻塞全部工作。
 
 配套：[接口提案](interfaces-h1-v1.md)、[准备与版本记录](preparation.md)。独立 Verifier 的预期先于实现形成；本稿不是其独立验收报告。
 
@@ -10,7 +10,7 @@
 
 | 引用 | 固定版本与节 | 本合同采用的规则 |
 | --- | --- | --- |
-| M | 计划提交 `4a9a6b0a92a11e5778833988bb6524d929f4608e`，`poc/docs/milestones/{README,H1-healthy-session-program-zh,H2-session-manager-zh,H3-publication-gfr-zh,M0-foundation-merge-zh}.md` | M1/M2 终点、M0 先交付、H1/H2/H3 职责与有限健康 profile。只读源位于 `/mnt/reth/jy/megaroation_poc/`。 |
+| M | 基础计划 `4a9a6b0a92a11e5778833988bb6524d929f4608e` 的五份milestone文档；最新派发 `d55d39f73593676325bdc0fbb7ba3845ca93025f` 的 `M1-implementation-dispatch-20261116.md` 优先 | M0已交付、M1立即分切片实施、正式所有权移交及十项接口决议；Force暂不实施。只读权威源位于 `/mnt/reth/jy/megaroation_poc/`。 |
 | V2 | [v2](../../../formalization_v10/poc_design_zh_v2.md) §§3.1–3.3、4、5、6、9.1、10.2、12 | 三个五成员委员会，q=4，10-height 窗口，误差与 RPC 延迟分开，单时间权威和完整 grant/Ack。 |
 | SP | [v10 Session Program v0.1](../../../formalization_v10/02_session_program_zh_v0_1.md) §§3.1–3.12、4.2–4.9 | cid 独立状态，Create/Enter/Close，Build/Accept5a–5d/NotBefore，CheckFINAL，停止签名与有条件进展。 |
 | SM | [v10 Manager v0.1](../../../formalization_v10/03_session_manager_zh_v0_1.md) §§3.1–3.10、4.1–4.3 | Ready 的精确状态依据，候选表、一次 Enter、Pause/选回原实例、全部候选的单调关闭。 |
@@ -37,7 +37,7 @@ H1 必须支持 R0→R1→R2 所需的动态 Create/Prepare/Enter/Pause/Close、
 | H1 交付 | 冻结接口 + NR-T/NR-A + 可被 H2/H3 消费的版本化实现/独立报告/同 SHA 证据 | 仅 R0 样例不够；完整 M1 由集成任务验证。 |
 | M1 集成依赖 | 15 进程持续运行，R0→R1→R2；真实 final/body 经 Publisher/SimEspresso/独立 GFR，R2 首个合格结果进入 G；另走 SessionEnd；同一真实结果字节经官方本地 Espresso 提交读回 | regional final、publication submitted、SessionAssigned 均不是 M1 完成。 |
 
-M2 的合法主动 Force 在 M1 之后；H1 保留 branch-close 输入能力，不实现治理控制策略。跨 PID 恢复、D/RESUME、批次/DA/Web 已退出近期关键路径；相关旧故障 gate、01 R1–R18、04 重启范围、整体 I1 仍 **OPEN**。异常退出使场景 FAIL 或明确的基础设施 INCONCLUSIVE，不能空 journal 重启继续。
+当前只实施M1；Force暂缓，H1保留既有branch-close的typed入口但不实现Force策略或激活。跨 PID 恢复、D/RESUME、批次/DA/Web 已退出近期关键路径；相关旧故障 gate、01 R1–R18、04 重启范围、整体 I1 仍 **OPEN**。异常退出使场景 FAIL 或明确的基础设施 INCONCLUSIVE，不能空 journal 重启继续。
 
 ## 3. F：来源硬规则及触发合同
 
@@ -63,7 +63,7 @@ Accept 时间字面边界固定：`δ_G=1000µs`，`Δ_G=2000µs`。5a `recv ≥
 
 **P-COMMIT。** input/grant 校验 → 有界确定性工作与候选 effects → native journal/sync/适用 witness + 首收/准入/terminal/reader/custody 辅助记录 → 实际完整 NormalGrant/NormalAck root 提交 → Hub 安装/释放。具体格式见接口提案 Q-WIRE。所有实际 Send、Final/Delivery、timer/work、consumer advance 均归本步 Ack，后台不旁路。无 native artifact 的 step 仍有真实 root，witness 项为显式 NotApplicable；有 artifact 却无匹配真实 receipt 必须拒绝。
 
-相同 grant 重放原完整 Ack，不再执行；篡改 grant、单个非法 effect、stale revision、缺 durable receipt 不产生部分外部释放。02 的 DurabilityReceipt 是 adapter 提供的事实，须对应真实 sync/记录，不当成组件自己证明 fsync。已持久释放义务不得因 stale plan 静默遗失；不声称能回滚此前已授权 native I/O。
+相同 grant 重放原完整 Ack，不再执行；篡改 grant、单个非法 effect、stale revision、缺 durable receipt 不产生部分外部释放。02 的 DurabilityReceipt 是 adapter 提供的事实，须对应真实 sync/记录，不当成组件自己证明 fsync。已持久释放义务不得因 stale plan 静默遗失；不声称能回滚此前已授权 native I/O。每worker仅H1拥有持久提交：完整合法ReplayRecord预检后，Manager opaque delta、关闭/tombstone、Selected+Preparing、cursor及action intents同root提交，返回`RootCommitted(actions_pending)`；另有`ActionsApplied`回执。缺后继执行材料不延迟已知合法Close。durable terminal或ClockUnsafe guard生效后的任何失败均fail-closed，不回滚Running；未完成动作继续pending，必要时停止runtime并报告。
 
 **P-INGRESS。** 原始 header/body 收包时刻与认证完成时刻分离；保留 `(cid,epoch,view,native_parent_view,physical_digest)` 的合格首收证据，直接 leader 绑定真实 transport 身份，转发 header 要有真实 leader 签名或已验证 native 证明。首收是最早适用合格 header/body 配对的较晚原 ingress；无权 header 不能占位。LOCAL_BUILD 在完整 B 形成时记录，不要求预先有自己的签名。认证延迟/乱序须先处理可能改变首收的已 admitted 输入，再永久时间裁决；队列/认证预算冻结后可验证，不能无限等待恶意垃圾。重复投递或 WAIT 重试不改写首收。
 
@@ -77,7 +77,7 @@ Accept 时间字面边界固定：`δ_G=1000µs`，`Δ_G=2000µs`。5a `recv ≥
 
 | ID | 最小事件序列或边界 | 必须断言 / 证据 | 对应 |
 | --- | --- | --- | --- |
-| H1-00 | 准确 M0 SHA 上先跑 Fresh 兼容；共享改动后在最终候选重跑 | 原普通 Engine::new 路径、旧 constructor/PoP/namespace/record 兼容；healthy/two-real-alone/proof-before-body/close/lease/crypto 负例及受影响 runtime/storage/witness；不得继承历史66次 PASS | P-SCOPE/Q-SHARED |
+| H1-00 | 消费已交付准确M0的兼容记录；shared行为改变后在最终候选复验适用路径 | 不因仅文档/API新增重复M0 heavy检查；普通Engine::new、旧constructor/PoP/namespace/record兼容及受影响healthy/two-real-alone/proof-before-body/close/lease/crypto/runtime/storage/witness另记命令；不得把历史66次移植为新PASS | P-SCOPE/P-SHARED |
 | H1-01 | 启动15 worker，三地区各五身份；R0 先运行 | 15 个不同真实 PID、incarnation=1，5 个实际 engine 的创建/运行证据、五真实私钥独占；10个独立 Clock/reader/root，无脚本 signer、无 Hub 代签 | NR-T/F-ID |
 | H1-02 | 假 pid/member/signer、错 run/config/cid/epoch/codec、重复注册 | 精确类型映射与拒绝原子性；实际 participant 顺序来自 03 registry，不按 pid cast | F-ID |
 | H1-03 | Sample 乱序/过期/延迟、lease 等号、ClockUnsafe；同虚拟输入不同 wall pause | 不免费续租、读钟/新签误差≤1ms、RPC latency 单列、同节点同钟；原 timer deadline 不改，暂停不能延长 lease | P-CLOCK |
@@ -97,20 +97,21 @@ Accept 时间字面边界固定：`δ_G=1000µs`，`Δ_G=2000µs`。5a `recv ≥
 | H1-17 | 同一签名坐标重复/冲突；pre-stop旧签名stop后拼证 | 原bytes缓存/冲突拒绝；stop后无CREATED；合法历史证书可观察但公开接纳仍由H3截止决定 | SP §4.9/CW |
 | H1-18 | proof先到、body/祖先/执行输入后到 | ProgressObserved、FinalProofObserved、Delivered分开；缺body/祖先WAIT且无可消费Res；补齐后连续 verified prefix 一次交付 | F-FINAL |
 | H1-19 | 一个非法effect、缺receipt、stale计划、重送grant/重复release、无artifact step | 无半份外部输出；实际完整Ack/root可重算；无artifact仍root且不伪造witness；有artifact必须适用真实见证 | P-COMMIT |
-| H1-20 | 运行后真实来源产生未来cid，动态准入后发送；未知cid/伪来源先发送 | 新cid只从已验证descriptor/Prepare provenance准入；旧队列、FIFO、message ordinal、custody、pending timer、历史hash不变；不得空kernel替换 | Q-TRANSPORT |
+| H1-20 | 运行后真实来源产生未来cid，动态准入后发送；未知cid/伪来源先发送 | 已选择A：RouteKernel与所有受影响ReliableMailbox在同一受控提交、同admission revision安装；新cid只来自真实已验证descriptor/Prepare；旧队列、FIFO、ordinal、inbox/outbox/custody、timer、历史hash不变；不得空kernel替换 | P-TRANSPORT-A |
 | H1-21 | 新cid准入重复/冲突、失效revision、Close后历史body/proof仍在途 | 幂等安装或原子拒绝；共识新生产关闭与历史data允许交付分开；不撤销持久义务，不改变旧frame解释 | Q-TRANSPORT/F-CLOSE |
 | H1-22 | Prepare取消/Close后旧job迟到；同cid补材料、不同cid同height状态 | token/anchor/配置/来源绑定；旧completion不产生Ready/签名；允许缓存已验证材料但不能按height跨链复用 | H1-SPREP-1 |
 | H1-23 | seeds7/42/99 × 正/反启动顺序 × wall暂停0/2ms，固定外部输入 | 同组完整虚拟trace/native帧逐字节相同；PID/wall诊断另存；不删协议事件制造相等 | V2 §5 |
 | H1-M1a | 接H2/H3，R0满窗→R1满窗→R2首结果入G | 15 PID持续、真实lifecycle从独立GFR到Manager/Program；记录每区proof/完整结果/publication/G接纳；R2入G才是集成终点 | M；集成任务 PLANNED |
-| H1-M1b | h10未及时公开，h9成为regular anchor；后继提前准备并缓存 | 后继固定11–20，不等SessionEnd后才开始所有准备；本地stop不触发public SessionEnd；公开选择后原候选继续；缺来源/前缀WAIT | M/H2/GF §4.3 |
+| H1-M1b | h10未及时公开，h9成为regular anchor；提前收到真实h9来源后准备/生产合法h11并缓存 | 这是指定h9→h11主例：必须在原h11准入窗内生产/首收，不能预知未来anchor/cid或倒填时间；窗口11–20，本地stop不触发public SessionEnd；获选后原历史结果真实入G | M派发§9/H2/GF §4.3 |
+| H1-M1b-late | 未提前生产h11；SessionEnd后在当时合法slot（例如h14）生产 | 同样固定11–20；完整验证真实h10–h13 padding与h14，不要求十个physical；不报h9→h11通过，不补造h11首收或挪窗 | M派发§9；与主例分开 |
 | H1-M1c | 主场景实际结果字节交16官方本地节点并读回 | hash/来源与SimEspresso结果相同，q/index/namespace/payload核对；wall/Unknown证据独立，不声称QC/VID或完整PE时序通过 | M/H3/16 |
 
 测试证据必须包含负向 oracle：故意冲突 final trace、application-invalid body、未认证首收、脚本 signer 或 Hub 代签标记应被 checker 拒绝；不能只证明 checker 接受正常输出。有限矩阵只证明所列边界与调度，不是协议证明。
 
 ## 6. 路径、冻结门禁与交付
 
-当前唯一 writer 只拥有本目录的 `task-contract-h1-v1.md`、`interfaces-h1-v1.md`、`preparation.md`。生产代码、proto、manifest/lockfile、shared shim、verification、其他功能文档、子模块均只读。不得 commit、merge、cherry-pick、build 或运行重型测试。
+当前Docer唯一writer只拥有本目录的前三份文档及`api-slice-v1.md`、必要的`api-v1.md`；Docer不写代码、不build、不commit。正式H1实施所有权已由d55派发授予，不能再用旧“仅准备”门禁阻止Builder。
 
-实现阶段拟由单 Builder 拥有原型 `src/normal_running/`、`src/bin/normal-{hub,worker}.rs`、`tests/normal_running_*.rs`、`poc/proto/normal_running.proto` 和 normal scenarios；这些是 **未来 allowlist 提案，不是当前授权**。Verifier 独占 `poc/verification/healthy-session-program/`；lead 串行处理 module/build/manifest/lock 声明。共享 scheme/witness/journal 及必要 driver/context/transport 扩展必须逐项移交，见接口 Q 表。
+H1正式拥有轻量独立workspace `poc/crates/healthy-session-api/`，原型`src/normal_running/`、normal-hub/normal-worker、normal tests、`poc/proto/normal_running.proto`；原型module/build/manifest/lock由lead串行安装；`native_scheme.rs/witness.rs/native_step_journal.rs/driver.rs/context.rs`最小normal扩展与相应聚焦测试、`poc/crates/sim-transport/`增量admission/可靠邮箱同步正式移交H1单writer。实际每切片只开放其allowlist；API切片不触碰runtime。根types/根manifest、01恢复模块/patch/crash fixtures、其他feature和子模块仍只读。Verifier持有独立verification路径。
 
-冻结要求：准确已验证 M0 SHA + component provenance/版本差异；独立预期；三组接口与 Q 决议；每项新增共享路径单 owner；具体 wire/namespace/record 黄金向量；runner 参数、资源界与 Fresh 兼容执行计划。全部命名后才转 FROZEN 并授权单 writer。实现报告必须交付准确候选/验证 SHA、dirty 状态、命令、seed、trace、限制与仍 OPEN 列表；本轮仅可报告“准备完成”。
+按切片冻结精确签名/guards/outputs/向量与单owner，由独立Verifier先保存预期，再Builder、独立复核与同SHA测试。API切片只需本地DTO/ID/shape约定。Q-ADMIT已通过两份独立源码审阅并选择[路线A](admission-bridge-v1.md)：本地Accept限制notarize准入，certify保持确定性V与完整持久数据，仍不代表native实现或活性矩阵通过。其余native相关Q在对应切片实现前闭合。M0已执行的兼容检查不因文档/API新增重复；shared行为改变后按影响复验Fresh。报告准确候选/验证SHA、dirty、命令、seed、trace、限制及OPEN项；API编译接口通过不能报H1或M1通过。

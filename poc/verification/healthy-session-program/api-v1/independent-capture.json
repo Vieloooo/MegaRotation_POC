@@ -1,0 +1,12 @@
+{
+  "phase": "BEFORE_NEW_API_CONTRACT_READ",
+  "api_contract_read": false,
+  "baseline": "4741489ba7a07d2a3f3f194dbd59ae3fd8d17bb9",
+  "files": {
+    "independent-expectations.md": "4ff8c59b95d96f2eacb704357c55dcc75efe30d345675922364f2c8cc3d00593",
+    "source-map.json": "a1046132db443dbb6dc7b1cf1546edc4d5892990bd484de1316d17d84df7ca47",
+    "source-recipes.json": "e2cba4a17d68f395ce7727b6fc8743aad5b169baa9d53b2a884eed7c1fb254f7"
+  },
+  "recipe_count": 42,
+  "runtime_status": "NOT_RUN"
+}
