@@ -1,0 +1,18 @@
+{
+  "schema": "H3-C-OFFLINE-TEST-SEAMS-1",
+  "authority": "Frozen C contract plus owner-reported signatures before named candidate",
+  "capture_loader": "load_payload_manifest(Path) -> (manifest_dict, exact_manifest_bytes, tuple(payload_bytes_by_ordinal), native_report_bytes_or_None)",
+  "checker_loader": "independently implemented load_payload_manifest(Path), same tuple shape",
+  "copy": "copy_payload_inputs(record, loaded, runner_sha) -> input_identity mapping",
+  "observe": "observe_publications(record, processes, genesis, genesis_transactions, payloads=MARKERS, input_identity=None)",
+  "checker": "check(root, reader_id, expected_candidate=None, payload_manifest=None); CLI --payload-manifest",
+  "configuration_keys": ["input_mode", "input_identity"],
+  "manifest_copy": "publication-input-manifest.json",
+  "payload_copy": "publication-input-{ordinal:03d}.bin",
+  "report_copy": "publication-input-native-report.bin",
+  "native_verification": "NOT_PERFORMED",
+  "message_metadata": ["ordinal", "codec", "path", "length", "sha256", "copied_path", "submit_record_id", "ack_hash", "byte_equal", "occurrences"],
+  "occurrence": ["q", "source_transaction_index", "pos_in_namespace", "message_index"],
+  "reader_rule": "Each reader derives positions from its own complete prefix; both compare against the first-reader submit transcript",
+  "candidate_execution": "NOT_RUN"
+}
