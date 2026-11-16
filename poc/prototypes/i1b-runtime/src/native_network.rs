@@ -137,6 +137,7 @@ pub(crate) fn validate_envelope(config: &Resolved, envelope: &Envelope) -> Resul
         .as_ref()
         .ok_or(Error("native envelope has no provenance"))?;
     let hash32 = |bytes: &[u8]| bytes.len() == 32;
+    let real_source = config.m1_region.is_some() || envelope.src_member_id < 2;
     let valid = match provenance {
         Provenance::Scripted(p) => {
             config.m1_region.is_none()
@@ -145,7 +146,7 @@ pub(crate) fn validate_envelope(config: &Resolved, envelope: &Envelope) -> Resul
                 && hash32(&p.entry_id)
         }
         Provenance::LocalWitness(p) => {
-            (config.m1_region.is_some() || envelope.src_member_id < 2)
+            real_source
                 && matches!(channel, Channel::Vote | Channel::Certificate)
                 && !p.witness_ids.is_empty()
                 && p.witness_ids.iter().all(|v| hash32(v))
@@ -155,13 +156,9 @@ pub(crate) fn validate_envelope(config: &Resolved, envelope: &Envelope) -> Resul
                     .is_some_and(|r| r.sequence > 0 && hash32(&r.hash))
         }
         Provenance::Resolver(p) => {
-            (config.m1_region.is_some() || envelope.src_member_id < 2)
-                && channel == Channel::Resolver
-                && hash32(&p.source_record_id)
+            real_source && channel == Channel::Resolver && hash32(&p.source_record_id)
         }
-        Provenance::Body(p) => {
-            envelope.src_member_id < 2 && channel == Channel::Body && hash32(&p.content_id)
-        }
+        Provenance::Body(p) => real_source && channel == Channel::Body && hash32(&p.content_id),
     };
     if !valid {
         return Err(Error("invalid native envelope provenance"));
