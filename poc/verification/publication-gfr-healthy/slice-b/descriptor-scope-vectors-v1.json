@@ -1,0 +1,49 @@
+{
+  "schema": "H3-B-DESCRIPTOR-SCOPE-1",
+  "candidate_execution": "NOT_RUN",
+  "setup": {
+    "ledger_closed_session": [
+      0,
+      0
+    ],
+    "legitimate_open_session": [
+      0,
+      1
+    ],
+    "same_key_fields": [
+      "descriptor.cid",
+      "target canonical body digest"
+    ]
+  },
+  "cases": [
+    {
+      "mutation": "replace plan.session with closed(0,0), keep cid/body",
+      "expected": "REJECT_BEFORE_SCOPE_LOOKUP_OR_STOPDECISION",
+      "legitimate_task_unchanged": true
+    },
+    {
+      "mutation": "alter plan.window, keep cid/body",
+      "expected": "REJECT_BEFORE_SCOPE_LOOKUP_OR_STOPDECISION",
+      "legitimate_task_unchanged": true
+    },
+    {
+      "mutation": "alter anchor.block.block_id, keep cid/body",
+      "expected": "REJECT_BEFORE_SCOPE_LOOKUP_OR_STOPDECISION",
+      "legitimate_task_unchanged": true
+    },
+    {
+      "mutation": "replace plan.config_ref with foreignconfig, keep cid/body",
+      "expected": "REJECT_BEFORE_SCOPE_LOOKUP_OR_STOPDECISION",
+      "legitimate_task_unchanged": true
+    }
+  ],
+  "positive_controls": [
+    "actual open(0,1) descriptor passes cheap binding and no sessionclosed stop",
+    "actual closed(0,0) descriptor passes binding and receives correctly scoped stop"
+  ],
+  "required_existing03_operations": [
+    "ProgramConfig::from_plan",
+    "regional_cid"
+  ],
+  "proof_validation": "not required solely for this scope check; actual Publisher verified task gating remains separate"
+}
