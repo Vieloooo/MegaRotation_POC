@@ -378,6 +378,8 @@ golden固定scope：run=`11`×32、config=`22`×32、Pid7、incarnation1，subje
 
 Lead冻结澄清：ManagerDelta先检查所有action ID重复，再按ordinal比较派生ID；重复明确返回DuplicateId。FailClosed的任何committed=Some都必须与外层scope/delta_id一致，不限于CommittedPending；没有commit时actions_pending同样须≤128且唯一。上述是shape自洽检查，不认证外部持久事实。
 
+ReplayBatch按其专门条款检查：完整保留input_ref/effects，检查effects数量和明确列出的位置、事件、LIFE-ID及外层绑定，不递归验证Duty/Tail内的域对象，也不解析InputRef::L1的source_bytes。资源行“每个03对象”指本表明确要求检查的对象，不构成另一套public replay validator。实际producer/consumer必须验证完整记录合法性；本slice的计数限制不声称整个嵌套ReplayRecord已通过字节容量或语义检查，shape成功不能授权root提交/动作释放。此澄清经独立来源预期核对，未改变公共对象或编码。
+
 字段名已只读核对：03 `PlanRecord`有`config_ref/window`，**没有rule_version/verifier_version**；版本来自`PublicConfig`与其生成的`ProgramConfig`。因此ProofObserved/RegionalDelivery的无配置shape入口只能检查Native形状，实际配置匹配由`validate_native_binding(binding, &PublicConfig)`及真实消费者验证；不得增加影子Plan字段或在没有配置时声称已校验版本兼容。
 
 ## 5. 持久owner和fail-closed语义
