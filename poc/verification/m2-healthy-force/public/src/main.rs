@@ -27,6 +27,8 @@ use sha2::{Digest as _, Sha256};
 
 #[path = "../../../m3-auto-force/historical_plan.rs"]
 mod historical_plan;
+#[path = "../../../m4-resume/replay_resume.rs"]
+mod replay_resume;
 use historical_plan::{ActivePolicy, Header, Policy};
 
 const PUBLICATION_CODEC: u32 = 0x47465201;
@@ -309,7 +311,7 @@ fn append(
     dep: &DepFixture,
     height: u64,
     block: Option<&PhysicalBlock>,
-) -> (Hash32, usize) {
+) -> (Hash32, Vec<Vec<u8>>) {
     let slot_time = timestamp(config, height);
     let scheduled =
         (slot_time - config.l1_genesis_timestamp_us - config.t_dep_us) / config.l1_block_us;
@@ -353,17 +355,15 @@ fn append(
             }
         }
     }
-    let count = kept.len();
     let root = chain.state.root().unwrap();
-    chain.native = NativeBlock {
+    let native = NativeBlock {
         parent: chain.native,
         metadata,
         dep: dep_raw,
         kept,
         post_state_root: root,
-    }
-    .digest()
-    .unwrap();
+    };
+    chain.native = native.digest().unwrap();
     if let Some(block) = block {
         chain.head = Anchor {
             block: BlockRef {
@@ -374,19 +374,24 @@ fn append(
             timestamp_us: slot_time,
         };
     }
-    (root, count)
+    (root, native.kept)
 }
 
 fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
     assert!(
-        (6..=7).contains(&args.len()),
-        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US [ACTUAL_L1_JSON]"
+        (6..=8).contains(&args.len()),
+        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US [ACTUAL_L1_JSON [VERIFIED_RESUME_JSON]]"
     );
     let headers: Option<Vec<Header>> = args.get(6).map(|path| {
         serde_json::from_slice(&fs::read(path).unwrap()).expect("actual L1 header projection")
     });
     let historical_headers = headers.as_deref();
+    let mut resume_inputs = args.get(7).map(|path| {
+        replay_resume::ResumeReplay::from_controls(
+            serde_json::from_slice(&fs::read(path).unwrap()).expect("independently verified cuts"),
+        )
+    });
     let raw = Path::new(&args[0]);
     let path = |name: &str| raw.join(name).to_str().unwrap().to_owned();
     let config: PublicConfig = read(&path("config.bin"));
@@ -540,6 +545,8 @@ fn main() {
     let mut regular = Vec::new();
     let mut expected = Vec::new();
     let mut final_accepted = BTreeSet::new();
+    let mut resume_events = Vec::new();
+    let mut regional_entries = Vec::new();
 
     for (q, &theta) in q_thetas.iter().enumerate() {
         let q = q as u64;
@@ -566,12 +573,33 @@ fn main() {
             } else {
                 timestamp(&config, global.head.block.height + 1) + expiry
             };
-            let control = controls.peek().map(|c| c.act_us).unwrap_or(u64::MAX);
+            let force_position = controls.peek().map(|c| (c.act_us, c.position));
+            let resume_position = resume_inputs.as_ref().and_then(|rows| rows.next());
+            let control_position = match (force_position, resume_position) {
+                (Some(force), Some(resume)) => Some(force.min(resume)),
+                (force, resume) => force.or(resume),
+            };
+            let control = control_position.map_or(u64::MAX, |event| event.0);
             let next = control.min(expire).min(end);
             if next > theta {
                 break;
             }
-            if next == control {
+            if next == control && resume_position == control_position {
+                let (event, stopped, new_floor) = resume_inputs.as_mut().unwrap().apply(
+                    &mut global,
+                    &mut duty,
+                    &mut expected,
+                    &config,
+                    historical_headers.expect("RESUME requires verified real headers"),
+                    q,
+                    ma,
+                    grace,
+                    expiry,
+                );
+                halted = stopped;
+                floor = new_floor;
+                resume_events.push(event);
+            } else if next == control {
                 let c = controls.next().unwrap();
                 let result = if halted || c.target != duty.beta {
                     json!({"seq":c.seq,"position":c.position,"act_us":c.act_us,"valid":false})
@@ -752,15 +780,21 @@ fn main() {
                         next_height,
                         physical,
                     );
-                    expected.push(json!({
+                    let mut accepted = json!({
                         "height":next_height,"physical":physical.map(|_|hex(id.as_bytes())),
                         "parent":physical.map(|b|hex(b.parent.as_bytes())),
                         "native":hex(global.native.as_bytes()),"state_root":hex(root.as_bytes()),
                         "cid":hex(item.proof.desc.cid.as_bytes()),"beta":duty.beta,"r":duty.r,
                         "region":duty.region,"anchor":hex(duty.anchor.block.block_id.as_bytes()),
                         "q_avail":item.q_avail,"q":q,"theta_us":theta,
-                        "target":hex(item.proof.target.as_bytes()),"kept":kept,
-                    }));
+                        "target":hex(item.proof.target.as_bytes()),"kept":kept.len(),
+                    });
+                    if resume_inputs.is_some() {
+                        accepted["metadata"] = json!(global.state.metadata);
+                        accepted["kept_bytes"] = json!(kept.iter().map(|bytes| hex(bytes)).collect::<Vec<_>>());
+                        regional_entries.push(accepted.clone());
+                    }
+                    expected.push(accepted);
                     next_height += 1;
                 }
             }
@@ -787,10 +821,16 @@ fn main() {
         "hash":hex(row.header.hash.as_bytes()), "parent_hash":hex(row.header.parent_hash.as_bytes()),
         "finalized_us":row.finalized_at_us,
     })).collect();
-    println!("{}", serde_json::to_string_pretty(&json!({
+    let mut output = json!({
         "config_ref":hex(config.reference().unwrap().as_bytes()),
         "public_finals":public_finals,"signature_checks":proofs.len(),"signer_indexes":signer_indexes,
         "espresso":espresso,"expected":expected,"force":force,"regular":regular,"l1":l1_meta,"late":late,
         "accepted_final_count":final_accepted.len(),"halted":halted,
-    })).unwrap());
+    });
+    if let Some(resumes) = resume_inputs {
+        assert!(resumes.next().is_none(), "Resume still missing Espresso coverage");
+        output["resumes"] = json!(resume_events);
+        output["regional_entries"] = json!(regional_entries);
+    }
+    println!("{}", serde_json::to_string_pretty(&output).unwrap());
 }
