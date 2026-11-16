@@ -140,6 +140,11 @@ th { color: var(--muted); font-weight: 600; }
   .lane-name { position: sticky; left: 0; z-index: 3; padding-right: 5px; background: var(--panel); }
   .explanation, .handoff-box { grid-template-columns: 1fr; gap: 10px; }
 }
+
+.masthead-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.scenario-link { font-size: 13px; text-decoration: none; }
+.timeline-row.stacked { min-height: 77px; }
+.mark.excluded { --mark-color: #fda4af; }
 </style>
 </head>
 <body>
@@ -150,7 +155,10 @@ th { color: var(--muted); font-weight: 600; }
         <h1>Regular Handoff 回放</h1>
         <p class="subtitle">从公开日志接纳区块，切换 GFR 生产职责</p>
       </div>
-      <a class="source-jump" href="#provenance">证据包 <span class="mono">91547857 · seed 42</span> ↓</a>
+      <div class="masthead-links">
+        <a class="scenario-link" href="force.html">M2 Force →</a>
+        <a class="source-jump" href="#provenance">证据包 <span class="mono">91547857 · seed 42</span> ↓</a>
+      </div>
     </header>
 
     <noscript>请启用 JavaScript，页面直接读取内嵌的封存证据。</noscript>
@@ -203,11 +211,11 @@ th { color: var(--muted); font-weight: 600; }
       </details>
       <details><summary>重放规则与边界 <span class="muted">v10 GFR §3–4</span></summary>
         <div class="manual">
-          <p>规则来源为 <code>formalization_v10/09_finality_rules_zh_v0_1.md</code> §3.2–3.4、§4.2–4.3。时间键先排序。同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。处理 Espresso(q) 时，其完整前缀已经覆盖当前的公开键。</p>
+          <p id="rule-source">规则来源为 <code>formalization_v10/09_finality_rules_zh_v0_1.md</code> §3.2–3.4、§4.2–4.3。时间键先排序。同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。处理 Espresso(q) 时，其完整前缀已经覆盖当前的公开键。</p>
           <p>只有缺少必需公共输入或已公开材料尚未读齐时，当前重放位置才 WAIT。公开历史本身尚缺证明或正文的候选暂不合格，其他事件仍可处理。读者补齐材料保留原公开位置。</p>
           <p>满窗交接由接纳上界 physical block 的同一 Espresso 转移触发。若未满窗，SessionEnd 依赖公开前缀覆盖截止键并且旧职责仍为 NEXT，使用前驱最后已接纳的 physical block 为 anchor。无新块时沿用初始 anchor。后继窗口始终从前驱名义上界加一开始。</p>
-          <p>同一虚拟时刻的 trace 按 seq 展示。若 fixture finalized 时刻与 trace 相同，页面先展示 fixture header。</p>
-          <p>本次封存观察范围截至 h21。L1 数据是预生成 finalized fixture，Espresso 数据来自 SimEspresso。fixture 包含超出本次轨迹的 header，逐 header 的 reader 收取时间未记录。</p>
+          <p id="timing-note">同一虚拟时刻的 trace 按 seq 展示。若 fixture finalized 时刻与 trace 相同，页面先展示 fixture header。</p>
+          <p id="scope">本次封存观察范围截至 h21。L1 数据是预生成 finalized fixture，Espresso 数据来自 SimEspresso。fixture 包含超出本次轨迹的 header，逐 header 的 reader 收取时间未记录。</p>
         </div>
       </details>
     </section>
@@ -228,10 +236,11 @@ const windowLabel = (d) => `[${d.window[0]}, ${d.window[1]}]`;
 const contextLabel = (d) => `R${d.region} · β${d.beta}/r${d.session}`;
 const percent = (tick) => `${100 * tick / data.end_us}%`;
 const contexts = new Map(data.contexts.map((d) => [d.cid, d]));
+const isForce = Boolean(data.force);
 const projectedL1 = data.l1.filter((row) => row.finalized_us <= data.end_us);
 
 const lanes = [
-  ["l1", "L1 fixture", projectedL1.map((row) => ({
+  ["l1", isForce ? "Anvil L1" : "L1 fixture", isForce ? forceL1Events() : projectedL1.map((row) => ({
     tick: row.finalized_us, seq: 0, index: row.height, label: `ℓ${row.height}`,
     title: `finalized L1 fixture header ℓ${row.height}`,
   }))],
@@ -245,15 +254,25 @@ const lanes = [
   }))],
   ["g", "G 链接纳", data.entries.map((entry, index) => ({
     tick: entry.replay.tick_us, seq: entry.replay.seq, index,
-    label: `${entry.body.height}${entry.handoff ? "↗" : ""}`,
-    title: `G 接纳 h${entry.body.height} / q${entry.q}${entry.handoff ? " 并接棒" : ""}`,
-    handoff: Boolean(entry.handoff),
+    label: entry.excluded ? "q10 ×" : `${entry.body.height}${entry.handoff ? "↗" : ""}`,
+    stage: entry.excluded ? "excluded" : entry.handoff ? "regular" : isForce && index === data.entries.length - 1 ? "h16" : undefined,
+    level: entry.excluded ? 2 : undefined,
+    title: entry.excluded ? "q10 完成重放 · 旧 physical h11 被排除" :
+      `G 接纳 h${entry.body.height} / q${entry.q}${entry.handoff ? " 并接棒" : ""}`,
+    handoff: Boolean(entry.handoff), excluded: Boolean(entry.excluded),
   }))],
 ];
+if (isForce) {
+  lanes[3][2].push({
+    tick: data.force.replay.tick_us, seq: data.force.replay.seq, index: data.entries.length,
+    label: "Force", title: "Force 激活 · β0 → β1", level: 0, stage: "force", handoff: true,
+  });
+}
 const frames = [{ kind: "start", tick: 0, seq: 0, index: 0 }].concat(
   lanes.flatMap(([kind, , events]) => events.map((event) => ({ ...event, kind })))
     .sort((a, b) => a.tick - b.tick || a.seq - b.seq),
 );
+const frameByStage = new Map(frames.flatMap((frame, i) => frame.stage ? [[frame.stage, i]] : []));
 const frameByEvent = new Map(frames.map((frame, i) => [`${frame.kind}:${frame.index}`, i]));
 let cursor = 0;
 let playback = null;
@@ -284,10 +303,11 @@ function title(head, description, tag) {
 
 function proofEvidence(entry) {
   const proof = data.espresso[entry.proof.q].messages[entry.proof.message];
+  const expected = entry.excluded ? "late[0]" : `expected[${entry.oracle.expected_index}]`;
   return [
     ["公开最终证明", positionRef(entry.proof.q, entry.proof.message)],
     ["证明字节", code(proof.proof)],
-    ["独立核对", code(`public-replay.json · expected[${entry.oracle.expected_index}] · public_finals[${entry.oracle.proof_index}]`)],
+    ["独立核对", code(`public-replay.json · ${expected} · public_finals[${entry.oracle.proof_index}]`)],
     ...entry.ancestry.map((body) => [`h${body.height} 首次公开正文`, positionRef(body.q, body.message)]),
   ];
 }
@@ -326,7 +346,7 @@ function espressoDetails(entry) {
       ["结果 q_avail", `q${entry.q_avail} · h${entry.body.height}`],
       ["来源", code(row.source)],
     ])
-    + `<div class="trace-links">${linkButton("g", entry.q, `查看 h${entry.body.height} 接纳`)}</div>`
+    + `<div class="trace-links">${linkButton("g", entry.q, entry.excluded ? "查看旧结果排除" : `查看 h${entry.body.height} 接纳`)}</div>`
     + evidence([
       ["PELG 文件", code(row.file)],
       ["PublisherRecorded", trace(entry.publisher)],
@@ -386,16 +406,25 @@ function gDetails(entry) {
   const cover = data.l1[check.l1_control_height];
   const publicKey = data.espresso[entry.q_avail].key_us;
   const judgeKey = entry.position.key_us;
+  const l1Observation = isForce
+    ? `模拟 finalized τ ${formatUs(cover.finalized_us)}，reader A 已读 τ ${formatUs(cover.readers.A.trace.tick_us)}。`
+    : `fixture finalized τ ${formatUs(cover.finalized_us)}，reader 收取时刻未记录。`;
+  const firstExpiry = entry.earliest_expiry_us ?? check.expiry_us;
+  const parentHeight = entry.append[0] - 1;
   const controls = [
     ["Espresso 覆盖 · §3.4", `处理 q${entry.q} 时，finalized J₀…J${entry.q} 覆盖 x = ${formatUs(judgeKey)}。`],
-    ["L1 控制覆盖 · §3.4", `x − Mₐ (${formatUs(data.profile.announcement_us)}) = ${formatUs(check.threshold_us)}。首个满足 ts ≥ x − Mₐ 的 header 是 ℓ${cover.height}，ts ${formatUs(cover.timestamp_us)}。fixture finalized τ ${formatUs(cover.finalized_us)}，reader 收取时刻未记录。`],
-    ["职责与窗口 · §4.2", `${contextLabel(d)} 当时为 NEXT，匹配当前 cid。新增 h${body.height} 位于 ${windowLabel(d)}。`],
-    ["首次公开完整 · §3.2", `经独立报告验证的最终证明 ${code(`(${entry.proof.q}, ${entry.proof.message})`)} 与 h${d.anchor.height + 1}…h${body.height} 的 ${entry.ancestry.length} 个 physical 正文共同确定 q_avail = q${entry.q_avail}。`],
-    ["父链与 anchor · §4.2", `本块物理父块匹配 G 的 h${body.height - 1}，完整 physical 路径从选定 anchor h${d.anchor.height} 接出。`],
+    ["L1 控制覆盖 · §3.4", `x − Mₐ (${formatUs(data.profile.announcement_us)}) = ${formatUs(check.threshold_us)}。首个满足 ts ≥ x − Mₐ 的 header 是 ℓ${cover.height}，ts ${formatUs(cover.timestamp_us)}。${l1Observation}`],
+    ["职责与窗口 · §4.2", `${contextLabel(d)} 当时为 NEXT，匹配当前 cid。新增 physical h${body.height} 位于 ${windowLabel(d)}。`],
+    ["首次公开完整 · §3.2", `经独立报告验证的最终证明 ${code(`(${entry.proof.q}, ${entry.proof.message})`)} 与 ${entry.ancestry.map((row) => `h${row.height}`).join("、")} 的 physical 正文共同确定 q_avail = q${entry.q_avail}。`],
+    ["父链与 anchor · §4.2", `本块物理父块匹配 G 的 h${parentHeight}，完整 physical 路径从选定 anchor h${d.anchor.height} 接出。`],
     ["原生验证 · §4.2", `L2 timestamp ${formatUs(body.timestamp_us)}。使用 finalized origin ℓ${check.l1_origin_height} 和 anchor origin ℓ${check.l1_anchor_origin_height}，origin 未超前，drift ${formatUs(check.drift_us)} ≤ ${formatUs(data.config.t_drift_us)}。强制前缀由 L1 attributes 与 DEP fixture 的 ${check.dep.length} 条 credit 组成。当前 Plan reference origin 是 ℓ${check.l1_reference_origin_height}。`],
     ["公开截止 · §4.2", `θ(q_avail) ${formatUs(publicKey)} < SessionEnd ${formatUs(check.session_end_us)}。`],
-    ["整段 Expire · §4.2", `追加区间 [${entry.append.join(", ")}] 的逐高度检查通过。x ${formatUs(judgeKey)} < ts*(h${body.height}) + W_exp = ${formatUs(check.expiry_us)}。`],
+    ["整段 Expire · §4.2", `追加区间 [${entry.append.join(", ")}] 的逐高度检查通过。x ${formatUs(judgeKey)} < 最早过期键 ts*(h${entry.append[0]}) + W_exp = ${formatUs(firstExpiry)}。`],
   ];
+  if (entry.padding?.length) {
+    const previous = entry.padding.at(-1);
+    controls.push(["虚拟前态 · §4.2", `physical h${body.height} 从 padding h${previous.height} 的执行后状态继续执行，物理父块仍连接 h${parentHeight}。`]);
+  }
   if (entry.handoff) {
     const next = contexts.get(entry.handoff.new);
     const origin = next.reference.origin;
@@ -408,7 +437,9 @@ function gDetails(entry) {
     ["GAccepted", trace(entry.accept)],
     ["GfrReplayRecord", trace(entry.replay)],
     ["重放记录 ID", code(entry.record_id)],
-    ["L1 coverage / origin", code(`raw/l1.bin · rows[${cover.height}] / rows[${check.l1_origin_height}]`)],
+    ["L1 coverage / origin", isForce
+      ? code(`${data.control.rpc_file} · blocks[${cover.height}] / blocks[${check.l1_origin_height}]`)
+      : code(`raw/l1.bin · rows[${cover.height}] / rows[${check.l1_origin_height}]`)],
     ["覆盖与时间参数", code("raw/config.bin · raw/profile.json · raw/dep.bin")],
     ...proofEvidence(entry),
   ];
@@ -441,21 +472,25 @@ function gDetails(entry) {
     + `<div class="explanation"><div><h3>封存记录观察</h3>${facts}</div>
     <div><h3>按规则核对</h3>${metricRows(controls, "guards")}</div></div>`
     + `<div class="trace-links">
-       ${linkButton("l1", cover.height, `L1 覆盖 ℓ${cover.height}`, true)}
-       ${linkButton("l1", check.l1_origin_height, `L1 origin ℓ${check.l1_origin_height}`, true)}
+       ${linkButton(isForce ? "l1-header" : "l1", cover.height, `L1 覆盖 ℓ${cover.height}`, true)}
+       ${linkButton(isForce ? "l1-header" : "l1", check.l1_origin_height, `L1 origin ℓ${check.l1_origin_height}`, true)}
        ${linkButton("espresso", entry.q, `Espresso q${entry.q}`, true)}
        ${linkButton("regional", entry.q, `区域 h${body.height}`, true)}
        </div>`
+    + (isForce ? paddingDetails(entry) : "")
     + evidence(refs);
 }
 
 function inspect(frame) {
   const entry = data.entries[frame.index];
   const views = {
-    l1: () => l1Details(data.l1[frame.index]),
+    l1: () => isForce ? (frame.stage ? forceL1Stage(frame) : forceL1Details(data.l1[frame.index]))
+      : l1Details(data.l1[frame.index]),
+    "l1-header": () => forceL1Details(data.l1[frame.index]),
+    "l1-fixture": () => l1Details(data.worker_l1[frame.index]),
     espresso: () => espressoDetails(entry),
     regional: () => regionalDetails(entry),
-    g: () => gDetails(entry),
+    g: () => frame.stage === "force" ? forceDetails() : entry.excluded ? exclusionDetails(entry) : gDetails(entry),
     start: () => title("初始职责", "G 从封存 genesis 开始", "Genesis") + metricRows([
       ["选定计划", contextLabel(data.contexts[0]) + " · 窗口 " + windowLabel(data.contexts[0])],
       ["初始 anchor", "h0 · " + code(data.config.genesis.physical)],
@@ -470,15 +505,15 @@ function inspect(frame) {
 }
 
 function makePlot() {
-  const axes = [0, 5, 10, 15, 20, 25, 30];
+  const axes = [0, 5, 10, 15, 20, 25, 30].filter((x) => x * 1_000_000 <= data.end_us);
   const plot = (label, axisName, classname, events) =>
-    `<div class="timeline-row" aria-label="${axisName}" data-lane="${classname}">
+    `<div class="timeline-row${isForce && (classname === "l1" || classname === "g") ? " stacked" : ""}" aria-label="${axisName}" data-lane="${classname}">
       <div class="lane-name"><span>${label}</span><span class="lane-head mono"></span></div>
       <div class="plot">${events ? '<span class="track"></span>' : ""}
         ${axes.map((x) => `<span class="${events ? "guide" : "ruler-label"}" style="left:${percent(x * 1_000_000)}">${events ? "" : x + "s"}</span>`).join("")}
         <span class="cursor" style="left:0%"></span>
         ${events ? events.map((event) =>
-          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}" style="left:${percent(event.tick)}"
+          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}${event.excluded ? " excluded" : ""}" style="left:${percent(event.tick)}${event.level === undefined ? "" : `;top:${18 + 32 * event.level}%`}"
              data-frame="${frameByEvent.get(`${classname}:${event.index}`)}"
              title="${escape(event.title)} · ${seconds(event.tick)}">${event.label}</button>`).join("") : ""}
       </div></div>`;
@@ -504,20 +539,29 @@ function seek(step) {
   const frame = frames[cursor];
   const latest = {};
   let active = data.contexts[0];
+  let head = null;
+  let pc = null;
   for (let i = 1; i <= cursor; i++) {
     const current = frames[i];
     latest[current.kind] = current.index;
     if (current.kind === "g") {
-      const entry = data.entries[current.index];
-      if (entry.handoff) active = contexts.get(entry.handoff.new);
+      if (current.stage === "force") {
+        active = contexts.get(data.force.new);
+        pc = data.force.position;
+      } else {
+        const entry = data.entries[current.index];
+        pc = entry.position;
+        if (!entry.excluded) head = entry;
+        if (entry.handoff) active = contexts.get(entry.handoff.new);
+      }
     }
   }
-  const head = latest.g === undefined ? null : data.entries[latest.g];
   state = { tick: frame.tick, seq: frame.seq, espresso: latest.espresso ?? -1 };
   byId("clock").textContent = seconds(frame.tick);
   byId("head").textContent = head ? `h${head.body.height}` : "h0";
   byId("context").textContent = `${contextLabel(active)} ${windowLabel(active)}`;
-  byId("position").textContent = head ? `q${head.q} · ${seconds(head.position.key_us)}` : "Genesis";
+  const pcName = pc?.kind === "Force" ? `Force(${data.control.position.join(",")})` : `q${pc?.index.Espresso}`;
+  byId("position").textContent = pc ? `${pcName} · ${seconds(pc.key_us)}` : "Genesis";
   byId("scrub").value = cursor;
   byId("step-label").textContent = `${cursor} / ${frames.length - 1}`;
   byId("reset").disabled = cursor === 0;
@@ -527,14 +571,16 @@ function seek(step) {
   followCursor(frame.tick);
   for (const [kind, , events] of lanes) {
     const lane = document.querySelector(`[data-lane="${kind}"]`);
-    lane.querySelector(".lane-head").textContent = latest[kind] === undefined
-      ? "—" : events[latest[kind]].label;
+    lane.querySelector(".lane-head").textContent = events.find((event) => event.index === latest[kind])?.label ?? "—";
   }
   for (const marker of document.querySelectorAll(".mark")) {
     marker.hidden = Number(marker.dataset.frame) > cursor;
   }
   for (const jump of document.querySelectorAll("[data-jump]")) {
     jump.setAttribute("aria-current", String(frame.kind === "g" && +jump.dataset.jump === frame.index + 1));
+  }
+  for (const jump of document.querySelectorAll("[data-stage]")) {
+    jump.setAttribute("aria-current", String(frame.stage === jump.dataset.stage));
   }
   inspect(frame);
 }
@@ -564,8 +610,8 @@ function jump(step) {
 }
 
 function fixtureTable() {
-  const table = data.l1.map((row) => `<tr>
-      <td>${linkButton("l1", row.height, `ℓ${row.height}`, true)}</td>
+  const table = (isForce ? data.worker_l1 : data.l1).map((row) => `<tr>
+      <td>${linkButton(isForce ? "l1-fixture" : "l1", row.height, `ℓ${row.height}`, true)}</td>
       <td>${formatUs(row.timestamp_us)}</td><td>${formatUs(row.finalized_us)}</td>
       <td>${row.finalized_us <= data.end_us ? "轨迹时段内" : "超出轨迹"}</td>
       <td>${code("[]")}</td><td>${code(row.hash)}</td>
@@ -579,19 +625,41 @@ function fixtureTable() {
 
 function sourceSummary() {
   byId("source").innerHTML = metricRows([
-    ["M1 原始证据包", code(data.source.bundle) + " · seed " + data.source.seed],
-    ["结果", `21 次 G 接纳 · 2 次满窗交接 · 21 份独立核对的最终证明`],
-    ["覆盖范围", `封存虚拟时间截至 ${formatUs(data.end_us)}，G 到 h21，L1 fixture 在此时段内显示至 ℓ${projectedL1.at(-1).height}。`],
+    [isForce ? "M2 原始证据包" : "M1 原始证据包", code(data.source.bundle) + " · seed " + data.source.seed],
+    ["结果", isForce ? "11 个 physical 接纳 · 5 个 padding · 12 份独立核对的最终证明" : `21 次 G 接纳 · 2 次满窗交接 · 21 份独立核对的最终证明`],
+    ["覆盖范围", isForce ? `封存虚拟时间截至 ${formatUs(data.end_us)}，G 到 h16。` : `封存虚拟时间截至 ${formatUs(data.end_us)}，G 到 h21，L1 fixture 在此时段内显示至 ℓ${projectedL1.at(-1).height}。`],
   ]) + evidence([
     ["运行提交", code(data.source.revision)],
     ["manifest.json · SHA-256", code(data.source.manifest_sha256)],
     ["独立证据包", code(data.source.independent)],
     ["public-replay.json · SHA-256", code(data.source.public_replay_sha256)],
+    ...(isForce ? [
+      ["report.json · SHA-256", code(data.source.report_sha256)],
+      ["controls.json · SHA-256", code(data.source.controls_sha256)],
+    ] : []),
     ["结束事件", trace(data.completion)],
     ...Object.entries(data.source.input_sha256).map(([file, digest]) => [code(file), code(digest)]),
   ], "提交、输入文件与 SHA-256");
 }
 
+if (isForce) {
+  document.title = "M2 Healthy Force · GFR 回放";
+  document.querySelector("h1").textContent = "Healthy Force 回放";
+  document.querySelector(".eyebrow").textContent = "SEQUENCER ROTATION POC / M2";
+  document.querySelector(".subtitle").textContent = "跟随真实 L1 控制，查看公开日志如何切换 GFR 职责";
+  document.querySelector(".source-jump span").textContent = `${data.source.revision.slice(0, 8)} · seed ${data.source.seed}`;
+  document.querySelector("#fixture summary").textContent = "Worker metadata fixture · 31 个 header";
+  document.querySelector("#scope").textContent = "Anvil L1 的 header、控制与 reader 交付来自实际封存日志。raw/l1.bin 是 worker 执行所用的高度和时间戳投影。";
+  document.querySelector("#timing-note").textContent = "同一虚拟时刻的 trace 按 seq 展示。每条 GfrReplayRecord 是一个原子公共转移。";
+  document.querySelector("#rule-source").textContent = "规则来源为 formalization_v10/09_finality_rules_zh_v0_1.md §3.2–3.4、§4.2–4.4。先按公开时间键排序，同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。";
+  document.querySelector(".jump-list").innerHTML = [
+    ["submit", "Force 提交"], ["include", "ℓ6 收录"], ["finalize", "模拟 finalized"],
+    ["reader-a", "Reader A"], ["reader-b", "Reader B"], ["regular", "R0 → R1"],
+    ["force", "Force 激活"], ["excluded", "排除旧 h11"], ["h16", "接纳 R2 h16"],
+  ].map(([stage, label]) => `<button type="button" data-stage="${stage}">${label}</button>`).join("");
+  document.querySelector(".scenario-link").href = "index.html";
+  document.querySelector(".scenario-link").textContent = "M1 Regular →";
+}
 makePlot();
 fixtureTable();
 sourceSummary();
@@ -616,6 +684,7 @@ byId("filters").addEventListener("change", (event) => {
 document.querySelector("main").addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
+  if (target.dataset.stage) jump(frameByStage.get(target.dataset.stage));
   if (target.dataset.jump) jump(frameByEvent.get(`g:${Number(target.dataset.jump) - 1}`));
   if (target.dataset.frame) jump(Number(target.dataset.frame));
   if (target.dataset.reference) {
@@ -634,7 +703,7 @@ document.querySelector("main").addEventListener("click", (event) => {
     }
   }
 });
-seek(frameByEvent.get("g:9"));
+seek(isForce ? frameByStage.get("submit") : frameByEvent.get("g:9"));
 </script>
 </body>
 </html>
