@@ -1,0 +1,96 @@
+{
+  "parent": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+  "note": "Full-history child sessions include inherited parent turn_context entries; use latest own role turn_context. No conversation bodies copied.",
+  "roles": [
+    {
+      "session_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+      "source": "vscode",
+      "latest_own_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      },
+      "metadata_source": "/home/jy/.codex/sessions/2026/11/16/rollout-2026-11-16T10-02-47-01a1e217-b70f-7b31-b9bf-981262fd9e97.jsonl"
+    },
+    {
+      "session_id": "01a1e218-b4d8-72d2-9762-760e9cd22f63",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+            "depth": 1,
+            "agent_path": "/root/m0_verifier",
+            "agent_nickname": "Pauli",
+            "agent_role": "bft_verifier"
+          }
+        }
+      },
+      "latest_own_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      },
+      "metadata_source": "/home/jy/.codex/sessions/2026/11/16/rollout-2026-11-16T10-03-52-01a1e218-b4d8-72d2-9762-760e9cd22f63.jsonl"
+    },
+    {
+      "session_id": "01a1e218-8975-7721-93d0-4b5f96b1156c",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+            "depth": 1,
+            "agent_path": "/root/m0_docer",
+            "agent_nickname": "Euler",
+            "agent_role": "bft_spec"
+          }
+        }
+      },
+      "latest_own_turn_context": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      },
+      "metadata_source": "/home/jy/.codex/sessions/2026/11/16/rollout-2026-11-16T10-03-41-01a1e218-8975-7721-93d0-4b5f96b1156c.jsonl"
+    },
+    {
+      "session_id": "01a1e21e-d12c-7be1-bece-ec5898dfafe9",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+            "depth": 1,
+            "agent_path": "/root/m0_builder",
+            "agent_nickname": "Kierkegaard",
+            "agent_role": "bft_builder"
+          }
+        }
+      },
+      "latest_own_turn_context": {
+        "model": "gpt-6.1-sol",
+        "effort": "high",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      },
+      "metadata_source": "/home/jy/.codex/sessions/2026/11/16/rollout-2026-11-16T10-10-32-01a1e21e-d12c-7be1-bece-ec5898dfafe9.jsonl"
+    },
+    {
+      "session_id": "01a1e221-5ed5-7f41-a03d-ba07dff24b2e",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+            "depth": 1,
+            "agent_path": "/root/m0_tester",
+            "agent_nickname": "Halley",
+            "agent_role": "bft_simulator"
+          }
+        }
+      },
+      "latest_own_turn_context": {
+        "model": "gpt-6.1-sol",
+        "effort": "high",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      },
+      "metadata_source": "/home/jy/.codex/sessions/2026/11/16/rollout-2026-11-16T10-13-20-01a1e221-5ed5-7f41-a03d-ba07dff24b2e.jsonl"
+    }
+  ]
+}
