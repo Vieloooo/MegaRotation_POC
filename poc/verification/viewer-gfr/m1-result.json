@@ -1,0 +1,39 @@
+{
+  "candidate": "e41b81a8d68d67216ea940beeb614135e808e95d",
+  "verdict": "PASS_M1_ONLY",
+  "role": "bft_verifier",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "evidence_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/m1-e41b81a-independent-v1",
+  "seed": "none; frozen literal deterministic fixtures",
+  "command": "bash poc/verification/viewer-gfr/independent-harness/run-m1-review.sh",
+  "summary": {
+    "failed": 0,
+    "passed": 167
+  },
+  "systematic_truncated_prefixes_checked": 1511,
+  "candidate_source_diff_empty": true,
+  "files": {
+    "candidate-diff.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate.txt": "2b69c9faf30c9cb181929508c7817f79e963c9d0e523f25a9e0e22e76e5fa464",
+    "cargo.txt": "c10ec31b8c6e6e2693cf65fc1971b41edbc3da1ae7db6f9f3f36c4823f8dcab5",
+    "command.sh": "cbe0de0a114d8faf2a573ea2ca4435b18ffbac104c4cc62733d964e228c584ec",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "harness.jsonl": "94f6f65dad04932d5c946992016844e76d2fd4d536cbd3e5a1b9e392a3aba415",
+    "harness.stderr": "0e92ade6bb5bce6d4b9fc4e9396dc990c4abc58afaf9f868fc2da2b0346f8157",
+    "input-hashes.txt": "54fd93c389aa3435e3ee023ee3c6efa49fd7998d91df70c3d26a95a0a77b01bb",
+    "lock-hash.txt": "bbc0e7ab061e0d173a7789ea0c2b39a54bf9b3a3a4597fe8ab9b0ecb9a3a0773",
+    "lock.stderr": "8d97feee22b3ad99351f030e12e1e26c29b8a535fa7e79d710db68abd7d9fb1a",
+    "lock.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rustc.txt": "f4d034f5660bb49f22bfcba3f3445be67e25b704c193ff421b53863b4faee148",
+    "status-after.txt": "c3f804ce6afc5ab5daa17477d4a82b73c0c1f20eadf0fd77173874bb2011b3a7",
+    "status-before.txt": "f408ac6b256a0328f28a9b0ac367b5e896711fa179706b5f7e05d8f8057a6ea4"
+  },
+  "remaining_gates": [
+    "M2 reducer state transitions and G1/G2",
+    "04 actual native finality certificates",
+    "09 real controls and 12/13 ResumeCut/material staging",
+    "08 controlled15-worker regular integration"
+  ],
+  "limits": "Finite codec/API checks and static review; no protocol safety or liveness proof."
+}
