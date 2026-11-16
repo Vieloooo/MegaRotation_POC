@@ -1,0 +1,14 @@
+[package]
+name = "batch-services-independent-m2"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+l1-adapter = { path = "../../../crates/l1-adapter" }
+serde_json = "=1.0.154"
+
+[profile.dev]
+debug = "line-tables-only"

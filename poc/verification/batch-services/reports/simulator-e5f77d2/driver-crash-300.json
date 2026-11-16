@@ -1,0 +1,78 @@
+{
+  "status": "PASS",
+  "commands": 119,
+  "mutating_rpc_count": 20,
+  "raw_transaction_signatures_checked": 8,
+  "wait_read_frontiers": [
+    {
+      "height": 2,
+      "included": 1,
+      "finalized": 1,
+      "visible": 1
+    },
+    {
+      "height": 2,
+      "included": 2,
+      "finalized": 1,
+      "visible": 1
+    },
+    {
+      "height": 2,
+      "included": 2,
+      "finalized": 2,
+      "visible": 1
+    }
+  ],
+  "cursor_queries": 10,
+  "final_frontiers": {
+    "reference_us": 14000000,
+    "included_height": 6,
+    "finalized_height": 6,
+    "visible_heights": {
+      "batcher": 6,
+      "certifier": 6,
+      "observer": 6
+    }
+  },
+  "crash_boundaries": [
+    "batcher_accepted_durable",
+    "batcher_built_durable",
+    "batcher_certified_durable",
+    "batcher_da_durable",
+    "batcher_raw_durable",
+    "certifier_before_signature_persist",
+    "certifier_signature_durable",
+    "da_before_bytes",
+    "da_bytes_durable",
+    "da_receipt_durable",
+    "raw_sent_before_reply"
+  ],
+  "process_exits": 10,
+  "sigkill": 1,
+  "durable_jobs": [
+    {
+      "job_id": "0x3df461e283d1fd173e33ff54e4da7993af9d2afb44a504828c96de878c560570",
+      "terminal": "reverted",
+      "tx_hash": "0xbc967b26a8ce62b4893b6e753c61640d7f9ac017de6397e129ed27ee3dd8730f",
+      "nonce": 5
+    },
+    {
+      "job_id": "0x3fcaef22c16cd1879ea743e731ecc2b1b0e90cfdc5d70e53617450ece095b57a",
+      "terminal": "accepted",
+      "tx_hash": "0x7b24c8b2c9ad115b298158a5d62ce17038b4ad590490919a85240b07c95e4eee",
+      "nonce": 2
+    },
+    {
+      "job_id": "0xe00c827926b29b7b9b3b599bccfb6b987c7013907db90c201025807baa7dfaa0",
+      "terminal": "accepted",
+      "tx_hash": "0xafefb53b872022136c81f62e0b01a5ff65db66a6e332c0e5532c46f3a5fad92b",
+      "nonce": 1
+    }
+  ],
+  "durable_certifier_signatures": 3,
+  "limits": [
+    "offline audit relies on observed live scenario/source review for actual process/fsync boundaries",
+    "same-host process exits; no kernel crash/power loss",
+    "fixture G source; no native recovery or full-system grant/ack proof"
+  ]
+}

@@ -1,0 +1,1025 @@
+{
+  "feature": "11",
+  "contract": "BS-COMPONENT-v1 / r2",
+  "contract_revision": "b9b8b1595ffd2a95fbdd779a843a4119ed59bba8",
+  "worktree": "/home/jy/.codex/worktrees/f025/megaroation_poc",
+  "branch": "codex/poc-batch-services",
+  "candidate_source_revision": "e5f77d27edde91a61f7400d1a61961e4cbe09c9c",
+  "verified_source_revision": "e5f77d27edde91a61f7400d1a61961e4cbe09c9c",
+  "tested_source_revision": "e5f77d27edde91a61f7400d1a61961e4cbe09c9c",
+  "integrated_baseline": "c9805f7a818bc23d30018ce4dc6f1ee45f92e3ac",
+  "dependencies": {
+    "03": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+    "09": "c443ae925ed549b046731c2d8ef3dd9ce0311d24"
+  },
+  "interface_revision": "75b574d40930b7c9c748a4c6b6e381117c937537",
+  "role": "bft_simulator, GPT-6.1 Sol, high configured",
+  "status": "PASS for B01–B16",
+  "open_cases": {
+    "B17": "INCONCLUSIVE (feature12 consumer run)",
+    "B18": "INCONCLUSIVE (system integration)"
+  },
+  "seed": "none (explicit script)",
+  "source_mode": "fixture",
+  "fixture_id": "poc11-real-inbox-fixture-v1",
+  "fixture_replay_position": {
+    "key_us": 5000000,
+    "kind": "Espresso",
+    "index": {
+      "Espresso": 2
+    }
+  },
+  "fixture_gpos_utf8": "poc11/fixtures/gpos/1",
+  "worktree_status_at_run_start": [
+    "?? poc/verification/batch-services/check_m2_driver_and_crash.py",
+    "?? poc/verification/batch-services/consumer-m2/",
+    "?? poc/verification/batch-services/reports/m2-accepted-300-e5f77d2.json",
+    "?? poc/verification/batch-services/reports/m2-accepted-650-e5f77d2.json",
+    "?? poc/verification/batch-services/reports/m2-driver-crash-300-e5f77d2.json",
+    "?? poc/verification/batch-services/reports/m2-driver-crash-650-e5f77d2.json",
+    "?? poc/verification/batch-services/reports/m2-execution-300-e5f77d2.json",
+    "?? poc/verification/batch-services/reports/m2-execution-650-e5f77d2.json"
+  ],
+  "tracked_source_equal_to_candidate": true,
+  "raw_evidence_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1",
+  "wall_seconds_validate_including_shared_lock": 6.32,
+  "wall_seconds_reader_fault_including_shared_lock": 3.45,
+  "runner_timeout_seconds_per_scenario": 90,
+  "timeout_count": 0,
+  "run_summary": [
+    {
+      "wall_pause_ms": 300,
+      "run_dir": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run",
+      "anvil_loopback_port": 34821,
+      "anvil_listener_present_after_runner": false,
+      "headers": 7,
+      "receipts": 8,
+      "original_advances": 2,
+      "reverted_receipts": 3,
+      "successful_no_event_retries": 1,
+      "accepted_heights_independently_matched": 3,
+      "fixture_poststates_independently_matched": 4,
+      "driver_commands": 119,
+      "mutating_rpcs": 20,
+      "verified_raw_transaction_signatures": 8,
+      "process_exit_91": 10,
+      "process_sigkill": 1,
+      "final_frontiers": {
+        "reference_us": 14000000,
+        "included_height": 6,
+        "finalized_height": 6,
+        "visible_heights": {
+          "batcher": 6,
+          "certifier": 6,
+          "observer": 6
+        }
+      }
+    },
+    {
+      "wall_pause_ms": 650,
+      "run_dir": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run",
+      "anvil_loopback_port": 33599,
+      "anvil_listener_present_after_runner": false,
+      "headers": 7,
+      "receipts": 8,
+      "original_advances": 2,
+      "reverted_receipts": 3,
+      "successful_no_event_retries": 1,
+      "accepted_heights_independently_matched": 3,
+      "fixture_poststates_independently_matched": 4,
+      "driver_commands": 119,
+      "mutating_rpcs": 20,
+      "verified_raw_transaction_signatures": 8,
+      "process_exit_91": 10,
+      "process_sigkill": 1,
+      "final_frontiers": {
+        "reference_us": 14000000,
+        "included_height": 6,
+        "finalized_height": 6,
+        "visible_heights": {
+          "batcher": 6,
+          "certifier": 6,
+          "observer": 6
+        }
+      }
+    }
+  ],
+  "across_pause_sha256": {
+    "protocol-trace.json": "c7c6878b4cb4fb8fd2c5216c7bb776830dba66ff06cab6aef8434654f8cbf1f7",
+    "driver-trace.json": "d69af263251bf6fe1939f294efd4b4df91db6415862aaacc59214555ca788cfd",
+    "raw-rpc-bundle.json": "98854d8360645b9d451e6181173fe69a73d9cb62ddbaf5842e68e72037b14f2b",
+    "accepted-records.json": "e0bb0f6e7df6e9cca5d29c12dfc9750e9047ffe0da66a4a50e56f62324a2b531",
+    "execution-source.json": "159d1b254ec6ea82452cdd5f53923197b2877d0612b22deb219b09dff2336467",
+    "rpc-transcript.json": "2cbad56efb9470f09f32e97a725b40a61f10b22fbc570d99ccef6b954a96db89",
+    "fixture-snapshot.json": "5659697c1f529cbbefd9fcfe7e64664dd650c403cf812c2900c4d6acef7cf466",
+    "da-index.json": "f67dde88dc66082fe075afc8ea25a960ca5fb0869a514894865da938584e40ca",
+    "accepted-view-after-override.json": "3f78b9cc0a466ab0b5551a0852adeac9697f656f4175f1a301ed6469cd930c26"
+  },
+  "normalized_crash_sha256": "be9cd6c55980f124328adc7841dd976a34bb84caa5745bcffb7346432bdc1aa4",
+  "crash_normalization": "drop pid and reopen_pid, canonical sort_keys=True separators=(comma,colon), UTF-8",
+  "raw_evidence_files": [
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/component-binary-sha256.txt",
+      "bytes": 171,
+      "sha256": "931505668d6770188502779b63be809e1b31e5ab3708b29d1d2d1702f7ec6738"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/component-source-sha256.txt",
+      "bytes": 2061,
+      "sha256": "0ab14eef90aed6e3d582fe2bca639bb6c2247b07322bc156811e8528a3ade7d2"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/evidence-sha256.txt",
+      "bytes": 13420,
+      "sha256": "ecda33340a99def14cb17253ada97eac6926a933e0dda6525926a5c9b6e78dce"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/anvil-command.json",
+      "bytes": 531,
+      "sha256": "e0393b12c635c8858f19774e82ed2766f1ec94ebd7806d5741863dd11bbde933"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/anvil-genesis.json",
+      "bytes": 502,
+      "sha256": "da7c1b589148c80aa467968bf40b060a56fff92a31c81f475e83d7b2a043ad41"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/accepted-records.json",
+      "bytes": 28249,
+      "sha256": "e0bb0f6e7df6e9cca5d29c12dfc9750e9047ffe0da66a4a50e56f62324a2b531"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/accepted-view-after-override.json",
+      "bytes": 13657,
+      "sha256": "3f78b9cc0a466ab0b5551a0852adeac9697f656f4175f1a301ed6469cd930c26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/batcher/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/batcher/identity.json",
+      "bytes": 614,
+      "sha256": "cffac15c2abc95af8c3a4df0c8789a9456b6db6daf8773ab16070cf9a169b163"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/batcher/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/batcher/state.json",
+      "bytes": 51732,
+      "sha256": "149e76bf470a4be4a347f0cffa18a7f40271579a18cc5955089ce48ed922d937"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/certifier/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/certifier/identity.json",
+      "bytes": 618,
+      "sha256": "852e04e385841b76f609715756ba087a36b5024f05596aa8482b5c10578cb1aa"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/certifier/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/certifier/state.json",
+      "bytes": 59245,
+      "sha256": "008477fccd0bdbc44af3e49d9b7c374c59a9467fe6686a7c204d6c9e7aa52bc4"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/crash-trace.json",
+      "bytes": 18299,
+      "sha256": "f05df5973b1cc8d814692708882247648bb6fa40ca846162a29bc2f747948c46"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2.bin",
+      "bytes": 117,
+      "sha256": "f84fd2986e31829e19bbad01784c5d4701d43febea0d42ed8fd3877073437e5c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2.receipt",
+      "bytes": 65,
+      "sha256": "17b6ab9d9fadc384e9b4358a85e03f0ee44e9704975e19ffb1ff7a76abfb312d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x3e97b55df1d209af0866d3d9c91c194e19530242ac165994a572b93e2ec97060.bin",
+      "bytes": 51,
+      "sha256": "a8a1c3637b7868b9c82096e9342cc08f3d49e45920d09c5f344112fe2dc8e64d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x3e97b55df1d209af0866d3d9c91c194e19530242ac165994a572b93e2ec97060.receipt",
+      "bytes": 65,
+      "sha256": "66ea54b7ac553533b3c969d672ea387186261eff5a65a8c18f474c824d970a86"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d.bin",
+      "bytes": 74,
+      "sha256": "dc09763e46982ed64c6f28e94af3163e6cbad48fefc4a8b6413f16e732aa7b93"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d.receipt",
+      "bytes": 65,
+      "sha256": "cb8f946668423e2f234fdaa4c8f6a3f901bcf6a1c6e514754058cf71bb939da1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0xcc05bb0940f19426e4231c85e2d9171bb8b8930e29fe97cb847d56198ff55331.bin",
+      "bytes": 74,
+      "sha256": "0f5a4fc0cdcd7841b77f2fb94a2d56fb25f1be827b5b0004e5faa323cbedf1a8"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/0xcc05bb0940f19426e4231c85e2d9171bb8b8930e29fe97cb847d56198ff55331.receipt",
+      "bytes": 65,
+      "sha256": "1a6224b61e820fd7dfb4ef44aba817eccaa3ca32ca37b3d69def37f7bd9c5c01"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/identity.json",
+      "bytes": 601,
+      "sha256": "987d0850be6fb4418ff7aba167d7c21020d51dba8c91806a5e4b32016bf03781"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da/state.json",
+      "bytes": 1496,
+      "sha256": "ae206ed4fee40ae1003236e8b2224e584b5dca971593ec1b5812209f8e1c1aba"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/da-index.json",
+      "bytes": 325,
+      "sha256": "f67dde88dc66082fe075afc8ea25a960ca5fb0869a514894865da938584e40ca"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/driver-config.json",
+      "bytes": 527,
+      "sha256": "1d377a4d8f12e6452b968c6a25e2a5fb0dc7ec3a46538f2125dc15a332e7374d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/driver-trace.json",
+      "bytes": 1140301,
+      "sha256": "d69af263251bf6fe1939f294efd4b4df91db6415862aaacc59214555ca788cfd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/execution-source.json",
+      "bytes": 4774,
+      "sha256": "159d1b254ec6ea82452cdd5f53923197b2877d0612b22deb219b09dff2336467"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/fixture-snapshot.json",
+      "bytes": 9364,
+      "sha256": "5659697c1f529cbbefd9fcfe7e64664dd650c403cf812c2900c4d6acef7cf466"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/protocol-trace.json",
+      "bytes": 7936,
+      "sha256": "c7c6878b4cb4fb8fd2c5216c7bb776830dba66ff06cab6aef8434654f8cbf1f7"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/raw-rpc-bundle.json",
+      "bytes": 77989,
+      "sha256": "98854d8360645b9d451e6181173fe69a73d9cb62ddbaf5842e68e72037b14f2b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/result.json",
+      "bytes": 182,
+      "sha256": "988a484cb7b1683db03f83fa87649cc2db496f37faed1866868f6331b412b61c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/revert-diagnostics.json",
+      "bytes": 8679,
+      "sha256": "82f28d9b01d0c347bf5561cde4c88bbd9148800507469dcf6da2adf52789b8ab"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/run/rpc-transcript.json",
+      "bytes": 230439,
+      "sha256": "2cbad56efb9470f09f32e97a725b40a61f10b22fbc570d99ccef6b954a96db89"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/scenario-command.json",
+      "bytes": 400,
+      "sha256": "ac20cc6968ef55f596501269a79244351e86d20c3c99085328e9b98755be259d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-300/scenario.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/anvil-command.json",
+      "bytes": 531,
+      "sha256": "afae0be343b9e3b2d749584ffe4dcb83f4e4d7f17df5b9820182a3b66668d065"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/anvil-genesis.json",
+      "bytes": 502,
+      "sha256": "da7c1b589148c80aa467968bf40b060a56fff92a31c81f475e83d7b2a043ad41"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/anvil.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/accepted-records.json",
+      "bytes": 28249,
+      "sha256": "e0bb0f6e7df6e9cca5d29c12dfc9750e9047ffe0da66a4a50e56f62324a2b531"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/accepted-view-after-override.json",
+      "bytes": 13657,
+      "sha256": "3f78b9cc0a466ab0b5551a0852adeac9697f656f4175f1a301ed6469cd930c26"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/batcher/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/batcher/identity.json",
+      "bytes": 614,
+      "sha256": "cffac15c2abc95af8c3a4df0c8789a9456b6db6daf8773ab16070cf9a169b163"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/batcher/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/batcher/state.json",
+      "bytes": 51732,
+      "sha256": "149e76bf470a4be4a347f0cffa18a7f40271579a18cc5955089ce48ed922d937"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/certifier/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/certifier/identity.json",
+      "bytes": 618,
+      "sha256": "852e04e385841b76f609715756ba087a36b5024f05596aa8482b5c10578cb1aa"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/certifier/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/certifier/state.json",
+      "bytes": 59245,
+      "sha256": "008477fccd0bdbc44af3e49d9b7c374c59a9467fe6686a7c204d6c9e7aa52bc4"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/crash-trace.json",
+      "bytes": 18299,
+      "sha256": "d534d59e37ef73163d4faf815e76d05c6b101601be4daa43802bb6c6fcd2ad37"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2.bin",
+      "bytes": 117,
+      "sha256": "f84fd2986e31829e19bbad01784c5d4701d43febea0d42ed8fd3877073437e5c"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2.receipt",
+      "bytes": 65,
+      "sha256": "17b6ab9d9fadc384e9b4358a85e03f0ee44e9704975e19ffb1ff7a76abfb312d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x3e97b55df1d209af0866d3d9c91c194e19530242ac165994a572b93e2ec97060.bin",
+      "bytes": 51,
+      "sha256": "a8a1c3637b7868b9c82096e9342cc08f3d49e45920d09c5f344112fe2dc8e64d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x3e97b55df1d209af0866d3d9c91c194e19530242ac165994a572b93e2ec97060.receipt",
+      "bytes": 65,
+      "sha256": "66ea54b7ac553533b3c969d672ea387186261eff5a65a8c18f474c824d970a86"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d.bin",
+      "bytes": 74,
+      "sha256": "dc09763e46982ed64c6f28e94af3163e6cbad48fefc4a8b6413f16e732aa7b93"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d.receipt",
+      "bytes": 65,
+      "sha256": "cb8f946668423e2f234fdaa4c8f6a3f901bcf6a1c6e514754058cf71bb939da1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0xcc05bb0940f19426e4231c85e2d9171bb8b8930e29fe97cb847d56198ff55331.bin",
+      "bytes": 74,
+      "sha256": "0f5a4fc0cdcd7841b77f2fb94a2d56fb25f1be827b5b0004e5faa323cbedf1a8"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/0xcc05bb0940f19426e4231c85e2d9171bb8b8930e29fe97cb847d56198ff55331.receipt",
+      "bytes": 65,
+      "sha256": "1a6224b61e820fd7dfb4ef44aba817eccaa3ca32ca37b3d69def37f7bd9c5c01"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/actor.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/identity.json",
+      "bytes": 601,
+      "sha256": "987d0850be6fb4418ff7aba167d7c21020d51dba8c91806a5e4b32016bf03781"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/initialized",
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da/state.json",
+      "bytes": 1496,
+      "sha256": "ae206ed4fee40ae1003236e8b2224e584b5dca971593ec1b5812209f8e1c1aba"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/da-index.json",
+      "bytes": 325,
+      "sha256": "f67dde88dc66082fe075afc8ea25a960ca5fb0869a514894865da938584e40ca"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/driver-config.json",
+      "bytes": 527,
+      "sha256": "1d377a4d8f12e6452b968c6a25e2a5fb0dc7ec3a46538f2125dc15a332e7374d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/driver-trace.json",
+      "bytes": 1140301,
+      "sha256": "d69af263251bf6fe1939f294efd4b4df91db6415862aaacc59214555ca788cfd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/execution-source.json",
+      "bytes": 4774,
+      "sha256": "159d1b254ec6ea82452cdd5f53923197b2877d0612b22deb219b09dff2336467"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/fixture-snapshot.json",
+      "bytes": 9364,
+      "sha256": "5659697c1f529cbbefd9fcfe7e64664dd650c403cf812c2900c4d6acef7cf466"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/protocol-trace.json",
+      "bytes": 7936,
+      "sha256": "c7c6878b4cb4fb8fd2c5216c7bb776830dba66ff06cab6aef8434654f8cbf1f7"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/raw-rpc-bundle.json",
+      "bytes": 77989,
+      "sha256": "98854d8360645b9d451e6181173fe69a73d9cb62ddbaf5842e68e72037b14f2b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/result.json",
+      "bytes": 182,
+      "sha256": "edffaba737e83b694f247b215759fdbc3224d584ccc791da5f9ec75e20a0f476"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/revert-diagnostics.json",
+      "bytes": 8679,
+      "sha256": "82f28d9b01d0c347bf5561cde4c88bbd9148800507469dcf6da2adf52789b8ab"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/run/rpc-transcript.json",
+      "bytes": 230439,
+      "sha256": "2cbad56efb9470f09f32e97a725b40a61f10b22fbc570d99ccef6b954a96db89"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/scenario-command.json",
+      "bytes": 400,
+      "sha256": "1d7cbe77aea25d53f58d33da5592cad555d53b842bf2a4406822c8c03c95ccbd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/pause-650/scenario.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/revision.txt",
+      "bytes": 41,
+      "sha256": "f3b3bdf6cef2bab04bb1ba14dacea376df6265bcd06149fd8cc67bd409ec9c00"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/toolchain.txt",
+      "bytes": 891,
+      "sha256": "07921a4b9b96485a96d9301791c606e981dae4ef0709c2e7709abf53214b5b60"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/validation.log",
+      "bytes": 5524,
+      "sha256": "28c39dd965e93211eb7bf25854b0b6f6c72bed839bde44eba9186a1b22d547cd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/worktree-status.txt",
+      "bytes": 554,
+      "sha256": "4051a9db3e2ab2c9796cdb09e5b0e3bd5c09b08f7a08b3113e26bc0455b115d5"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/forge-out/ControlAuthority.sol/ControlAuthority.json",
+      "bytes": 81172,
+      "sha256": "ad39aa553d8806be949609bef6fe93026f615def3101ce797221c4e13066ba3e"
+    }
+  ],
+  "independent_results_and_report": [
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/accepted-300.json",
+      "bytes": 3796,
+      "sha256": "ba6de36ba3fd9ee1c1baa5ee5b68ac8f06c139c0121d10d758142f3d73d23f1e"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/accepted-650.json",
+      "bytes": 3796,
+      "sha256": "ba6de36ba3fd9ee1c1baa5ee5b68ac8f06c139c0121d10d758142f3d73d23f1e"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/driver-crash-300.json",
+      "bytes": 2063,
+      "sha256": "392f5716fffdc475573de5b991686538d84477d1c3701a570b35c985e7cae0e6"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/driver-crash-650.json",
+      "bytes": 2063,
+      "sha256": "392f5716fffdc475573de5b991686538d84477d1c3701a570b35c985e7cae0e6"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/execution-300.json",
+      "bytes": 5271,
+      "sha256": "5654aea80d6ab04cc762c423f409c70d060b0fc4463257a843bd6463e1e758f5"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/execution-650.json",
+      "bytes": 5271,
+      "sha256": "5654aea80d6ab04cc762c423f409c70d060b0fc4463257a843bd6463e1e758f5"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/reader-faults.txt",
+      "bytes": 403,
+      "sha256": "79baea228d4830d385580ff7e86d64892e28708cbd27ef9731b8f0109e701263"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/reports/simulator-e5f77d2/report.md",
+      "bytes": 9812,
+      "sha256": "c35c0c0f6cd567753078010ed381873669386c0cb31babdd6d31a255c49ff336"
+    }
+  ],
+  "tracked_source_and_replay_inputs": [
+    {
+      "source_path": "poc/Cargo.lock",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/Cargo.lock",
+      "bytes": 62183,
+      "sha256": "017428ebfab116fe627f6f3abf06cc747c741eda3d7aaf3bdb0e50fe28fcb231"
+    },
+    {
+      "source_path": "poc/Cargo.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/Cargo.toml",
+      "bytes": 1050,
+      "sha256": "75b28f6e09a0fbde445e7d3c9a4b9d4d8233b3b1c72bcbfb1f96390955b7198b"
+    },
+    {
+      "source_path": "poc/contracts/abi/BatchInbox.json",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/abi/BatchInbox.json",
+      "bytes": 16455,
+      "sha256": "73b8ad771b25e56ef52298fd002837e8aa32e1ab0ecaeb617ca4aa274c51f8e2"
+    },
+    {
+      "source_path": "poc/contracts/abi/ControlAuthority.json",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/abi/ControlAuthority.json",
+      "bytes": 13222,
+      "sha256": "0105e17a32ceebd35291ac78aee0efb5711e2294cd5f7b544a6d2f5c2c2cc124"
+    },
+    {
+      "source_path": "poc/contracts/foundry.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/foundry.toml",
+      "bytes": 131,
+      "sha256": "7e84f26e49779307458841362589f263ff098383358d782938ae07d62d951c42"
+    },
+    {
+      "source_path": "poc/contracts/src/BatchInbox.sol",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/src/BatchInbox.sol",
+      "bytes": 6075,
+      "sha256": "3b8bb77dfb6051511afade2f037f95a1fb05b74c037b30f669d7372a4071cba7"
+    },
+    {
+      "source_path": "poc/contracts/src/ControlAuthority.sol",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/src/ControlAuthority.sol",
+      "bytes": 5933,
+      "sha256": "22702af5b82d67d778b70629d6e108835e6d8f1d8557ecff7d20f66dc0d9c650"
+    },
+    {
+      "source_path": "poc/contracts/src/L1ABI.sol",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/src/L1ABI.sol",
+      "bytes": 2801,
+      "sha256": "5fd88b6f8101203968a42db0a548a1b352bb5fd2bb2bbaf2e84286d2135204e0"
+    },
+    {
+      "source_path": "poc/contracts/src/TypedData.sol",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/src/TypedData.sol",
+      "bytes": 1951,
+      "sha256": "27d110f3c27e083e36a5b7d4ffdc7628b7c7c54ef982e645aa773c66d65d53ce"
+    },
+    {
+      "source_path": "poc/contracts/test/RollbackFixture.sol",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/contracts/test/RollbackFixture.sol",
+      "bytes": 1025,
+      "sha256": "f99fdd89ab27e039c67c70f5becf77f349351cf3e0557ec5548debbf6a503c7a"
+    },
+    {
+      "source_path": "poc/crates/batch-services/.gitignore",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/.gitignore",
+      "bytes": 9,
+      "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
+    },
+    {
+      "source_path": "poc/crates/batch-services/Cargo.lock",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/Cargo.lock",
+      "bytes": 34238,
+      "sha256": "7fe61f52c7c3eb918e1eec0e242e36eeadbf3799efea85c2805594706778274b"
+    },
+    {
+      "source_path": "poc/crates/batch-services/Cargo.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/Cargo.toml",
+      "bytes": 480,
+      "sha256": "d29f975c9dda921ae194dc6a59e8c55b2948ca8988980ffdbf71ba9c0d3fa641"
+    },
+    {
+      "source_path": "poc/crates/batch-services/README.md",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/README.md",
+      "bytes": 7704,
+      "sha256": "f39b54a79fafc247b593085291b1eb2e393e8481dfe6d6d986e71de1a34662d2"
+    },
+    {
+      "source_path": "poc/crates/batch-services/examples/run_component.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/examples/run_component.rs",
+      "bytes": 39781,
+      "sha256": "ec028b5b7e5e185317f1e6ddbe4cd8167de23962fb2ad02963b0f89de919db03"
+    },
+    {
+      "source_path": "poc/crates/batch-services/examples/support/process.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/examples/support/process.rs",
+      "bytes": 4562,
+      "sha256": "2e456e02f7c17d94e6fd42d3e138ae34b401b57b0934b299fe94fc36f097a57c"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/accepted_view.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/accepted_view.rs",
+      "bytes": 34338,
+      "sha256": "cba724e68ac895d58f7a1335d22a01d721fe77559c6995a774d010655799a01d"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/batcher.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/batcher.rs",
+      "bytes": 16399,
+      "sha256": "72251a9ee6a9d5bf6b89a5f6b2c807014920629447a04cbc082944969ba0fa43"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/certifier.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/certifier.rs",
+      "bytes": 7320,
+      "sha256": "db57354aa440e594dd6b50fdf99455fcaeb93a58b5373cbd42a094aafdbc6ce3"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/crypto.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/crypto.rs",
+      "bytes": 12184,
+      "sha256": "1e0527f660ea1529578320e667bc73b3b0ed5e5813a26c28f7fdbe57d8cb2120"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/da.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/da.rs",
+      "bytes": 4837,
+      "sha256": "b9d23bd665d0275a41ac4a7a88f37b49a6f8d66014160efd7d500797578aedaa"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/frame.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/frame.rs",
+      "bytes": 6437,
+      "sha256": "b8c0d1c734bb8f643b973934a2882696cde5a4de52daf56e8146c8c158e217dc"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/lib.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/lib.rs",
+      "bytes": 289,
+      "sha256": "a2b46e9ed4934c613498e1f38c0245e404a29a83fc17f7151a2c273447508556"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/source.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/source.rs",
+      "bytes": 9640,
+      "sha256": "4ca4240ca04a604978168e025e9f323b49a01a5ce37761739594541e86e52b0e"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/storage.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/storage.rs",
+      "bytes": 9200,
+      "sha256": "6beb67b04cfce22b1a8be4d0b97f236072c2230e2f1f1914d5b06236f6fa86bb"
+    },
+    {
+      "source_path": "poc/crates/batch-services/src/transaction.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/src/transaction.rs",
+      "bytes": 3008,
+      "sha256": "fcb92c837eece255fac797a1efbb0d7ec10839c53ff85d7b4f8e73af0cc14be8"
+    },
+    {
+      "source_path": "poc/crates/batch-services/tests/anvil_component.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/tests/anvil_component.py",
+      "bytes": 3702,
+      "sha256": "c16d354a01c68bb2a01620b9ca1d3c4f1a213cc6c4d64b6d1dfe22052068eb41"
+    },
+    {
+      "source_path": "poc/crates/batch-services/tests/frozen_vectors.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/tests/frozen_vectors.rs",
+      "bytes": 8880,
+      "sha256": "15742d07e5ce3b96f107427c20d3fa2040b0bfb04f94f8c60c94b7936d9a54f8"
+    },
+    {
+      "source_path": "poc/crates/batch-services/tests/validate.sh",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/batch-services/tests/validate.sh",
+      "bytes": 2517,
+      "sha256": "5e6350fa696dd991d079abb9d1cb1d4490cb85070f1d246baa46fc9f3797e569"
+    },
+    {
+      "source_path": "poc/crates/core/Cargo.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/Cargo.toml",
+      "bytes": 355,
+      "sha256": "b080140f2f23e47963be1b30b3c24e91091c5b97b3237a54187bbe9bcce7c12c"
+    },
+    {
+      "source_path": "poc/crates/core/src/execution/mod.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/src/execution/mod.rs",
+      "bytes": 3071,
+      "sha256": "0d1ad47cb583e9254e3295c3e82f0f4aea388c223d41551b5394a26f7e2815f6"
+    },
+    {
+      "source_path": "poc/crates/core/src/fixture/mod.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/src/fixture/mod.rs",
+      "bytes": 11655,
+      "sha256": "4f7ce1734094b13e4dd7a494dccb6ec765846142e0cc1ab37e8fbedf4fccfbbb"
+    },
+    {
+      "source_path": "poc/crates/core/src/lib.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/src/lib.rs",
+      "bytes": 138,
+      "sha256": "3a2964a28a47102739d1da2117d933d1d109e7af879db7599f22c6f9abfb7bc2"
+    },
+    {
+      "source_path": "poc/crates/core/src/merge/mod.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/src/merge/mod.rs",
+      "bytes": 11827,
+      "sha256": "653e3923ea0cdd1ffd57b38952204ce638569841a5e35183596c0f2bfca3cbd4"
+    },
+    {
+      "source_path": "poc/crates/core/src/metadata/mod.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/core/src/metadata/mod.rs",
+      "bytes": 6572,
+      "sha256": "81c5d7e23cc604dc05180133331d275f94a8e5b073da7387c21fc232d2a252e2"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/Cargo.lock",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/Cargo.lock",
+      "bytes": 5085,
+      "sha256": "3c3402fc74ddc9553a9da50c71d3f8a84e2b642f83d042a96ad1dcd196a40742"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/Cargo.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/Cargo.toml",
+      "bytes": 229,
+      "sha256": "264c89d4e0d7dec653d29deaa148be18ab5a6cfb3f044cbaad3e5c2860b1ce93"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/README.md",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/README.md",
+      "bytes": 3594,
+      "sha256": "79dc60ec9074eced32d89f5192ad7f793bdd08dd36bb16c0131805430ec87b25"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/src/abi.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/src/abi.rs",
+      "bytes": 7030,
+      "sha256": "bea56c8716816f4ce3fe7c78ec4a5abf283dbf13334bf14846027cbfc26a859a"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/src/history.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/src/history.rs",
+      "bytes": 16689,
+      "sha256": "05549a5ff931ffef0fefe55e907e28ee458e0e086c499909483e194adc82a033"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/src/lib.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/src/lib.rs",
+      "bytes": 20640,
+      "sha256": "f87f1d8fda9906421351c774cd5281f28de7ad8fcc33ae257b1c77921362244b"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/src/main.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/src/main.rs",
+      "bytes": 2092,
+      "sha256": "0b69eb5372a23b55c0a68b09e5d0cc9731fe01f5eb1e78a50942777c6feb2596"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/src/rpc.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/src/rpc.rs",
+      "bytes": 5170,
+      "sha256": "2078bb2257f38f6753785523c31e2fa8aab6a5921420f15339ab9bf9c6158663"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/tests/check_abi.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/tests/check_abi.py",
+      "bytes": 466,
+      "sha256": "9cf2a2a2f388c97fc9ea524196c03b9b028d2d44e36cc65609c2c14f8d75a150"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/tests/receipt_faults.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/tests/receipt_faults.rs",
+      "bytes": 8019,
+      "sha256": "0f158d2b542e6ca0f1c969deb9f4d22c21240202dd315eca218e1cb364d3d861"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/tests/run_anvil.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/tests/run_anvil.py",
+      "bytes": 37148,
+      "sha256": "e47e88e104d8afe0488fee985e24c73cd1210cdffaf8d74134398bb1c3e68c58"
+    },
+    {
+      "source_path": "poc/crates/l1-adapter/tests/validate.sh",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/l1-adapter/tests/validate.sh",
+      "bytes": 2055,
+      "sha256": "39e2ddb511d0e31caec76d69c3e68fe4f1a94dd3e03535aedefe901f0deeb2ec"
+    },
+    {
+      "source_path": "poc/crates/types/Cargo.toml",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/types/Cargo.toml",
+      "bytes": 690,
+      "sha256": "6f4e3a2ce79e9324bc49a4145bae583038e683b8c6b61eccb67bb10c4682d719"
+    },
+    {
+      "source_path": "poc/crates/types/build.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/types/build.rs",
+      "bytes": 468,
+      "sha256": "5ce98915ae75ea9dd4376e75fdc77a70096ca4c118e89df12a3c601b79cd84c9"
+    },
+    {
+      "source_path": "poc/crates/types/src/domain.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/types/src/domain.rs",
+      "bytes": 7335,
+      "sha256": "49247f396fdb8b68d85cf823954d8e901dba8f888580c04f8bf797ec07a33e68"
+    },
+    {
+      "source_path": "poc/crates/types/src/domain/objects.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/types/src/domain/objects.rs",
+      "bytes": 35626,
+      "sha256": "3d49888368cb197e51000403324a7c424415c8ef2fd678220a0ac2bcc447ff20"
+    },
+    {
+      "source_path": "poc/crates/types/src/lib.rs",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/crates/types/src/lib.rs",
+      "bytes": 1198,
+      "sha256": "f5dce5f3cabdcc71c2c2f47382ba4fc893988f3e33cfc0893306f8f2e48f80c3"
+    },
+    {
+      "source_path": "poc/docs/contracts/task-contract-batch-services-v1.md",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/docs/contracts/task-contract-batch-services-v1.md",
+      "bytes": 30102,
+      "sha256": "f21140efb5b0a61ca89cf3fa92a61264ae448b82e1a5fbd2edfd033ca092973e"
+    },
+    {
+      "source_path": "poc/proto/i1.proto",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/proto/i1.proto",
+      "bytes": 3539,
+      "sha256": "fdbe4a22c251077c4c58ad7d97853c890103204678b0d0e07d11d94da1fa7c14"
+    },
+    {
+      "source_path": "poc/proto/native.proto",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/proto/native.proto",
+      "bytes": 6649,
+      "sha256": "981ed3b55639aa7ead414bf7bb5059804323eecfd8f8f9541f2d7caf891d0cd2"
+    },
+    {
+      "source_path": "poc/verification/anvil-l1/golden_vectors.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/anvil-l1/golden_vectors.py",
+      "bytes": 17899,
+      "sha256": "aff8b4fd74b324e4109e7a7162fef08c126553b9a7d9c788b7416bf1954e9ce8"
+    },
+    {
+      "source_path": "poc/verification/anvil-l1/independent_codec.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/anvil-l1/independent_codec.py",
+      "bytes": 10767,
+      "sha256": "fe230c5a95a8ba726e36af795e672c326cadaf8e1f8d4d9b12ca6a830e0bab4d"
+    },
+    {
+      "source_path": "poc/verification/anvil-l1/receipt_checker.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/anvil-l1/receipt_checker.py",
+      "bytes": 14864,
+      "sha256": "d0c74823fa55a766a77c15a2e9b1a999d4388c7357704fad36412ab58f8afacf"
+    },
+    {
+      "source_path": "poc/verification/batch-services/check_accepted_evidence.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/check_accepted_evidence.py",
+      "bytes": 4501,
+      "sha256": "3ba3e72096525d888dd1a092ee5d7bce22b90f791cbe822e55d590508d4cbf2a"
+    },
+    {
+      "source_path": "poc/verification/batch-services/check_execution_evidence.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/check_execution_evidence.py",
+      "bytes": 15433,
+      "sha256": "31eb7d54750fbd12ca2d356d24b8420226b274e6fd39059a8acff66d2ef9b514"
+    },
+    {
+      "source_path": "poc/verification/batch-services/frame-golden-vectors.json",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/frame-golden-vectors.json",
+      "bytes": 12706,
+      "sha256": "947b3b1c5fba237d0f72d5ad3e574bb661d58f0314928f0986ab3559d392910b"
+    },
+    {
+      "source_path": "poc/verification/batch-services/frame_vectors.py",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/frame_vectors.py",
+      "bytes": 7735,
+      "sha256": "c9b38bae676cf253aa1891a2aa6206daca12d3f5b7e3aecd1a09f0f55df9b0b3"
+    },
+    {
+      "source_path": "poc/verification/batch-services/signature-golden-vectors.json",
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/signature-golden-vectors.json",
+      "bytes": 8991,
+      "sha256": "9e9a41ba7801dd307199a787e23d6e2646e699f802e9800eaf3a4ec826eb08f2"
+    }
+  ],
+  "supplemental_verifier_inputs_used": [
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/check_m2_driver_and_crash.py",
+      "bytes": 13505,
+      "sha256": "b01e54242f4cf26dbc8de4ee4c2a245645e07343c04e9e08e86a38a163272143"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/consumer-m2/Cargo.lock",
+      "bytes": 5204,
+      "sha256": "7d696781fa5922bfb7d8309373c61d6e08598d851a740cc0e400a66456b3115f"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/consumer-m2/Cargo.toml",
+      "bytes": 248,
+      "sha256": "6b3aeeee7afaeb8fc96597137c437e564f2b6fbf0bc6e49ba7c9a1efec0878b1"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/poc/verification/batch-services/consumer-m2/tests/reader_faults.rs",
+      "bytes": 8174,
+      "sha256": "28eb1604887bf9ae669c78b378bc90e709fffcd78ba1e798dbf74c76429d9da0"
+    }
+  ],
+  "runtime_binaries": [
+    {
+      "path": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+      "bytes": 644784,
+      "sha256": "bff349e72704ff70bc08a234a3847338e797065bbedde5e556808bc87b7bf7c6"
+    },
+    {
+      "path": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+      "bytes": 42185192,
+      "sha256": "841072d1d92f9e841d9ba5b0814182a0adf064acf4527cd120967b7bc49dcb66"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/tools/foundry-1.0.0/anvil",
+      "bytes": 22813168,
+      "sha256": "839d5ed3c99ce527bbb0d68c91839b8d1fddb5e8e94fe5d716747b7b89bfea5f"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/tools/foundry-1.0.0/forge",
+      "bytes": 60316400,
+      "sha256": "bced57e0ad861bf45cee877cefc39347342205da60d38b238956eeb732a7f115"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/tools/foundry-1.0.0/solc",
+      "bytes": 14660184,
+      "sha256": "0479d44fdf9c501c25337fdc540419f1593b884a87b47f023da4f1c700fda782"
+    },
+    {
+      "path": "/home/jy/miniconda3/bin/python3",
+      "bytes": 30747192,
+      "sha256": "50b87e8c64c746719ec879e22465b92eeb2c26a23b0e33c968afc463dc8bd7fa"
+    },
+    {
+      "path": "/home/jy/.codex/worktrees/f025/megaroation_poc/.build/target/batch-services/debug/examples/run_component",
+      "bytes": 18307816,
+      "sha256": "dc9654b096ea13f736b33365861d5ed8ced197f11aa4cc1014fea0ce8e066848"
+    }
+  ],
+  "toolchain_versions_file": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m2-simulator-e5f77d2-run1/toolchain.txt",
+  "independent_python_coincurve": "20.0.0"
+}

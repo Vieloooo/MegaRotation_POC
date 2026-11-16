@@ -1,0 +1,178 @@
+{
+  "status": "PASS",
+  "scope": "independent 03 execution and accepted DA record fidelity; source_mode=fixture",
+  "fixture_id": "poc11-real-inbox-fixture-v1",
+  "config_ref": "0x0164217731b8eaed4885095e898d3e9106d80ef931a654302482f28c3e92689d",
+  "snapshots": {
+    "0x706f6331312f66697874757265732f67706f732f31": [
+      {
+        "height": 1,
+        "origin": 0,
+        "pre_state_root": "0xcba1363885f762adcd559b85e87003f2a8846d0d4dd13810aa18948d91374348",
+        "kept_indices": [
+          0,
+          3
+        ],
+        "kept": [
+          "0x01000100000000000000000000000000000007",
+          "0x01000100000000000000010000000000000008"
+        ],
+        "filtered": [
+          {
+            "index": 1,
+            "reason": "nonce_mismatch"
+          },
+          {
+            "index": 2,
+            "reason": "insufficient_balance"
+          }
+        ],
+        "post_accounts": [
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            0,
+            15
+          ]
+        ],
+        "post_state_root": "0x4f1e21176fe6174b2ec8f7c61be3845a12b44604766ecff00e679409ad039938",
+        "native_hash": "0x710f25c77a2a758ef777c52727929a2a85beeb77b0dbe8310d06775d97025601"
+      },
+      {
+        "height": 2,
+        "origin": 0,
+        "pre_state_root": "0x4f1e21176fe6174b2ec8f7c61be3845a12b44604766ecff00e679409ad039938",
+        "kept_indices": [],
+        "kept": [],
+        "filtered": [],
+        "post_accounts": [
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            0,
+            15
+          ]
+        ],
+        "post_state_root": "0xeb7899e934718e5ec6a9c415067fa0c87fcddcd2a90772229a7a519630f7325e",
+        "native_hash": "0x457eaff8b33f0b5532d7accdc9f871737cfa6cdd87b3dd5c8be1f9a5e7c5e8cc"
+      },
+      {
+        "height": 3,
+        "origin": 0,
+        "pre_state_root": "0xeb7899e934718e5ec6a9c415067fa0c87fcddcd2a90772229a7a519630f7325e",
+        "kept_indices": [
+          0
+        ],
+        "kept": [
+          "0x01010000000000000000000000000000000004"
+        ],
+        "filtered": [],
+        "post_accounts": [
+          [
+            0,
+            2,
+            4
+          ],
+          [
+            1,
+            1,
+            11
+          ]
+        ],
+        "post_state_root": "0x87fb1f11decda3f922cc70596be5cdb00c8e63bb2b6449c469f521aeadf8145a",
+        "native_hash": "0x5417d3281658344134008e4556e228dc4310e46be1768adfecf847ae4ffbf9ae"
+      },
+      {
+        "height": 4,
+        "origin": 0,
+        "pre_state_root": "0x87fb1f11decda3f922cc70596be5cdb00c8e63bb2b6449c469f521aeadf8145a",
+        "kept_indices": [
+          0
+        ],
+        "kept": [
+          "0x01010000000000000000010000000000000002"
+        ],
+        "filtered": [],
+        "post_accounts": [
+          [
+            0,
+            2,
+            6
+          ],
+          [
+            1,
+            2,
+            9
+          ]
+        ],
+        "post_state_root": "0x438190a3201ba6c2f6fa8772e96997686e34862e4f62a8e3fb2fe17d3af11c52",
+        "native_hash": "0x3693e90bf08fb858a4862e61480497be1739c49faff566d85aac7d768f1beafd"
+      }
+    ]
+  },
+  "observed_poststates_compared": 4,
+  "accepted_heights_compared": 3,
+  "matches": [
+    {
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "commitment": "0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2",
+      "gpos": "0x706f6331312f66697874757265732f67706f732f31",
+      "height": 1,
+      "kept_count": 2,
+      "filtered_count": 2,
+      "post_state_root": "0x4f1e21176fe6174b2ec8f7c61be3845a12b44604766ecff00e679409ad039938",
+      "native_hash": "0x710f25c77a2a758ef777c52727929a2a85beeb77b0dbe8310d06775d97025601"
+    },
+    {
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "commitment": "0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2",
+      "gpos": "0x706f6331312f66697874757265732f67706f732f31",
+      "height": 2,
+      "kept_count": 0,
+      "filtered_count": 0,
+      "post_state_root": "0xeb7899e934718e5ec6a9c415067fa0c87fcddcd2a90772229a7a519630f7325e",
+      "native_hash": "0x457eaff8b33f0b5532d7accdc9f871737cfa6cdd87b3dd5c8be1f9a5e7c5e8cc"
+    },
+    {
+      "position": [
+        3,
+        0,
+        0
+      ],
+      "commitment": "0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d",
+      "gpos": "0x706f6331312f66697874757265732f67706f732f31",
+      "height": 3,
+      "kept_count": 1,
+      "filtered_count": 0,
+      "post_state_root": "0x87fb1f11decda3f922cc70596be5cdb00c8e63bb2b6449c469f521aeadf8145a",
+      "native_hash": "0x5417d3281658344134008e4556e228dc4310e46be1768adfecf847ae4ffbf9ae"
+    }
+  ],
+  "missing": [],
+  "not_established": [
+    "actual GFR consensus/source validity",
+    "authenticity of initial state/fixture config",
+    "full PublicConfig or dep-fixture content-address validation",
+    "DA durability",
+    "D actual-parent derivation",
+    "receipt/finality checks must be provided by the separate accepted evidence result"
+  ],
+  "source_file_sha256": "159d1b254ec6ea82452cdd5f53923197b2877d0612b22deb219b09dff2336467",
+  "accepted_result_sha256": "ba6de36ba3fd9ee1c1baa5ee5b68ac8f06c139c0121d10d758142f3d73d23f1e"
+}

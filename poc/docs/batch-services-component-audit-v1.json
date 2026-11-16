@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-16",
+  "candidate_verified_and_tested": "e5f77d27edde91a61f7400d1a61961e4cbe09c9c",
+  "status": "PASS",
+  "scope": "Evidence sealing only; no new implementation or simulation matrix.",
+  "manifests": [
+    {
+      "path": "poc/verification/batch-services/reports/m2-manifest-e5f77d2.json",
+      "sha256": "4b0c89746260022ec07707e81ebe354abb28e559da8f3c52b88f566d7016799a",
+      "checked_entries": {
+        "raw_files": 92,
+        "source_files": 19,
+        "verification_files": 13
+      }
+    },
+    {
+      "path": "poc/verification/batch-services/reports/simulator-e5f77d2/manifest.json",
+      "sha256": "e70753e660527c6b19f8627849ef0baa6f6deeef1f160799c55d9763c43b5e8e",
+      "checked_entries": {
+        "raw_evidence_files": 84,
+        "independent_results_and_report": 8,
+        "tracked_source_and_replay_inputs": 63,
+        "supplemental_verifier_inputs_used": 4,
+        "runtime_binaries": 7
+      }
+    }
+  ],
+  "tester_ports_no_listener": [
+    33599,
+    34821
+  ],
+  "production_source_unchanged": true,
+  "subagents": "All named subagents completed; no active child agent at sealing.",
+  "paused_scope": "User redirected near-term work to healthy-node regular/Espresso/GFR and Force; feature11 is checkpointed with B17/B18 open."
+}

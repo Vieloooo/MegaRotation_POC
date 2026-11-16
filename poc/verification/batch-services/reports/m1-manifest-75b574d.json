@@ -1,0 +1,52 @@
+{
+  "source_revision": "75b574d40930b7c9c748a4c6b6e381117c937537",
+  "source_expected_commit": "8fb46c296808dbe97c95df7a2761678412b95f62",
+  "evidence_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2",
+  "files": [
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/build.log",
+      "sha256": "18c11d61e78d3772be9d600cf3edff9610189bea47f0bd5f7d101c97a2d93dfe"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/consumer-output.json",
+      "sha256": "c8b63a6427ec5fe0e8fb1660712426582e75f67bc7889a22ee28fc5d27ad9217"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/independent-results.json",
+      "sha256": "b7039dbb26ef2772765fc8f1fd9a92c7956ddf27ba3e35345a169a3945103bf1"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/revision.txt",
+      "sha256": "f4a04d29df0a2105a0ad2af28a6df42a49e5408dc4f07ef5e3a05e264bc075e5"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/toolchain.txt",
+      "sha256": "441e13fe2bd03db7b5f95cb495f685cd762e5f32dc1749baea7ae873cb5009cd"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/11/artifacts/m1-verifier-75b574d-run2/worktree-status.txt",
+      "sha256": "2eda97ff26d49e8d30b333eda5637f4ac8db15c9e7ca70feed54695c9db64155"
+    }
+  ],
+  "source_files": {
+    "poc/crates/batch-services/.gitignore": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368",
+    "poc/crates/batch-services/Cargo.lock": "b7bd28f5077ed8b2487a488defc5be2d916913ffccd563cfc4d9bb1b01dd8793",
+    "poc/crates/batch-services/Cargo.toml": "c4daf152c71b3b278ed4771c543c0b10ba82fc37ab2158edf0cc16bd83323c6c",
+    "poc/crates/batch-services/README.md": "52c2b02cb12b96f03d54e578572c076e2323368d2a759278232700c9d430ad12",
+    "poc/crates/batch-services/src/accepted_view.rs": "fc288b7d93d0f9182de8117e5daf036187d7054e69a475819086168ddc99c43c",
+    "poc/crates/batch-services/src/crypto.rs": "1e0527f660ea1529578320e667bc73b3b0ed5e5813a26c28f7fdbe57d8cb2120",
+    "poc/crates/batch-services/src/frame.rs": "b8c0d1c734bb8f643b973934a2882696cde5a4de52daf56e8146c8c158e217dc",
+    "poc/crates/batch-services/src/lib.rs": "d85818e72193b7173cdbbe121b2a990640326758f779ddb7db5326adbd3388fe",
+    "poc/crates/batch-services/tests/frozen_vectors.rs": "15742d07e5ce3b96f107427c20d3fa2040b0bfb04f94f8c60c94b7936d9a54f8"
+  },
+  "verifier_inputs": {
+    "poc/verification/batch-services/check_accepted_evidence.py": "7097d19b41eee91d99bceb8d4f477461c97c6753ae77661e2a44447d8268be81",
+    "poc/verification/batch-services/check_m1_output.py": "dde87632a9bfcb0c2ce0b534bfc2bcbe2e2eba5d9d1ecc54085b1cdc0a327929",
+    "poc/verification/batch-services/consumer-m1/Cargo.lock": "6578b8c635989a99b9210edd29866973d534fa4e5de541ff1abf7a10c02a355b",
+    "poc/verification/batch-services/consumer-m1/Cargo.toml": "93eef8a39fd86f7f5d413d04547815f826e83128c5da4d73eec07201abb0e6a3",
+    "poc/verification/batch-services/consumer-m1/src/main.rs": "d987cf026b2b04737e6dc0147ad17255ac4aa8b03a7c536ab109fb793c84cf41",
+    "poc/verification/batch-services/frame_vectors.py": "c9b38bae676cf253aa1891a2aa6206daca12d3f5b7e3aecd1a09f0f55df9b0b3",
+    "poc/verification/batch-services/signature_vectors.py": "31010441353ac52d44204c86ccbb576e467edb3619762e0124ba352d7b8b41f1"
+  },
+  "notes": "Tracked production source matches candidate; only independent verifier artifacts are uncommitted. Run1 is preserved separately. No private key included."
+}

@@ -1,0 +1,97 @@
+{
+  "status": "PASS",
+  "scope": "offline raw receipt/ABI/signature replay plus BS-FRAME-v1 DA opening; source_mode remains fixture",
+  "configuration": {
+    "chain_id": 31337,
+    "inbox": "0x4f9da333dcf4e5a53772791b95c161b2fc041859",
+    "config_ref": "0x0164217731b8eaed4885095e898d3e9106d80ef931a654302482f28c3e92689d"
+  },
+  "accepted_count": 2,
+  "payloads_verified": 2,
+  "accepted": [
+    {
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "block_hash": "0x23ca4cdd03cfa9114f65a217d546a8eb3e1562a06ebd1b74622b5c462a434cee",
+      "transaction_hash": "0xafefb53b872022136c81f62e0b01a5ff65db66a6e332c0e5532c46f3a5fad92b",
+      "rpc_log_index": 0,
+      "request_id": "0xe00c827926b29b7b9b3b599bccfb6b987c7013907db90c201025807baa7dfaa0",
+      "commitment": "0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2",
+      "first_height": 1,
+      "last_height": 2,
+      "next_origin": 0,
+      "gpos": "0x706f6331312f66697874757265732f67706f732f31",
+      "inclusion_timestamp_seconds": 1700000004,
+      "status": "VERIFIED_PAYLOAD",
+      "payload_length": 117,
+      "payload_sha256": "f84fd2986e31829e19bbad01784c5d4701d43febea0d42ed8fd3877073437e5c",
+      "records": [
+        {
+          "height": 1,
+          "origin": 0,
+          "transactions": [
+            "0x01000100000000000000000000000000000007",
+            "0x01000100000000000000010000000000000008"
+          ]
+        },
+        {
+          "height": 2,
+          "origin": 0,
+          "transactions": []
+        }
+      ],
+      "da_certificate": "0xff734caa95e79422432113b21d179cfc9d9d5893a10deb111b7839c60c765d376d8d3ac0ba97fd2178e28f9e71ca9e0dfb0f6825885964e6b5f006a7d80634ba1b",
+      "certifier_signature": "0xdc7f5e67511b7226772eac7287c5d3696679474ca96491a52e9deb8181c83f5918a178d33c1c01e3c9923fccc1bfea9d69be61bfc19d7b0d1a1443ec572e35cb1c"
+    },
+    {
+      "position": [
+        3,
+        0,
+        0
+      ],
+      "block_hash": "0x7c91a7923ef614f69c22b0bd01c376b0799cf0e1bb2c338f285af7f1640736e2",
+      "transaction_hash": "0x7b24c8b2c9ad115b298158a5d62ce17038b4ad590490919a85240b07c95e4eee",
+      "rpc_log_index": 0,
+      "request_id": "0x3fcaef22c16cd1879ea743e731ecc2b1b0e90cfdc5d70e53617450ece095b57a",
+      "commitment": "0x5629543d719715cc831f03dd53c111bd0112681dd05eee06ae084f92f1e9448d",
+      "first_height": 3,
+      "last_height": 3,
+      "next_origin": 0,
+      "gpos": "0x706f6331312f66697874757265732f67706f732f31",
+      "inclusion_timestamp_seconds": 1700000006,
+      "status": "VERIFIED_PAYLOAD",
+      "payload_length": 74,
+      "payload_sha256": "dc09763e46982ed64c6f28e94af3163e6cbad48fefc4a8b6413f16e732aa7b93",
+      "records": [
+        {
+          "height": 3,
+          "origin": 0,
+          "transactions": [
+            "0x01010000000000000000000000000000000004"
+          ]
+        }
+      ],
+      "da_certificate": "0xc60c5045c13d075fe4dd44a5b2a7307c95b1d3ca7f841485a633c94aabf5922d0485dd775ff5da5a3b1f640cca40bbfd79c1609350460c2db8cf9aad3d38326a1b",
+      "certifier_signature": "0x7bcb7564a4ab8d26e0f4e17056bc642bae7f7982bbc88153c2c38cdbbf3355a572bbeec868ea672b841c36fb528a0af194708bf0591f71c1fec5bdd8c13c09ac1b"
+    }
+  ],
+  "missing": [],
+  "failed_receipts": [
+    "0xbc967b26a8ce62b4893b6e753c61640d7f9ac017de6397e129ed27ee3dd8730f",
+    "0x68c81ea2b509c530fddfb027b5060ebd26cf5615ab9d96b85616806b5f8c09e2",
+    "0x8d5b8894d1f1c5ea0cf20a2c9f853e3e7d6a72115658ec12b9ffb5069bed926e"
+  ],
+  "no_new_event_retries": [
+    "0x3d87ee597b8c0d7e6ba01deffee65e1692e70f1b5488e436334cd206e8e13789"
+  ],
+  "not_established": [
+    "artifact live-run provenance",
+    "driver finalized and reader delivery discipline",
+    "DA write-before-receipt durability",
+    "Certifier independent G replay",
+    "full GFR/G-prime/D/ResumeCut"
+  ]
+}

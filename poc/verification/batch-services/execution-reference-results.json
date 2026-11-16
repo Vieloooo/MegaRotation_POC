@@ -1,0 +1,259 @@
+{
+  "status": "PASS",
+  "scope": "source reference self-check, production M2 not inspected or executed",
+  "source": "03 e9c15e04bc83b335668f3ecd837367aa87344a89; task-contract-mock-plan-execution-v2 \u00a75.1; BS r1 \u00a79",
+  "seed": "none (literal cases)",
+  "cases": [
+    {
+      "name": "contract-h1",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          1,
+          7
+        ],
+        [
+          2,
+          0,
+          3
+        ]
+      ],
+      "kept_indices": [
+        0
+      ],
+      "filtered": [
+        {
+          "index": 1,
+          "reason": "nonce_mismatch"
+        },
+        {
+          "index": 2,
+          "reason": "insufficient_balance"
+        }
+      ]
+    },
+    {
+      "name": "contract-h2",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          2,
+          5
+        ],
+        [
+          2,
+          0,
+          5
+        ]
+      ],
+      "kept_indices": [
+        0
+      ],
+      "filtered": []
+    },
+    {
+      "name": "contract-padding",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          1,
+          7
+        ],
+        [
+          2,
+          0,
+          3
+        ]
+      ],
+      "kept_indices": [],
+      "filtered": []
+    },
+    {
+      "name": "credit-and-filter",
+      "status": "PASS",
+      "accounts": [
+        [
+          0,
+          2,
+          0
+        ],
+        [
+          1,
+          0,
+          15
+        ]
+      ],
+      "kept_indices": [
+        0,
+        3
+      ],
+      "filtered": [
+        {
+          "index": 1,
+          "reason": "nonce_mismatch"
+        },
+        {
+          "index": 2,
+          "reason": "insufficient_balance"
+        }
+      ]
+    },
+    {
+      "name": "self-at-max-balance",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          1,
+          18446744073709551615
+        ]
+      ],
+      "kept_indices": [
+        0
+      ],
+      "filtered": []
+    },
+    {
+      "name": "nonce-overflow",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          18446744073709551615,
+          1
+        ]
+      ],
+      "kept_indices": [],
+      "filtered": [
+        {
+          "index": 0,
+          "reason": "nonce_overflow"
+        }
+      ]
+    },
+    {
+      "name": "receiver-overflow",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          0,
+          1
+        ],
+        [
+          2,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "kept_indices": [],
+      "filtered": [
+        {
+          "index": 0,
+          "reason": "recipient_overflow"
+        }
+      ]
+    },
+    {
+      "name": "zero-new-sender",
+      "status": "PASS",
+      "accounts": [
+        [
+          3,
+          1,
+          0
+        ]
+      ],
+      "kept_indices": [
+        0
+      ],
+      "filtered": []
+    },
+    {
+      "name": "self-insufficient",
+      "status": "PASS",
+      "accounts": [
+        [
+          1,
+          0,
+          1
+        ]
+      ],
+      "kept_indices": [],
+      "filtered": [
+        {
+          "index": 0,
+          "reason": "insufficient_balance"
+        }
+      ]
+    },
+    {
+      "name": "missing-attr",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "wrong-attr",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "ordinary-credit",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "DEP-transfer",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "late-attr",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "bad-tail-after-valid",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "credit-overflow",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "byte-limit",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "tx-count",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "DEP-count",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "schema-source-accepted-join",
+      "status": "PASS",
+      "kind": "in-memory reference fixture only"
+    },
+    {
+      "name": "config-binding",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "pre-root",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "observed-state",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "accepted-not-kept",
+      "status": "PASS_REJECT"
+    },
+    {
+      "name": "missing-source",
+      "status": "PASS_INCONCLUSIVE"
+    }
+  ]
+}
