@@ -160,13 +160,19 @@ def decode_descriptor(data, label):
     eligible = [r.uint(1) for _ in range(r.count(5))]
     r.check(d["region"] in range(3) and committee == eligible ==
             list(range(d["region"] * 5, d["region"] * 5 + 5)), "committee membership")
-    r.check((r.uint(2), r.uint(2), r.uint(4)) == (1, 1, 0), "static leader rule")
+    rule, version, size = r.uint(2), r.uint(2), r.uint(4)
+    r.check(version == 1 and (rule, size) in ((1, 0), (2, 32)), "unsupported leader rule")
+    if rule == 2:
+        r.check(d["cause"] in (1, 2), "historical leader rule without a predecessor")
+        d["historical_rule_ref"] = r.digest()
     h_min, h_max = r.uint(8), r.uint(8)
     r.check(h_max - h_min == 9, "fixed window")
     d["window"] = [h_min, h_max]
     d["reference"] = block_ref(r)
     d["config_ref"] = r.digest()
     d["authorization_ref"] = r.digest()
+    r.check(d.get("historical_rule_ref", d["authorization_ref"]) == d["authorization_ref"],
+            "historical rule does not bind authorization ref")
     d["anchor"] = anchor(r)
     d["cid"] = r.digest()
     r.check(d["anchor"]["height"] < h_min, "invalid anchor height")

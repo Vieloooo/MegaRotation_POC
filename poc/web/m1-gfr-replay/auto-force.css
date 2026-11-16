@@ -1,0 +1,20 @@
+.mode { padding: 8px 12px; margin: 0 0 16px; border-left: 3px solid var(--cyan); color: var(--muted); background: var(--panel-soft); font-size: 13px; }
+.mode.sample { border-color: var(--amber); color: var(--amber); }
+.governance { --mark-color: #ffb6cb; }
+.auto-plot .mark.dot { width: 9px; min-width: 9px; height: 9px; padding: 0; border-radius: 50%; }
+.auto-plot .mark { top: var(--mark-top, 50%); }
+.auto-plot .timeline-row { min-height: 64px; }
+.auto-plot .timeline-row[aria-label="刻度"] { min-height: 23px; }
+.signer-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 9px; margin: 13px 0; }
+.signer-card { text-align: left; white-space: normal; background: var(--panel-soft); padding: 11px; border-radius: 9px; }
+.signer-card strong,.signer-card span { display: block; }
+.signer-card span { font-size: 12px; color: var(--muted); }
+.poll-table td { word-break: normal; }
+.pads { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.pads span { border: 1px dashed var(--muted); padding: 4px 7px; border-radius: 5px; font: 11px ui-monospace,monospace; }
+.pads .physical { border-style: solid; border-color: var(--green); color: var(--green); }
+@media (max-width: 650px) {
+  .auto-plot .timeline-row { grid-template-columns: 110px minmax(0,1fr); }
+  .auto-plot .lane-name { position: sticky; left: 0; z-index: 3; padding-right: 4px; background: var(--panel); }
+  .auto-plot .lane-head { display: none; }
+}
