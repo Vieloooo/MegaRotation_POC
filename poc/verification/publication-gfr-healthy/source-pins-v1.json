@@ -1,0 +1,212 @@
+{
+  "schema": "H3-PREPARATION-SOURCE-PINS-1",
+  "date": "2026-11-16",
+  "baseline": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+  "candidate": null,
+  "source_entries": [
+    {
+      "path": "AGENTS.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "5c99ced956be33dd449a952ceebffeb22b92c335fd69b1bbd23c1f6af2c4e56a"
+    },
+    {
+      "path": "DESIGN.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "e4b93a400cb4da02ddf55f47763062aecbcdb1b81e9a7a9d0fcb28e89801b2f8"
+    },
+    {
+      "path": ".agents/skills/regional-bft-conformance/SKILL.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "125af723d15454b1311a2147bde3e8716cd12a89c76161ff2df21f8c52e5a8fd"
+    },
+    {
+      "path": ".codex/agents/bft_verifier.toml",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "98dc81c4cd7af3d521142ebd361bf9859b82605242851d5dab095db90dfe8628"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_handoff_zh.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "f82c49f19305484ecf7c3a5d1a34eb4c4752db5cfd8fa1b406f2220a681eff05"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_setup_zh.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "a14555319ce66b01474fb033715acd93938fe41b041fa0dbf56062cd5ba93b07"
+    },
+    {
+      "path": "formalization_v10/poc_design_zh_v2.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab"
+    },
+    {
+      "path": "formalization_v10/00_arch_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "2de0929fc2f75fda51802c7c354146849a285a247283ca1d8fc7338b2a8e8871"
+    },
+    {
+      "path": "formalization_v10/02_session_program_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "a8cafc846acffda6b2d08915b9ccc251825c33cf84e776dae94d67611db47eb2"
+    },
+    {
+      "path": "formalization_v10/03_session_manager_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "dbcc467b6f3f52d7832112217c3caf27de1e09bdda11b9745393aea326fd5954"
+    },
+    {
+      "path": "formalization_v10/04_publisher_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "80999009464571ed8f4b1e129b83c67638121829286ebefbf6f3f6c127f8da41"
+    },
+    {
+      "path": "formalization_v10/09_finality_rules_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc"
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-viewer-gfr-v1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "0a622d8504f48ad63305b917ee30da0d5e07f366512bd10018345ecedd5bfabb"
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-publisher-espresso-v1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "0dba5ad2707404dd4baeeb0aa82455703e2aa4733384cd2f9411df31a7fd761b"
+    },
+    {
+      "path": "poc/crates/types/src/domain/objects.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "3d49888368cb197e51000403324a7c424415c8ef2fd678220a0ac2bcc447ff20"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/codec.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "993c8bbe224372d34e9eb3c05f37365a492909444960ef47f828eddf3284baf1"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/api.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "13a95666aae42d5bec869b2547a35d8c3432a10334165a258c1de56f23a2f74f"
+    },
+    {
+      "path": "poc/crates/publisher/src/lib.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "1706d75458684a5bf97a1357e7d0837fffb7f282e1fd1c1c438fac0ede35991f"
+    },
+    {
+      "path": "poc/crates/publisher/src/codec.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "a9c6c143d0c570591d6f69892ee977644abf3e19dbfab7f9c86427b7be1b5364"
+    },
+    {
+      "path": "poc/docs/milestones/README.md",
+      "git_revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "sha256": "52e83a1b3013707a14a1220e5c962a807e07c9a8dd1816afbc32a7d47f0e65a0",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/docs/milestones/H3-publication-gfr-zh.md",
+      "git_revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "sha256": "d71f9f17f9778f84daae15958972ccf380fce54d00baf6186ebadfe195b5b3ca",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/crates/sim-transport/src/identity.rs",
+      "git_revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "sha256": "23ad4a528087cc679d06a00de724193f92a9cd25a3a6b9579f07be636801df32",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/crates/sim-transport/src/service.rs",
+      "git_revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "sha256": "f8f5ac07f313bcda95472bafb5062ee89fe85bf2412a97bfb411bfe341f181ff",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-sim-transport-kernel-v1.md",
+      "git_revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "sha256": "fa8d694d255524a8511a5988d63b26448814be6733d53e59c291a18246aaa1dd",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-espresso-compatibility-v1.md",
+      "git_revision": "5c34b400ba5245d7775a281566e21bf59708b147",
+      "sha256": "ebca8a616e370cb63319e8cf436c2ec2c079a9eaa1850c22153734ede9bfa6ae",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/crates/espresso-compatibility/src/lib.rs",
+      "git_revision": "5c34b400ba5245d7775a281566e21bf59708b147",
+      "sha256": "b283ecd2854710c2bfb1653e8f252dcdafda4f6a8151ed7cfded8be4f842ca44",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/crates/espresso-compatibility/src/reader.rs",
+      "git_revision": "5c34b400ba5245d7775a281566e21bf59708b147",
+      "sha256": "29e062259de5986dfb83c60253a3bedd8dc4db3cb5f7c63044402e4c878b7a33",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/scenarios/espresso-compatibility/capture.py",
+      "git_revision": "5c34b400ba5245d7775a281566e21bf59708b147",
+      "sha256": "e19fe38446656befa58f518a44b98b195dea11597c0c38c7ab763eef301d6660",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "poc/scenarios/espresso-compatibility/run-local.sh",
+      "git_revision": "5c34b400ba5245d7775a281566e21bf59708b147",
+      "sha256": "9e0362fcb457151f36c6f092463959a0e1c5b925bcd9b763a2c6e1ce26cca3e1",
+      "access": "git show; not merged"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/regional_BFT_sim/DESIGN.md",
+      "pin": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "sha256": "0749ff8bef9ad18b3794788d9f72c887126f4a2368dcf6adcb8587853eee3eae",
+      "access": "read only"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/regional_BFT_sim/README.md",
+      "pin": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "sha256": "6f12994133943938b8ff3ff7f149308dd653358ec64762fd117e7158af422d73",
+      "access": "read only"
+    },
+    {
+      "path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-utils-2026.10.0/src/faults.rs",
+      "pin": "Commonware 2026.10.0",
+      "sha256": "f443c640e027d71263cb908fbb8bfd32ccf09d26bad80585f10495179fc2c1f9",
+      "access": "read only"
+    },
+    {
+      "path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-consensus-2026.10.0/src/simplex/mod.rs",
+      "pin": "Commonware 2026.10.0",
+      "sha256": "f2745799e26a93b55fd1aa8178d1252e3a10717eac28a1fcc1f25335bcae829d",
+      "access": "read only"
+    },
+    {
+      "path": "formalization_v10/11_global_chain_safety_liveness_zh_v0_1.md",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "d34b5e270f7be5019a608e198b1e3d078670b3a86e1bfdb8173b0a53c35d5fde",
+      "review_stage": "additive source review"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/publications.rs",
+      "git_revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "sha256": "04ed8cdda2dd357b4047b4d4003b600e54731ac398bec24b69e3ff01d7eaa054",
+      "review_stage": "additive source review"
+    },
+    {
+      "path": "poc/crates/sim-transport/src/config.rs",
+      "git_revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "sha256": "e3c977c61fdd4d14390c56bdd469ec0dab59a53537aad4b577d55195452afed7",
+      "access": "git show; not merged",
+      "review_stage": "additive source review"
+    }
+  ],
+  "status": "PREPARATION_ONLY",
+  "notes": [
+    "No H3 implementation candidate inspected or run.",
+    "Pinned external Regional BFT source HEAD checked; local gitlink kept uninitialized.",
+    "Hashes are audit provenance, not cryptographic proof of correct implementation."
+  ]
+}

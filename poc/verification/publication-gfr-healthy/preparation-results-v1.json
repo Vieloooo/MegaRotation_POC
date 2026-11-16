@@ -1,0 +1,287 @@
+{
+  "schema": "H3-PREPARATION-REVIEW-RESULT-1",
+  "date": "2026-11-16",
+  "checkout": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+  "baseline": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+  "h3_implementation_candidate": null,
+  "role": {
+    "name": "bft_verifier",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "outcome": "PASS_PREPARATION_REVIEW_ONLY",
+  "implementation_readiness": "INCONCLUSIVE",
+  "healthy_M1": "NOT_RUN",
+  "healthy_M2": "OUT_OF_SCOPE",
+  "reviewed_documents": [
+    {
+      "path": "poc/docs/contracts/h3-publication-gfr-healthy-preparation-v1.md",
+      "sha256": "381f408f63e805040d0f3dd01a72150ca1ee2ef3fb023d6ab4f2cd781c4c52c4",
+      "reviewed_before_lead_status_freeze_sha256": "ca3001725618751b8c3d6a5485d55a8bbb58d990bb0e41517c22b6b445534600",
+      "status": "PREPARATION_SEMANTICS_FROZEN",
+      "note": "Lead changed freeze/status text only; final status text independently read. Concrete H1/H2/wire/owner gates remain open."
+    },
+    {
+      "path": "poc/docs/h3-publication-gfr-interface-proposal-v1.md",
+      "sha256": "892376107f8f08c0534f5a77cdbcbc2129d98627fe96bf6052f0b554c64b0ce4",
+      "reviewed_before_lead_status_freeze_sha256": "1d60162887b7ad82577e4411f767fb4bb9fdd20c51fc7650f7e64a1293f0b4e3",
+      "status": "PREPARATION_SEMANTICS_FROZEN",
+      "note": "Lead changed freeze/status text only; final status text independently read. Concrete H1/H2/wire/owner gates remain open."
+    }
+  ],
+  "chronology": {
+    "source_first_cases": 28,
+    "source_first_freeze_sha256": "c3aa3243a0914766c13e7bfd359a6e439f0edd41ae3a6813f95e1b8832d4b195",
+    "later_additive_cases": 4,
+    "later_additions": "Explicitly after proposal reading; no H3 implementation or builder explanation inspected.",
+    "source_pins_count": 36
+  },
+  "preparation_check": {
+    "command": "python3 poc/verification/publication-gfr-healthy/check-preparation.py",
+    "workdir": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+    "exit_code": 0,
+    "stdout": {
+      "candidate_executions": 0,
+      "checks": 52,
+      "native_integration_official": "NOT_RUN",
+      "seed": null,
+      "status": "PASS_PREPARATION_SELF_CHECK_ONLY",
+      "vectors": 15
+    },
+    "previous_self_check_count": 49,
+    "count_increase_reason": "Three additive-review source hashes added to the source pin manifest.",
+    "scope": "stdlib arithmetic/structural literal bytes/JSON/frozen source hashes only; no candidate imports",
+    "draft_transcription_error": "Earlier fixture construction asserted on incorrect hand-entered decimal codec and stopped before file output. Corrected to literal0x47465201; no candidate test failed."
+  },
+  "cases": [
+    {
+      "id": "H3-01",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-02",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-03",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-04",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-05",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-06",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-07",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-08",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-09",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-10",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-11",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-12",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-13",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-14",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-15",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-16",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-17",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-18",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-19",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-20",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-21",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-22",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-23",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-24",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-25",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-26",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-27",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-28",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-29",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-30",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-31",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "H3-32",
+      "status": "NOT_RUN"
+    }
+  ],
+  "readiness_gates": [
+    {
+      "id": "R1",
+      "topic": "Exact M0/H1 native verifier, historical basis and root/service custody interfaces",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "id": "R2",
+      "topic": "H2/H1 per-worker atomic lifecycle acknowledgement and immediate terminal fence while assignment material waits",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "id": "R3",
+      "topic": "Exact transport framing, configured limits, full-attempt profile and controlled fanout credits",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "id": "R4",
+      "topic": "H3 durable scoped stop ledger for late offers and pre-dispatch gating",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "id": "R5",
+      "topic": "Shared07 pure completeness API; unselected Recorded and separate-q inclusion adapter",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "id": "R6",
+      "topic": "Official runner genuine artifact input and single-owner assignment",
+      "status": "INCONCLUSIVE"
+    }
+  ],
+  "execution_limits": {
+    "builds": 0,
+    "heavy_simulations": 0,
+    "native_crypto_tests": 0,
+    "candidate_protocol_tests": 0,
+    "worker_processes_started": 0,
+    "official_services_started": 0,
+    "git_or_submodule_mutations": 0,
+    "writes": "Only poc/verification/publication-gfr-healthy/",
+    "vectors": "15 synthetic structural/semantic recipes; no signed evidence or executed ReadyState; illustrative q0\u20133/heights0\u201311, with official-position fixture q7",
+    "claims_excluded": [
+      "protocol proof",
+      "fault/recovery conformance",
+      "bounded liveness",
+      "PUB-4 or Espresso E-TS",
+      "official QC/VID verification",
+      "healthy15-worker M1",
+      "Force",
+      "D/RESUME",
+      "completeI1"
+    ]
+  },
+  "artifact_hashes": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/README.md",
+      "length": 1693,
+      "sha256": "eb74d98b5752ee9accc124ee3c5d6e8305fc10ea1a62da9aabeef8f6fc101b74"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/additive-expectations-v1.md",
+      "length": 5704,
+      "sha256": "112d6331c90eb9b6dd988118e7058a6b3252774091f54b61cc446d89a4eac78f"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/check-preparation.py",
+      "length": 3415,
+      "sha256": "a6052c6647d053c8e14d9945c1e40713216f6e666db70dbaf9b72683e9c7f92a"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/expectations-freeze-v1.json",
+      "length": 582,
+      "sha256": "f3a0b7649a941296bb7a1c123bc06c2fc963a428af7262e73eef33de5e1ad0a6"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/interface-review-v1.md",
+      "length": 9248,
+      "sha256": "23d9b7a532a4549c46e74fbf130edbbbb7e726ab575d7e5dbc7ed5192f735559"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/literal-vectors-v1.json",
+      "length": 11893,
+      "sha256": "a3062d5c781036544aa985c8d9f5375115bf48d3ca5c5edb8f3ca5928688f94b"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/replay-recipes-v1.md",
+      "length": 10487,
+      "sha256": "8466917571d46b401d01a3e2634393ca338a3b37a2ee59420e384e95e5ba27c5"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/source-first-expectations-v1.md",
+      "length": 16689,
+      "sha256": "c3aa3243a0914766c13e7bfd359a6e439f0edd41ae3a6813f95e1b8832d4b195"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/source-pins-v1.json",
+      "length": 9255,
+      "sha256": "c9ce8f32a93d0e8822dae19cae02aeb9b3888cd15151b52848ee87874f3ba62b"
+    }
+  ]
+}

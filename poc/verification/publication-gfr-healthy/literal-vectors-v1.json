@@ -1,0 +1,446 @@
+{
+  "schema": "H3-INDEPENDENT-LITERALS-1",
+  "baseline": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+  "status": "PREPARATION_ONLY",
+  "candidate_execution": "NOT_RUN",
+  "derivation": "independent construction from v10 and frozen component field rules; no production encoder imports",
+  "seed": null,
+  "vectors": [
+    {
+      "id": "L01-finality-threshold",
+      "kind": "semantic recipe; no native signature bytes",
+      "committee": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "fault_bound": 1,
+      "cases": [
+        {
+          "signers": [
+            0,
+            1,
+            2
+          ],
+          "expect": "INVALID_FINAL"
+        },
+        {
+          "signers": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "expect": "VALID_ONLY_IF_NATIVE_SIGNATURE_SUBJECT_DOMAIN_CHECKS_PASS"
+        },
+        {
+          "signers": [
+            0,
+            1,
+            2,
+            2
+          ],
+          "expect": "INVALID_FINAL"
+        },
+        {
+          "signers": [
+            0,
+            1,
+            2,
+            5
+          ],
+          "expect": "INVALID_FINAL"
+        }
+      ]
+    },
+    {
+      "id": "L02-public-body-literal",
+      "kind": "structural fixture, not executed/finalized",
+      "parent_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+      "height": 11,
+      "timestamp_us": 11000000,
+      "origin": 7,
+      "pre_state_root_hex": "2222222222222222222222222222222222222222222222222222222222222222",
+      "transactions": [],
+      "physical_length": 94,
+      "physical_hex": "00011111111111111111111111111111111111111111111111111111111111111111000000000000000b0000000000a7d8c00000000000000007222222222222222222222222222222222222222222222222222222222222222200000000",
+      "public_codec": 1195790849,
+      "public_length": 105,
+      "public_hex": "474652500001000000005e00011111111111111111111111111111111111111111111111111111111111111111000000000000000b0000000000a7d8c00000000000000007222222222222222222222222222222222222222222222222222222222222222200000000",
+      "public_sha256": "7ad4bc191ea7586ab6576c7eef3426c1c5b47dedeadbcdcfb8105487aa21f7d0",
+      "expect": "structural decode only; no Ready, finality or acceptance claim"
+    },
+    {
+      "id": "L03-lifecycle-identity",
+      "position": {
+        "key_us": 100,
+        "kind": "Espresso",
+        "q": 7
+      },
+      "position_hex": "00010000000000000064040000000000000007",
+      "events": [
+        {
+          "kind": "SessionClosed",
+          "session": [
+            0,
+            0
+          ],
+          "reason": "Complete",
+          "projection_hex": "00010000001300010000000000000064040000000000000007010000000000000000000000000000000001"
+        },
+        {
+          "kind": "BranchClosed",
+          "branch": 0,
+          "reason": "Expired",
+          "projection_hex": "0001000000130001000000000000006404000000000000000702000000000000000004"
+        }
+      ],
+      "expect": [
+        "two distinct identities at same pc",
+        "each exact duplicate idempotent",
+        "retain event order"
+      ]
+    },
+    {
+      "id": "L04-proof-body",
+      "assumptions": [
+        "actual native proof valid",
+        "selected C; A0->B1->B3",
+        "all source blocks and L1 inputs complete"
+      ],
+      "events": [
+        {
+          "q": 0,
+          "theta_us": 4000000,
+          "objects": [
+            "proof(C,B3)"
+          ]
+        },
+        {
+          "q": 1,
+          "theta_us": 4000000,
+          "objects": [
+            "body(B3)",
+            "body(B1)"
+          ]
+        }
+      ],
+      "expected_q_avail": [
+        null,
+        1
+      ],
+      "expect": [
+        "q0 no G append; unrelated replay proceeds",
+        "q1 may append h1,h2,h3 if other guards pass; h2 padding"
+      ]
+    },
+    {
+      "id": "L05-public-versus-local-missing",
+      "cases": [
+        {
+          "public_q0": [
+            "proof(C,B3)"
+          ],
+          "private_cache": [
+            "body(B1)",
+            "body(B3)"
+          ],
+          "expect": "q0 commits; q_avail null; private cache cannot publish bodies"
+        },
+        {
+          "q0_message_count": 2,
+          "delivered_indices": [
+            0
+          ],
+          "q1_complete": true,
+          "expect": "prefix WAIT at q0; q1 not visible"
+        }
+      ]
+    },
+    {
+      "id": "L06-proof-variants",
+      "locations": {
+        "proof_A": [
+          0,
+          0
+        ],
+        "body_B1": [
+          1,
+          0
+        ],
+        "body_B3": [
+          1,
+          1
+        ],
+        "proof_B": [
+          2,
+          0
+        ],
+        "optional_anchor_evidence": [
+          3,
+          0
+        ]
+      },
+      "expected_q_avail": 1,
+      "expect": "original positions and earliest completeness unchanged by reverse download/extra valid proof"
+    },
+    {
+      "id": "L07-cutoff-equality",
+      "window": [
+        1,
+        10
+      ],
+      "ts_h_us": "1000000*h",
+      "grace_us": 3000000,
+      "session_end_us": 14000000,
+      "cases": [
+        {
+          "theta_q_avail_us": 13999999,
+          "expect": "public cutoff guard passes"
+        },
+        {
+          "theta_q_avail_us": 14000000,
+          "expect": "SessionEnd before Espresso; no old-cid append"
+        }
+      ]
+    },
+    {
+      "id": "L08-cached-successor-expiry",
+      "g_height": 8,
+      "successor_window": [
+        11,
+        20
+      ],
+      "anchor_height": 8,
+      "ts_h_us": "1000000*h",
+      "expiry_us": 20000000,
+      "original_q_avail": 0,
+      "original_theta_us": 12000000,
+      "cases": [
+        {
+          "x_us": 28999999,
+          "target": 11,
+          "expect": "h9,h10,h11 may append if other guards pass"
+        },
+        {
+          "x_us": 29000000,
+          "target": 11,
+          "expect": "Expire9 HALTs first; no append although target expiry=31000000"
+        }
+      ]
+    },
+    {
+      "id": "L09-sessionend",
+      "old_window": [
+        1,
+        10
+      ],
+      "initial_anchor_height": 0,
+      "last_accepted_physical_height": 8,
+      "unaccepted_candidate_height": 10,
+      "expect": {
+        "reason": "Complete",
+        "successor_session": [
+          0,
+          1
+        ],
+        "region": 1,
+        "window": [
+          11,
+          20
+        ],
+        "production_anchor_height": 8,
+        "plan_reference_height": 0,
+        "immediate_g_height": 8,
+        "synthetic_tail": []
+      }
+    },
+    {
+      "id": "L10-publisher-states",
+      "events": [
+        "valid full Offer",
+        "durable prepare",
+        "root Ack + mark_dispatched",
+        "service ACK",
+        "source finalized but not reader delivered",
+        "complete delivered verified receipt"
+      ],
+      "expected_phases": [
+        "QUEUED",
+        "QUEUED",
+        "SUBMITTED",
+        "SUBMITTED",
+        "SUBMITTED",
+        "RECORDED"
+      ],
+      "expect": "stable bytes and custody refs; RECORDED is not G acceptance"
+    },
+    {
+      "id": "L11-late-offer",
+      "events": [
+        "valid public SessionClosed(0,0)",
+        "first full Offer for unknown key in session(0,0)",
+        "attempt preparation"
+      ],
+      "expect": [
+        "retain closed scope independently of keys",
+        "properly validated task STOPPED",
+        "no attempt or dispatch"
+      ],
+      "negative_controls": [
+        "local TIME does not stop",
+        "unrelated assignment does not stop",
+        "unknown-source or uncommitted lifecycle cannot stop"
+      ]
+    },
+    {
+      "id": "L12-whole-attempt-size",
+      "source_id_length": 1,
+      "cases": [
+        {
+          "message_lengths": [
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536
+          ],
+          "encoded_block_bytes": 1048752,
+          "expect": "CAPACITY; no silent multiple attempts"
+        },
+        {
+          "message_lengths": [
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65360
+          ],
+          "encoded_block_bytes": 1048576,
+          "expect": "at block size limit"
+        },
+        {
+          "message_lengths": [
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65536,
+            65361
+          ],
+          "encoded_block_bytes": 1048577,
+          "expect": "CAPACITY"
+        }
+      ],
+      "expect": "framed transport does not lift public message/list limits"
+    },
+    {
+      "id": "L13-official-projection",
+      "kind": "structural fixture; genuine M1 bytes remain unavailable",
+      "q": 7,
+      "namespace": 160016,
+      "transactions": [
+        {
+          "flat_index": 0,
+          "namespace": 9,
+          "payload_hex": "aa"
+        },
+        {
+          "flat_index": 1,
+          "namespace": 160016,
+          "payload_hex": "474652500001000000005e00011111111111111111111111111111111111111111111111111111111111111111000000000000000b0000000000a7d8c00000000000000007222222222222222222222222222222222222222222222222222222222222222200000000"
+        },
+        {
+          "flat_index": 2,
+          "namespace": 160016,
+          "payload_hex": "474652500001000000005e00011111111111111111111111111111111111111111111111111111111111111111000000000000000b0000000000a7d8c00000000000000007222222222222222222222222222222222222222222222222222222222222222200000000"
+        }
+      ],
+      "expected_mapping": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "expect": "keep duplicate bytes and source flat indices; full N=3 required",
+      "timing": {
+        "proposed_at": "Unknown",
+        "finalized_at": "Unknown",
+        "live_at_proposal": "Unknown"
+      },
+      "pe_export": "UnsupportedTimingEvidence"
+    },
+    {
+      "id": "L14-atomic-batch-local-fence",
+      "events": [
+        "GFR commits close(old)+assign(new)",
+        "worker A lacks new anchor state",
+        "worker B ready",
+        "A receives local ClockUnsafe/Close"
+      ],
+      "expect": [
+        "A retains complete ordered pending batch, no partial new assignment/Enter",
+        "B progresses independently; no all15 barrier",
+        "A permanent close fence applies without waiting for new material"
+      ],
+      "interface_status": "INCONCLUSIVE until H2 acknowledgement/fence policy frozen"
+    },
+    {
+      "id": "L15-transport-fanout",
+      "kind": "capacity arithmetic recipe; header256 is illustrative, NOT frozen wire",
+      "payload_limit": 65536,
+      "illustrative_header_bytes": 256,
+      "chunk_body_capacity": 65280,
+      "source_object_bytes": 1048576,
+      "fragment_count": 17,
+      "framed_copy_bytes": 1052928,
+      "default_global_queue_payload_bytes": 4194304,
+      "four_copy_bytes": 4211712,
+      "fifteen_copy_bytes": 15793920,
+      "expect": [
+        "four complete copies exceed default queue payload bound",
+        "15-reader fanout needs bounded credits/enqueue/drain",
+        "retain reliable custody if queue overflows; no fragment loss reported as public absence",
+        "configured smaller payload limit needs adaptive chunks or explicit profile rejection before output"
+      ]
+    }
+  ]
+}
