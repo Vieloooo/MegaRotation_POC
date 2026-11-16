@@ -1,5 +1,7 @@
 # H2 Session Manager healthy preparation v1
 
+**历史准备稿说明（2026-11-16）：** 下文保留原 `draft2` 的准备时状态、门禁及封存审查语境。实施派发 `d55d39f73593676325bdc0fbb7ba3845ca93025f` 已撤销“仅准备”限制，M0 已交付 `35d382ac445cc8bc779f0d18fd23cb57e54680da`；可立即冻结/实现的纯组件以新 [H2 Manager reducer v1 合同](h2-session-manager-reducer-v1.md) 为准。旧文中的 M0/后续授权等待不再阻塞新切片；真实 H1/H3 接线 gates 仍分别验收。本次只新增此说明，不改写旧独立 oracle、旧审查 hash 或原准备阶段的 NOT RUN 结论。
+
 日期：2026-11-16，Asia/Shanghai。合同 ID：`H2-SM-HEALTHY-v1-draft2`。状态：**DRAFT / NOT FROZEN / NOT IMPLEMENTATION AUTHORIZATION**。本轮仅产出合同与独立验收准备；没有实现、构建、测试、模拟或验收 PASS。
 
 准备基线为 `4a9a6b0a92a11e5778833988bb6524d929f4608e`，工作目录为 `/home/jy/.codex/worktrees/a6cf/megaroation_poc`。这只是计划文档基线，**不是 M0 集成交付 SHA**。M0 准确验收 SHA、H1/H3 冻结接口提交和本合同独立复核齐备后，lead 才可收口合同；启动 Builder 还须总协调的后续实现授权。本轮准备派发不因依赖到齐自动变为实现授权。未知 SHA 保持未填写，不以浮动 HEAD 代替。
