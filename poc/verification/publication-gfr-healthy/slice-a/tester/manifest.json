@@ -1,0 +1,320 @@
+{
+  "accepted_07_revision": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+  "artifact_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/h3-a-e59d026-acceptance-v1",
+  "candidate": "e59d026e8c08b64ff744b57c63cc7756f0b34019",
+  "captured_input_hashes_unchanged": true,
+  "captured_inputs": 125,
+  "cases": [
+    {
+      "binary_sha256": "a4e80911a104bd7dc62aa982139323cd87deca6c5b2253bac9f5dc445981647b",
+      "case": "slice-a-independent",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.toml",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "local_wall_elapsed_ns": 104606535130,
+      "passed": 14,
+      "profile": "SYNTHETIC_NATIVE_BOUNDARY_NOT_CRYPTO",
+      "seed": null,
+      "stderr": "slice-a-independent.stderr",
+      "stderr_sha256": "9d8f8db1399602cdc05a57a490e9b6b1c518c9cbf3d27426b7bb717a4f827695",
+      "stdout": "slice-a-independent.stdout",
+      "stdout_sha256": "dd0c6fd71d31ba63d1936490176b8e1900cce37fee4962c64f5824ac5b7b027c",
+      "timed_out": false
+    },
+    {
+      "accepted_raw_trace_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "binary_sha256": "1d953e46d7f95cb6d3b196f268185230861257d24e9de4d17b4b0497e2bff01a",
+      "byte_identical_to_accepted_07": true,
+      "case": "G1-42-0",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "poc/crates/viewer-gfr/Cargo.toml",
+        "--example",
+        "replay",
+        "--",
+        "G1",
+        "42",
+        "0"
+      ],
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 65832366722,
+      "pause_ms": 0,
+      "profile": "gfr-07-noncryptographic-rule-fixture-v1",
+      "seed": 42,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "G1-42-0.stderr",
+      "stderr_sha256": "76871f56367c921e65e6e6f171ee797976507a2bd573fa66e2509cdacdce6e69",
+      "stdout": "G1-42-0.jsonl",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "accepted_raw_trace_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "binary_sha256": "1d953e46d7f95cb6d3b196f268185230861257d24e9de4d17b4b0497e2bff01a",
+      "byte_identical_to_accepted_07": true,
+      "case": "G1-42-2",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "poc/crates/viewer-gfr/Cargo.toml",
+        "--example",
+        "replay",
+        "--",
+        "G1",
+        "42",
+        "2"
+      ],
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 1017584233,
+      "pause_ms": 2,
+      "profile": "gfr-07-noncryptographic-rule-fixture-v1",
+      "seed": 42,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "G1-42-2.stderr",
+      "stderr_sha256": "93378d9618f4e01db35f6b5a2c79df0c06c216dd0b6edc427b7ee738356d88cc",
+      "stdout": "G1-42-2.jsonl",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "accepted_raw_trace_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "binary_sha256": "1d953e46d7f95cb6d3b196f268185230861257d24e9de4d17b4b0497e2bff01a",
+      "byte_identical_to_accepted_07": true,
+      "case": "G2-42-0",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "poc/crates/viewer-gfr/Cargo.toml",
+        "--example",
+        "replay",
+        "--",
+        "G2",
+        "42",
+        "0"
+      ],
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 616232384,
+      "pause_ms": 0,
+      "profile": "gfr-07-noncryptographic-rule-fixture-v1",
+      "seed": 42,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "G2-42-0.stderr",
+      "stderr_sha256": "6a235af24c97a13496a12b234264e7de699cf6997f3449b83346c3663e7bc794",
+      "stdout": "G2-42-0.jsonl",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "accepted_raw_trace_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "binary_sha256": "1d953e46d7f95cb6d3b196f268185230861257d24e9de4d17b4b0497e2bff01a",
+      "byte_identical_to_accepted_07": true,
+      "case": "G2-42-2",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "poc/crates/viewer-gfr/Cargo.toml",
+        "--example",
+        "replay",
+        "--",
+        "G2",
+        "42",
+        "2"
+      ],
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 1066731289,
+      "pause_ms": 2,
+      "profile": "gfr-07-noncryptographic-rule-fixture-v1",
+      "seed": 42,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "G2-42-2.stderr",
+      "stderr_sha256": "aa04703892676ba4b275b50a0d525d46f1ed959675dec7da7c82396d62a75ba9",
+      "stdout": "G2-42-2.jsonl",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    }
+  ],
+  "contract": "H3-A-1",
+  "harness_lock_sha256": "27fa993956b33e3afdf8e9647ca1619159e9d8b4486f03a046343a83c5add118",
+  "incomplete_cases": [],
+  "local_wall_clock": "perf_counter_ns around each Cargo command, within the acquired host lock",
+  "open_gates": [
+    "Actual H1 native finality and historical proof acceptance",
+    "Controlled H1 runtime",
+    "H2 integration",
+    "Healthy 15-worker M1 and genuine-result official publication"
+  ],
+  "outer_lock_command": [
+    "flock",
+    "--exclusive",
+    "--timeout",
+    "60",
+    "--conflict-exit-code",
+    "75",
+    "/tmp/megaroation-poc-heavy.lock",
+    "python3",
+    "-B",
+    "poc/verification/publication-gfr-healthy/slice-a/tester/run.py",
+    "h3-a-e59d026-acceptance-v1"
+  ],
+  "pause_pairs": [
+    {
+      "byte_identical": true,
+      "scenario": "G1",
+      "seed": 42,
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f"
+    },
+    {
+      "byte_identical": true,
+      "scenario": "G2",
+      "seed": 42,
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371"
+    }
+  ],
+  "raw_manifest": "manifest.json",
+  "raw_manifest_sha256": "4d32a56fc24e1217b97de73854dbc0f2c65bdc7f7d5ab63bf898d42a6551aa95",
+  "real_network_measurements": null,
+  "runner_sha256": "1c81f9dbc20ce83ea7817b6ebf2ba627dd738c1d0b6b082bfdcd1be0eaf4353a",
+  "timeouts": [],
+  "tools": {
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "flock": "flock from util-linux 2.37.2",
+    "git": "git version 2.34.1",
+    "python3": "Python 3.12.8",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.95.0\nLLVM version: 22.1.2"
+  },
+  "tracked_worktree_changes_at_capture": [],
+  "verdict": "PASS"
+}

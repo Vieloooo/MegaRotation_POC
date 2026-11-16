@@ -5,14 +5,15 @@ use poc_core::{
     metadata::{MetadataProvider, RegionalMetadata, l2_timestamp_us},
 };
 use poc_types::domain::{DomainError, MAX_FIXTURE_ROWS, Metadata, validate_transactions};
-use sim_espresso::{EspressoPosition, FinalizedBlock};
+use sim_espresso::{EspressoPosition, FinalizedBlock, VerifiedPrefix};
 
 use crate::{
     Anchor, ConfigRef, Descriptor, ExecutionAnchor, GfrError, Hash32, InputError, InputStatus,
-    Missing, PUBLICATION_CODEC, PhysicalBlock, PublicObject, ReplayReads, ReplayServices,
-    ResultKey, decode_publication,
+    Missing, PUBLICATION_CODEC, PhysicalBlock, PublicConfig, PublicObject, ReplayReads,
+    ReplayServices, ResultKey, VerificationProfile, VerifierBinding, decode_publication,
     frontier::{expiry_key, input_missing, session_end_key, u64_index},
-    replay::{StepError, StepResult},
+    reader::validate_source_id,
+    replay::{StepError, StepResult, verify_profile},
     state::PublicReplayState,
 };
 
@@ -69,6 +70,109 @@ pub enum ResultExclusion {
 pub enum PublicationDiagnostic {
     UnknownCodec(u32),
     Malformed(GfrError),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PublicCompleteness {
+    pub key: ResultKey,
+    pub first_complete_q: u64,
+    pub publication_position: EspressoPosition,
+    /// Physical bodies ordered from the anchor's child through the target.
+    pub physical_chain: Vec<PhysicalBlock>,
+    pub valid_proof_locations: Vec<EspressoPosition>,
+    pub body_locations: Vec<(Hash32, Vec<EspressoPosition>)>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CompletenessInvalid {
+    Ancestry,
+    FinalProof,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CompletenessOutcome {
+    Complete(PublicCompleteness),
+    Incomplete,
+    Wait(Missing),
+    Invalid(CompletenessInvalid),
+    Reject(GfrError),
+}
+
+/// Evaluate exact public evidence independent of selection and acceptance time.
+pub fn public_completeness(
+    prefix: &VerifiedPrefix<'_>,
+    through_q: u64,
+    config: &PublicConfig,
+    expected: &VerificationProfile,
+    descriptor: &Descriptor,
+    target: Hash32,
+    finality: Option<&VerifierBinding<'_>>,
+) -> CompletenessOutcome {
+    let check = || -> StepResult<CompletenessOutcome> {
+        if through_q > prefix.tip().0 {
+            return Err(GfrError::HistoricalBound.into());
+        }
+        validate_source_id(prefix.source_id())?;
+        let config_ref = config.reference()?;
+        verify_profile(config, expected, finality)?;
+        descriptor.validate()?;
+        if descriptor.plan.config_ref != config_ref {
+            return Err(GfrError::ConfigMismatch.into());
+        }
+        let key = ResultKey {
+            cid: descriptor.cid,
+            block_hash: target,
+        };
+        let mut index = PublicationIndex::default();
+        let cut = prefix
+            .blocks()
+            .get(..=u64_index(through_q)?)
+            .ok_or(GfrError::InvalidSource)?;
+        for block in cut {
+            index.index(block)?;
+        }
+        let Some(evidence) = index.results.get_mut(&key) else {
+            return Ok(CompletenessOutcome::Incomplete);
+        };
+        let complete = match evaluate_completeness(
+            &index.bodies,
+            evidence,
+            key,
+            descriptor,
+            config,
+            finality,
+        )? {
+            EvaluationOutcome::Incomplete => return Ok(CompletenessOutcome::Incomplete),
+            EvaluationOutcome::Invalid(reason) => return Ok(CompletenessOutcome::Invalid(reason)),
+            EvaluationOutcome::Complete(complete) => complete,
+        };
+        let mut valid_proof_locations: Vec<_> = valid_proof_positions(evidence).collect();
+        valid_proof_locations.sort_unstable();
+        valid_proof_locations.dedup();
+        let body_locations = complete
+            .digests
+            .into_iter()
+            .map(|digest| {
+                let mut locations = index.bodies[&digest].locations.clone();
+                locations.sort_unstable();
+                locations.dedup();
+                (digest, locations)
+            })
+            .collect();
+        Ok(CompletenessOutcome::Complete(PublicCompleteness {
+            key,
+            first_complete_q: complete.first_complete_q,
+            publication_position: complete.publication_position,
+            physical_chain: complete.blocks,
+            valid_proof_locations,
+            body_locations,
+        }))
+    };
+    match check() {
+        Ok(outcome) => outcome,
+        Err(StepError::Wait(missing)) => CompletenessOutcome::Wait(missing),
+        Err(StepError::Reject(error)) => CompletenessOutcome::Reject(error),
+    }
 }
 
 pub(crate) struct Candidate {
@@ -174,43 +278,28 @@ impl Evaluation<'_> {
             if evidence.exclusion.is_some() {
                 continue;
             }
-            for proof in evidence.proofs.values_mut() {
-                if *proof.descriptor != *descriptor {
-                    proof.verdict = ProofVerdict::DescriptorMismatch;
+            let CompletePath {
+                blocks,
+                digests,
+                first_complete_q: q_avail,
+                ..
+            } = match evaluate_completeness(
+                bodies,
+                evidence,
+                key,
+                descriptor,
+                &state.config,
+                self.services.finality.as_ref(),
+            )? {
+                EvaluationOutcome::Incomplete
+                | EvaluationOutcome::Invalid(CompletenessInvalid::FinalProof) => continue,
+                EvaluationOutcome::Invalid(CompletenessInvalid::Ancestry) => {
+                    evidence.exclusion = Some(ResultExclusion::InvalidAncestry);
+                    continue;
                 }
-            }
-            if !evidence
-                .proofs
-                .values()
-                .any(|proof| matches!(proof.verdict, ProofVerdict::Unchecked | ProofVerdict::Valid))
-            {
-                continue;
-            }
-            let (blocks, digests, first_q) =
-                match ancestry(bodies, key.block_hash, descriptor, &state.config)? {
-                    BodyPath::Missing => continue,
-                    BodyPath::Invalid => {
-                        evidence.exclusion = Some(ResultExclusion::InvalidAncestry);
-                        continue;
-                    }
-                    BodyPath::Complete {
-                        blocks,
-                        digests,
-                        first_q,
-                    } => (blocks, digests, first_q),
-                };
-            let target = blocks.last().ok_or(GfrError::InvalidSource)?;
-            self.verify_proofs(evidence, descriptor, target)?;
-            let Some(proof_q) = evidence
-                .proofs
-                .values()
-                .filter(|p| p.verdict == ProofVerdict::Valid)
-                .map(|p| p.locations[0].q)
-                .min()
-            else {
-                continue;
+                EvaluationOutcome::Complete(complete) => complete,
             };
-            let q_avail = first_q.max(proof_q);
+            let target = blocks.last().ok_or(GfrError::InvalidSource)?;
             evidence.q_avail = Some(q_avail);
             evidence.physical_chain.clone_from(&digests);
             let q_block = self
@@ -252,43 +341,115 @@ impl Evaluation<'_> {
         }
         Ok(candidates)
     }
+}
 
-    fn verify_proofs(
-        &self,
-        evidence: &mut ResultEvidence,
-        descriptor: &Descriptor,
-        target: &PhysicalBlock,
-    ) -> StepResult<()> {
-        if !evidence
-            .proofs
-            .values()
-            .any(|proof| proof.verdict == ProofVerdict::Unchecked)
-        {
-            return Ok(());
+struct CompletePath {
+    blocks: Vec<PhysicalBlock>,
+    digests: Vec<Hash32>,
+    first_complete_q: u64,
+    publication_position: EspressoPosition,
+}
+
+enum EvaluationOutcome {
+    Incomplete,
+    Invalid(CompletenessInvalid),
+    Complete(CompletePath),
+}
+
+// Both callers index checked public messages themselves. Only replay carries
+// verdicts forward, inside its sealed state under a fixed verification profile.
+fn evaluate_completeness(
+    bodies: &BTreeMap<Hash32, BodyEvidence>,
+    evidence: &mut ResultEvidence,
+    key: ResultKey,
+    descriptor: &Descriptor,
+    config: &PublicConfig,
+    finality: Option<&VerifierBinding<'_>>,
+) -> StepResult<EvaluationOutcome> {
+    for proof in evidence.proofs.values_mut() {
+        if *proof.descriptor != *descriptor {
+            proof.verdict = ProofVerdict::DescriptorMismatch;
         }
-        let binding = self
-            .services
-            .finality
-            .as_ref()
-            .ok_or(StepError::Wait(Missing::FinalVerifierUnavailable))?;
-        match binding.basis.require(descriptor, target) {
-            InputStatus::Ready(()) => {}
-            InputStatus::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
-            InputStatus::Reject(error) => return Err(StepError::Reject(error.into())),
-        }
-        for proof in evidence
-            .proofs
-            .values_mut()
-            .filter(|p| p.verdict == ProofVerdict::Unchecked)
-        {
-            proof.verdict = if binding.verifier.check(descriptor, target, &proof.proof) {
-                ProofVerdict::Valid
-            } else {
-                ProofVerdict::Invalid
-            };
-        }
-        Ok(())
     }
+    if !evidence
+        .proofs
+        .values()
+        .any(|proof| matches!(proof.verdict, ProofVerdict::Unchecked | ProofVerdict::Valid))
+    {
+        // Invalid verdicts can only have been determined after a complete path.
+        return Ok(
+            if evidence
+                .proofs
+                .values()
+                .any(|p| p.verdict == ProofVerdict::Invalid)
+            {
+                EvaluationOutcome::Invalid(CompletenessInvalid::FinalProof)
+            } else {
+                EvaluationOutcome::Incomplete
+            },
+        );
+    }
+    let (blocks, digests, first_body_q) =
+        match ancestry(bodies, key.block_hash, descriptor, config)? {
+            BodyPath::Missing => return Ok(EvaluationOutcome::Incomplete),
+            BodyPath::Invalid => {
+                return Ok(EvaluationOutcome::Invalid(CompletenessInvalid::Ancestry));
+            }
+            BodyPath::Complete {
+                blocks,
+                digests,
+                first_q,
+            } => (blocks, digests, first_q),
+        };
+    let target = blocks.last().ok_or(GfrError::InvalidSource)?;
+    verify_proofs(evidence, descriptor, target, finality)?;
+    let Some(publication_position) = valid_proof_positions(evidence).min() else {
+        return Ok(EvaluationOutcome::Invalid(CompletenessInvalid::FinalProof));
+    };
+    Ok(EvaluationOutcome::Complete(CompletePath {
+        blocks,
+        digests,
+        first_complete_q: first_body_q.max(publication_position.q),
+        publication_position,
+    }))
+}
+
+fn valid_proof_positions(evidence: &ResultEvidence) -> impl Iterator<Item = EspressoPosition> + '_ {
+    evidence
+        .proofs
+        .values()
+        .filter(|proof| proof.verdict == ProofVerdict::Valid)
+        .flat_map(|proof| proof.locations.iter().copied())
+}
+
+fn verify_proofs(
+    evidence: &mut ResultEvidence,
+    descriptor: &Descriptor,
+    target: &PhysicalBlock,
+    finality: Option<&VerifierBinding<'_>>,
+) -> StepResult<()> {
+    let unchecked = evidence
+        .proofs
+        .values_mut()
+        .filter(|proof| proof.verdict == ProofVerdict::Unchecked);
+    let mut unchecked = unchecked.peekable();
+    if unchecked.peek().is_none() {
+        return Ok(());
+    }
+    let binding = finality.ok_or(StepError::Wait(Missing::FinalVerifierUnavailable))?;
+    match binding.basis.require(descriptor, target) {
+        InputStatus::Ready(()) => {}
+        InputStatus::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
+        InputStatus::Reject(error) => return Err(StepError::Reject(error.into())),
+    }
+    for proof in unchecked {
+        proof.verdict = if binding.verifier.check(descriptor, target, &proof.proof) {
+            ProofVerdict::Valid
+        } else {
+            ProofVerdict::Invalid
+        };
+    }
+    Ok(())
 }
 
 fn check_compatible(

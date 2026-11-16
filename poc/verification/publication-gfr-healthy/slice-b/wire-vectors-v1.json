@@ -1,0 +1,92 @@
+{
+  "schema": "H3-B-INDEPENDENT-PRECODE-1",
+  "candidate_execution": "NOT_RUN",
+  "binding_recipe": "fixed literal binding only; exact derivation awaiting annex freeze",
+  "frame_vector": {
+    "kind": 0,
+    "binding_id_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "object_hex": "616263",
+    "payload_limit": 86,
+    "object_digest_hex": "651ecc0f248a06ff73bb0b6e033f90b4ac21e9679f486faab0f62718e8596819",
+    "frame_hex": "483354460001001111111111111111111111111111111111111111111111111111111111111111651ecc0f248a06ff73bb0b6e033f90b4ac21e9679f486faab0f62718e8596819000000030000000100000003616263",
+    "header_bytes": 83,
+    "frame_bytes": 86
+  },
+  "segmentation": [
+    {
+      "object_bytes": 61440,
+      "payload_limit": 65536,
+      "chunks": [
+        61440
+      ]
+    },
+    {
+      "object_bytes": 61441,
+      "payload_limit": 65536,
+      "chunks": [
+        61440,
+        1
+      ]
+    },
+    {
+      "object_bytes": 1048576,
+      "payload_limit": 65536,
+      "chunks": [
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        61440,
+        4096
+      ]
+    },
+    {
+      "object_bytes": 1048577,
+      "payload_limit": 65536,
+      "expected": "CAPACITY"
+    },
+    {
+      "object_bytes": 1,
+      "payload_limit": 83,
+      "expected": "CAPACITY"
+    },
+    {
+      "object_bytes": 1024,
+      "payload_limit": 84,
+      "chunk_count": 1024
+    },
+    {
+      "object_bytes": 1025,
+      "payload_limit": 84,
+      "expected": "CAPACITY"
+    }
+  ],
+  "empty_object": "NEEDS_EXPLICIT_RULE",
+  "fanout": {
+    "one_mib_framed_bytes": 1050070,
+    "four_copies_bytes": 4200280,
+    "default_global_queue_bytes": 4194304,
+    "expected": "four full copies already exceed shared queue; use actual credits"
+  },
+  "negative_mutations": [
+    "count0 for nonempty",
+    "chunk_index==chunk_count",
+    "wrong declared final chunk length",
+    "changed digest",
+    "same identity conflicting bytes",
+    "wrong run/config/destination/incarnation",
+    "extra trailing byte"
+  ]
+}

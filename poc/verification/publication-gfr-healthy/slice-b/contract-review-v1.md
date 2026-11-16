@@ -1,0 +1,17 @@
+# B/C pre-code review
+
+2026-11-16. No B/C candidate implementation inspected or executed. Slice A's independent harness preparation is separate. Relevant original source32-case expectations remain unchanged.
+
+**C: PASS for local contract freeze.** Reviewed `h3-publication-gfr-slice-c-v1.md` SHA-256 `e83d38861f4d35951a761ef01556082ec920ff6038189a268cfa53662d3d8da9`. The corrected51560/51169 size distinction is sound. The unchanged16 audit codec `0xEC160001` labels its opaque audit projection; manifest codec `0x47465201` binds actual GFR payload bytes independently. HTTP has namespace/payload, so preserving the legacy audit does not rewrite the submitted object. Default markers, duplicate ordinals, separate producer/runner revisions, complete positional readback, and explicit native revalidation/Unknown timing gates are preserved. Source-derived cases/fixtures are in `../slice-c/`; C execution remains NOT_RUN.
+
+**B: semantic design passes; one exact binding clarification remains before final freeze.** Reviewed `h3-publication-gfr-slice-b-v1.md` SHA-256 `701cfd339ce74631b45f5dcbea0031343d653c18dc85416ba260875e78b72252`. The initially unresolved record/binding hash recipes and zero-length rule are now concrete. All five supplied hash vectors independently match stdlib SHA-256 calculations. An additional nonempty Append+SessionClosed record projection is162 bytes, ID `09d03132fa7bb0d455caa75b9b62be44ac5eb8aa69b61ca7d2bc587b1a0c99ba`; see `identity-vectors-v1.json`. These are composition literals, not authenticated native records or root receipts.
+
+| Finding | Source, location, impact | Required resolution / replay recipe |
+| --- | --- | --- |
+| B-R1 replay-parameter binding | Frozen07 §§3/9 binds GfrParameters in immutable replay state separately from03 config_ref. B §1 lines9/29 lists source/config/profile capture, while StopLedgerBinding atline47 contains parameters. A sealed replay with shorter grace/expiry must not authorize public stops in a ledger configured with different parameters. | Retain exact GfrParameters in private RecordDelivery capture and compare them to ledger binding before planning a record. Keep parameters in snapshot/receipt binding. The existing8-part record ID may stay unchanged because exact parameters can be checked separately. Negative recipe: capture otherwise same source/config/profile under different grace/expiry, apply to normal ledger→Reject before scope/state change. |
+
+B's new restore rule is necessary and correct: matching checksum alone cannot install a public exclusion; the actual expected owner receipt must authenticate the complete bound snapshot. RecordDelivery from sealed GFR is evidence of an algorithmic replay step, not H1 durable root commit or released Manager delivery. Those distinctions satisfy the dispatch's sole-committer rule without blocking pure component work.
+
+The dispatch's lifecycle policy remains authoritative: full legal record precheck precedes the shared committed delta; close/tombstone is not postponed for successor material, and permanent guards cannot roll back on later action failure. H3 does not create ReadyToken. Framing, per-destination/global bounds, completed-ID retention and actual02 credits preserve pending custody; synthetic ports prove only test transition behavior.
+
+No actual H1 root/API or native-M1 evidence is required to freeze or implement the pure B/C portions. Those are local integration gates. All protocol/custody/readback execution remains NOT_RUN; only literal hash/size arithmetic has been checked.

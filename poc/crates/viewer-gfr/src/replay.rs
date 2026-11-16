@@ -15,7 +15,8 @@ use crate::{
     GlobalSource, InitInput, InitResult, InputRef, LifecycleBody, LifecycleEvent, Missing,
     PlanError, PlanInput, PlanOutcome, PublicConfig, PublicReplayState, ReplayEffect,
     ReplayPosition, ReplayReads, ReplayRecord, ReplayResult, ReplayServices, ReplayState,
-    ReplayStatus, SessionId, SupportingCuts, Tail, VerificationProfile, Window, compare_positions,
+    ReplayStatus, SessionId, SupportingCuts, Tail, VerificationProfile, VerifierBinding, Window,
+    compare_positions,
     frontier::{OrderedEvent, Sources, add, input_missing, u64_index},
     publications::{Candidate, Evaluation, ResultExclusion, interval_unexpired},
     reader::validate_source_id,
@@ -217,8 +218,16 @@ fn verify_services(
     {
         return Err(GfrError::ConfigMismatch);
     }
+    verify_profile(config, expected, services.finality.as_ref())
+}
+
+pub(crate) fn verify_profile(
+    config: &PublicConfig,
+    expected: &VerificationProfile,
+    finality: Option<&VerifierBinding<'_>>,
+) -> Result<(), GfrError> {
     expected.validate(config)?;
-    if let Some(binding) = &services.finality {
+    if let Some(binding) = finality {
         binding.profile.validate(config)?;
         if binding.profile != *expected {
             return Err(GfrError::VerificationProfileMismatch);

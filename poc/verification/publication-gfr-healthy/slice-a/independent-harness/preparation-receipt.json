@@ -1,0 +1,72 @@
+{
+  "schema": "H3-A-INDEPENDENT-HARNESS-PREPARATION-1",
+  "source_expectations_sha256": "426f886c6a686975c16dc10d74f5bfa7800d60b572069fecec5989d57cb20485",
+  "status": "PREPARED_NOT_RUN",
+  "candidate_inspected": null,
+  "candidate_executions": 0,
+  "compiled": false,
+  "rust_tests": 14,
+  "proof_classification": "SYNTHETIC_NATIVE_BOUNDARY_NOT_CRYPTO; real03 registry/PoP/Plan/execution and06 components consumed",
+  "lock_status": "Preparation seed retained; actual own Cargo.lock resolution waits named candidate manifest",
+  "sealed_originals": "all9 original prep artifact hashes unchanged; sliceA source/vector freeze unchanged",
+  "new_guards": [
+    "InvalidFinalProof receipt pending until later valid variant",
+    "trusted sealed internal GFR historical cache may advance emptyq without optionalbinding; fresh helper stillWAIT"
+  ],
+  "files": [
+    {
+      "path": "Cargo.lock.preparation-seed",
+      "bytes": 61708,
+      "sha256": "f94c45a60b060f8e261d846dc8c0d115283907cf107679ae67365d69dfc5302d"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 594,
+      "sha256": "2e05b291b56a37fc8e95f02464fca7b3cdd01d751eff7cb5ade9a67f897fce93"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2194,
+      "sha256": "58a4e61f6364fe5f81eae2ed3ea8f768a8791e301821d43bacd37a919a60d0a7"
+    },
+    {
+      "path": "fixture-provenance.json",
+      "bytes": 1943,
+      "sha256": "6278a4d660d8e91740fa34ac15f2c458d91dcab76d04da936968817c22709265"
+    },
+    {
+      "path": "tests/fixtures/component_fixture.rs",
+      "bytes": 4705,
+      "sha256": "823c7e349be467e4b977a1e03bc7f217d069715a83d0aea0b63f153da58109c7"
+    },
+    {
+      "path": "tests/fixtures/m2-golden-vectors.json",
+      "bytes": 25040,
+      "sha256": "5bbd96c791ce2a1db148f8a627b6a8d34070e229a941f564cb45b06f78ea3aca"
+    },
+    {
+      "path": "tests/fixtures/m2-inputs.json",
+      "bytes": 8797,
+      "sha256": "217774789279650a88d8147f1913f0bdc07ce92b57e7a9d12284e1bb0a5f8ea6"
+    },
+    {
+      "path": "tests/fixtures/mod.rs",
+      "bytes": 11575,
+      "sha256": "7675576e488ac32792c9226bc123af3208fbbd4278b57816b79d8e183c334c60"
+    },
+    {
+      "path": "tests/fixtures/public-registry.json",
+      "bytes": 10915,
+      "sha256": "f1649fca8439f686ba8c017a3ee0b2a34164283b2d9408c1183e4c27c4cd4ede"
+    },
+    {
+      "path": "tests/slice_a.rs",
+      "bytes": 25769,
+      "sha256": "1b862999f0316048f897f47ca104270f81302c1609b5ca7cb05540cabbbb90e6"
+    }
+  ],
+  "additional_pre_candidate_guards": [
+    "missing actual finalizedL1 keepsOfferVerifying",
+    "synthetic-valid proof cannot bypass invalid03 executionroot"
+  ]
+}

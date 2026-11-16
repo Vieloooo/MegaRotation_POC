@@ -1,0 +1,22 @@
+[package]
+name = "poc-publication-bridge"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+poc-core = { path = "../core" }
+poc-publisher = { path = "../publisher" }
+poc-types = { path = "../types" }
+poc-viewer-gfr = { path = "../viewer-gfr" }
+sim-espresso = { path = "../sim-espresso" }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+overflow-checks = true

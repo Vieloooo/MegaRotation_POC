@@ -246,3 +246,51 @@ impl L1ControlReader for DeliveredL1<'_> {
         }
     }
 }
+
+#[test]
+fn established_public_proof_remains_usable_when_the_optional_binding_is_absent() {
+    let fixture = Fixture::new();
+    let mut scenario = Scenario::new("G2", &fixture);
+    scenario.espresso[2].proposal.messages.clear();
+    let mut viewer = Viewer::new(&fixture, &scenario, b"cached-proof-test", 0);
+    viewer.headers(&fixture, 0..=30);
+    viewer.controls(&fixture, 0..=30);
+    for block in &scenario.espresso[..=3] {
+        viewer.block(block);
+    }
+    let first = viewer.advance(&fixture, &scenario.bound(1), None);
+    assert_eq!(first.status, ReplayStatus::Ready);
+    assert_eq!(first.state.public_state().entries.len(), 1);
+
+    let reads = ReplayReads {
+        espresso: &viewer.espresso,
+        l1: &viewer.l1,
+    };
+    let metadata = RegionalMetadata::new(fixture.setup.config(), &viewer.l1).unwrap();
+    let without_finality = ReplayServices {
+        finality: None,
+        ..services(&fixture, &metadata, &fixture.plan)
+    };
+    let empty = advance_global(
+        &first.state,
+        &reads,
+        &without_finality,
+        Some(&scenario.bound(2)),
+    );
+    assert_eq!(empty.status, ReplayStatus::Ready);
+    assert_eq!(
+        empty.state.public_state().pc.as_ref(),
+        Some(&scenario.bound(2))
+    );
+
+    let new_proof = advance_global(
+        &empty.state,
+        &reads,
+        &without_finality,
+        Some(&scenario.bound(3)),
+    );
+    assert!(
+        matches!(new_proof.status, ReplayStatus::Wait { missing, .. } if missing == vec![Missing::FinalVerifierUnavailable])
+    );
+    assert_eq!(new_proof.state, empty.state);
+}

@@ -1,0 +1,281 @@
+{
+  "schema": "H3-SLICE-A-PRECODE-VECTORS-1",
+  "baseline": "a1bee707b92b6b550a1b53c914e667994db15c84",
+  "dispatch": "d55d39f73593676325bdc0fbb7ba3845ca93025f",
+  "status": "EXPECTED_NOT_RUN",
+  "scope": "bounded sliceA; symbolic chain labels must bind exact03 objects in future harness",
+  "synthetic_verifier": {
+    "classification": "SYNTHETIC_NATIVE_BOUNDARY_NOT_CRYPTO",
+    "accepted_proofs_hex": [
+      "48332d534c4943452d412d50524f4f462d31",
+      "48332d534c4943452d412d50524f4f462d32"
+    ],
+    "invalid_proof_hex": "ff",
+    "additional_required_match": [
+      "exact descriptor",
+      "exact target block"
+    ]
+  },
+  "existing_structural_literal_reference": {
+    "path": "poc/verification/publication-gfr-healthy/literal-vectors-v1.json",
+    "vector": "L02-public-body-literal",
+    "sha256": "a3062d5c781036544aa985c8d9f5375115bf48d3ca5c5edb8f3ca5928688f94b"
+  },
+  "vectors": [
+    {
+      "id": "A01",
+      "selected_cid": "OTHER",
+      "candidate_cid": "C",
+      "chain": [
+        "A0",
+        "B1",
+        "B3"
+      ],
+      "q_objects": {
+        "0": [
+          "body(B1)"
+        ],
+        "1": [
+          "validP1(C,B3)"
+        ],
+        "2": [
+          "body(B3)"
+        ]
+      },
+      "cut_q": 2,
+      "expect": {
+        "complete": true,
+        "first_complete_q": 2,
+        "first_valid_proof_position": [
+          1,
+          0
+        ],
+        "recorded_allowed": true,
+        "g_append_from_helper": false
+      }
+    },
+    {
+      "id": "A02",
+      "chain": [
+        "A0",
+        "B1",
+        "B3"
+      ],
+      "q_objects": {
+        "0": [
+          "body(B1)"
+        ],
+        "1": [
+          "validP1(C,B3)"
+        ],
+        "2": [
+          "body(B3)"
+        ],
+        "3": [
+          "validP2(C,B3)"
+        ]
+      },
+      "cuts": [
+        {
+          "q": 1,
+          "complete": false
+        },
+        {
+          "q": 2,
+          "complete": true,
+          "first_complete_q": 2
+        },
+        {
+          "q": 3,
+          "complete": true,
+          "first_complete_q": 2
+        }
+      ],
+      "expect": "cached q2/q3 cannot leak into cut1; repeated queries do not poison state"
+    },
+    {
+      "id": "A03",
+      "q_objects": {
+        "0": [
+          "invalidProof(C,B3)"
+        ],
+        "1": [
+          "validP1(C,B3)"
+        ],
+        "2": [
+          "body(B1)",
+          "body(B3)"
+        ],
+        "3": [
+          "validP2(C,B3)"
+        ]
+      },
+      "expect": {
+        "first_complete_q": 2,
+        "first_valid_proof_position": [
+          1,
+          0
+        ],
+        "body_positions": [
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "additional_valid_proof_position": [
+          3,
+          0
+        ]
+      }
+    },
+    {
+      "id": "A04",
+      "expected_profile": "Native matching config rule/verifier versions and TEST-ONLY/slice-a/v1 source",
+      "cases": [
+        {
+          "binding": "absent",
+          "expected": "WAIT",
+          "bool_calls": 0
+        },
+        {
+          "basis": "Wait",
+          "expected": "WAIT",
+          "bool_calls": 0
+        },
+        {
+          "basis": "Reject",
+          "expected": "REJECT",
+          "bool_calls": 0
+        },
+        {
+          "binding_profile": "NonCryptographicFixture",
+          "production_expected": "REJECT",
+          "bool_calls": 0
+        },
+        {
+          "binding_profile": "different Native source/version",
+          "expected": "REJECT",
+          "bool_calls": 0
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "cases": [
+        {
+          "input": "wrong target/cid/domain proof tuple",
+          "expected": "not complete; invalid diagnostic"
+        },
+        {
+          "input": "missing actual physical ancestor body",
+          "expected": "publicly incomplete; no padding substitute"
+        },
+        {
+          "input": "missing local Plan/anchor provenance",
+          "expected": "Offer WAIT"
+        },
+        {
+          "input": "known wrong Plan/anchor/state",
+          "expected": "Offer REJECT"
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "events": [
+        "partial Offer",
+        "complete same-key Offer",
+        "same-key validP2 Offer",
+        "prepare attempt",
+        "public receipt",
+        "repeat receipt"
+      ],
+      "expected_phases": [
+        "Verifying",
+        "Queued",
+        "Queued",
+        "Queued",
+        "Recorded",
+        "Recorded"
+      ],
+      "expect": "one task; first complete canonical payload retained; no automatic dispatch"
+    },
+    {
+      "id": "A07",
+      "submitted_attempts": 1,
+      "immutable_list": [
+        "body(B1)",
+        "body(B3)",
+        "validP1(C,B3)"
+      ],
+      "public_schedule": {
+        "0": [
+          "body(B1)"
+        ],
+        "1": [
+          "validP1(C,B3)"
+        ],
+        "2": [
+          "body(B3)"
+        ]
+      },
+      "expect_at_prefix1": "NotYetPublic, never Recorded",
+      "expect_at_prefix2": {
+        "publication_position": [
+          1,
+          0
+        ],
+        "complete_through_q": 2,
+        "first_complete_q": 2,
+        "recorded": true
+      }
+    },
+    {
+      "id": "A08",
+      "cases": [
+        "wrong source identity",
+        "wrong reader identity",
+        "service ACK only",
+        "source-finalized but undelivered",
+        "header missing declared message",
+        "wrong target publication index"
+      ],
+      "expect": "no Recorded; preserve existing task"
+    },
+    {
+      "id": "A09",
+      "public_codec": 1195790849,
+      "public_message_limit": 65536,
+      "complete_attempt_encoded_limit": 1048576,
+      "private_result_component_limit": 4194304,
+      "snapshot_component_limit": 67108864,
+      "cases": [
+        "exact partial and full roundtrip",
+        "unknown version",
+        "truncation",
+        "trailing bytes",
+        "declared length above cap",
+        "actual bytes cap+1"
+      ],
+      "expect": "only bounded canonical structural input roundtrips; private exact wire pending annex"
+    },
+    {
+      "id": "A10",
+      "relevant_existing07_cases": [
+        "V06",
+        "V07",
+        "V08",
+        "V09",
+        "V13",
+        "V14",
+        "V15",
+        "V21"
+      ],
+      "expect": "same pure public projections after helper extraction; explicit fixture regressions remain labeled"
+    }
+  ]
+}

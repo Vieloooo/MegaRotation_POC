@@ -1,0 +1,11 @@
+{
+  "schema": "H3-SOURCE-EXPECTATIONS-FREEZE-1",
+  "date": "2026-11-16",
+  "baseline": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+  "path": "poc/verification/publication-gfr-healthy/source-first-expectations-v1.md",
+  "sha256": "c3aa3243a0914766c13e7bfd359a6e439f0edd41ae3a6813f95e1b8832d4b195",
+  "case_count": 28,
+  "lead_acceptance": "PASS for preparation only",
+  "candidate_execution": "NOT_RUN",
+  "chronology": "Initial28-case content restored by removing just-appended post-proposal additions to additive-expectations-v1.md; hash first sealed now. No candidate existed."
+}

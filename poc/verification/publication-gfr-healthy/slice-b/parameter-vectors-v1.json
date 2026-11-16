@@ -1,0 +1,54 @@
+{
+  "schema": "H3-B-PARAMETER-BOUNDARY-1",
+  "candidate_execution": "NOT_RUN",
+  "cases": [
+    {
+      "ledger_parameters": {
+        "announcement_us": 6000000,
+        "grace_us": 3000000,
+        "expiry_us": 30000000
+      },
+      "delivery_or_snapshot_parameters": {
+        "announcement_us": 5000000,
+        "grace_us": 3000000,
+        "expiry_us": 30000000
+      },
+      "config_source_profile_equal": true,
+      "record_id_equal": true,
+      "expected": "REJECT_BEFORE_DEDUPE_OR_SCOPE_MUTATION",
+      "synthetic_matching_snapshot_receipt_does_not_override_parameter_mismatch": true
+    },
+    {
+      "ledger_parameters": {
+        "announcement_us": 6000000,
+        "grace_us": 3000000,
+        "expiry_us": 30000000
+      },
+      "delivery_or_snapshot_parameters": {
+        "announcement_us": 6000000,
+        "grace_us": 1000000,
+        "expiry_us": 30000000
+      },
+      "config_source_profile_equal": true,
+      "record_id_equal": true,
+      "expected": "REJECT_BEFORE_DEDUPE_OR_SCOPE_MUTATION",
+      "synthetic_matching_snapshot_receipt_does_not_override_parameter_mismatch": true
+    },
+    {
+      "ledger_parameters": {
+        "announcement_us": 6000000,
+        "grace_us": 3000000,
+        "expiry_us": 30000000
+      },
+      "delivery_or_snapshot_parameters": {
+        "announcement_us": 6000000,
+        "grace_us": 3000000,
+        "expiry_us": 15000000
+      },
+      "config_source_profile_equal": true,
+      "record_id_equal": true,
+      "expected": "REJECT_BEFORE_DEDUPE_OR_SCOPE_MUTATION",
+      "synthetic_matching_snapshot_receipt_does_not_override_parameter_mismatch": true
+    }
+  ]
+}

@@ -1,0 +1,385 @@
+{
+  "schema": "H3-A-INDEPENDENT-CANDIDATE-RESULT-1",
+  "candidate": "e59d026e8c08b64ff744b57c63cc7756f0b34019",
+  "workdir": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+  "verdict": "PASS_COMPONENT_SCOPE_ONLY",
+  "findings": [],
+  "test_source_fixes": [],
+  "source_integrity": {
+    "head_unchanged": true,
+    "production_paths_match_candidate": true,
+    "legacy_acceptance_artifacts_unmodified": true,
+    "harness_test_source_matches_candidate": true,
+    "harness_test_source": {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/independent-harness/tests/slice_a.rs",
+      "sha256": "1b862999f0316048f897f47ca104270f81302c1609b5ca7cb05540cabbbb90e6"
+    },
+    "unrelated_dirty_scope": "untracked B/C documentation/preparation and new verifier evidence/ownedlock; no production edits"
+  },
+  "toolchain": [
+    "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo 1.95.0 (f2d3ce0bd 2026-03-21)"
+  ],
+  "environment": {
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_HOME": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/cargo",
+    "CARGO_TARGET_DIR": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/target",
+    "heavy_lock": "/tmp/megaroation-poc-heavy.lock",
+    "network": "offline",
+    "sequential": true
+  },
+  "runs": [
+    {
+      "suite": "independent H3 slice A",
+      "passed": 14,
+      "failed": 0,
+      "exit_code": 0,
+      "native_finality": "SYNTHETIC_NATIVE_BOUNDARY_NOT_CRYPTO",
+      "test_names": [
+        "bounds_rerender_and_tail_contradiction_are_not_silently_normalized",
+        "full_offer_partial_storage_and_real_file_receipt_preserve_one_task",
+        "independent_private_wire_literals_and_negatives",
+        "invalid_proof_then_valid_variants_do_not_poison_later_completeness",
+        "missing_basis_precedes_boolean_checker_and_profile_mismatch_rejects",
+        "offer_waits_for_actual_l1_inputs_then_uses_merge",
+        "production_fixture_profile_rejected_and_context_failure_preserved",
+        "public_cut_excludes_future_bodies_and_preserves_original_positions",
+        "recorded_before_selection_and_g_unchanged",
+        "recorded_waits_for_later_valid_proof_without_poisoning_task",
+        "sealed_internal_gfr_cache_can_advance_empty_q_without_optional_binding",
+        "source_hole_is_not_public_incompleteness",
+        "valid_synthetic_proof_does_not_bypass_bad_execution_root",
+        "wrong_source_or_reader_never_records"
+      ]
+    },
+    {
+      "suite": "legacy07 independent codec/capacity",
+      "passed": 167,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "suite": "legacy07 independent rules",
+      "passed": 117,
+      "failed": 0,
+      "exit_code": 0,
+      "coverage": {
+        "V01": "INCONCLUSIVE_NOT_EXECUTED_IN_THIS_HARNESS",
+        "V02": "PASS",
+        "V03": "PASS",
+        "V04": "PASS",
+        "V05": "PASS",
+        "V06": "PASS",
+        "V07": "PASS",
+        "V08": "PASS",
+        "V09": "PASS",
+        "V10": "PASS",
+        "V11": "PASS",
+        "V12": "PASS",
+        "V13": "PASS",
+        "V14": "PASS",
+        "V15": "PASS",
+        "V16": "PASS",
+        "V17": "PASS",
+        "V18": "PASS",
+        "V19": "PASS",
+        "V20": "PASS",
+        "V21": "PASS",
+        "V22": "INCONCLUSIVE_ACTUAL_NATIVE_CERTIFICATES_UNAVAILABLE",
+        "V23": "PASS",
+        "VG01": "PASS",
+        "VG02": "PASS",
+        "VG03": "PASS",
+        "VG04": "PASS",
+        "VG05": "PASS",
+        "VG06": "PASS",
+        "VG07": "PASS",
+        "VG08": "PASS",
+        "VG09": "PASS",
+        "VG10": "PASS",
+        "VG11": "PASS",
+        "VG12": "PASS",
+        "VG13": "PASS",
+        "VG14": "PASS",
+        "VG15": "PASS",
+        "VG16": "PASS",
+        "VG17": "PASS",
+        "VG18": "PASS",
+        "VG19": "PASS",
+        "VG20": "PASS",
+        "VG21": "PASS",
+        "VG22": "PASS",
+        "VG23": "PASS",
+        "VG24": "PASS",
+        "VG25": "PASS",
+        "VG26": "PASS",
+        "VG27": "PASS",
+        "VG28": "PASS",
+        "VG29": "PASS",
+        "VG30": "PASS",
+        "VG31": "PASS",
+        "VG32": "PASS",
+        "VG33": "PASS",
+        "VG34": "PASS",
+        "VG35": "INCONCLUSIVE_REPEAT_PASSED_WALL_PAUSE_MATRIX_PENDING",
+        "VG36": "PASS",
+        "VG37": "PASS",
+        "VG38": "PASS",
+        "VG39": "INCONCLUSIVE_FUTURE_RESUME_MATERIAL_STAGING_GATE",
+        "VG40": "PASS"
+      }
+    }
+  ],
+  "seed": "N/A fixed finite fixtures; no randomized or wall-pause matrix",
+  "limits": {
+    "new_source_q": "0..2; explicit beyond-cut rejection also checked",
+    "new_physical_heights": "selected through3; unselected successor11",
+    "L1_fixture": "0..30",
+    "DEP_fixture": "1..40",
+    "real_H1_final_certificates": "NOT_RUN",
+    "15_workers": "NOT_RUN",
+    "H1_root_custody_and_ReadyToken": "NOT_RUN",
+    "B_transport_stopledger": "NOT_RUN",
+    "official_capture": "NOT_RUN",
+    "Force_D_RESUME_recovery": "OUT_OF_SCOPE",
+    "safety_liveness_theorem": false,
+    "legacy_limit_strings": [
+      "M1 codec/comparison only; no GFR state transition, native certificate, real control, RESUME execution, or integration acceptance",
+      "not fullVGcoverage/nativefinality/realcontrols/RESUME/15worker/safetyproof"
+    ]
+  },
+  "production_source_hashes": [
+    {
+      "path": "poc/crates/publication-bridge/Cargo.lock",
+      "sha256": "2992684dd4696932d3b921f8be2867b431bad76ccc4ca19d4050fc2361b40fad"
+    },
+    {
+      "path": "poc/crates/publication-bridge/Cargo.toml",
+      "sha256": "04345861008a69b43018bb416a51200f50a2fba9aeaac6446603751caa8b1a37"
+    },
+    {
+      "path": "poc/crates/publication-bridge/README.md",
+      "sha256": "1adf0ea63fe6a2ed41586ba05bf8b06951ea56e301704a54e1e3ee6f8a165c3d"
+    },
+    {
+      "path": "poc/crates/publication-bridge/src/lib.rs",
+      "sha256": "1adf4ac40f3046794ec8155811068a0cfc9beb3703d777683584f2fd99bd7a16"
+    },
+    {
+      "path": "poc/crates/publication-bridge/src/result.rs",
+      "sha256": "0a27f49983158c7c5f91eebab4b636e2afcdca76045f9f49de89868806b7d887"
+    },
+    {
+      "path": "poc/crates/publication-bridge/src/verifier.rs",
+      "sha256": "3d645978cafbf0d5ba9f37e8793f43c03b3345cc29b690fbef418e4268577a4e"
+    },
+    {
+      "path": "poc/crates/publication-bridge/tests/slice_a.rs",
+      "sha256": "2cb959ff7853ba3bef9296b9976342d16f891a23b0ef2c30518b7cfafee7901c"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/Cargo.lock",
+      "sha256": "11a1dd677d7c80da84f2371681e6054d5ac1df0ac72b5bd748d63843f746a6b8"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/Cargo.toml",
+      "sha256": "ae9f2fa2b211f9b02e6e2ffee55c6f25d01a39ffcf44de1b62a4ed599a9d033e"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/README.md",
+      "sha256": "cdfbbb555bf62a03a5d19d24182e4b9f2f4bf05af06990c8309d67c67c6b30c7"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/examples/replay.rs",
+      "sha256": "b15b46acb4f21fe6e35a13756c5ad275b300693a01c5b95c8fc57e25a9ba35fe"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/examples/replay/fixture.rs",
+      "sha256": "84b6b090847ab369bf4c9f0667716fc7e232c98ad4225fcb43cf40579fd70631"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/examples/replay/trace.rs",
+      "sha256": "e6167b421418ef95e72674dc73620bbb34d800aa3b704afbc9c99c74dce01dc5"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/examples/replay/viewer.rs",
+      "sha256": "96962226c7fa24ba302d90a8e29b9503f8c56fe0b9d5178154443b87dfa52d80"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/api.rs",
+      "sha256": "13a95666aae42d5bec869b2547a35d8c3432a10334165a258c1de56f23a2f74f"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/codec.rs",
+      "sha256": "993c8bbe224372d34e9eb3c05f37365a492909444960ef47f828eddf3284baf1"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/frontier.rs",
+      "sha256": "de4f058227247c2b190061f6c89cf94bf0607f293738f5497c78dc981cd0e787"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/lib.rs",
+      "sha256": "4e9818ddde3bf0b19b9b4a88174f2040ce68ac0d66c29b8542d91ebaf47ab9eb"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/publications.rs",
+      "sha256": "4e159a5a38fdf12ac687821b93c108cfe3fd969a4af116bf6675f8960f73b464"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/reader.rs",
+      "sha256": "94b562375fdc7781b47236b295c2149d24d40b963782030407c78486ba33ec2c"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/replay.rs",
+      "sha256": "6e39f40031bd8098e20296806b4ff9a26c8d4b15e188a31ac55d9d2950dcde68"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/state.rs",
+      "sha256": "2f97682e31451d0f2d7969beb09fa20aae519a6613a53edb20140155c370be93"
+    }
+  ],
+  "contract_and_expectation_hashes": [
+    {
+      "path": "poc/docs/contracts/h3-publication-gfr-slice-a-v1.md",
+      "sha256": "9995be1064e67043798eb6ce61cea1e39619a250058ca94c2556aa635602f741"
+    },
+    {
+      "path": "poc/docs/contracts/h3-publication-gfr-implementation-v1.md",
+      "sha256": "71bc98ae4c3c9f8cecb6e9a8e1faa0f842dec34709c92f02327b6f56edc503a5"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/source-expectations-v1.md",
+      "sha256": "426f886c6a686975c16dc10d74f5bfa7800d60b572069fecec5989d57cb20485"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/vectors-v1.json",
+      "sha256": "896a774ba0ae7bf6f9a8422ac96fc842a0d57872ce9d0dfba20326a24ccff374"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/wire-vectors-v1.json",
+      "sha256": "2782929acaf124fb0d0a1080922ec660548303fea9ec4ef588c21f49a4620b2e"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/harness-preparation-notes-v1.md",
+      "sha256": "7356d00a75b61fd7cde9db1414bcf72e591b07723c27053a3e65fa9a265978b8"
+    }
+  ],
+  "lock_hashes": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.lock",
+      "sha256": "27fa993956b33e3afdf8e9647ca1619159e9d8b4486f03a046343a83c5add118"
+    },
+    {
+      "path": "poc/verification/viewer-gfr/independent-harness/Cargo.lock",
+      "sha256": "f94c45a60b060f8e261d846dc8c0d115283907cf107679ae67365d69dfc5302d"
+    }
+  ],
+  "binaries_observed_after_runs": [
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/target/debug/deps/slice_a-aeb3ed1180e5114f",
+      "bytes": 65211776,
+      "sha256": "98dfe7d4f29ed280d9aef57ac4463f3d5256fe3b5b67501a49c73a08ca5c1b82"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/target/debug/viewer-gfr-independent-harness",
+      "bytes": 57930408,
+      "sha256": "6549a86a18accc80aca73ef4ab20b20153a29f731f7befc855238495f848290d"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/target/debug/m2",
+      "bytes": 62621320,
+      "sha256": "43c98574fcf45fb08044a9467fd576960bcefc342082d5d5041bdaddf2e6b5b6"
+    }
+  ],
+  "raw_evidence_archive": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1",
+  "relocation_manifest": {
+    "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/relocation.json",
+    "sha256": "0c081c63725c6ccae90cba2eb8fe9c5b6d9628e6129a219bbc1993333a381fde"
+  },
+  "raw_evidence": [
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/independent-test.exit",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/independent-test.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/independent-test.log",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/independent-test.log",
+      "bytes": 9390,
+      "sha256": "6c5a85e0153ad7f3e9e39b4254844e7a27427a9b8530713de81e676b7da6846f"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-codecs.exit",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-codecs.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-codecs.jsonl",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-codecs.jsonl",
+      "bytes": 39570,
+      "sha256": "94f6f65dad04932d5c946992016844e76d2fd4d536cbd3e5a1b9e392a3aba415"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-codecs.stderr",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-codecs.stderr",
+      "bytes": 344,
+      "sha256": "61e582750efc3e62f5235ec6f16cade0efb5f7feb737a55d0e2cb9bd97d02862"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-rules.exit",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-rules.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-rules.jsonl",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-rules.jsonl",
+      "bytes": 39560,
+      "sha256": "6084c4ae54d826a177ceb2a4d5eba718a74f5ee9aba3e838d0c28bffd5dbbc6c"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/legacy-rules.stderr",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/legacy-rules.stderr",
+      "bytes": 676,
+      "sha256": "be3a4154be218f0ec493478ab5fcf8d7c0e2e4de3a67162114b07745671177e2"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/lock-resolution.exit",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/lock-resolution.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/lock-resolution.log",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/lock-resolution.log",
+      "bytes": 66,
+      "sha256": "6a84ba07f3ec156e6d825a69dcaa5f154ac5027ed50ceb70d61a4bdc2a245083"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/run-independent.sh",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/run-independent.sh",
+      "bytes": 1305,
+      "sha256": "cb3a4def486f1cdc5853a96581aaed785fa9764d72062e8ceb3ef3a79ba2022e"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/run-legacy.sh",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/run-legacy.sh",
+      "bytes": 1340,
+      "sha256": "2bce4b95cd5e67a631400a807f4bcf83ad515be203e0acd5971bfb8ae157e9cf"
+    },
+    {
+      "original_executed_evidence_path": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/toolchain.txt",
+      "archived_path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-a-e59d026-independent-v1/toolchain.txt",
+      "bytes": 72,
+      "sha256": "441e13fe2bd03db7b5f95cb495f685cd762e5f32dc1749baea7ae873cb5009cd"
+    }
+  ],
+  "original_executed_commands": [
+    "bash poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/run-independent.sh",
+    "bash poc/verification/publication-gfr-healthy/slice-a/e59d026e8c08b64ff744b57c63cc7756f0b34019/run-legacy.sh"
+  ],
+  "review_sha256": "a34a2f70f5245366e99912dda6bce52386f3b645306a4782af06ad166876394c",
+  "handoff": "Tester may run agreed sliceA cases on the exactsame candidate SHA; changes require affected independent reverification"
+}

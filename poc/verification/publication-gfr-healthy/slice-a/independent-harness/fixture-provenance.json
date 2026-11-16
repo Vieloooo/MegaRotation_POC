@@ -1,0 +1,37 @@
+{
+  "classification": "accepted component inputs; ExactProofs always synthetic, no native signature validation",
+  "copies": [
+    {
+      "original_path": "poc/verification/mock-plan-execution/implementation-v1/component_fixture.rs",
+      "revision": "a1bee707b92b6b550a1b53c914e667994db15c84",
+      "sha256": "823c7e349be467e4b977a1e03bc7f217d069715a83d0aea0b63f153da58109c7",
+      "copied_to": "tests/fixtures/component_fixture.rs"
+    },
+    {
+      "original_path": "poc/verification/mock-plan-execution/implementation-v1/m2-inputs.json",
+      "revision": "a1bee707b92b6b550a1b53c914e667994db15c84",
+      "sha256": "217774789279650a88d8147f1913f0bdc07ce92b57e7a9d12284e1bb0a5f8ea6",
+      "copied_to": "tests/fixtures/m2-inputs.json"
+    },
+    {
+      "original_path": "poc/verification/mock-plan-execution/implementation-v1/m2-golden-vectors.json",
+      "revision": "a1bee707b92b6b550a1b53c914e667994db15c84",
+      "sha256": "5bbd96c791ce2a1db148f8a627b6a8d34070e229a941f564cb45b06f78ea3aca",
+      "copied_to": "tests/fixtures/m2-golden-vectors.json"
+    },
+    {
+      "original_path": "poc/verification/mock-plan-execution/implementation-v1/public-registry.json",
+      "revision": "a1bee707b92b6b550a1b53c914e667994db15c84",
+      "sha256": "f1649fca8439f686ba8c017a3ee0b2a34164283b2d9408c1183e4c27c4cd4ede",
+      "copied_to": "tests/fixtures/public-registry.json"
+    },
+    {
+      "original_path": "poc/verification/viewer-gfr/independent-harness/src/m2_fixture.rs",
+      "revision": "a1bee707b92b6b550a1b53c914e667994db15c84",
+      "sha256": "cc00f9f3ba2f7834131221435e474715d6bef1b2b2938637003f71f3b84ac2b4",
+      "copied_to": "tests/fixtures/mod.rs",
+      "changes": "only relative paths changed; tests use zero/four-or-fewer transfers, not old seven-transfer scenario"
+    }
+  ],
+  "lock_seed": "accepted07 harness lock; resolve own Cargo.lock only after named candidate to avoid inspecting in-flight manifest"
+}
