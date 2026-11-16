@@ -236,5 +236,7 @@
     "11",
     "12",
     "16"
-  ]
+  ],
+  "restart_free_handoff_policy": "poc/docs/commander/restart-free-handoff-track-20261116.md",
+  "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates."
 }
