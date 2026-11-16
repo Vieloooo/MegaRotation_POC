@@ -1,0 +1,37 @@
+{
+  "schema": "H3-B-PRE-RUN-ADAPTER-CORRECTIONS-1",
+  "candidate": "d289066082e0b89964e16653360a5c72356142f8",
+  "candidate_runs_before_change": 0,
+  "changes": [
+    {
+      "file": "tests/credits.rs",
+      "reason": "Use independently framed validH3TF bytes rather than arbitrary0x5a payloads for the frozen H3 frame-credit contract; expected counts/bytes/receipt guards unchanged."
+    },
+    {
+      "file": "tests/services.rs",
+      "reason": "Unknown verified deadline must produce no stop plan; frozen Result<Option<Plan>> API permits None or typed error. Earlier assertion incorrectly required only error; now tests the source guard, no stop."
+    }
+  ],
+  "test_hashes": [
+    {
+      "path": "tests/core.rs",
+      "sha256": "d454a857e2bd7293623f9a7d4b5cfa7c298692c6717726719d3d0c94176dd7ee"
+    },
+    {
+      "path": "tests/credits.rs",
+      "sha256": "c04c43964e27cc4fc31dbd28d7819e0ee8ad84edacd7515832a760e1b4e2bb9b"
+    },
+    {
+      "path": "tests/reassembly.rs",
+      "sha256": "082b3bcb8585484b7f7625c6d4d4a7d2e83266892e609b9bec6a91dabd748ad0"
+    },
+    {
+      "path": "tests/route_fixture.rs",
+      "sha256": "2d272583acbef3a118ccff8a3143f57b65c1e1691996024b91c2d92713241c3f"
+    },
+    {
+      "path": "tests/services.rs",
+      "sha256": "16521c6ea3e1ac0a492d2544d5d018cc5abfff016efbdcc2ff1e88425d668e01"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "H3-B-INDEPENDENT-HARNESS-FREEZE-1",
+  "named_candidate": "d289066082e0b89964e16653360a5c72356142f8",
+  "chronology": "Source expectations/vectors preceded B code; executable adapters completed from frozen/communicated public signatures only. No B implementation behavior inspected before this freeze.",
+  "prepared_tests": 19,
+  "candidate_executions": 0,
+  "compiled": false,
+  "contract_sha256": "01cb3b6ab222e2c01c22383a48944e27c972b785234a004253621df70a5d21d0",
+  "proof_and_receipt_classification": "SYNTHETIC; actual03/06/07 and02 route/mailbox/clock algorithms, not actualH1root/nativefinality",
+  "H1_typed_api": "f9364a2a8e59913f7f9373fab2774be4ed528e57; read-only README andh3_consumer; no merge",
+  "files": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.toml",
+      "sha256": "f1f3fa396acd4ed56e3b1ff69da4e6431f4efba2b286a10c782362820cbb10c2"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/README.md",
+      "sha256": "25b958895f8ff5e3c686c947da2b5c4120ebb17078bb12db3ee0a75465b2fdbd"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/core.rs",
+      "sha256": "d454a857e2bd7293623f9a7d4b5cfa7c298692c6717726719d3d0c94176dd7ee"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/credits.rs",
+      "sha256": "0a9394711a27988a63ab90c1e8fecc4a5569b50ebc83c7475ade3ee33d306036"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/reassembly.rs",
+      "sha256": "082b3bcb8585484b7f7625c6d4d4a7d2e83266892e609b9bec6a91dabd748ad0"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/route_fixture.rs",
+      "sha256": "2d272583acbef3a118ccff8a3143f57b65c1e1691996024b91c2d92713241c3f"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/services.rs",
+      "sha256": "39f1c93d2549f38cee36981e6cdc1408df3b45e70ba1f377ec539396084e7e86"
+    }
+  ]
+}

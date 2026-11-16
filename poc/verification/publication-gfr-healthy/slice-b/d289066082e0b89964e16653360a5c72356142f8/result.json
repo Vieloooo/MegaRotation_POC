@@ -1,0 +1,80 @@
+{
+  "schema": "H3-B-LEAD-CLOSEOUT-SEAL-1",
+  "candidate": "d289066082e0b89964e16653360a5c72356142f8",
+  "verdict": "PASS_COMPONENT_SCOPE_ONLY",
+  "independent_tests": {
+    "passed": 19,
+    "failed": 0
+  },
+  "review_sha256": "b68b177190b9ae10779e1ec8fef77636fb65b43e7808057fbc24500833fbc3c1",
+  "raw_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/verification/h3-b-d289066-independent-v1",
+  "raw_files": [
+    {
+      "path": "commands.json",
+      "bytes": 1001,
+      "sha256": "cc09df501d43b84babd50942502d339368f880ca89a542444923e60ba31c2d4f"
+    },
+    {
+      "path": "lock.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "lock.stderr",
+      "bytes": 66,
+      "sha256": "14b4beda5d2bd98d336e7d5e5bb21b13e559f31eb6e19c49180b68c4ab28dc6c"
+    },
+    {
+      "path": "lock.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tests.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "tests.stderr",
+      "bytes": 9921,
+      "sha256": "1a8a8340642b26d8abc24761ad6bbde702b27a83a94a2e548238ff6878649f16"
+    },
+    {
+      "path": "tests.stdout",
+      "bytes": 1949,
+      "sha256": "71752ab53dc5396d5b6d2d8ef422dbba168d5dfd1dfa0fe3b10bd3d1df7a7724"
+    },
+    {
+      "path": "toolchain.txt",
+      "bytes": 72,
+      "sha256": "441e13fe2bd03db7b5f95cb495f685cd762e5f32dc1749baea7ae873cb5009cd"
+    }
+  ],
+  "source_hashes": {
+    "poc/crates/publication-bridge/Cargo.lock": "4db4482f7212b300643c44a750becdbea250085bde70247d686ba61f4711f42f",
+    "poc/crates/publication-bridge/Cargo.toml": "aa01d8a10311e220d1b6125c20c9d0c921f6dbf48c891a2defc4fa52676f92ac",
+    "poc/crates/publication-bridge/README.md": "5d504eb78e121ad8bfa1d74512b5f37c608a3a8f9151112f8007ad45ca031544",
+    "poc/crates/publication-bridge/src/bounded.rs": "ed600d1f56b4d1f0b9e62defa230c22401ff7deb188b7bd56bb9e56c35c4ef2a",
+    "poc/crates/publication-bridge/src/credit.rs": "b00615a790cca00225617e1f80d5574d929a0bdb6db246b63b046a4988468b32",
+    "poc/crates/publication-bridge/src/custody.rs": "2182a6f6bbbec8fce705454d9c3d5ee16f1bd1f45ce5e4d916f5b6572fb406fa",
+    "poc/crates/publication-bridge/src/lib.rs": "f149a38f97af886599b72c10b87b9a72a5ab259d0075d2c7e3c64ed86986a116",
+    "poc/crates/publication-bridge/src/record.rs": "6ede9ef007a9ec3a9cfd8cda56f9e307290c43c8028b1056be5e92c41ecfada5",
+    "poc/crates/publication-bridge/src/result.rs": "0a27f49983158c7c5f91eebab4b636e2afcdca76045f9f49de89868806b7d887",
+    "poc/crates/publication-bridge/src/stop.rs": "0747010e4ea47080b4e84c1083ce800d94f86fd608bd5c4b5b7d26483dd2077f",
+    "poc/crates/publication-bridge/src/transport.rs": "a0bebe5339e2e50998423a16ff4a6156f4a2827d45fcab99e799e8de998cc5ea",
+    "poc/crates/publication-bridge/src/verifier.rs": "3d645978cafbf0d5ba9f37e8793f43c03b3345cc29b690fbef418e4268577a4e",
+    "poc/crates/publication-bridge/tests/b_cases/mod.rs": "0ae2e2adb69679f28aba8178be0e792b8e9624e1445325e682281e7d3f3bdece",
+    "poc/crates/publication-bridge/tests/b_cases/transport.rs": "47d3113af489a7c164a12a48f06b8e5ac1beb6547db8721ff53e791571b4f4a8",
+    "poc/crates/publication-bridge/tests/slice_a.rs": "1f3c31e510f3a5e812edd6d3833b9e18a3537d81b3891185ff813fa109c9652f"
+  },
+  "tester_manifest_sha256": "604a3b1a024507a65553067c860223d2d7f514c9dcbe93053a2e951917302e2d",
+  "tester_raw_files_checked": 53,
+  "sealed_by": "lead after independent Verifier PASS and Tester PASS; no additional execution",
+  "closeout": "User requested rapid wrap-up. Verifier reporting turn stopped after review.md and test completion; lead sealed existing evidence. No unfinished test was counted as PASS.",
+  "remaining_gates": [
+    "actual H1 native proof/context",
+    "actual H1 root/aux/delivery/credits",
+    "H2 actions and healthy15-worker M1",
+    "C07 genuine official publication"
+  ]
+}
