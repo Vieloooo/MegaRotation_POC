@@ -91,11 +91,16 @@ class CommitteeL1(baseline.L1):
             "calldata": codec.hx(calldata),
             "driver_command": {"id": self.command, "op": "submit", "raw": codec.hx(raw)},
         }
-        with (self.out / "governance-transaction.json").open("x") as journal:
+        path = self.out / "governance-transaction.json"
+        staged = path.with_suffix(".prepared")
+        if path.exists():
+            raise RuntimeError("a governance transaction is already prepared")
+        with staged.open("x") as journal:
             json.dump(prepared, journal, sort_keys=True)
             journal.write("\n")
             journal.flush()
             os.fsync(journal.fileno())
+        staged.replace(path)
         data_dir = os.open(self.out, os.O_DIRECTORY)
         try:
             os.fsync(data_dir)

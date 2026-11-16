@@ -1770,6 +1770,7 @@ impl Hub {
         serde_json::to_writer(&mut file, &json!({"phase":phase,"tick_us":self.now.tick,"detail":&detail}))?;
         file.write_all(b"\n")?;
         file.sync_all()?;
+        File::open(&self.root)?.sync_all()?;
         self.log("GovernanceState", None, json!({"phase":phase,"evidence":detail}))
     }
 
