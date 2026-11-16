@@ -1,6 +1,6 @@
 # MegaETH Sequencer Rotation PoC v2
 
-> **2026-11-16 最新优先级：** 近期只推进15健康节点的Regular+Espresso+GFR（M1），再做健康节点主动Force（M2）。以[两个里程碑计划](poc/docs/milestones/README.md)及其中per-feature交接为准；旧恢复/批次/D/RESUME/Web计划保留，暂不作为这两个里程碑的前置。
+> **2026-11-16 · M1 健康满窗 smoke 已通过。** Seed 42 的 15 个真实 worker 完成 R0 → R1 → R2，R2 的 h21 进入 `G`。见 [M1 验收证据](poc/docs/milestones/results/M1-healthy-smoke-result-zh.md)、[M2 与 GFR 回放交接](poc/docs/milestones/M2-and-regular-gfr-replay-handoff-zh.md)和 [M1–M5 计划](poc/docs/milestones/M1-M5-implementation-plan-zh.md)。
 
 这是 Sequencer Rotation PoC 的独立 Git checkout。目标是在单机运行三个地区、每区五个等权 replica，并用可重放的场景验证 regular、Force 和 RESUME。先看 [PoC v2 设计](formalization_v10/poc_design_zh_v2.md) 和 [v10 协议规范](formalization_v10/README.md)。
 
