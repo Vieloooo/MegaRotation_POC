@@ -412,11 +412,15 @@ def evm_hex(value):
     return crypto.hx(bytes(value)).lower()
 
 
-def check_views(trace, public):
+def check_views(trace, public, bundle):
     """Independently tie claimed poll observations to finalized published positions and G."""
     polls = []
     previous = {}
-    finalized_l1 = 0
+    finalized_l1 = None
+    observed_l1 = {}
+    downloaded_espresso = {signer: set() for signer in range(3)}
+    observed_espresso = {signer: -1 for signer in range(3)}
+    genesis_floor = bundle["config"]["genesisOrigin"]
     last_finalized_q = -1
     e_rows = {row["q"]: row for row in public["espresso"]}
     g_rows = public["expected"]
@@ -426,6 +430,8 @@ def check_views(trace, public):
         kind, now, detail = row["kind"], row["tick_us"], row["detail"]
         if kind == "L1Finalized":
             finalized_l1 = detail["height"]
+        elif kind == "L1ReaderAvailable" and detail["height"] == 0:
+            finalized_l1 = 0
         elif kind in {"EspressoHeartbeat", "PublisherRecorded"}:
             q = detail["q"]
             need(e_rows[q]["finalized_us"] <= now, "log exposes Espresso before finalized")
@@ -434,10 +440,37 @@ def check_views(trace, public):
             if kind == "EspressoHeartbeat":
                 need(detail["theta_us"] == e_rows[q]["theta_us"] and detail["message_count"] == 0,
                      "heartbeat differs from finalized empty public input")
+        if kind == "GovernanceL1Available":
+            signer_id, height = detail["signer"], detail["height"]
+            need(height == observed_l1.get(signer_id, -1) + 1
+                 and finalized_l1 is not None and height <= finalized_l1
+                 and evm_hex(detail["hash"]) == bundle["blocks"][height]["hash"].lower(),
+                 "signer received an unavailable or noncanonical L1 row")
+            observed_l1[signer_id] = height
+        elif kind == "GovernanceEspressoAvailable":
+            signer_id, q = detail["signer"], detail["q"]
+            seen = downloaded_espresso[signer_id]
+            need(q not in seen and q <= last_finalized_q
+                 and detail["theta_us"] == e_rows[q]["theta_us"],
+                 "signer received Espresso outside its canonical finalized prefix")
+            seen.add(q)
+            while observed_espresso[signer_id] + 1 in seen:
+                observed_espresso[signer_id] += 1
         if kind != "GovernancePoll":
             continue
         polls.append(row)
         signer = detail["signer"]
+        sample = detail["clock_sample"]
+        good_clock = (sample is not None
+                      and sample["as_of_us"] <= sample["received_us"] <= now < sample["lease_end_us"]
+                      and abs(sample["offset_us"]) <= 1_000)
+        need(detail["clock_good"] == good_clock and detail["clock_sample_us"] == now,
+             "signer normal clock was not supported by its sample and live lease")
+        if sample is not None:
+            need(sample["received_us"] - sample["as_of_us"] == 250 and
+                 sample["lease_end_us"] - sample["as_of_us"] == 180_000 and
+                 sample["offset_us"] == (signer - 1) * 500,
+                 "signer clock RPC delay, lease or offset differs from controlled profile")
         advertised, verified = detail["espresso_advertised"], detail["espresso_verified"]
         if advertised is not None:
             need(advertised["q"] == last_finalized_q
@@ -446,13 +479,15 @@ def check_views(trace, public):
                  "governance advertised Espresso is not the public finalized position")
         else:
             need(last_finalized_q < 0, "governance dropped advertised finalized position")
+        individual_q = observed_espresso[signer]
         if verified is not None:
-            need(advertised is not None and verified["q"] <= advertised["q"]
-                 and verified["theta_us"] == e_rows[verified["q"]]["theta_us"],
-                 "governance verified Espresso claim cannot be tied to finalized prefix")
-        need(detail["l1_advertised"] == finalized_l1 and
-             (detail["l1_verified"] is None or detail["l1_verified"] <= finalized_l1),
-             "governance advertised/verified L1 claim differs from finalized service")
+            need(advertised is not None and verified["q"] == individual_q <= advertised["q"]
+                 and verified["theta_us"] == e_rows[individual_q]["theta_us"],
+                 "governance verified Espresso claim differs from its delivered prefix")
+        else:
+            need(individual_q == -1, "signer omitted its received Espresso prefix")
+        need(detail["l1_advertised"] == finalized_l1 and detail["l1_verified"] == observed_l1.get(signer),
+             "governance L1 claim differs from finalized service or its delivered prefix")
 
         pos = detail["replay_position"]
         replay_q = pos["index"]["Espresso"] if pos and pos["kind"] == "Espresso" else None
@@ -491,7 +526,7 @@ def check_views(trace, public):
                  "eligible signer has unexpected primary responsibility or contribution")
             progress = produced[-1]["theta_us"]
             need(detail["policy"]["enabled_mask"] == 6 and detail["policy"]["order"] == [0, 1, 2]
-                 and detail["policy"]["signed_floor"] == 0,
+                 and detail["policy"]["signed_floor"] == genesis_floor,
                  "primary signer proposed policy not derived by disabling its own stalled responsibility")
             need(detail["progress_us"] == progress and verified["theta_us"] - progress >= 2_000_000,
                  "signer voted before the last selected-cid progress plus the stall threshold")
@@ -507,8 +542,8 @@ def check_views(trace, public):
     return polls, checked
 
 
-def check_governance(mode, raw, trace, public, committee, controls, stages):
-    polls, checked_views = check_views(trace, public)
+def check_governance(mode, raw, trace, public, committee, controls, stages, bundle):
+    polls, checked_views = check_views(trace, public, bundle)
     votes = [row for row in trace if row["kind"] == "GovernanceSignature"]
     broadcasts = [row for row in trace if row["kind"] == "GovernanceSubmission"]
     report = {"polls": len(polls), "espresso_replay_views": checked_views}
@@ -661,7 +696,9 @@ def check_runs(args):
                  "ordering contrast progressed beyond frozen h1")
             last_poll = [row for row in trace if row["kind"] == "GovernancePoll"][-1]
             check_fault(trace, last_poll)
-    report["governance"] = check_governance(args.mode, raw, trace, public, committee, controls, stages)
+    report["governance"] = check_governance(
+        args.mode, raw, trace, public, committee, controls, stages, evm,
+    )
     write_json(output / "public-replay.json", public)
     report["status"] = "PASS"
     write_json(output / "report.json", report)
