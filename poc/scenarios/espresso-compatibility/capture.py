@@ -167,6 +167,129 @@ class Processes:
         return results
 
 
+# Alloy's TestConfigBuilder first resolves anvil through PATH, then discards
+# that bootstrap provider when given the dedicated L1 URL. Keep upstream's
+# argv unchanged and attach every exec to the local capture.
+_BOOTSTRAP_WRAPPER = r'''
+import json
+import os
+from pathlib import Path
+import sys
+
+namespace_pid = os.getpid()
+namespace_ppid = os.getppid()
+start_ticks = int(Path("/proc/self/stat").read_text().rsplit(")", 1)[1].split()[19])
+port_args = []
+for index, arg in enumerate(sys.argv[1:], 1):
+    if arg in ("--port", "-p"):
+        port_args.append(sys.argv[index:index + 2])
+    elif arg.startswith("--port=") or (arg.startswith("-p") and arg[2:].isdigit()):
+        port_args.append([arg])
+exec_argv = COMMAND + sys.argv[1:]
+evidence = {
+    "argv": sys.argv,
+    "namespace_pid": namespace_pid,
+    "namespace_ppid": namespace_ppid,
+    "start_ticks": start_ticks,
+    "port_args": port_args,
+    "exec_argv": exec_argv,
+}
+path = Path(INVOCATIONS) / f"{namespace_pid}-{start_ticks}.json"
+with path.open("x", encoding="utf-8") as stream:
+    json.dump(evidence, stream, sort_keys=True)
+    stream.write("\n")
+    stream.flush()
+    os.fsync(stream.fileno())
+directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+try:
+    os.fsync(directory_fd)
+finally:
+    os.close(directory_fd)
+os.execv(exec_argv[0], exec_argv)
+'''
+
+
+class BootstrapAnvil:
+    def __init__(self, run, configuration):
+        self.invocations = run / "bootstrap-anvil-invocations"
+        self.bin = run / "bin"
+        self.wrapper = self.bin / "anvil"
+        self.details = {
+            "role": "upstream TestConfigBuilder bootstrap before the dedicated L1 override",
+            "wrapper": str(self.wrapper),
+            "invocations": [],
+        }
+        configuration["bootstrap_anvil"] = self.details
+
+    def prepare(self, loader, native, recorder):
+        self.bin.mkdir(mode=0o700)
+        self.invocations.mkdir(mode=0o700)
+        command = loader + [str(native / "anvil")]
+        source = (
+            "#!/usr/bin/python3\n"
+            f"COMMAND = {command!r}\n"
+            f"INVOCATIONS = {str(self.invocations)!r}\n"
+            + _BOOTSTRAP_WRAPPER
+        ).encode()
+        with self.wrapper.open("xb") as output:
+            output.write(source)
+        self.wrapper.chmod(0o700)
+        recorder.artifact("bootstrap-anvil-wrapper.py", source)
+        self.details["wrapper_artifact"] = "bootstrap-anvil-wrapper.py"
+        self.details["exec_command_prefix"] = command
+
+    @staticmethod
+    def still_present(invocation):
+        pid = invocation["namespace_pid"]
+        try:
+            stat = Path(f"/proc/{pid}/stat").read_text()
+        except (FileNotFoundError, ProcessLookupError):
+            return False
+        start_ticks = int(stat.rsplit(")", 1)[1].split()[19])
+        return start_ticks == invocation["start_ticks"]
+
+    def finish(self, node_pid, recorder):
+        invocations = []
+        if self.invocations.exists():
+            for path in sorted(self.invocations.glob("*.json")):
+                with path.open("rb") as stream:
+                    raw = stream.read(MAX_RESPONSE + 1)
+                name = f"bootstrap-anvil-{path.name}"
+                recorder.artifact(name, raw)
+                invocation = json.loads(raw)
+                invocation["artifact"] = name
+                invocations.append(invocation)
+        self.details["invocations"] = invocations
+        self.details["namespace_espresso_pid"] = node_pid
+        if not invocations:
+            self.details["cleanup"] = "no wrapper invocation recorded"
+            if node_pid is not None:
+                raise RuntimeError("upstream bootstrap Anvil invocation is missing")
+            return
+
+        # The wrapper execs the official binary with the same PID. Check the
+        # original PID and start ticks together so reuse cannot target or mask
+        # a leftover. The namespace supervisor owns final teardown on failure.
+        deadline = time.monotonic() + 3
+        while True:
+            leftovers = [entry["namespace_pid"] for entry in invocations if self.still_present(entry)]
+            if not leftovers or time.monotonic() >= deadline:
+                break
+            time.sleep(0.05)
+        self.details["cleanup"] = {
+            "checked_after_owned_parent_wait": True,
+            "leftover_namespace_pids": leftovers,
+        }
+        if leftovers:
+            raise RuntimeError(f"upstream bootstrap Anvil survived parent cleanup: {leftovers}")
+
+        for entry in invocations:
+            if entry["namespace_ppid"] != node_pid:
+                raise RuntimeError("bootstrap Anvil parent does not match the owned Espresso PID")
+        if not any(entry["port_args"] for entry in invocations):
+            raise RuntimeError("no bootstrap Anvil invocation recorded a port argument")
+
+
 def unavailable(status):
     return status is None or status in (404, 408, 429) or 500 <= status <= 599
 
@@ -235,7 +358,7 @@ def submit_hash(response):
     return value
 
 
-def observe(record, args, processes, configuration):
+def observe(record, args, processes, configuration, bootstrap):
     if {name for _, name in socket.if_nameindex()} != {"lo"}:
         raise RuntimeError("refusing official launch outside a loopback-only namespace")
     # Check our isolated namespace before starting any server that binds the
@@ -261,6 +384,7 @@ def observe(record, args, processes, configuration):
         "AZTEC_SRS_PATH": str(native / SRS), "RUST_LOG": "warn",
         "TOKIO_WORKER_THREADS": "2", "RAYON_NUM_THREADS": "2",
     }
+    bootstrap.prepare(loader, native, record)
     configuration["commands"].update({"anvil": anvil, "espresso": espresso})
     configuration["environment"] = environment
     configuration["l1"] = {"chain_id": 31337, "url": origin("anvil"), "mode": "dedicated Anvil"}
@@ -272,7 +396,9 @@ def observe(record, args, processes, configuration):
         lambda value: value.get("result") == "0x7a69",
         time.monotonic() + 20, "private Anvil eth_chainId", processes,
     )
-    configuration["processes"]["espresso"] = processes.start("espresso", espresso, environment)
+    espresso_environment = dict(environment, PATH=f"{bootstrap.bin}:/usr/bin:/bin")
+    configuration["espresso_environment"] = espresso_environment
+    configuration["processes"]["espresso"] = processes.start("espresso", espresso, espresso_environment)
 
     height_path = "/v1/node/block-height"
     readiness = time.monotonic() + 90
@@ -431,15 +557,27 @@ def main():
     for name in ("index.json", "manifest-amd64.json", "config.json"):
         record.artifact("official-" + name, (args.image / name).read_bytes())
 
+    bootstrap = BootstrapAnvil(args.run, configuration)
     outcome = None
     error = None
     try:
-        outcome = observe(record, args, processes, configuration)
+        outcome = observe(record, args, processes, configuration, bootstrap)
     except BaseException as exc:
         error = exc
     finally:
-        configuration["process_exit"] = processes.close()
+        try:
+            configuration["process_exit"] = processes.close()
+        except (OSError, subprocess.SubprocessError) as cleanup_error:
+            configuration["process_cleanup_error"] = str(cleanup_error)
+            if error is None:
+                error = cleanup_error
     try:
+        try:
+            bootstrap.finish(configuration.get("processes", {}).get("espresso"), record)
+        except RuntimeError as cleanup_error:
+            configuration["bootstrap_anvil"]["validation_error"] = str(cleanup_error)
+            if error is None:
+                error = cleanup_error
         for name in ("anvil", "espresso"):
             logfile = processes.dir / f"{name}.log"
             if logfile.exists():
@@ -450,6 +588,9 @@ def main():
             record.seal(json.loads(identity_path.read_bytes()), configuration)
         else:
             (args.run / "partial-requests.json").write_bytes(json_bytes(record.records))
+            (args.run / "partial-configuration.json").write_bytes(json_bytes({
+                "configuration": configuration, "artifacts": record.artifacts,
+            }))
         if error is not None:
             raise error
         offline(args, outcome)

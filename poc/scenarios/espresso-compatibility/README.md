@@ -33,8 +33,19 @@ for a host with different paths.
 The local network namespace contains only its loopback interface. The runner
 starts the bundled Anvil on port 18775 and the unmodified official image
 binary with its matching runtime libraries on ports 18770 through 18774.
-Anvil chain ID 31337 is queried before the official dev-node starts. The HTTP
-client opens fresh connections directly to the private local endpoints.
+Anvil chain ID 31337 is queried before the official dev-node starts. This is
+the dedicated L1 used by the dev-node API. Its upstream configuration builder
+also starts a bootstrap Anvil before overriding the L1 URL. A run-local
+`bin/anvil` wrapper at the front of the sanitized dev-node PATH records the
+original invocation, requested port arguments, namespace PID and parent PID,
+and Linux process start ticks. It then execs the same verified image Anvil
+through the image loader with the original arguments. The wrapper source and
+invocations are retained as bundle artifacts. The runner checks the recorded
+process identities after waiting for its owned parents and fails the scenario
+if a bootstrap process remains. Bootstrap port arguments document the request,
+including port zero when upstream asks the OS to select the port.
+
+The HTTP client opens fresh connections directly to the private local endpoints.
 Readiness and capture have finite wall deadlines. Cleanup signals the process
 groups created by this invocation and waits for their exit.
 
@@ -49,6 +60,8 @@ The runner records the original executable and image hashes, commands,
 response bodies, ACKs, full blocks, leaves and all positional responses in
 `.build/artifacts/RUN_ID/bundle/`. It preserves the manifest and raw records
 from runs that fail after genesis, when those records remain available.
+Before genesis, `partial-configuration.json` and `partial-requests.json`
+record the available launch metadata and transcript.
 After stopping its owned processes, it replays the bundle twice for the first
 session with different pauses and separately for the second session. It
 compares the exact EC16-AUDIT-1 bytes and projection across runs, and compares
