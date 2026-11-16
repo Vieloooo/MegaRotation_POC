@@ -1,0 +1,704 @@
+{
+  "VG35_wall_pause": "PASS",
+  "artifact_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1",
+  "binary": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/.build/target/debug/examples/replay",
+  "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+  "candidate": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+  "capture_sha256": "22ffb73876e98efc6327ff8adcea648e1734f2e9a874bc7e57e1c783752fcf6c",
+  "cases": [
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-7-0",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 615672871,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-7-0.jsonl",
+      "scenario": "G1",
+      "seed": 7,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-7-0.stderr",
+      "stderr_sha256": "91bb49906e81df95de85b9ea6db6b73d1b4ac06677935f004e01f389ffd6ffb1",
+      "stdout_sha256": "0990e115f76aea8e0a07252e0c83f478f026d1ea172cc1637d13e3b71af74457",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-7-2",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 1016871528,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-7-2.jsonl",
+      "scenario": "G1",
+      "seed": 7,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-7-2.stderr",
+      "stderr_sha256": "b6312d4c335548e6c08a739434e64b215744f378a73691be5dfa5254776b3d1a",
+      "stdout_sha256": "0990e115f76aea8e0a07252e0c83f478f026d1ea172cc1637d13e3b71af74457",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-42-0",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 615391870,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-42-0.jsonl",
+      "scenario": "G1",
+      "seed": 42,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-42-0.stderr",
+      "stderr_sha256": "b775f3c7f810a729ba074acc750314f8d3b4c96afc987a5d75328ba4578a240c",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-42-2",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 965995451,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-42-2.jsonl",
+      "scenario": "G1",
+      "seed": 42,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-42-2.stderr",
+      "stderr_sha256": "aef142d39c44561c2c2fc96bf64f0361e2c88f25183b9a4a60e6f874ef3f04e5",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-99-0",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 615412104,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-99-0.jsonl",
+      "scenario": "G1",
+      "seed": 99,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-99-0.stderr",
+      "stderr_sha256": "31883ea5ebe095925c07f343eab1ce9686380efaa26fe8b12671175aac1cf640",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G1-99-2",
+      "common_pc_comparisons": 7,
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "exit_code": 0,
+      "final_height": 20,
+      "final_pc": {
+        "index": {
+          "Espresso": 4
+        },
+        "key_us": 61000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "control": "Resume",
+        "kind": "UNSUPPORTED_CONTROL",
+        "position": {
+          "index": {
+            "L1": {
+              "block": 26,
+              "log": 0,
+              "tx": 1
+            }
+          },
+          "key_us": 64000000,
+          "kind": "Resume"
+        }
+      },
+      "local_wall_elapsed_ns": 966280712,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 8,
+        "B": 14
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-99-2.jsonl",
+      "scenario": "G1",
+      "seed": 99,
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G1-99-2.stderr",
+      "stderr_sha256": "4fcf46b98f5a5df248affb319f3384498b9e9f1bf4f41e612a9303690ab25833",
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        30000000,
+        31000000,
+        53999999,
+        54000000,
+        61000000,
+        64000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-7-0",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 615387683,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-7-0.jsonl",
+      "scenario": "G2",
+      "seed": 7,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-7-0.stderr",
+      "stderr_sha256": "0b598a0cb8d398288ce39989bdf98800cdce8b28b1ed89077721b998b8823eb6",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-7-2",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 1016865138,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-7-2.jsonl",
+      "scenario": "G2",
+      "seed": 7,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-7-2.stderr",
+      "stderr_sha256": "9ad6492d30ce198be1acdd2f5323906a6f800f94a90829d3ecb79956286e52e9",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-42-0",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 615393597,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-42-0.jsonl",
+      "scenario": "G2",
+      "seed": 42,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-42-0.stderr",
+      "stderr_sha256": "6a235af24c97a13496a12b234264e7de699cf6997f3449b83346c3663e7bc794",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-42-2",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 1016449647,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-42-2.jsonl",
+      "scenario": "G2",
+      "seed": 42,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-42-2.stderr",
+      "stderr_sha256": "3967104f9b39bf0af30bc05451a0a743446739f1f2271c78d70784709784e111",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-99-0",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 615400863,
+      "pause_ms": 0,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-99-0.jsonl",
+      "scenario": "G2",
+      "seed": 99,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-99-0.stderr",
+      "stderr_sha256": "c645dd05a4d2c7a493d6e63956d9de09e60b02608d2e5c1351250373837b7984",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    },
+    {
+      "binary_sha256": "0544600279839b71d89b8a8d363640aea7f4e81af140654ff35b1e321ed76524",
+      "case": "G2-99-2",
+      "common_pc_comparisons": 10,
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "exit_code": 0,
+      "final_height": 11,
+      "final_pc": {
+        "index": {
+          "Espresso": 7
+        },
+        "key_us": 52000000,
+        "kind": "Espresso"
+      },
+      "final_status": {
+        "kind": "READY"
+      },
+      "local_wall_elapsed_ns": 1016403591,
+      "pause_ms": 2,
+      "reader_steps": {
+        "A": 10,
+        "B": 12
+      },
+      "replay_fixture": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-99-2.jsonl",
+      "scenario": "G2",
+      "seed": 99,
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534",
+      "stderr": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/gfr-8907ad6-g1-g2-v1/G2-99-2.stderr",
+      "stderr_sha256": "865c9c85c6ef3c3e80f896534f330887ebcf70de500374af2b56915bda0bf06c",
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "timed_out": false,
+      "verdict": "PASS",
+      "virtual_espresso_keys_us": [
+        12000000,
+        13000000,
+        14000000,
+        15000000,
+        16000000,
+        23999999,
+        24000000,
+        52000000
+      ]
+    }
+  ],
+  "contract": "GFR-07-v1",
+  "environment": {
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_HOME": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/.build/cargo",
+    "CARGO_TARGET_DIR": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/.build/target",
+    "PATH": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:$PATH"
+  },
+  "final_revision": {
+    "branch": "codex/poc-viewer-gfr",
+    "head": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+    "status": [
+      "?? poc/verification/viewer-gfr/integrated-result-8907ad6.json",
+      "?? poc/verification/viewer-gfr/integrated-review-8907ad6.md",
+      "?? poc/verification/viewer-gfr/simulation/run-matrix.py"
+    ]
+  },
+  "fixture_bounds": {
+    "DEP": [
+      1,
+      40
+    ],
+    "G1_Espresso_q": [
+      0,
+      5
+    ],
+    "G2_Espresso_q": [
+      0,
+      7
+    ],
+    "L1": [
+      0,
+      30
+    ]
+  },
+  "incomplete_cases": [],
+  "initial_revision": {
+    "branch": "codex/poc-viewer-gfr",
+    "head": "8907ad64d882673d6ef2142defdf6bff2e208a71",
+    "status": [
+      "?? poc/verification/viewer-gfr/integrated-result-8907ad6.json",
+      "?? poc/verification/viewer-gfr/integrated-review-8907ad6.md",
+      "?? poc/verification/viewer-gfr/simulation/run-matrix.py"
+    ]
+  },
+  "input_hashes_checked_after_capture": {
+    "poc/Cargo.toml": "75b28f6e09a0fbde445e7d3c9a4b9d4d8233b3b1c72bcbfb1f96390955b7198b",
+    "poc/crates/viewer-gfr/Cargo.lock": "11a1dd677d7c80da84f2371681e6054d5ac1df0ac72b5bd748d63843f746a6b8",
+    "poc/proto/i1.proto": "fdbe4a22c251077c4c58ad7d97853c890103204678b0d0e07d11d94da1fa7c14",
+    "poc/verification/mock-plan-execution/implementation-v1/public-registry.json": "f1649fca8439f686ba8c017a3ee0b2a34164283b2d9408c1183e4c27c4cd4ede"
+  },
+  "open_gates": [
+    "V22 native Regional BFT certificates and exact 04 FinalVerifier",
+    "09 authenticated nonempty L1 controls",
+    "VG39 and 12/13 historical ResumeCut and material staging",
+    "08 controlled real-producer regular integration and downstream consumption"
+  ],
+  "pause_pairs": [
+    {
+      "scenario": "G1",
+      "seed": 7,
+      "stdout_sha256": "0990e115f76aea8e0a07252e0c83f478f026d1ea172cc1637d13e3b71af74457",
+      "verdict": "PASS"
+    },
+    {
+      "scenario": "G1",
+      "seed": 42,
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "verdict": "PASS"
+    },
+    {
+      "scenario": "G1",
+      "seed": 99,
+      "stdout_sha256": "53eabf5b9d4b98ab59cefd3dac8be07ad62ede15d96b04a0d175af2fe979bc5f",
+      "verdict": "PASS"
+    },
+    {
+      "scenario": "G2",
+      "seed": 7,
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "verdict": "PASS"
+    },
+    {
+      "scenario": "G2",
+      "seed": 42,
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "verdict": "PASS"
+    },
+    {
+      "scenario": "G2",
+      "seed": 99,
+      "stdout_sha256": "6c4ba42753752599226376eb956ccaebf8e6dbaacbd464d09909ef55f5afd371",
+      "verdict": "PASS"
+    }
+  ],
+  "real_network_measurements": null,
+  "scenario_sources": {
+    "G1": {
+      "common_pc_projection_sha256": "033020911dfd81e8169051493ce3c61891dcd7faf255933e6cd3a2b6dd4b30e8",
+      "source_sha256": "3f4e63fbf1524be277a57903ba19c285e80abb92878c9357e2dba372cb1674ea"
+    },
+    "G2": {
+      "common_pc_projection_sha256": "de5d4bd37af71168b8439207a9a98e09e6600b6089e0400b02af6ccdc8ab1734",
+      "source_sha256": "30ac3b29578fefcf80bac4aca790edec45d95068517929354069e0a1645be534"
+    }
+  },
+  "tester_script_sha256": {
+    "check-traces.py": "e3e54cd70f3871b6e19440b0211df6ce4e741617cfb0cece813145f2a87c6afd",
+    "run-matrix.py": "95bcbb79d297fe32d6126ea28cb5ba304df9fe7f916a487fd9d45d5dbc8257fd"
+  },
+  "tools": {
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "flock": "flock from util-linux 2.37.2",
+    "git": "git version 2.34.1",
+    "python": "Python 3.12.8",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.95.0\nLLVM version: 22.1.2"
+  },
+  "verdict": "PASS",
+  "verification_profile": "gfr-07-noncryptographic-rule-fixture-v1"
+}

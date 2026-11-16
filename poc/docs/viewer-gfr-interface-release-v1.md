@@ -1,6 +1,6 @@
 # 07 Viewer GFR interface release v1
 
-2026-11-16 (Asia/Shanghai). **M1 interface PASS; pure reducer M2 in progress; full feature 07 OPEN.** This release is a consumable component milestone and does not increase the complete accepted-feature count.
+2026-11-16 (Asia/Shanghai). **M1 interface PASS; full feature 07 OPEN.** This release records the first consumable interface milestone and does not increase the complete accepted-feature count. Subsequent M2 verification and Tester results are recorded in the [component handoff](viewer-gfr-component-handoff-v1.md).
 
 ## Exact revisions and API
 
@@ -41,6 +41,6 @@ M1 tests cover codecs/comparison and capability shapes, not GFR state transition
 
 ## Remaining gates and latest routing decision
 
-M2 must finish and independently verify all applicable pure-rule cases before the Simulator runs G1/G2 on the same candidate. 04's real native FinalVerifier/certificates remain unavailable and OPEN; fixtures never satisfy that gate. Unsupported Force/RESUME must be reported at their position rather than skipped. Future RESUME lifecycle batches require complete materials before allocation; actual 13 dispatch/durability remains OPEN.
+The subsequent M2 handoff separately records pure-rule verification and G1/G2 on one verified candidate; this M1 evidence alone does not establish those results. 04's real native FinalVerifier/certificates remain unavailable and OPEN; fixtures never satisfy that gate. Unsupported Force/RESUME must be reported at their position rather than skipped. Future RESUME lifecycle batches require complete materials before allocation; actual 13 dispatch/durability remains OPEN.
 
 The coordinator's 2026-11-16 restart-free route (`0c15aac`, handoff update `32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77`) was read from the source checkout without merging unrelated changes. It confirms that this work does not wait for complete 01 recovery. Future genuine 04 certificates may come from a continuously running healthy-worker profile; this does not waive clocks, leases, grant/Ack, signatures, close gates, or independent replay. Current 07 ownership and pure-rule scope are unchanged. No main merge or push has been performed.
