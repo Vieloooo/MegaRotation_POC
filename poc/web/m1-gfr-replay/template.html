@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+  <title>M1 Regular Handoff · GFR 回放</title>
+  <style>/* INLINE_CSS */</style>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">SEQUENCER ROTATION POC / M1</p>
+        <h1>Regular Handoff 回放</h1>
+        <p class="subtitle">从公开日志接纳区块，切换 GFR 生产职责</p>
+      </div>
+      <a class="source-jump" href="#provenance">证据包 <span class="mono">91547857 · seed 42</span> ↓</a>
+    </header>
+
+    <noscript>请启用 JavaScript，页面直接读取内嵌的封存证据。</noscript>
+    <section class="dashboard" aria-label="回放状态">
+      <div><span>虚拟时间 τ</span><strong id="clock">—</strong></div>
+      <div><span>G 链高度</span><strong id="head">—</strong></div>
+      <div><span>当前 NEXT</span><strong id="context">—</strong></div>
+      <div><span>已完成公共位置</span><strong id="position">—</strong></div>
+    </section>
+
+    <section class="console panel" aria-labelledby="timeline-title">
+      <div class="panel-head">
+        <div><h2 id="timeline-title">回放时间轴</h2><p>横轴为虚拟秒，点击任一可见标记检查证据。</p></div>
+        <div id="filters" class="filter-list" aria-label="轨道筛选">
+          <label><input type="checkbox" data-filter="l1" checked> L1</label>
+          <label><input type="checkbox" data-filter="espresso" checked> Espresso</label>
+          <label><input type="checkbox" data-filter="regional" checked> 区域</label>
+          <label><input type="checkbox" data-filter="g" checked> G</label>
+        </div>
+      </div>
+      <div class="timeline-scroll">
+        <div id="timeline" class="timeline" aria-label="四条共享虚拟时间轴的记录轨道"></div>
+      </div>
+      <div class="transport">
+        <div class="buttons" role="group" aria-label="播放控制">
+          <button id="reset" type="button" title="回到开头">↺ <span>起点</span></button>
+          <button id="previous" type="button" aria-label="上一步">‹</button>
+          <button id="play" class="primary" type="button" aria-pressed="false">▶ 播放</button>
+          <button id="next" type="button" aria-label="下一步">›</button>
+        </div>
+        <div class="scrubber">
+          <input id="scrub" type="range" min="0" value="0" aria-label="回放位置">
+          <output id="step-label" for="scrub" class="mono"></output>
+        </div>
+      </div>
+      <nav class="jump-list" aria-label="关键位置">
+        <button type="button" data-jump="10"><span class="mono">h10 / q9</span><strong>R0 → R1</strong></button>
+        <button type="button" data-jump="20"><span class="mono">h20 / q19</span><strong>R1 → R2</strong></button>
+        <button type="button" data-jump="21"><span class="mono">h21 / q20</span><strong>R2 首块进入 G</strong></button>
+      </nav>
+    </section>
+
+    <section class="inspector panel" id="inspector" aria-labelledby="selection-title"></section>
+
+    <section class="provenance panel" id="provenance">
+      <h2>证据包与核对</h2>
+      <div id="source"></div>
+      <details id="fixture"><summary>完整 finalized L1 fixture <span class="muted">31 个 header</span></summary>
+        <div id="fixture-body"></div>
+      </details>
+      <details><summary>重放规则与边界 <span class="muted">v10 GFR §3–4</span></summary>
+        <div class="manual">
+          <p>规则来源为 <code>formalization_v10/09_finality_rules_zh_v0_1.md</code> §3.2–3.4、§4.2–4.3。时间键先排序。同键时 L1 control → Expire → SessionEnd → Espresso，同类再按各自索引。处理 Espresso(q) 时，其完整前缀已经覆盖当前的公开键。</p>
+          <p>只有缺少必需公共输入或已公开材料尚未读齐时，当前重放位置才 WAIT。公开历史本身尚缺证明或正文的候选暂不合格，其他事件仍可处理。读者补齐材料保留原公开位置。</p>
+          <p>满窗交接由接纳上界 physical block 的同一 Espresso 转移触发。若未满窗，SessionEnd 依赖公开前缀覆盖截止键并且旧职责仍为 NEXT，使用前驱最后已接纳的 physical block 为 anchor。无新块时沿用初始 anchor。后继窗口始终从前驱名义上界加一开始。</p>
+          <p>同一虚拟时刻的 trace 按 seq 展示。若 fixture finalized 时刻与 trace 相同，页面先展示 fixture header。</p>
+          <p>本次封存观察范围截至 h21。L1 数据是预生成 finalized fixture，Espresso 数据来自 SimEspresso。fixture 包含超出本次轨迹的 header，逐 header 的 reader 收取时间未记录。</p>
+        </div>
+      </details>
+    </section>
+  </main>
+  <script type="application/json" id="replay-data">INLINE_JSON</script>
+  <script>/* INLINE_JS */</script>
+</body>
+</html>
