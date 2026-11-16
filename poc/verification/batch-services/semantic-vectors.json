@@ -1,0 +1,227 @@
+{
+  "profile": "batch-services-source-first-v1",
+  "kind": "independent expected outcomes; not observed candidate tests",
+  "seed": "none (literal source-derived inputs)",
+  "ranges": [
+    {
+      "id": "B01",
+      "prev_height": 0,
+      "heights": [
+        1
+      ],
+      "expected": "BUILT"
+    },
+    {
+      "id": "B02",
+      "prev_height": 0,
+      "heights": [
+        1,
+        2
+      ],
+      "expected": "BUILT"
+    },
+    {
+      "id": "B03-0",
+      "prev_height": 0,
+      "heights": [],
+      "expected": "REJECT"
+    },
+    {
+      "id": "B03-1",
+      "prev_height": 0,
+      "heights": [
+        1,
+        2,
+        3
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "id": "B03-2",
+      "prev_height": 0,
+      "heights": [
+        2
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "id": "B03-3",
+      "prev_height": 0,
+      "heights": [
+        1,
+        3
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "id": "B03-4",
+      "prev_height": 0,
+      "heights": [
+        1,
+        1
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "id": "B04",
+      "prev_height": 18446744073709551615,
+      "heights": [
+        0
+      ],
+      "expected": "REJECT_OVERFLOW"
+    }
+  ],
+  "execution": {
+    "id": "B05",
+    "parent_accounts": {
+      "0": {
+        "nonce": 0,
+        "balance": 10
+      }
+    },
+    "credits": [
+      {
+        "to": 0,
+        "amount": 5
+      }
+    ],
+    "transactions": [
+      {
+        "from": 0,
+        "to": 1,
+        "nonce": 0,
+        "amount": 7
+      },
+      {
+        "from": 0,
+        "to": 1,
+        "nonce": 0,
+        "amount": 1
+      },
+      {
+        "from": 0,
+        "to": 1,
+        "nonce": 1,
+        "amount": 9
+      },
+      {
+        "from": 0,
+        "to": 1,
+        "nonce": 1,
+        "amount": 8
+      }
+    ],
+    "kept_indices": [
+      0,
+      3
+    ],
+    "post_accounts": {
+      "0": {
+        "nonce": 2,
+        "balance": 0
+      },
+      "1": {
+        "nonce": 0,
+        "balance": 15
+      }
+    },
+    "record_excludes": [
+      "DEP attributes",
+      "DEP credit",
+      "transaction index 1",
+      "transaction index 2"
+    ]
+  },
+  "states": [
+    {
+      "id": "D01",
+      "input": "same payload repeat/restart",
+      "expected": "same commitment and immutable payload"
+    },
+    {
+      "id": "D02",
+      "input": "DA data not durable",
+      "expected": "no receipt output"
+    },
+    {
+      "id": "D03",
+      "input": "accepted commitment missing bytes",
+      "expected": "WAIT_NO_DA_OBJECT"
+    },
+    {
+      "id": "D04",
+      "input": "accepted commitment bytes mismatch",
+      "expected": "explicit mismatch, no DAObject"
+    },
+    {
+      "id": "C01",
+      "input": "prev height same but source differs",
+      "expected": "REJECT_STALE_PREV"
+    },
+    {
+      "id": "C02",
+      "input": "source unavailable at exact gpos",
+      "expected": "WAIT_NO_SIGNATURE"
+    },
+    {
+      "id": "C03",
+      "input": "latest RESUME at or before prev written_at not replayed",
+      "expected": "WAIT_NO_SIGNATURE"
+    },
+    {
+      "id": "C04",
+      "input": "cached certificate after cursor advanced",
+      "expected": "REJECT_STALE_PREV"
+    },
+    {
+      "id": "C05",
+      "input": "payload record ordinary tx differs from independently executed Kept",
+      "expected": "REJECT_NO_SIGNATURE"
+    },
+    {
+      "id": "L01",
+      "input": "pending transaction",
+      "expected": "NOT_ACCEPTED"
+    },
+    {
+      "id": "L02",
+      "input": "successful included receipt but not finalized",
+      "expected": "NOT_ACCEPTED"
+    },
+    {
+      "id": "L03",
+      "input": "finalized receipt but not reader delivered",
+      "expected": "NOT_ACCEPTED"
+    },
+    {
+      "id": "L04",
+      "input": "delivered finalized successful configured Inbox Advanced with matching calldata",
+      "expected": "ONE_ACCEPTED_RECORD_AT_ORIGINAL_POSITION"
+    },
+    {
+      "id": "L05",
+      "input": "same request replay successful receipt with no new Advanced",
+      "expected": "NO_SECOND_ACCEPTED_RECORD"
+    },
+    {
+      "id": "R01",
+      "input": "old-prev certificate submitted after finalized Override",
+      "expected": "NO_NEW_ACCEPTANCE"
+    },
+    {
+      "id": "R02",
+      "input": "unknown submit outcome after crash",
+      "expected": "RECONCILE_RECEIPT_BEFORE_REBUILD"
+    },
+    {
+      "id": "V01",
+      "input": "cursor height2 but only verified source through height1",
+      "expected": "cursor=2, materialized=1, missing_sources nonempty"
+    },
+    {
+      "id": "V02",
+      "input": "CursorSet without exact ResumeCut",
+      "expected": "WAIT_MATERIALIZATION; do not fabricate cursor-height prefix"
+    }
+  ]
+}

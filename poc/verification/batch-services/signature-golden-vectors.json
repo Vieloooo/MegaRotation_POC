@@ -1,0 +1,222 @@
+{
+  "profile": "BS-FRAME-v1/ANVIL-L1-ABI-v1",
+  "kind": "offline independent real secp256k1 public vectors; fixture addresses/gpos; NOT Anvil acceptance",
+  "fixture": {
+    "chain_id": 31337,
+    "inbox": "0x2000000000000000000000000000000000000002",
+    "config_ref": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "prev": [
+      0,
+      0,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      0,
+      "0x"
+    ],
+    "next": [
+      2,
+      0,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      1,
+      "0x666978747572653a42532d4652414d452d76313a67706f733a31"
+    ],
+    "first_height": 1,
+    "last_height": 2,
+    "gpos": "0x666978747572653a42532d4652414d452d76313a67706f733a31",
+    "payload": "0x503042310001c3b59fb7da9fef25053dde7dc7bac67b0000000000580002000000000000000100000000000000000000000200000013010001000000000000000000000000000000070000001301000100000000000000010000000000000008000000000000000200000000000000000000000001",
+    "commitment": "0x3719037b49943e3c4dfdb7488fd54eb94cbfa8b849e4e8339ea5f03cc7ca3ef2",
+    "da_certificate": "0x7d9f9536301cfb3a7444e23cbf83552eb937bec82b8347bc735c6ef1fc7bc51e00f39ccb4d1c4a50525ccec643a0175d2ee6136c72eb76b94123fa0334fbddbc1c"
+  },
+  "da_signer": "0x173635e34ffe0476c8052502e1040b982af0ab85",
+  "certifier_signer": "0xeade410ab1e209ef7c9ce00eccda14f217cd827b",
+  "certifier_signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966a0c236660197751098b0ad046f7be63a94413f2cd84a044665b3cd25bccd98a681c",
+  "da_digest": "0xd52bdca1ee7d59cb15f421f5f717fdf34b1d7e4d80880dd499885853c46ca6a2",
+  "batch_digest": "0xa682ab9ec673e9cf543f7d56bb02108b963b38c2fa221a1089ec42e36229e110",
+  "mutations": [
+    {
+      "role": "da",
+      "changed": "chain_id",
+      "digest": "0xdd97b69cb295ffbde3721432eb760485325f854fa5c0e127bb9844229906d4b8",
+      "recovered": "0xdc17ca04c396688334d9da0750de93f6705f8ff9",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "da",
+      "changed": "inbox",
+      "digest": "0x26c1e2a68c31e75b41fa7854b10ee6d0894ee56ec81d96bceb24b19053f8cc8b",
+      "recovered": "0xf5e6e5863a599d8e2da13465025633a4801af53d",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "da",
+      "changed": "config_ref",
+      "digest": "0xf20446f7112a72bff76d75553ff0faeaee808fe46eac5312f2b9b044320002e8",
+      "recovered": "0x6caeff5241b66eea0424ac3cdb7a467b7004eb16",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "da",
+      "changed": "commitment",
+      "digest": "0xa1ab722b732a2d2acd917db222efdfea69b4f188ec6c876453d95853e1e892ca",
+      "recovered": "0x5ee623575279aba1b88bca101c106a37719f5834",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "chain_id",
+      "digest": "0x6b71b96039a9e313b56c6e21ed7d0d8c00cec43b67772a266fba6034e4a3cbc3",
+      "recovered": "0x7b0aa34d339fb0aa8fd12bb19c639332a3067e8a",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "inbox",
+      "digest": "0x66945dde4b0b4d69cda53c7c8639dff25ee043b93aca80ac6cd2ad72dafba4e9",
+      "recovered": "0xd8ab076484325bd32dfcfbe794848ff8febf8cc1",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "config_ref",
+      "digest": "0xbd400bef7f5dcfec29d9fc3595d62f7b13788877b5f19085782397a3ed009825",
+      "recovered": "0x7938a25a80109a512d247494edea3d95641b0062",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "commitment",
+      "digest": "0x91d2ca7a2f4f07f3a0e529cc711e9701717bc22e26cb8260b73fb3e234e1d06e",
+      "recovered": "0x457a3584ba77ce952cb335751eb4a3caaad46555",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "prev.height",
+      "digest": "0x39f2f4fd8e1fac766d6a5b2ddf0cadc440eb9d5e0ec8f2354254147bb551a657",
+      "recovered": "0x1eca4733a12ce776dfe1fc0e10634cdb0a7ff24c",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "prev.origin",
+      "digest": "0x76be7853e00f10b2614517e114fca6ff37a2dcbe67a48a4602cc76fef14b4134",
+      "recovered": "0xb48ad4cc8359a81bac281d8ae06a766484880903",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "prev.frames_digest",
+      "digest": "0x8b50bc6c931114c2bab433382d800909d4a0cb68753cffa03ea1d6334e75f2d4",
+      "recovered": "0x648697b6eb1f083e7262e771e05b3cb9c20152f4",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "prev.source_kind",
+      "digest": "0xbc07f1a9f31ac74743eb95a7b5d260c3a2ecfbbd4e94df95f6d46be474cb2095",
+      "recovered": "0xd1dd99a175ba74b6a49628b71bf70a37f95855e6",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "prev.source",
+      "digest": "0x726764cb9aed80769f9b6dd7e07eacf53c988bf9335c36ff7485149b1e932383",
+      "recovered": "0x19bff14165ed616b06c9343b92d2f4331a9369bb",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "next.height",
+      "digest": "0xd410f648ca6de7e76b08f7fe2339f7ff014cb228743e5969fcf8a8cbb1dba78c",
+      "recovered": "0x103a09c6a8f72d199aadff0fea8742663441117c",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "next.origin",
+      "digest": "0xc2316ce43df5f02d59e3eed9060214f1fa75cd853e7f1e312f0c86a530005f38",
+      "recovered": "0x5404c0585e8c9e6715653df4b64e12d2278eb134",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "next.frames_digest",
+      "digest": "0xdf3c935286bb14bb145acebb60d8263e76f3971cf07e5ebd4a6f55992a809c0c",
+      "recovered": "0x56ab3eb9befee36509811f1dd8241ec1720c6e48",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "next.source_kind",
+      "digest": "0x93f8ebd6f18655aca01d843c6e6c5be135f75d426841baea0e9a3b941e8202ed",
+      "recovered": "0xf0924e338b9cc13e12704365d3c04645ffe2f90e",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "next.source",
+      "digest": "0xc5b3c494478403989e16500edbdd5d63f5c07a12122c5e8f2442dbc19a88089b",
+      "recovered": "0xa645850a33ace7afd08b422a2da813c1fa02bd6e",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "first_height",
+      "digest": "0x884eb7d2fe01b6cab21dc224d785cd502efb08b4676b96659975d79c90ca772c",
+      "recovered": "0xb38f3c51c741ee5c7edc4369840dc993bcd04f40",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "last_height",
+      "digest": "0x23b9dbd4f84581bf444e5a401d57a20ffa6aec4a3be8dd034712ac2be9aa5286",
+      "recovered": "0x095dba64b6054763113b7b8c950e2ca5974b5f4a",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "gpos",
+      "digest": "0x2f36b40564019dc4af9611b51982490f18bbadc137d4f07364c11f880cd7c495",
+      "recovered": "0xc87c95acfa411555c3b3b81498b3485a4d7151d6",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    },
+    {
+      "role": "certifier",
+      "changed": "da_certificate",
+      "digest": "0xf0cd83cf3a4bc2358a230fee44dbdab7a4a4907f95642f44b27ede673dddf076",
+      "recovered": "0x5cc6d549ae6e9c031b1c69872283edd3b75b4f40",
+      "expected": "REJECT_ORIGINAL_SIGNATURE"
+    }
+  ],
+  "malformed_signatures": [
+    {
+      "name": "short",
+      "signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966a0c236660197751098b0ad046f7be63a94413f2cd84a044665b3cd25bccd98a68",
+      "expected": "REJECT"
+    },
+    {
+      "name": "trailing",
+      "signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966a0c236660197751098b0ad046f7be63a94413f2cd84a044665b3cd25bccd98a681c00",
+      "expected": "REJECT"
+    },
+    {
+      "name": "v0",
+      "signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966a0c236660197751098b0ad046f7be63a94413f2cd84a044665b3cd25bccd98a6800",
+      "expected": "REJECT"
+    },
+    {
+      "name": "r0",
+      "signature": "0x00000000000000000000000000000000000000000000000000000000000000000c236660197751098b0ad046f7be63a94413f2cd84a044665b3cd25bccd98a681c",
+      "expected": "REJECT"
+    },
+    {
+      "name": "s0",
+      "signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966a00000000000000000000000000000000000000000000000000000000000000001c",
+      "expected": "REJECT"
+    },
+    {
+      "name": "high_s",
+      "signature": "0xc81e5cbf0454a46877387f456e6c677340fb99959761952a400c6153b148966af3dc999fe688aef674f52fb908419c55769aea192aa85bd564958c31035cb6d91b",
+      "expected": "REJECT"
+    }
+  ]
+}

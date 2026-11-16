@@ -1,0 +1,27 @@
+{
+  "profile": "batch-services-source-first-v1",
+  "baseline": "c9805f7a818bc23d30018ce4dc6f1ee45f92e3ac",
+  "source_dependencies": {
+    "03": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+    "09": "c443ae925ed549b046731c2d8ef3dd9ce0311d24"
+  },
+  "regional_bft_gitlink": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+  "commonware": "2026.10.0",
+  "files": {
+    "AGENTS.md": "5c99ced956be33dd449a952ceebffeb22b92c335fd69b1bbd23c1f6af2c4e56a",
+    "DESIGN.md": "e4b93a400cb4da02ddf55f47763062aecbcdb1b81e9a7a9d0fcb28e89801b2f8",
+    "formalization_v10/poc_v2_xuelab_handoff_zh.md": "f82c49f19305484ecf7c3a5d1a34eb4c4752db5cfd8fa1b406f2220a681eff05",
+    "formalization_v10/poc_v2_xuelab_setup_zh.md": "a14555319ce66b01474fb033715acd93938fe41b041fa0dbf56062cd5ba93b07",
+    "formalization_v10/poc_design_zh_v2.md": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+    "formalization_v10/05_batcher_zh_v0_1.md": "56ac5fe4856cc78bb37ddfb3c2c3fefcad0b8c424ecda6362bb8f641920d6dc4",
+    "formalization_v10/06_certifier_zh_v0_1.md": "66e59d3db662021eb9c109114c2c423673d46a620eeed8ee3f599c6033e13167",
+    "formalization_v10/07_batch_inbox_zh_v0_1.md": "666b5a3735f677da4a5b087e9da96d66b30524898eac7688a678b3ec59c410cf",
+    "formalization_v10/08_da_zh_v0_1.md": "cb3a81091a8b45070e79ab8f0ae49df39e624e4595ea12248d3079e98114d788",
+    "poc/docs/contracts/task-contract-anvil-l1-v1.md": "dd727cee5de9ab33579f62d0747717d6bfafae749d3c1a3c1559c35345b3ce81",
+    "poc/docs/contracts/task-contract-mock-plan-execution-v2.md": "a18d2b33f9c541abc81b4fead601c3ccaead6221c90dc43345d52a850429cc15",
+    "poc/docs/contracts/mock-plan-public-interface-v1.md": "4c5381e2809122fc4c05173f1f6412cd227edfaa846ca9bbfd9511d861cff7f8",
+    "poc/contracts/src/L1ABI.sol": "5fd88b6f8101203968a42db0a548a1b352bb5fd2bb2bbaf2e84286d2135204e0",
+    "poc/contracts/src/BatchInbox.sol": "3b8bb77dfb6051511afade2f037f95a1fb05b74c037b30f669d7372a4071cba7",
+    "poc/contracts/src/TypedData.sol": "27d110f3c27e083e36a5b7d4ffdc7628b7c7c54ef982e645aa773c66d65d53ce"
+  }
+}
