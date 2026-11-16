@@ -18,7 +18,7 @@
   "jobs": [
     {
       "feature": "01",
-      "status": "checkpoint-requested",
+      "status": "deferred-checkpointed",
       "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
       "thread_id": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
       "candidate_sha": null,
@@ -32,7 +32,7 @@
       },
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01-resume",
       "last_turn_status": "inProgress",
-      "worktree_head": "8a81391c7a0b08be3ce1d2adf3b44e8bf4bbc509",
+      "worktree_head": "0183b401f805e5508ae5fdb20d53457eb4149504",
       "worktree_dirty": false,
       "blocker": null,
       "reported_progress": "Builder final: 26 real-process cases, 14 named crash cuts, native 132 and workspace 20 checks. R16 prior fixed snapshot 24 runs with per-seed byte-identical frames/trace. Complete independent R1-R18 remains OPEN.",
@@ -43,11 +43,14 @@
       "old_child_agents_quiescent_verified": true,
       "previous_thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
       "previous_worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc",
-      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "0183b401f805e5508ae5fdb20d53457eb4149504",
+      "subagents_stopped": true,
+      "checkpoint_report": "/home/jy/.codex/worktrees/2123/megaroation_poc/poc/docs/native-recovery-checkpoint-20261116.md"
     },
     {
       "feature": "02",
-      "status": "waiting-integration",
+      "status": "reused-for-H1-preparation",
       "phase_authorized": "freeze-and-implement-isolated-transport-component",
       "waits_for": {
         "restart_free_integration": [
@@ -126,7 +129,7 @@
     },
     {
       "feature": "09",
-      "status": "waiting-integration",
+      "status": "delivered-reserved-for-H4",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
       "thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
       "candidate_sha": "87daee8e9e77bbe27c337383d873a5eaf4a694ba",
@@ -147,7 +150,7 @@
     },
     {
       "feature": "07",
-      "status": "component-delivered-for-milestones",
+      "status": "reused-for-H3-preparation",
       "phase_authorized": "20261116-independent-wave",
       "thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
       "candidate_sha": null,
@@ -165,7 +168,7 @@
     },
     {
       "feature": "11",
-      "status": "checkpoint-requested",
+      "status": "deferred-checkpointed",
       "phase_authorized": "finish-current-safe-step-save-commit-and-defer",
       "thread_id": "01a1e1cc-4bbd-75b3-8c75-0c9745613cde",
       "candidate_sha": null,
@@ -178,7 +181,10 @@
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/f025/megaroation_poc"
       },
-      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
+      "delivery_sha": "aab8a5180801ed7f97f7e437d147c97f972b4dd8",
+      "worktree_dirty": false,
+      "subagents_stopped": true
     },
     {
       "feature": "12",
@@ -196,11 +202,13 @@
         "cwd": "/home/jy/.codex/worktrees/29df/megaroation_poc"
       },
       "last_notification": "restart-free policy, tool-acknowledged 2026-11-16",
-      "delivery_sha": "1f6d1b3b4076ff16908dc59f272a06686b1d1ea5"
+      "delivery_sha": "1f6d1b3b4076ff16908dc59f272a06686b1d1ea5",
+      "worktree_dirty": false,
+      "subagents_stopped": true
     },
     {
       "feature": "16",
-      "status": "component-delivered-for-milestones",
+      "status": "delivered-reserved-for-M1-smoke",
       "phase_authorized": "20261116-independent-wave",
       "thread_id": "01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2",
       "candidate_sha": null,
@@ -227,14 +235,14 @@
     "15"
   ],
   "merge_batches": [],
-  "dispatch_note": "User narrowed primary goal to two healthy-node milestones. Seven feature/merge handoffs drafted. 01/11 asked to checkpoint gracefully; 12 preserved. No implementation merge performed in commander checkout.",
+  "dispatch_note": "M0 remote merge running; existing02 reused for H1 preparation, new H2 and existing07/H3 preparing interfaces. 01 and11 safely checkpointed/idle;12 saved. No component code merge performed by commander. M0 has not yet delivered an accepted integrated SHA.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
   "accepted_features_per_merge": 3,
   "policy_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42",
   "last_status_check": "2026-11-16 Asia/Shanghai",
-  "observed_active_parent_chats": 5,
+  "observed_active_parent_chats": 4,
   "next_actions": [
     "Receive safe checkpoints from 01/11; preserve 12 and all original worktrees/artifacts.",
     "Dispatch remote M0 merge with exact existing component SHAs.",
@@ -243,8 +251,10 @@
   ],
   "status_evidence_scope": "Current chat snapshots and actual turn_context checked. Commander independent acceptance of exact 03 SHA completed; 06/09 component evidence hashes and tested-vs-delivery source identity rechecked. Full 01 and integrated component gates remain OPEN.",
   "active_features": [
-    "01-checkpoint",
-    "11-checkpoint"
+    "M0",
+    "H1",
+    "H2",
+    "H3"
   ],
   "restart_free_handoff_policy": "poc/docs/commander/restart-free-handoff-track-20261116.md",
   "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates.",
@@ -274,25 +284,52 @@
   "milestone_jobs": [
     {
       "id": "M0",
-      "status": "ready-to-dispatch",
-      "handoff": "poc/docs/milestones/M0-foundation-merge-zh.md"
+      "status": "integrating",
+      "handoff": "poc/docs/milestones/M0-foundation-merge-zh.md",
+      "thread_id": "01a1e217-b70f-7b31-b9bf-981262fd9e97",
+      "worktree": "/home/jy/.codex/worktrees/440b/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e217-bcfe-73e2-94e1-6b64b3e51d22",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/440b/megaroation_poc"
+      }
     },
     {
       "id": "H1",
-      "status": "preparation-ready",
+      "status": "contract-preparation",
       "reuse_thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
-      "handoff": "poc/docs/milestones/H1-healthy-session-program-zh.md"
+      "handoff": "poc/docs/milestones/H1-healthy-session-program-zh.md",
+      "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
+      "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+      "actual_turn_configuration": null
     },
     {
       "id": "H2",
-      "status": "queued",
-      "handoff": "poc/docs/milestones/H2-session-manager-zh.md"
+      "status": "contract-preparation",
+      "handoff": "poc/docs/milestones/H2-session-manager-zh.md",
+      "thread_id": "01a1e219-b02d-7e00-949c-8879580b1a19",
+      "worktree": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e219-b791-7ae2-ad99-41f113128e64",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/a6cf/megaroation_poc"
+      }
     },
     {
       "id": "H3",
-      "status": "queued",
+      "status": "contract-preparation",
       "reuse_thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
-      "handoff": "poc/docs/milestones/H3-publication-gfr-zh.md"
+      "handoff": "poc/docs/milestones/H3-publication-gfr-zh.md",
+      "thread_id": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "worktree": "/home/jy/.codex/worktrees/1e2f/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1e219-b830-7e11-aa88-4ee4a76f3f41",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
+      }
     },
     {
       "id": "M1",
@@ -310,5 +347,6 @@
       "status": "waiting-H4",
       "handoff": "poc/docs/milestones/M2-force-merge-zh.md"
     }
-  ]
+  ],
+  "primary_plan_sha": "4a9a6b0a92a11e5778833988bb6524d929f4608e"
 }
