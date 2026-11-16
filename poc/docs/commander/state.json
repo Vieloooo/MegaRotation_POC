@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "date": "2026-11-15",
+  "date": "2026-11-16",
   "source_checkout": "/mnt/reth/jy/megaroation_poc",
   "project_id": "ccb826e2-d47a-4623-9b20-2632ac96d8e3",
   "host_id": "remote-ssh-discovered:xuelab_jump",
@@ -16,7 +16,7 @@
   "jobs": [
     {
       "feature": "01",
-      "status": "active",
+      "status": "needs-attention",
       "phase_authorized": "full-feature",
       "thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
       "candidate_sha": null,
@@ -28,11 +28,16 @@
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/5efa/megaroation_poc"
       },
-      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01"
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01",
+      "last_turn_status": "failed",
+      "worktree_head": "b9fce86f8c286fb110bafbae5d902581ac0c19f3",
+      "worktree_dirty": true,
+      "blocker": "Platform flagged the turn for possible cybersecurity risk. No retry or safeguard workaround was attempted. Full R1-R18 and same-revision review remain incomplete.",
+      "reported_progress": "Development runs cover three root transaction/Ack recovery cuts with new PIDs; not a final verified delivery."
     },
     {
       "feature": "02",
-      "status": "active",
+      "status": "waiting-integration",
       "phase_authorized": "freeze-and-implement-isolated-transport-component",
       "waits_for": {
         "native_integration": [
@@ -41,7 +46,7 @@
         ]
       },
       "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
-      "candidate_sha": null,
+      "candidate_sha": "4fd6f115bd969b0a8f252d7933edd21c27f00a8f",
       "client_thread_id": "client-new-thread:86e0247d-309e-4ff4-b20d-24ec50ed91a0",
       "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
       "actual_turn_configuration": {
@@ -51,15 +56,20 @@
         "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
       },
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02",
-      "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10"
+      "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10",
+      "last_turn_status": "completed",
+      "delivery_sha": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "worktree_dirty": false,
+      "reported_results": "Transport component PASS: builder 10/10, independent 46/46, formal 12/12. Native worker count zero in this slice.",
+      "report": "/home/jy/.codex/worktrees/0b8e/megaroation_poc/poc/docs/sim-transport-kernel-results.md"
     },
     {
       "feature": "03",
-      "status": "active",
+      "status": "awaiting-commander-acceptance",
       "phase_authorized": "freeze-contract-and-implement-feature-03",
       "waits_for": [],
       "thread_id": "01a1df9e-37c7-7a92-ae94-9b195a61c2f7",
-      "candidate_sha": null,
+      "candidate_sha": "e9c15e04bc83b335668f3ecd837367aa87344a89",
       "client_thread_id": "client-new-thread:7dd2fe87-3a90-42d0-a1c5-90084059ca3c",
       "worktree": "/home/jy/.codex/worktrees/1c43/megaroation_poc",
       "actual_turn_configuration": {
@@ -69,14 +79,19 @@
         "cwd": "/home/jy/.codex/worktrees/1c43/megaroation_poc"
       },
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/03",
-      "preparation_sha": "183430e71e5d61533f54a76b2d7d22c5021f1704"
+      "preparation_sha": "183430e71e5d61533f54a76b2d7d22c5021f1704",
+      "last_turn_status": "completed",
+      "delivery_sha": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "worktree_dirty": false,
+      "reported_results": "Full authorized 03 scope submitted: independent and Tester PASS, 32 feature tests; workspace 52 passed and 11 ignored. Commander acceptance not yet recorded.",
+      "report": "/home/jy/.codex/worktrees/1c43/megaroation_poc/poc/docs/mock-plan-execution-result.md"
     },
     {
       "feature": "06",
-      "status": "active",
+      "status": "waiting-integration",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
       "thread_id": "01a1dfd1-e222-7373-a4cf-1b0bb0f0e780",
-      "candidate_sha": null,
+      "candidate_sha": "8ba78f1ace3b383caa1c4360401c645d25907326",
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06",
       "worktree": "/home/jy/.codex/worktrees/1fe1/megaroation_poc",
       "client_thread_id": "client-new-thread:ca1fa83a-e652-4d87-84af-a11bb8d0bebb",
@@ -85,14 +100,19 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1fe1/megaroation_poc"
-      }
+      },
+      "last_turn_status": "completed",
+      "delivery_sha": "4b034dfbb6c3e1c7143208347b546daab8dfe298",
+      "worktree_dirty": false,
+      "reported_results": "Component PASS: 15 component tests, 6 independent API tests, 6 replay runs/3 wall-pause pairs. Full feature OPEN.",
+      "report": "/home/jy/.codex/worktrees/1fe1/megaroation_poc/poc/docs/publisher-espresso-component-handoff-v1.md"
     },
     {
       "feature": "09",
-      "status": "active",
+      "status": "waiting-integration",
       "phase_authorized": "freeze-interfaces-and-implement-independent-components",
       "thread_id": "01a1dfd2-412c-7a41-8b87-0843f9135e34",
-      "candidate_sha": null,
+      "candidate_sha": "87daee8e9e77bbe27c337383d873a5eaf4a694ba",
       "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09",
       "worktree": "/home/jy/.codex/worktrees/65ef/megaroation_poc",
       "client_thread_id": "client-new-thread:d6bc7704-13ab-493a-8a66-e8087e48f967",
@@ -101,7 +121,12 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/65ef/megaroation_poc"
-      }
+      },
+      "last_turn_status": "completed",
+      "delivery_sha": "c443ae925ed549b046731c2d8ef3dd9ce0311d24",
+      "worktree_dirty": false,
+      "reported_results": "Independent component A01-A17 PASS; two wall-pause runs with 145 receipts each. Full feature INCONCLUSIVE.",
+      "report": "/home/jy/.codex/worktrees/65ef/megaroation_poc/poc/docs/anvil-l1-component-delivery-v1.md"
     }
   ],
   "remaining_features": [
@@ -118,10 +143,19 @@
     "16"
   ],
   "merge_batches": [],
-  "dispatch_note": "Five active chats confirmed: 01 continues recovery; 02 resumed isolated transport; 03 resumed independent implementation; 06/09 created for public-log and L1/contract components. Whole-feature acceptance remains unchanged.",
+  "dispatch_note": "Status audit: five feature parent chats are idle/notLoaded. 03 full-scope delivery awaits commander acceptance; 02/06/09 completed independent component slices; 01 turn failed with platform safety flag and has uncommitted work. No feature batch merged.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
   "accepted_features_per_merge": 3,
-  "policy_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42"
+  "policy_sha": "0a951c482a9712678ab9de34765b781b9c3c9f42",
+  "last_status_check": "2026-11-16 Asia/Shanghai",
+  "observed_active_parent_chats": 0,
+  "next_actions": [
+    "Review and accept/reject the exact 03 final evidence, then release its interfaces to consumers.",
+    "Check component reports for extra downstream gates that could create circular acceptance dependencies.",
+    "Integrate 02/06/09 components on named interface commits; release ready 07/11/12/16 slices within five active jobs.",
+    "Resolve the platform interruption of 01 through supported channels, preserving its dirty worktree and full R1-R18 gates."
+  ],
+  "status_evidence_scope": "Read chat completion/error snapshots, Git heads/dirty state and delivery reports; no test rerun or final commander acceptance performed in this status audit."
 }
