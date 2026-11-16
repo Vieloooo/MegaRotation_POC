@@ -1,0 +1,422 @@
+{
+  "status": "PASS",
+  "scope": "offline RPC consistency, signatures, acceptance/events and historical cursor only",
+  "blockCount": 8,
+  "receiptCount": 145,
+  "failedReceipts": [
+    "0x24db80701ac743eff25bdfd1412006e9d919777f30c9faf654a117758512098f",
+    "0xbc20ab1a1475a6be0dda7024ac1574a5ec5f984704eff9f42a7023fdb352894b",
+    "0x27a58e52ebe44bbdb985c8e7076e427e9d1ccd6d35276ddb3836011541a78bb1",
+    "0x8041e5f54e6a6bcd85becf0fbd39090e2ab27df719dc2270268d3be885182644",
+    "0xb5b2eb6453f738c35c4aff6cce30f62570571a37d3a82f01aa469ff59bd94509",
+    "0xfca7fa33d02fb5ab6e422c774e3c941df6551cd8801cf48b261c2da375db5764",
+    "0xf317c712250c8a6ed47b24d6074f7afd3069185ff0d1421d90430bc32a1464db",
+    "0x117f35c7d8bae14ee115f4ba6bf4c28ecd3cdac88e11a0b8f00c0153c324e293",
+    "0x0dc62f06bd40b56ad1c7c1d293c4f2f1edd87a1fa51572fd5815be6a377ee861",
+    "0xeebbe9dbf23c0fc69dc6656e67c9e82d803413b7b5820fe094e7399c7b0f6589",
+    "0x93725d5ae80f9371cb96d8643fe9a2fdea76718b1b9701b5ad3849d59ad8a358",
+    "0x7db0119de96b55556ce48b101bab748cae97c190b8b6aa04f566c939cf9f0b14",
+    "0x0ab57e4b255628aa971482825c54aab5007b72990d4d7c301b7e9b81722632b0",
+    "0xb99b3312f03b7492d133217a4c0e1b5a7b94222ee74ed9c427bf059d01607e6d",
+    "0x09643aa9cba99c4b40aa0d1c07c45816cb10fb7aa8bb65193eee79bdb4c5e513",
+    "0x3de2c9c47f22f91d9d346dacd38fb09fdfcd5c59bc99ad0985e0a1866a7201b0",
+    "0xa17f3aabe930b888d68e0ab194d8da5bd42bcf9753780e490226abd6a40e0dff",
+    "0xcbb200a3bd733a9bc7248d209bf197acd630664bbdf4cca8416c1cac8f65a0c5",
+    "0x4a33ed501cccca2d03f745664e17ed42a5ce1292a9d70374992f544fed147b34",
+    "0xac04cb2720475b05d361b2286dd9015ffaa114ec641f1193ee1ff0b10fe2a439",
+    "0x2ab0950aaba8bb73c2f521241a4faf4cebafe46ac2bd8fd61527599f8fea8819",
+    "0xcd9a6c68af9db94de0416577e9888294bbcdc0eac43881ccef3b62738ec618c3",
+    "0x3d9e7c43d08dd6300dd75fe280551b20298ded5eecb07eca32958a60fb869f72",
+    "0x2f96e2b418a5247b34c7111d37236942b078f32845c48c6728cea4478a71d363",
+    "0x15305a42a0fb63fa12ee0d7be31671049dd43186d071b8749d3341025ba31679",
+    "0xfa1de6342431fd35be88bb087488118c2615e8433cc7ab8291b60f098f8bef46",
+    "0x5a649e218a237d699787ca4da94dc0946358c03f1af2426132aa9672c0bc4b9d",
+    "0x2b5da29585ce7c3f7bc2b73d92ebce1063f6c97205d004f3fb1a8d5136fa2caf",
+    "0x21c57181eccc20445d3dd5b337b0ab470b33703ec3e04099a186d692815595fc",
+    "0x5c1538c178716d17dd49e8ab6063545ee68e4860e10a33b80b3b600439c00e17",
+    "0xa982c0c37310ac06c32c03dc39106d52316b8437b912009c0b1dd0a20c6a776f",
+    "0x0d80831a30face09699eb1dd2f6c98894b5f069f55c24d6439ce176e48561dde",
+    "0x4f5dd3997f00c250629125d5a4179ed3cf77bf940b040bf0cf1bd02b605323bc",
+    "0x0508315c8731e3e9e7b0717f7097a6d69541b9d37e8a83dafa94dfca2ba18a0c",
+    "0x16556eabaf370fe62cb352df067b485650ff3702fa83cae3dfc118db013be1b2",
+    "0xf2e493cf979dfecc6d9f775a38b70a908c6e8af2cc30cb798f25f8d10dfdcd7b",
+    "0xd33d16e803e9fee08f6512235558c10fb674c95fc5e3e92f16cdeed5430f332d",
+    "0x11a40681c6a0dfe99a179f0ebea02147251bb33972fb7fa36e4ae7c6c7eb3774",
+    "0x8450a617adc3b856ecd6c21abe55b7222e7d709c1fcbe6f67785e72e54d9fdf7",
+    "0x904ae83b753e8bb8487d662c18bc12cbad30990433d51913dcaa0a07a885050f",
+    "0x9dbe911d1b702e430848242d2e34c934faf89e062301d4189f3cc45e755ac6e6",
+    "0x9dbd0ee705434d2133346ada7813ca9cf44d5c059c5308a0f2457fc857e67e7c",
+    "0xa0bf85d20d94cc57a3fe42df68371783cb9dc2f38f57e3bee45df1dad75c6ec0",
+    "0x50a92206daffe7613814376bea976c344cf5e2acaf232dc579532c3a884dbc01",
+    "0x07c94f3571bd4ea4f05917b1931af56639d1feda0e31bb47315d14243ee0d933",
+    "0xd1228731760a8290d18cedb78de0e7be10cf1b7a0e7f0eb6fd618b297b5b2053",
+    "0x1f16102e28c9d0cdc9c9329da7c95d8c2020b4ac0f7426ef8f7bf0cb2c46be81",
+    "0xcdefe8cef32e2f519e049fac00cd3223bea83ba22fef2b9dc78c513816f2ca16",
+    "0x8c2cd8a15028da037af3e58351ae9de074b1c0fa79096a7179281d456032c90a",
+    "0x8c38711314359fc9b37657bfc9d76788a273a09deb231b63caee824c8b83a932",
+    "0xd399b21171636d471f693d4119a4de702920df8e34207806e83337d36e6a6172",
+    "0xb25989dcce1fd8f86722c6ff4bd51f71bbecfeaa9789d9afd59a5b371cb46730",
+    "0x9acf83a4a0e731094509b903e1942d3f8a5971700a6b57d9691633bb1a4b8700",
+    "0x4b9276a4a33f8b7bd2310b839e4344d41d554268830392c1f980dae40541a88d",
+    "0x68ee2c57bb10d5d90384c5f93d2098fe6b35f43981e7716a11caa0914cedb83b",
+    "0xdffbf2578673f1fd540335c6f85bd76894c92c3616942a168f53188f22742852",
+    "0x612dcc0ce48be4d1c39c152cbac427e9f22db3ce815d96413a65a494288d6f60",
+    "0x8a96976843be7762039ef4fad66797c2164b1c1323ee0e3fdccf2df7cddc391a",
+    "0x3a8cb2d6a64283f4013ff25a8012cad73b60b8489ff14763341e1dd8e55313dc",
+    "0xd15d6feccd5a247228e4e92859d9a4e62b5152ba106a8e265b275ebb12d801f9",
+    "0x7a15a3a1716804b52ec45dd3f19ba594cfc3fb642ea60864831540a4f125adf9",
+    "0x19958be8a62a5d43b7d89575df7cbd6def56189d46358c1bfe407800c69e8585",
+    "0xfe3cedd5c6957d85837e0924d7f87f73aafd7b5182377abe4fdb977652ab0d38",
+    "0x6e8ad94d1abff88daf70866bcac4f25047cff210eec11d367731f72959ab9251",
+    "0x06429bc13adaaa39b0b42ef678c6e6afadc326914aa8cef21adeca22746e524d",
+    "0xdab29c3840fafb66f91c1c818c022df897f296753470b5599daa05f715887493",
+    "0xd39ceeff4eba82f21184bfdc15be68e0974e1507dcfd3d43b3f543cd7a490750",
+    "0x67c6aed9673a00f4b5e5548876f83220b6d63e93f68f78d9d3c9c7b74127f264",
+    "0x88d3a98ee2266fc0f3f9267e97ee652e22fc7d55bafcc8c544ea03029c44ebed",
+    "0xf3e43b320cf52adf47117c65ca2df7ee7fb77500afc2bb1e717f1f31770a011d",
+    "0x7db5ccd3a44b4689d204912dc83546a344277e5778bed94f28c96457c219d228",
+    "0x81913ba02161ce21724f15f3e2d87c7e68dc284b8cefab9888492b77efd6f261",
+    "0x882c6f6db49793c3812729cbdb849828e5e5938eb3265dee385ebeefe5ead0cb",
+    "0xc59dd36ff207a6f851b15f2b8f39879218a1940dd2cd49ec52b3f0079d46a200",
+    "0x696941c73ba1068a7c93863bdf10f36126736c5ecd3bbef6a8fb54e841ccac30",
+    "0xfd43f2f9817325965272c7d41d010cdb4f1b2fe4329a6d09611031db0e0dd3f5",
+    "0x1d317c68416bfb94f95008340fcc232bc7753b64206185a25cbedcddc335ba41",
+    "0x6917ba243afb27ef47ff8bb81f7dfa0afc7f7c8c0ccaf82792abea2e828075b3",
+    "0x57791d028cff2dc6ef04de22c48cb6047c2d63117e4a3c5933149ccb32338da3",
+    "0x8f35b18b3e7e0a9de23acb5f13f25e84c2526acaca16cf620cc0f26d33d8f5fc",
+    "0x3df1b1b65dd235c4da6c3015fdc373827878bb3f8900b1f0344baf1d3969a2b9",
+    "0x5de30305a49705248a82dd623f8a48b27780a9985b89cefe5396718fd6fa16a7",
+    "0x893c3384069ed558c2c086969a0bcd3d5ce142a28229bbb34c49763584bd3170",
+    "0x6c8244508b54720827c54f7c0ac1fc3d46b6e936b111220f3f536b23dc681694",
+    "0x28857d2e4def3a0b8d1432d6ecfc0ba31432fdc8f78405eaf4026a009a585e12",
+    "0xf1e7936b8fd22e7c081c7a90ff26c5dba332bdf418a85c19cd003d5c3e26a6d8",
+    "0x75571ca302db04f7edf0bd29f251ef29decc4cb99d2304d568a0fe28f7852b8e",
+    "0x331cd827b6235c4275e0c0012234648053d1b1ba66b390ef11705e5232cc7cce",
+    "0xcfbd6fa2df79aa3013dee0b84df463f3530fb408ac0f43c35345ddabae9c9190",
+    "0x976e362087bb61f6f591068fe853c79541f4ba1cf036001ce9ed0455f248031e",
+    "0xeef1228d90be652ca433a263cc372b22da25728a734a7f19a752744672dfce2f",
+    "0x41d858acc10bc20c95bc5120d898cbcbeb5223ac2d3a4d5c42a816fd11a6a89e",
+    "0x4dc94b8791cf67b18253b61d976c336e77ee9efb355cb23b63756f01e62d0148",
+    "0x08d49a3560468880f2aaa60b3533a453d0daf03fcf5f26b470aa2bf28f254d5e",
+    "0x6672e40409d52e92705b374399376e300b56cb4200a2b1a1f323e4fe25c9a5fa",
+    "0x2b694e91240533d598bd2066f7623d577e719e167d57c89077e56c042f869d05",
+    "0x1f8e5e569b6b2171628ee5a6a1780773c12a5e1753d48f560a6a15b674d3a5ea",
+    "0x6a8690893d3a5eb18022234b3b097eff087a66887e9d46b6ef013e5a737aad47",
+    "0x07965cf209c7b02f63bd6b9289f2e56788c8d50bbd5e948c42a94267eb81a2ac",
+    "0x46ab55cec016a915a24a1075236990495b4044cc9a2729d7609b21b472969d22",
+    "0x9fbdac9be403309fc1068b91782099e7bf9f07f2c46bccf93e9502689807ec11",
+    "0xf6826f13506f68be7b5a3c8b75bf7a6e32d7455f4e431eb222e1cad2ff984c2a",
+    "0xe456d111ce79f425c6b4851158f09f9df9daebb98ec8b85eb665e75e0d36bf49",
+    "0x99861ec6b0ec10faedda89733c8a0d93f738dd127cebb3f5b9fd3e4370cf8d72",
+    "0x878406b933333d72c9155ca8fd691786c3583091e415727f8698fb80644fa215",
+    "0x58900d4611cee390351482fba8d99002ddb1c1512dda98c9b9dc549cdce78ade",
+    "0x8a8a21fd42899eb0dfff2e4c149e9c3282bc2a3bc2aceb147ec5cf6e71cd51cb",
+    "0xa89afa66cb31b494cd7b7af4672cfd41997435a2ad7a1a4caa5d4d3a7c5fdace",
+    "0x8b127eb10c83aab9a68e504abec31a30a47b2d8073a624f2e139598b6fcf2d20",
+    "0xc0f64ad4b9d9c2f6dcebcdc3599ee70570a5d4522c21639ff3f8421e1d0858d1",
+    "0xcb74b043023fda6feaf077cd23b2775117eea2cd6dec878067ef68f9b4625755",
+    "0xfc55f927766597db66eb67b2052ee6e77a8177da96741086d8f747b18ec37769",
+    "0x85d8d3a0cd3be00411a914bd6ab9794b758a23937c7747e26b5f5d23a3043fe4",
+    "0x4de02595e537003c153e6e54a9c17415c35c1242dbd6f5ffd2d45b2965dca67f",
+    "0xf85df96ad7359b053528c9cd6a36d90b300b68a809237cd270bb28b5b360243c",
+    "0x2fb9b57cf5fb89fdfff7350b20b72dda8f7626fd6f4722bdfdb338a42f78c6e3",
+    "0xc42c166af2fe516495f89a01c0b1c7fecccb3fb78928fe5a0becbbedb84fca8c",
+    "0x3f00d4faf18d396914e8bb8ec87796fe9d639e28f8c78d133b3fbfd9fab9d82a",
+    "0x3ad050c07690acd54a4e8cdf4e48561fdbb7da80e8fbc0bebd57864709a93f8b",
+    "0x6328136057688678e1f8b9455efc44c097437e62395e4b17c24182c7698dc796",
+    "0x7b1c5a534d1c24e89dbe944ccf784a2fa66e80091f7c63deebe2954f778b2a13",
+    "0x55a7c4dd730152f5caeec411941ffe3d2f114424bd27812e0c45d48dc378f169",
+    "0xb72701bf227d4a2db85fd636ede2bb234f4f5324532034d73a708e93551d3583",
+    "0x1a5f780addc06706e4dd9ee6ee032102485d82d09456bf85f68f59ec2f9b2ce1",
+    "0xbb1c689cff258ca85572396e7897425c5f293e3673193c42dd1770e57ac1c865",
+    "0x0d720648001fecb5418f3787ac8b7c56ef52c890403e4301813b29745c4d799b",
+    "0x7ffaee9486a9aecb2e954b42de777c62b1fe98c0a2781438b903dcf4f9633fe7",
+    "0x4db651409e2e589f4cb67b808150dd23873662d7ce5aebbfc587d25da6955c7a",
+    "0x9d1bc47acf68a05350df909b3af161a666c7f26eed0e4c1fa2dd08f78ccfa362"
+  ],
+  "idempotentRetries": [
+    "0x0260804cb19fc98c7c173a7c8a7672c847fbd5373863beff882cbe1c446e38df",
+    "0x9dcc60b00ca3d6ac3fe77a6627f905e587ed8269c63111275733dbb0f474e362",
+    "0x5ad3a19b83ce3db8a9b35091f8c62ca2d3d657b49ac583cba7ed6d77a53e0bf1",
+    "0x58f54c7f23d4434afb8e80c401b668a82feec056c386f936c399e8bd2f02c1e6",
+    "0xa04679e64e705d310493d4720f14acc06dd0d5f2f82908b65b0bab0594786097"
+  ],
+  "events": [
+    {
+      "kind": "CursorInitialized",
+      "position": [
+        1,
+        0,
+        0
+      ],
+      "cursor": [
+        0,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        "0x"
+      ]
+    },
+    {
+      "kind": "ForceRecorded",
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "seq": 0,
+      "act": 1700000010
+    },
+    {
+      "kind": "CursorAdvanced",
+      "position": [
+        2,
+        1,
+        0
+      ],
+      "cursor": [
+        2,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x01020304"
+      ],
+      "commitment": "0x154d1b7645e114f6ef0a5a8d3ac694fb6d173433627fa72b8b5bccce037c8d37"
+    },
+    {
+      "kind": "CursorAdvanced",
+      "position": [
+        2,
+        2,
+        0
+      ],
+      "cursor": [
+        3,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x05"
+      ],
+      "commitment": "0x0f0c34b0888adf8b61ee0e28c71b1aaaf1f31e0e90caae8aded1ff94189bf440"
+    },
+    {
+      "kind": "ForceRecorded",
+      "position": [
+        4,
+        0,
+        0
+      ],
+      "seq": 2,
+      "act": 1700000014
+    },
+    {
+      "kind": "CursorSet",
+      "position": [
+        4,
+        1,
+        0
+      ],
+      "resumePosition": [
+        4,
+        1,
+        1
+      ],
+      "seq": 4,
+      "cursor": [
+        8,
+        4,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        2,
+        "0x0000000000000000000000000000000000000000000000000000000000000004"
+      ]
+    },
+    {
+      "kind": "ResumeRecorded",
+      "position": [
+        4,
+        1,
+        1
+      ],
+      "setPosition": [
+        4,
+        1,
+        0
+      ],
+      "seq": 4,
+      "act": 1700000014
+    },
+    {
+      "kind": "CursorSet",
+      "position": [
+        4,
+        2,
+        0
+      ],
+      "resumePosition": [
+        4,
+        2,
+        1
+      ],
+      "seq": 5,
+      "cursor": [
+        11,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        2,
+        "0x0000000000000000000000000000000000000000000000000000000000000005"
+      ]
+    },
+    {
+      "kind": "ResumeRecorded",
+      "position": [
+        4,
+        2,
+        1
+      ],
+      "setPosition": [
+        4,
+        2,
+        0
+      ],
+      "seq": 5,
+      "act": 1700000014
+    },
+    {
+      "kind": "CursorAdvanced",
+      "position": [
+        5,
+        10,
+        0
+      ],
+      "cursor": [
+        12,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x61667465722d726573756d65"
+      ],
+      "commitment": "0xf13f8f48f784339836074bca589b438c6e583d5a28900901e1cb2141728a9248"
+    },
+    {
+      "kind": "ForceRecorded",
+      "position": [
+        6,
+        0,
+        0
+      ],
+      "seq": 18446744073709551615,
+      "act": 1700000018
+    }
+  ],
+  "history": {
+    "0": {
+      "cursor": null,
+      "writtenAt": null
+    },
+    "1": {
+      "cursor": [
+        0,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        0,
+        "0x"
+      ],
+      "writtenAt": [
+        1,
+        0,
+        0
+      ]
+    },
+    "2": {
+      "cursor": [
+        3,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x05"
+      ],
+      "writtenAt": [
+        2,
+        2,
+        0
+      ]
+    },
+    "3": {
+      "cursor": [
+        3,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x05"
+      ],
+      "writtenAt": [
+        2,
+        2,
+        0
+      ]
+    },
+    "4": {
+      "cursor": [
+        11,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        2,
+        "0x0000000000000000000000000000000000000000000000000000000000000005"
+      ],
+      "writtenAt": [
+        4,
+        2,
+        0
+      ]
+    },
+    "5": {
+      "cursor": [
+        12,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x61667465722d726573756d65"
+      ],
+      "writtenAt": [
+        5,
+        10,
+        0
+      ]
+    },
+    "6": {
+      "cursor": [
+        12,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x61667465722d726573756d65"
+      ],
+      "writtenAt": [
+        5,
+        10,
+        0
+      ]
+    },
+    "7": {
+      "cursor": [
+        12,
+        0,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+        "0x61667465722d726573756d65"
+      ],
+      "writtenAt": [
+        5,
+        10,
+        0
+      ]
+    }
+  },
+  "notEstablished": [
+    "Ethereum proof verification",
+    "Clock/transport integration",
+    "driver commands actually executed",
+    "finalized/delivery grant discipline",
+    "DA persistence or D/ResumeCut"
+  ]
+}

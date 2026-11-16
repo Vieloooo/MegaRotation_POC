@@ -1,0 +1,642 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "configRef_",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "governance_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "submitter_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "certifier_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "daSigner_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "announcementSeconds_",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "genesisHeight",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "genesisOrigin",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "announcementSeconds",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "configRef",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "forceDigest",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rid",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "seq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "branch",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "governance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hasControl",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hashPolicy",
+    "inputs": [
+      {
+        "name": "policy",
+        "type": "tuple",
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "inbox",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract BatchInbox"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lastControlSeq",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "resumeDigest",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rid",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "seq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "height",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "origin",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "submitForce",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "controlSeq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "targetBranch",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "acceptedSeq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "includedBlock",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "act",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitResume",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "controlSeq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "targetHeight",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "origin",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "acceptedSeq",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "includedBlock",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "act",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "ForceRecorded",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "controlSeq",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "targetBranch",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "act",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ResumeRecorded",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "controlSeq",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Policy",
+        "components": [
+          {
+            "name": "enabledMask",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order0",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order1",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "order2",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "l1Floor",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "targetHeight",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "origin",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "act",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "InvalidPolicy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSequence",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Overflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RequestConflict",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Unauthorized",
+    "inputs": []
+  }
+]
