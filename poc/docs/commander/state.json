@@ -42,16 +42,20 @@
       "continuation_thread_id": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
       "old_child_agents_quiescent_verified": true,
       "previous_thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
-      "previous_worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc"
+      "previous_worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc",
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
     },
     {
       "feature": "02",
       "status": "waiting-integration",
       "phase_authorized": "freeze-and-implement-isolated-transport-component",
       "waits_for": {
-        "native_integration": [
-          "01 accepted recovery interface and file handoff",
-          "03 public identity interface"
+        "restart_free_integration": [
+          "explicit stable Fresh/API baseline and path-owner handoff; no full-01 dependency",
+          "03 accepted public identity interface"
+        ],
+        "same_cid_recovery_integration": [
+          "01 accepted recovery interface and file handoff"
         ]
       },
       "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
@@ -155,7 +159,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
-      }
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
     },
     {
       "feature": "11",
@@ -171,7 +176,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/f025/megaroation_poc"
-      }
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
     },
     {
       "feature": "12",
@@ -187,7 +193,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/29df/megaroation_poc"
-      }
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
     },
     {
       "feature": "16",
@@ -203,7 +210,8 @@
         "model": "gpt-6-astra",
         "effort": "ultra",
         "cwd": "/home/jy/.codex/worktrees/d2be/megaroation_poc"
-      }
+      },
+      "last_notification": "restart-free policy, tool-acknowledged 2026-11-16"
     }
   ],
   "remaining_features": [
@@ -216,7 +224,7 @@
     "15"
   ],
   "merge_batches": [],
-  "dispatch_note": "Supported standard create_thread through repair subagent created five active Astra/ultra feature chats: recovery continuation plus 07/11/12/16. Parent tool visibility remains unresolved. 03 independently ACCEPTED; 1 of 3 full features toward next main merge.",
+  "dispatch_note": "Self-contained restart-free notices sent to all five active chats via standard tool; exact target and prompt hashes verified. Idle02/06/09 notices prepared but not sent to avoid a sixth active job. Next normal-running02/04 contract preparation is underway.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
@@ -238,5 +246,24 @@
     "16"
   ],
   "restart_free_handoff_policy": "poc/docs/commander/restart-free-handoff-track-20261116.md",
-  "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates."
+  "next_ready_slot_priority": "Freeze/integrate normal-running 02 transport and 04 healthy 15-worker admission without requiring full same-cid recovery 01; preserve shared-path ownership and all original acceptance gates.",
+  "restart_free_handoff_policy_sha": "0c15aacf0461a0d1ae2bf4718c18a51aaaaa805b",
+  "handoff_scope_update_sha": "32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77",
+  "notifications": {
+    "source": "poc/docs/commander/notifications/restart-free-20261116.json",
+    "delivery": "poc/docs/commander/notifications/restart-free-20261116-delivery.json",
+    "tool_acknowledged": [
+      "01",
+      "07",
+      "11",
+      "12",
+      "16"
+    ],
+    "deferred_idle": [
+      "02",
+      "06",
+      "09"
+    ],
+    "deferred_source": "poc/docs/commander/notifications/restart-free-deferred-20261116.json"
+  }
 }

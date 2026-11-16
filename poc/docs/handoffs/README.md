@@ -10,12 +10,12 @@
 
 **调度修订：** [分层依赖v2](../commander/dependency-plan-v2.md)覆盖旧的整任务等待规则。下表保留完整接线所需的依赖；独立组件可在接口冻结后先实现，03不再依赖01。表中的编号用于指向任务文档，提交时使用完整 SHA 以及对应的合同和验收报告。多条前置工作合并后，从同时包含它们的一个集成 SHA 创建下游 worktree。
 
-| 任务 | 已有基础与本次交付 | 实现基线 |
+| 任务 | 已有基础与本次交付 | 接线依赖（按测试profile） |
 | --- | --- | --- |
 | [01 原生恢复与 I1](01-native-recovery-zh.md) | 从一个 pending-Verify 进程场景扩展到 R1–R18，关闭 I1 | 当前 `36eff1c` |
-| [02 全局时钟与仿真通信](02-sim-communication-zh.md) | 泛化现有真实 native 路由，接通多 endpoint、按 cid 分发和按 channel 注入故障 | 01 |
+| [02 全局时钟与仿真通信](02-sim-communication-zh.md) | 泛化现有真实 native 路由，接通多 endpoint、按 cid 分发和按 channel 注入故障 | 普通运行：已验收Fresh基础及03身份接口；同cid恢复：01 |
 | [03 Mock Plan 与轻量执行](03-mock-plan-execution-zh.md) | 固定 3×5 registry、静态排班、公共编码、Merge 和执行向量 | 无01实现依赖；先冻结本功能合同 |
-| [04 15-worker Session Program](04-session-program-zh.md) | REG-A，15 个真实进程中先运行一个地区的五个真实引擎，完成 slot-aware 准入 | 02 + 03 |
+| [04 15-worker Session Program](04-session-program-zh.md) | REG-A，15 个真实进程中先运行一个地区的五个真实引擎，完成 slot-aware 准入 | 02普通接线 + 03；重启验收另需01 |
 | [05 Session Manager](05-session-manager-zh.md) | 每 worker 的候选管理，多 cid Pause/恢复和持久 Close | 04 |
 | [06 Publisher 与 SimEspresso](06-publisher-espresso-zh.md) | 持久发布任务、确定性 finalized 公共日志和独立 reader 交付 | 02 + 03 |
 | [07 Viewer GFR](07-viewer-gfr-zh.md) | 纯 GFR 重放、regular/Expire、独立 A/B reader | 03，使用 06 的冻结日志接口；接真证书需 04 |
@@ -29,11 +29,11 @@
 | [15 全系统验收](15-system-verification-zh.md) | 同一集成提交上的完整 v2 矩阵、可重放证据包和三条演示 | 13 + 14 |
 | [16 官方 Espresso 兼容](16-espresso-compatibility-zh.md) | 真实 dev-node 的独立 API、录制和离线回放 | 06 的公共日志接口已冻结 |
 
-当前同时推进 **01/02/03/06/09**。01恢复独占native接线；02先做独立transport；03先做公共对象与执行；06先做公共日志；09先做真实合约。接口/组件提交可提前供下游消费，完整功能仍按原矩阵验收。之后按就绪队列安排04/05/07/11/12/14/16的独立组件或集成工作，不等固定三任务批次全部结束。
+当前活跃任务为 **01/07/11/12/16**，03已完整accepted，02/06/09已交付组件。下一可用槽优先安排02普通运行接线/04健康15-worker准入，推进不重启BFT worker的regular、主动Force和RESUME路线。已审查接口/组件可先被下游消费，完整故障验收和feature计数单列；实际状态见[总协调登记](../commander/state.json)。
 
 ## 共享路径与集成顺序
 
-- **01 → 02 → 04 → 05 → 08。** 依次交接 native hub、driver、worker 和共用 wire 定义。使用上一任务验收后的集成提交。02 的路由接口经冻结后，06 和 09 在各自模块使用它。公共接线由总协调安排。
+- **恢复文件串行移交：01 → 02 → 04 → 05 → 08。** 这条链约束同cid恢复相关native hub/driver/worker/wire文件及故障验收；普通运行接线可在稳定Fresh基础上另行指定adapter和最小共享提交，不要求完整01先通过。02 的路由接口经冻结后，06 和 09 在各自模块使用它。公共接线由总协调安排。
 - **03 → 04/06/07/09/12。** 03 提供权威的 Plan、descriptor、执行和公共对象接口。02 拥有通信 wire，03 拥有 `poc/crates/types/` 的公共协议域对象。多个任务都需要修改 workspace manifest、lockfile、`lib.rs` 或同一 proto 时，总协调先提交共用声明，或在合入时串行负责这些文件。各 Builder 同时只写其专属模块。
 - **07 → 10 → 13。** GFR 从 regular/Expire 扩展至 Force，再扩展至 RESUME。10 负责治理控制状态机初版，13 在其集成提交上增加恢复规则。
 - **09 → 11/12/13。** 合约、ABI 和 L1 driver 的所有权在 09。11/12/13 消费同一签名域和 finalized 日志映射。需要改 ABI 时由总协调指定一个修改提交，随后重跑受影响任务。
