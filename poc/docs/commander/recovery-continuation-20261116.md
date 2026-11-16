@@ -62,4 +62,6 @@ REGIONAL_BFT_RUST_BIN=/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1
 
 ## 会话创建状态
 
-本文件与快照已由总协调准备。**当前工具列表缺少 create_thread 和 send_message_to_thread，因此截至本次交付尚未创建新chat，也未启动新的功能01子agent。** 在应用中新建 Astra/ultra chat后，将本文件作为启动任务即可接续。此前五chat规则继续有效。
+准备本文件时，父会话工具列表缺少 create_thread 和 send_message_to_thread。随后用户授权排查工具，新子agent会话收到正常创建接口，并成功创建正式接手chat：`01a1e1c6-25a9-7021-bd85-fcccd42bf829`（标题「PoC 01 本地恢复续作与 I1 验收」）。实际worktree为 `/home/jy/.codex/worktrees/2123/megaroation_poc`，已正常fast-forward到上述快照，实际turn_context核实为Astra/ultra。无需用户重复创建。
+
+父会话自身的工具缺失尚未全局修复；创建通过子会话本来提供的标准工具完成，没有修改权限、安全配置或共享服务。[诊断记录](create-thread-diagnostic-20261116.md)。五chat规则继续有效。

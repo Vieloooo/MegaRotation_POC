@@ -20,7 +20,7 @@
 
 | 功能来源 | 合并到自己worktree的交付SHA | 核对范围 |
 | --- | --- | --- |
-| 03 公共对象/排班/执行 | `e9c15e04bc83b335668f3ecd837367aa87344a89` | 最终Verifier/Tester报告PASS；总协调正独立核对完整feature接受条件。授权先作为固定组件依赖，发现问题时由owner修复，不冒称main已合入。 |
+| 03 公共对象/排班/执行 | `e9c15e04bc83b335668f3ecd837367aa87344a89` | 最终Verifier/Tester报告PASS；总协调独立审计79项核对通过，已ACCEPT完整03授权范围。该SHA可消费；main尚未合入。 |
 | 06 公共日志/Publisher | `4b034dfbb6c3e1c7143208347b546daab8dfe298` | 源码与被测试的`8ba78f1ace3b383caa1c4360401c645d25907326`一致；总协调核对49+121份证据哈希。PE-LOG-1/PE-LOG-WIRE-1/PE-READER-1可独立消费。 |
 | 09 合约/L1组件 | `c443ae925ed549b046731c2d8ef3dd9ce0311d24` | 源码与`87daee8e9e77bbe27c337383d873a5eaf4a694ba`一致；总协调核对34份原始文件及4份独立结果哈希。A01–A17组件通过，A18/A19集成未通过。 |
 
