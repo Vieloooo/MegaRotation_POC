@@ -1,0 +1,116 @@
+{
+  "schema": "I1-hash-parts-preservation-v1",
+  "source": "Existing public poc-types hash_parts contract and i1.proto; no implementation-generated expected",
+  "hash": "SHA-256",
+  "frame": "u64BE byte length for domain then every part, including empty parts",
+  "cases": [
+    {
+      "id": "empty",
+      "domain": "",
+      "parts_hex": [],
+      "framed_hex": "0000000000000000",
+      "expected_hash": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "id": "empty-component",
+      "domain": "",
+      "parts_hex": [
+        ""
+      ],
+      "framed_hex": "00000000000000000000000000000000",
+      "expected_hash": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    },
+    {
+      "id": "ascii",
+      "domain": "I1/test/v1",
+      "parts_hex": [
+        "616263"
+      ],
+      "framed_hex": "000000000000000a49312f746573742f76310000000000000003616263",
+      "expected_hash": "25052d86b0bd222af1b20bec29e187103986983e6c63e5e4df569a2c40bcef70"
+    },
+    {
+      "id": "segments-a",
+      "domain": "I1/test/v1",
+      "parts_hex": [
+        "6162",
+        "63"
+      ],
+      "framed_hex": "000000000000000a49312f746573742f763100000000000000026162000000000000000163",
+      "expected_hash": "7723ee2fac31fa8e287c050898ea054e08e2604a3ad603687bdc9c8babf29e79"
+    },
+    {
+      "id": "segments-b",
+      "domain": "I1/test/v1",
+      "parts_hex": [
+        "61",
+        "6263"
+      ],
+      "framed_hex": "000000000000000a49312f746573742f763100000000000000016100000000000000026263",
+      "expected_hash": "caa068eb03c8c08b7ea4a8614714c7c268883bc4572f33a98ce0baf450ba98b5"
+    },
+    {
+      "id": "binary",
+      "domain": "I1/test/v1",
+      "parts_hex": [
+        "00ff8001"
+      ],
+      "framed_hex": "000000000000000a49312f746573742f7631000000000000000400ff8001",
+      "expected_hash": "8b40fd3ed61b9d905ed2a0002dd9f8d5490fca1760db71d72b447d7c1c3c6114"
+    },
+    {
+      "id": "utf8-domain",
+      "domain": "I1/\u5fae\u79d2/v1",
+      "parts_hex": [
+        "78"
+      ],
+      "framed_hex": "000000000000000c49312fe5beaee7a7922f7631000000000000000178",
+      "expected_hash": "7430b4756a2fcefd402de1205163fbc4d78514291b4c1164ae0e2d8c2fafc9e9"
+    },
+    {
+      "id": "grant",
+      "domain": "I1/grant/v1",
+      "parts_hex": [
+        "080112020102180e2807300938dc0b40014a04deadbeef"
+      ],
+      "framed_hex": "000000000000000b49312f6772616e742f76310000000000000017080112020102180e2807300938dc0b40014a04deadbeef",
+      "expected_hash": "4a9fa44a3699484359b0beb301476e6bf0d5bb4e3e7912498b1ce05a58e90499"
+    },
+    {
+      "id": "ack",
+      "domain": "I1/ack/v1",
+      "parts_hex": [
+        "080112020102180e280730093a02aabb4001500b5a02ccdd"
+      ],
+      "framed_hex": "000000000000000949312f61636b2f76310000000000000018080112020102180e280730093a02aabb4001500b5a02ccdd",
+      "expected_hash": "8d5815da72bd6e36518f6bd315d0fa6c74e480d8f357951f47d01974eb9bdd71"
+    }
+  ],
+  "grant_fields": {
+    "schema_version": 1,
+    "run_id": "0102",
+    "node_id": 14,
+    "incarnation": "ignored: use 3 and 999",
+    "logical_step_id": 7,
+    "event_id": 9,
+    "tick_us": 1500,
+    "causal_wave": 1,
+    "tie_rank": "deadbeef",
+    "input": null,
+    "grant_hash": "ignored"
+  },
+  "ack_fields": {
+    "schema_version": 1,
+    "run_id": "0102",
+    "node_id": 14,
+    "incarnation": "ignored: use 3 and 999",
+    "logical_step_id": 7,
+    "event_id": 9,
+    "grant_hash": "aabb",
+    "status": "REJECTED=1",
+    "effects": [],
+    "durable_journal_seq": 11,
+    "state_hash": "ccdd",
+    "logical_ack_hash": "ignored"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "schema": "strict-registry-negative-vectors-v1",
+  "source": "Approved D-REG strict Ed25519 gate; independently checked finite-field Edwards arithmetic, not Commonware/Poc implementation",
+  "identity_cases": [
+    {
+      "id": "valid-edwards-basepoint",
+      "identity_key_hex": "5866666666666666666666666666666666666666666666666666666666666666",
+      "expected_accept": true,
+      "decompresses": true,
+      "canonical": true,
+      "small_order": false,
+      "torsion_free": true
+    },
+    {
+      "id": "identity",
+      "identity_key_hex": "0100000000000000000000000000000000000000000000000000000000000000",
+      "expected_accept": false,
+      "decompresses": true,
+      "canonical": true,
+      "small_order": true,
+      "torsion_free": true
+    },
+    {
+      "id": "small-order-zero-encoding",
+      "identity_key_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_accept": false,
+      "decompresses": true,
+      "canonical": true,
+      "small_order": true,
+      "torsion_free": false
+    },
+    {
+      "id": "noncanonical-identity",
+      "identity_key_hex": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "expected_accept": false,
+      "decompresses": true,
+      "canonical": false,
+      "small_order": true,
+      "torsion_free": true
+    },
+    {
+      "id": "mixed-torsion",
+      "identity_key_hex": "9599999999999999999999999999999999999999999999999999999999999999",
+      "expected_accept": false,
+      "decompresses": true,
+      "canonical": true,
+      "small_order": false,
+      "torsion_free": false
+    },
+    {
+      "id": "off-curve-y2",
+      "identity_key_hex": "0200000000000000000000000000000000000000000000000000000000000000",
+      "expected_accept": false,
+      "decompresses": false
+    }
+  ],
+  "bls_cases": [
+    {
+      "id": "G2-zero",
+      "target": "vote_key",
+      "hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expected": "DECODE_REJECT"
+    },
+    {
+      "id": "G2-infinity",
+      "target": "vote_key",
+      "hex": "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expected": "DECODE_REJECT"
+    },
+    {
+      "id": "G1-zero",
+      "target": "pop",
+      "hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expected": "DECODE_REJECT"
+    },
+    {
+      "id": "G1-infinity",
+      "target": "pop",
+      "hex": "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expected": "DECODE_REJECT"
+    }
+  ],
+  "additional_crypto_cases": [
+    "G2 95/97 bytes reject",
+    "G1 47/49 bytes reject",
+    "valid G1 PoP under wrong namespace rejects",
+    "valid G1 PoP for another public key rejects",
+    "message signature is not a PoP",
+    "duplicate identity rejects atomically",
+    "duplicate BLS vote key rejects atomically",
+    "missing/duplicate pid rejects atomically",
+    "reordered valid15 tuples normalize pid order",
+    "signer index sort uses identity key, not vote key"
+  ]
+}

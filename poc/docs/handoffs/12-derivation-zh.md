@@ -1,5 +1,7 @@
 # 12 独立 D 派生与历史 ResumeCut
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以含 **03、09** 以及 **11 已冻结的 Inbox/DA 数据接口**的集成 SHA 建 managed worktree `poc-derivation`，分支 `codex/poc-derivation`。实现独立派生 D 与位置绑定的 ResumeCut。可先做规则与输入向量，联调使用 11 的实际提交。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。遵循[共用工作约定](workflow-zh.md)。
