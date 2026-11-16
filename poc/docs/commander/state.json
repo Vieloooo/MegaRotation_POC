@@ -1,23 +1,110 @@
 {
-  "schema": 1,
+  "schema": 2,
   "date": "2026-11-15",
   "source_checkout": "/mnt/reth/jy/megaroation_poc",
-  "project_id": "afd93354-4ab5-406d-9931-9e67039cbd61",
-  "host_id": "remote-ssh-discovered:xuelab_direct",
-  "max_active_jobs": 3,
+  "project_id": "ccb826e2-d47a-4623-9b20-2632ac96d8e3",
+  "host_id": "remote-ssh-discovered:xuelab_jump",
+  "max_active_jobs": 5,
   "feature_lead_model": "gpt-6-astra",
   "feature_lead_effort": "ultra",
   "main_branch": "main",
   "implementation_base_sha": "36eff1c76d5c4df5d0790133c0e14719c0c73ebd",
-  "documentation_base_sha": null,
-  "main_sha": null,
+  "documentation_base_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+  "main_sha": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
   "heavy_job_lock": "/tmp/megaroation-poc-heavy.lock",
   "accepted_since_merge": [],
   "jobs": [
-    {"feature": "01", "status": "queued", "phase_authorized": "full-feature", "thread_id": null, "candidate_sha": null},
-    {"feature": "02", "status": "queued", "phase_authorized": "contract-and-independent-expectations", "waits_for": ["01"], "thread_id": null, "candidate_sha": null},
-    {"feature": "03", "status": "queued", "phase_authorized": "contract-and-independent-expectations", "waits_for": ["01"], "thread_id": null, "candidate_sha": null}
+    {
+      "feature": "01",
+      "status": "running",
+      "phase_authorized": "full-feature",
+      "thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
+      "candidate_sha": null,
+      "client_thread_id": "client-new-thread:a9d7dc91-4ca5-4871-ba48-908e01a76230",
+      "worktree": "/home/jy/.codex/worktrees/5efa/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1df9d-7813-7460-bcee-12625752f80f",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/5efa/megaroation_poc"
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/01"
+    },
+    {
+      "feature": "02",
+      "status": "ready-to-resume",
+      "phase_authorized": "freeze-and-implement-isolated-transport-component",
+      "waits_for": {
+        "native_integration": [
+          "01 accepted recovery interface and file handoff",
+          "03 public identity interface"
+        ]
+      },
+      "thread_id": "01a1df9d-eb12-7682-8c3f-8ba0e262c795",
+      "candidate_sha": null,
+      "client_thread_id": "client-new-thread:86e0247d-309e-4ff4-b20d-24ec50ed91a0",
+      "worktree": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1df9d-eef9-7652-be99-3b80befc9cbb",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/0b8e/megaroation_poc"
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/02",
+      "preparation_sha": "125d8cf4e30b5affe3cd731fbb5d4a73d0e40a10"
+    },
+    {
+      "feature": "03",
+      "status": "ready-to-resume",
+      "phase_authorized": "freeze-contract-and-implement-feature-03",
+      "waits_for": [],
+      "thread_id": "01a1df9e-37c7-7a92-ae94-9b195a61c2f7",
+      "candidate_sha": null,
+      "client_thread_id": "client-new-thread:7dd2fe87-3a90-42d0-a1c5-90084059ca3c",
+      "worktree": "/home/jy/.codex/worktrees/1c43/megaroation_poc",
+      "actual_turn_configuration": {
+        "turn_id": "01a1df9e-3df7-7203-9e87-77b9b3b68262",
+        "model": "gpt-6-astra",
+        "effort": "ultra",
+        "cwd": "/home/jy/.codex/worktrees/1c43/megaroation_poc"
+      },
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/03",
+      "preparation_sha": "183430e71e5d61533f54a76b2d7d22c5021f1704"
+    },
+    {
+      "feature": "06",
+      "status": "queued",
+      "phase_authorized": "freeze-interfaces-and-implement-independent-components",
+      "thread_id": null,
+      "candidate_sha": null,
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/06"
+    },
+    {
+      "feature": "09",
+      "status": "queued",
+      "phase_authorized": "freeze-interfaces-and-implement-independent-components",
+      "thread_id": null,
+      "candidate_sha": null,
+      "build_root": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/09"
+    }
   ],
-  "remaining_features": ["04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16"],
-  "merge_batches": []
+  "remaining_features": [
+    "04",
+    "05",
+    "07",
+    "08",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "merge_batches": [],
+  "dispatch_note": "User increased active jobs to five. Independent dependency review confirms 01/02/03/06/09: remove 03->01 whole-feature gate, allow isolated 02 kernel and 06/09 components; preserve real-integration and full acceptance gates.",
+  "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
+  "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
+  "scheduling_policy": "dependency-plan-v2.md",
+  "accepted_features_per_merge": 3
 }

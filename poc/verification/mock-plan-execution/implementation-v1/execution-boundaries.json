@@ -1,0 +1,442 @@
+{
+  "schema": "production-be-execution-boundaries-v1",
+  "parent_metadata": [
+    9,
+    19000000,
+    7
+  ],
+  "current_metadata": [
+    10,
+    20000000,
+    7
+  ],
+  "cases": [
+    {
+      "id": "unknown-zero-transfer",
+      "accounts": [],
+      "credits": [],
+      "txs": [
+        [
+          7,
+          8,
+          0,
+          0
+        ]
+      ],
+      "expected_accounts": [
+        [
+          7,
+          1,
+          0
+        ]
+      ],
+      "kept": [
+        0
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "self-max-balance",
+      "accounts": [
+        [
+          1,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          1,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          1,
+          18446744073709551615
+        ]
+      ],
+      "kept": [
+        0
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "self-insufficient",
+      "accounts": [
+        [
+          1,
+          0,
+          10
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          1,
+          0,
+          11
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          0,
+          10
+        ]
+      ],
+      "kept": [],
+      "expected_status": "READY"
+    },
+    {
+      "id": "nonce-overflow-skip",
+      "accounts": [
+        [
+          1,
+          18446744073709551615,
+          10
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          2,
+          18446744073709551615,
+          0
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          18446744073709551615,
+          10
+        ]
+      ],
+      "kept": [],
+      "expected_status": "READY"
+    },
+    {
+      "id": "receiver-overflow-skip",
+      "accounts": [
+        [
+          1,
+          0,
+          5
+        ],
+        [
+          2,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          2,
+          0,
+          1
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          0,
+          5
+        ],
+        [
+          2,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "kept": [],
+      "expected_status": "READY"
+    },
+    {
+      "id": "zero-to-full-receiver",
+      "accounts": [
+        [
+          2,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          2,
+          0,
+          0
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          0,
+          18446744073709551615
+        ]
+      ],
+      "kept": [
+        0
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "unknown-receiver-created",
+      "accounts": [
+        [
+          1,
+          0,
+          3
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          200,
+          0,
+          2
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          200,
+          0,
+          2
+        ]
+      ],
+      "kept": [
+        0
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "unknown-sender-insufficient",
+      "accounts": [],
+      "credits": [],
+      "txs": [
+        [
+          7,
+          8,
+          0,
+          1
+        ]
+      ],
+      "expected_accounts": [],
+      "kept": [],
+      "expected_status": "READY"
+    },
+    {
+      "id": "skip-does-not-consume-nonce",
+      "accounts": [
+        [
+          1,
+          1,
+          5
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          2,
+          0,
+          4
+        ],
+        [
+          1,
+          2,
+          1,
+          5
+        ]
+      ],
+      "expected_accounts": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          2,
+          0,
+          5
+        ]
+      ],
+      "kept": [
+        1
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "zero-credit-no-account",
+      "accounts": [],
+      "credits": [
+        [
+          99,
+          0
+        ]
+      ],
+      "txs": [],
+      "expected_accounts": [],
+      "kept": [],
+      "expected_status": "READY"
+    },
+    {
+      "id": "unknown-zero-self",
+      "accounts": [],
+      "credits": [],
+      "txs": [
+        [
+          7,
+          7,
+          0,
+          0
+        ]
+      ],
+      "expected_accounts": [
+        [
+          7,
+          1,
+          0
+        ]
+      ],
+      "kept": [
+        0
+      ],
+      "expected_status": "READY"
+    },
+    {
+      "id": "credit-overflow-atomic",
+      "accounts": [
+        [
+          1,
+          0,
+          18446744073709551614
+        ]
+      ],
+      "credits": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "txs": [],
+      "expected_status": "REJECT",
+      "expected_parent_unchanged": true
+    },
+    {
+      "id": "valid-then-malformed-atomic",
+      "accounts": [
+        [
+          1,
+          0,
+          10
+        ]
+      ],
+      "credits": [
+        [
+          1,
+          5
+        ]
+      ],
+      "txs": [
+        [
+          1,
+          2,
+          0,
+          3
+        ]
+      ],
+      "extra_raw_hex": [
+        "ff"
+      ],
+      "expected_status": "REJECT",
+      "expected_parent_unchanged": true
+    },
+    {
+      "id": "valid-transfer-exceeds-config-byte-limit",
+      "accounts": [
+        [
+          1,
+          0,
+          10
+        ]
+      ],
+      "credits": [],
+      "txs": [
+        [
+          1,
+          2,
+          0,
+          3
+        ]
+      ],
+      "byte_limit": 18,
+      "expected_status": "REJECT",
+      "expected_parent_unchanged": true
+    }
+  ],
+  "invalid_dep": [
+    {
+      "id": "missing-attr",
+      "dep_hex": []
+    },
+    {
+      "id": "late-attr",
+      "special": "credit-before-attr"
+    },
+    {
+      "id": "duplicate-attr",
+      "special": "attr-twice"
+    },
+    {
+      "id": "metadata-mismatch",
+      "special": "attr-origin-plus-one"
+    },
+    {
+      "id": "transfer-in-dep",
+      "special": "attr-then-transfer"
+    },
+    {
+      "id": "credit-in-ordinary",
+      "special": "credit-ordinary"
+    }
+  ],
+  "codec_rejections": [
+    "explicit zero account",
+    "duplicate account id",
+    "descending account id",
+    "account count257",
+    "ordinary count1025",
+    "credit count1025",
+    "DEP count1026",
+    "oversized raw byte prefix before allocation",
+    "unknown opcode",
+    "transfer length18/20",
+    "credit length9/11",
+    "attr length24/26"
+  ]
+}

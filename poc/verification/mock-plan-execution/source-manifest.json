@@ -1,0 +1,74 @@
+{
+  "baseline": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+  "worktree": "/home/jy/.codex/worktrees/1c43/megaroation_poc",
+  "branch": "codex/poc-mock-plan-execution",
+  "role": "bft_verifier",
+  "role_config": "gpt-6-astra/xhigh (named role tool configuration)",
+  "date": "2026-11-15",
+  "python": "3.12.8",
+  "seed": null,
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "5c99ced956be33dd449a952ceebffeb22b92c335fd69b1bbd23c1f6af2c4e56a"
+    },
+    {
+      "path": "DESIGN.md",
+      "sha256": "e4b93a400cb4da02ddf55f47763062aecbcdb1b81e9a7a9d0fcb28e89801b2f8"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_handoff_zh.md",
+      "sha256": "f82c49f19305484ecf7c3a5d1a34eb4c4752db5cfd8fa1b406f2220a681eff05"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_setup_zh.md",
+      "sha256": "a14555319ce66b01474fb033715acd93938fe41b041fa0dbf56062cd5ba93b07"
+    },
+    {
+      "path": "formalization_v10/poc_design_zh_v2.md",
+      "sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab"
+    },
+    {
+      "path": "formalization_v10/00_arch_zh_v0_1.md",
+      "sha256": "2de0929fc2f75fda51802c7c354146849a285a247283ca1d8fc7338b2a8e8871"
+    },
+    {
+      "path": "formalization_v10/01_l1_authority_zh_v0_1.md",
+      "sha256": "e95c0cbc8c8daa05b9ee60cba342793ebb85d0c9e37afa972f34259676ad84b6"
+    },
+    {
+      "path": "formalization_v10/02_session_program_zh_v0_1.md",
+      "sha256": "a8cafc846acffda6b2d08915b9ccc251825c33cf84e776dae94d67611db47eb2"
+    },
+    {
+      "path": "formalization_v10/09_finality_rules_zh_v0_1.md",
+      "sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc"
+    },
+    {
+      "path": "poc/docs/handoffs/03-mock-plan-execution-zh.md",
+      "sha256": "afe9aeb3c1b9ee287bd6e48c0b2fd6d26c2843b378e818dee7a6478dae8b534b"
+    },
+    {
+      "path": "poc/docs/handoffs/workflow-zh.md",
+      "sha256": "ad5d800c7e035bb491db00e5bc22e44820c9ddee9c7b22e8f3733d81f8482131"
+    },
+    {
+      "path": "poc/docs/commander/README.md",
+      "sha256": "84d43a0d465b67b8077ceb70f8a2f09884d69d547c890feb75845fe3aee0ac47"
+    },
+    {
+      "path": "poc/docs/contracts/regular-preparation-v1.md",
+      "sha256": "db6c1225556241a6a476810c1016e7c75a1e4fe19cfb1cfda77ffa6cf4c9c55e"
+    },
+    {
+      "path": "poc/docs/contracts/task-contract-mock-plan-execution-v1.md",
+      "sha256": "6a45b6d1f8489c5861e3a0bc39f62a0286a10f6c772dfaf63a6826d486ef0496"
+    }
+  ],
+  "regional_bft": {
+    "read_only_path": "/mnt/reth/jy/megaroation_poc/regional_BFT_sim",
+    "head": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+    "design_sha256": "0749ff8bef9ad18b3794788d9f72c887126f4a2368dcf6adcb8587853eee3eae",
+    "commonware_release": "2026.10.0"
+  }
+}

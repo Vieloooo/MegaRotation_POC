@@ -1,5 +1,7 @@
 # 07 Viewer GFR 与独立公共重放
 
+> 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
+
 > **新会话启动任务**
 >
 > 在 `/mnt/reth/jy/megaroation_poc` 上，以 **03 的集成 SHA 和 06 已冻结的公共日志接口**建 managed worktree `poc-viewer-gfr`，分支 `codex/poc-viewer-gfr`。实现纯 viewer GFR、regular/Expire 和独立 A/B reader，实际证书验签接在 04 的接口提交上。主会话用 Astra / ultra。走 Docer `bft_spec` → Verifier `bft_verifier` 先写独立期望 → Builder `bft_builder` → Verifier 复核候选 → Tester `bft_simulator`。遵循[共用工作约定](workflow-zh.md)。
