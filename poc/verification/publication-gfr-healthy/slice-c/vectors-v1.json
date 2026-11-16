@@ -1,0 +1,64 @@
+{
+  "schema": "H3-C-INDEPENDENT-PRECODE-1",
+  "candidate_execution": "NOT_RUN",
+  "native_crypto": "NOT_RUN",
+  "positive_fixtures": [
+    "fixtures/single.json",
+    "fixtures/duplicates-eleven.json"
+  ],
+  "classification": "synthetic-adapter only; structurally encoded GFR Body not a native result",
+  "expected_duplicate_rule": "11 inputs retained; may map to one occurrence;12 submit requests including repeatfirst",
+  "negative_recipes": [
+    {
+      "mutation": "length=true",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "duplicate root schema key in raw JSON",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "extra unknown root/message/native field",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "codec=0x47465200",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "ordinal sequence0,2",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "messages=[] or12 entries",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "path=/tmp/escape or../escape or symlink",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "payload length/hash mismatch",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "aggregate payload65537 or payload65537",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "manifest65537 or native report65537",
+      "expected": "PRELAUNCH_REJECT"
+    },
+    {
+      "mutation": "native-regional tag without exact132-lowercasehex resultkey/report",
+      "expected": "PRELAUNCH_REJECT"
+    }
+  ],
+  "readback_controls": [
+    "wrong namespace cannot match",
+    "ACK alone cannot pass",
+    "missing earlierq/index waits",
+    "input/report tag alone cannot claimnative",
+    "producer and runner revisions remain distinct"
+  ]
+}

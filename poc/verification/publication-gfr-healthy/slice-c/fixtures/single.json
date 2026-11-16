@@ -1,0 +1,17 @@
+{
+  "schema": "H3-PUBLICATION-ARTIFACT-1",
+  "evidence_kind": "synthetic-adapter",
+  "producer_candidate_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "run_id": "h3-c-input-fixture",
+  "result_key_hex": null,
+  "native_evidence": null,
+  "messages": [
+    {
+      "ordinal": 0,
+      "codec": 1195790849,
+      "path": "payload-000.bin",
+      "length": 105,
+      "sha256": "e01a2d8750c91f8ca519552272d511fac9db9b4d3a1716707ec478bd092b7349"
+    }
+  ]
+}
