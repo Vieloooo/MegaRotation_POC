@@ -22,7 +22,7 @@
 - 官方镜像 `ghcr.io/espressosystems/espresso-network/espresso-dev-node:20260918`；index digest **`sha256:af73f55630690caa35aa0bc015d60dc03333791f966fdcc07b0798e33d4f768e`**；linux/amd64 manifest digest **`sha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66`**。运行证据保存 manifest/config/layers 的实际 hash 和 image revision，执行文件 hash 单列。
 - 显式 **`--version 0.3`**，HTTP **`/v1`**，publication namespace **`160016`**。这三个都是 A，不能从 moving 文档推断。固定源码 `crates/espresso/dev-node/src/main.rs:232` 默认 0.3，`src/lib.rs` 支持 0.3/0.4/0.5/0.6；main 文档的 0.6/0.7 不是本 profile。
 - 官方 Dockerfile 直接执行 `/bin/espresso-dev-node`，另装 Anvil，没有必须依赖 Docker daemon 的入口脚本。允许两种执行方式：固定镜像容器；或从同一固定官方镜像核验并提取**未修改** binary、运行库、SRS，使用任务目录内匹配 loader/runtime 运行原 executable。后者明确标为“official-image binary native execution”，不是容器运行。不可替换二进制、自己伪造 official server 或更改系统 loader/daemon/代理。
-- 必须显式连接本任务专属本地 Anvil，记录 L1 chain-id、URL、binary hash、配置；不得默默另启不受记录的 L1，不调用公共生产/测试网络。允许 upstream dev-node 自身必要的本地部署操作；不把它们当 PoC staking 实现。
+- 必须显式连接本任务专属本地 Anvil，记录 L1 chain-id、URL、binary hash、配置；不得默默另启不受记录的 L1，不调用公共生产/测试网络。固定 upstream `crates/espresso/node/src/lib.rs:1514–1516` 的 `TestConfigBuilder::default()` 还会在 `main.rs:332–338` 将 l1_url改为显式L1之前启动一个bootstrap Anvil。该原binary内部行为不修改；须通过任务私有PATH wrapper调用同一已验证镜像的Anvil，记录每次原始argv、namespace PID/PPID、端口参数及退出清理。wrapper只记录后exec固定binary/匹配loader，不伪造Anvil输出。显式L1为18775，bootstrap辅助链是upstream初始化资源，二者明确区分；均受同一私有network/PID namespace约束。禁止继承宿主foundry可执行文件来隐式满足依赖。允许 upstream dev-node 自身必要的本地部署操作；不把它们当 PoC staking 实现。
 - 端口建议：18770 API、18771 dev-info、18772 builder、18773 prover、18774 tonic、18775 L1。以实际可用端口为准且冻结到 run manifest。upstream 若监听 `0.0.0.0`，可以用本任务独立 user/network namespace 隔离到其 loopback；禁止改全局网络/daemon 配置。所有客户端、节点、Anvil 在同一任务隔离环境内。只能终止本次保存的 PID/容器。
 - Rust 编译和重型运行经 `flock /tmp/megaroation-poc-heavy.lock`，默认 `CARGO_BUILD_JOBS=2`，不嵌套锁。`.build` 指向 `/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16`；每次新 artifact 目录，旧结果只读。
 
@@ -184,7 +184,7 @@ Verifier 已从 pinned source 和06合同推导下列 V01–V14；literal vector
 | V09 | 同录制离线重放两次，wall pause不同 | 公共投影和规范摘要相同，原始网络时间单列。seed=N/A。 |
 | V10 | truncated/malformed JSON/base64，错q/hash/namespace，缺file/错hash、越界path、未知schema | 明确拒绝或按缺日志WAIT；无半前缀，不能默认空库。 |
 | V11 | Unknown timing +请求PELOG/PEReader | 明确Unsupported且缺项准确；不产出假PE blocks/ticks/false live。 |
-| V12 | 本地端点、独立端口/PID/隔离环境与cleanup | 无公共network请求、无未知进程终止、记录运行条件。 |
+| V12 | 本地端点、显式L1及upstream bootstrap Anvil、独立端口/PID/隔离环境与cleanup | 所有Anvil均为已验证镜像binary；bootstrap wrapper记录argv/PID/PPID/端口并检查清理；无公共network请求、无未知进程终止。 |
 | V13 | 官方binary本机publication、原submit/blocks/leaf/tx、第二连接重复查询、缺数据probe | 原始真实transcript与source pin可核验，按实际API行为报告。 |
 | V14 | fixture矩阵和V13真实证据/环境失败 | 两者分开；fixture PASS不能充官方PASS；无实际运行则真实gate INCONCLUSIVE。 |
 
@@ -201,3 +201,5 @@ Verifier 已从 pinned source 和06合同推导下列 V01–V14；literal vector
 - **G-ENV**：若缺Docker权限，先调查官方native方式并记录实际失败；不得更改系统daemon/代理。若仍无法运行，已授权离线实现/验证继续，真实G-API保持INCONCLUSIVE。
 
 本阶段无待用户决定的协议选择。lead需冻结本合同版本、路径和准确导出；对来源表示/运行环境的新发现只修订受影响条款，不自行升级pin或更改其他功能。全部原16工作及独立验收完成后才申请功能accepted；准确报告G-PE-TIMING兼容缺口，是否可接受此受限profile由总协调决定。
+
+2026-11-16 运行条件澄清：候选8750535的正式run01在genesis前以SpawnError(NotFound)退出，原始证据保留。此修订只冻结upstream bootstrap辅助进程的可审计启动，不改变EC16公共对象/摘要/读取规则。修复须新候选SHA并重新复核实际运行路径；旧离线PASS不能填补真实运行失败。
