@@ -16,7 +16,7 @@
   "jobs": [
     {
       "feature": "01",
-      "status": "needs-attention",
+      "status": "continuation-ready-session-tool-unavailable",
       "phase_authorized": "full-feature",
       "thread_id": "01a1df9d-73d2-7a12-a9b8-e03a0db6d9dd",
       "candidate_sha": null,
@@ -33,7 +33,12 @@
       "worktree_head": "b9fce86f8c286fb110bafbae5d902581ac0c19f3",
       "worktree_dirty": true,
       "blocker": "Platform flagged the turn for possible cybersecurity risk. No retry or safeguard workaround was attempted. Full R1-R18 and same-revision review remain incomplete.",
-      "reported_progress": "Development runs cover three root transaction/Ack recovery cuts with new PIDs; not a final verified delivery."
+      "reported_progress": "Builder final: 26 real-process cases, 14 named crash cuts, native 132 and workspace 20 checks. R16 prior fixed snapshot 24 runs with per-seed byte-identical frames/trace. Complete independent R1-R18 remains OPEN.",
+      "continuation_snapshot_sha": "8a81391c7a0b08be3ce1d2adf3b44e8bf4bbc509",
+      "continuation_branch": "codex/poc-native-recovery-resume",
+      "continuation_handoff": "poc/docs/commander/recovery-continuation-20261116.md",
+      "continuation_thread_id": null,
+      "old_child_agents_quiescent_verified": true
     },
     {
       "feature": "02",
@@ -143,7 +148,7 @@
     "16"
   ],
   "merge_batches": [],
-  "dispatch_note": "Status audit: five feature parent chats are idle/notLoaded. 03 full-scope delivery awaits commander acceptance; 02/06/09 completed independent component slices; 01 turn failed with platform safety flag and has uncommitted work. No feature batch merged.",
+  "dispatch_note": "User requested a new local-simulation recovery chat. Preserved 33 files in WIP continuation snapshot with old index/worktree unchanged; handoff ready. create_thread/send_message_to_thread are absent from current tools, so no new chat has been created.",
   "commander_thread_id": "01a1df90-c314-7043-8b13-7725fe43647c",
   "resource_note": "Per-job .build on /mnt/reth data volume; source target is 13GB but root volume has only 11GB free. All three chats informed; global heavy-job flock retained.",
   "scheduling_policy": "dependency-plan-v2.md",
