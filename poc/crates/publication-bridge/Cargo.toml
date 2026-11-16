@@ -14,6 +14,7 @@ poc-publisher = { path = "../publisher" }
 poc-types = { path = "../types" }
 poc-viewer-gfr = { path = "../viewer-gfr" }
 sim-espresso = { path = "../sim-espresso" }
+sim-transport = { path = "../sim-transport" }
 
 [profile.dev]
 debug = "line-tables-only"

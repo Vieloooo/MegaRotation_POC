@@ -56,6 +56,39 @@ genesis. The second session fetches the same complete prefix by height and flat
 transaction position. Each session preserves its own HTTP status, body and
 wall observation metadata.
 
+To submit a publication artifact, pass its manifest as a separate argument.
+
+```sh
+poc/scenarios/espresso-compatibility/run-local.sh h3-capture-01 REVIEWED_CANDIDATE_SHA \
+  --payload-manifest /path/to/publication-manifest.json
+```
+
+The [Slice C contract](../../docs/contracts/h3-publication-gfr-slice-c-v1.md)
+defines H3-PUBLICATION-ARTIFACT-1. Put the declared payload files and optional
+native report under the manifest directory. Before launching either process,
+the capture validates their bounds, paths, lengths and hashes and retains their
+exact bytes. The runner submits every declared ordinal in order and repeats
+the first payload. Identical payloads keep separate submit record IDs and may
+share a native occurrence. Producer and runner revisions are recorded separately.
+
+`bundle/` retains exact input copies. The `input_identity` section in the
+capture configuration and `result.json` binds each GFR codec and payload to its
+submit record, ACK and native positions. The EC16-AUDIT-1 projection retains
+its opaque audit codec for both input modes.
+
+```sh
+python3 poc/verification/espresso-compatibility/check_capture.py \
+  .build/artifacts/h3-capture-01/bundle --candidate REVIEWED_CANDIDATE_SHA \
+  --payload-manifest /path/to/publication-manifest.json
+```
+
+The independent checker reads the retained copies, raw POSTs and source
+positions. With `--payload-manifest`, it also checks the current external input
+bytes against those copies. Run it with `--reader requery` to inspect the second
+reader's prefix. `synthetic-adapter` labels synthetic input. `native-regional`
+retains the declared evidence metadata and reports byte publication only.
+Actual regional validation requires the reviewed H1 proof and context checks.
+
 The runner records the original executable and image hashes, commands,
 response bodies, ACKs, full blocks, leaves and all positional responses in
 `.build/artifacts/RUN_ID/bundle/`. It preserves the manifest and raw records

@@ -1,0 +1,47 @@
+{
+  "schema": "H3-C-INDEPENDENT-HARNESS-PREPARATION-1",
+  "candidate_inspected": null,
+  "candidate_executions": 0,
+  "planned_matrix_cases": 52,
+  "syntax": "PASS_STDLIB_AST_ONLY",
+  "source_encoder_audit_selfcheck": [
+    {
+      "messages": 2,
+      "source_blocks": 2,
+      "audit_bytes": 517,
+      "audit_sha256": "49febbf6905181b00efbdd8a3e032d05c1df7bc130cc0efa82e201c7b918c27e"
+    },
+    {
+      "messages": 11,
+      "source_blocks": 2,
+      "audit_bytes": 408,
+      "audit_sha256": "f7063e995fefb7536e76e5956a180f7061952cb7dddda0cfca32bcb3bd23634c"
+    }
+  ],
+  "reference_oracle": {
+    "revision": "e59d026e8c08b64ff744b57c63cc7756f0b34019",
+    "path": "poc/verification/espresso-compatibility/check_capture.py",
+    "sha256": "e42e68df3f40c991dcce199ba6fa53d03fd2c6d75f243d0bf3ace9c25ead157a",
+    "note": "Accepted16 reference only; current C files never imported or inspected"
+  },
+  "contract_sha256": "a06e944e8802c269c00b0514db6ca947f625e15ec5145c015b6f511bfdac2783",
+  "classification": "SYNTHETIC_OFFLINE; native/genuine/official gate NOT_RUN",
+  "files": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/README.md",
+      "sha256": "f356b61bedeae0364a22843ac9e53954dd53ea193c69ff162d7215b37b08865e"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/api-bindings-v1.json",
+      "sha256": "c682e161f5086ae38dbda8d3bdc162941298960d957c12da3c8ec96d9c606081"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/fixture_model.py",
+      "sha256": "f24536e87e5102bf22f4f2320cd5936a2967805801bd1804cda77436ff4ca032"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-c/independent-harness/tests.py",
+      "sha256": "c04de4b13aa30b8922a035de050e30945849aa687fb2680ea42aff85cc7f13eb"
+    }
+  ]
+}

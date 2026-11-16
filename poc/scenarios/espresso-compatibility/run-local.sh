@@ -3,12 +3,24 @@ set -euo pipefail
 
 scenario=$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd "$scenario/../../.." && pwd)
-cd "$repo"
 
-if [[ $# != 2 || ! $1 =~ ^[A-Za-z0-9_-]{1,64}$ || ! $2 =~ ^[a-f0-9]{40}$ ]]; then
-  echo "usage: $0 RUN_ID EXPECTED_CANDIDATE_SHA" >&2
+if [[ ( $# != 2 && $# != 4 ) || ! $1 =~ ^[A-Za-z0-9_-]{1,64}$ || ! $2 =~ ^[a-f0-9]{40}$ ]] ||
+  [[ $# == 4 && ( $3 != --payload-manifest || -z $4 ) ]]; then
+  echo "usage: $0 RUN_ID EXPECTED_CANDIDATE_SHA [--payload-manifest PATH]" >&2
   exit 2
 fi
+payload_args=()
+payload_mount=()
+if [[ $# == 4 ]]; then
+  manifest=$4
+  manifest_directory=$(realpath -e -- "$(dirname -- "$manifest")")
+  # Keep inputs available even when their host directory is under /tmp.
+  # Resolve the directory only so capture can reject a symlink at the file.
+  payload_mount=(--ro-bind "$manifest_directory" /tmp/ec16-publication-input)
+  payload_args=(--payload-manifest "/tmp/ec16-publication-input/${manifest##*/}")
+fi
+cd "$repo"
+
 run_id=$1
 candidate=$2
 owned=(poc/crates/espresso-compatibility poc/scenarios/espresso-compatibility)
@@ -48,9 +60,11 @@ command=(
   timeout --signal=TERM --kill-after=15s 250s
   bwrap --unshare-user --unshare-net --unshare-pid --die-with-parent --new-session
   --ro-bind / / --bind "$run" "$run" --tmpfs /tmp --proc /proc
+  "${payload_mount[@]}"
   /usr/bin/python3 "$scenario/capture.py"
   --image "$image" --run "$run" --run-id "$run_id" --candidate "$candidate"
   --replay-binary "$target/debug/espresso-compatibility"
+  "${payload_args[@]}"
 )
 python3 -c 'import json,sys; print(json.dumps(sys.argv[1:], indent=2))' "${command[@]}" > "$run/launch-command.json"
 "${command[@]}" > "$run/capture.stdout" 2> "$run/capture.stderr"

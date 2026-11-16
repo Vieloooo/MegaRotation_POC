@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import signal
 import socket
+import stat
 import subprocess
 import time
 
@@ -23,6 +24,124 @@ MAX_BUNDLE = 256 * 1024 * 1024
 MAX_CAPTURE_HEIGHT = 128
 SRS = "kzg10-aztec20-srs-1048584.bin"
 API = "/v1/availability"
+INPUT_SCHEMA = "H3-PUBLICATION-ARTIFACT-1"
+GFR_PUBLICATION_CODEC = 0x47465201
+MAX_INPUT_BYTES = 65_536
+MAX_INPUT_MESSAGES = 11
+
+
+def strict_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        result[key] = value
+    return result
+
+
+def reject_number(value):
+    raise ValueError(f"noninteger JSON number {value!r}")
+
+
+def checked_input_file(root_fd, relative, limit):
+    if (type(relative) is not str or "\\" in relative or "\0" in relative
+            or any(part in ("", ".", "..") for part in relative.split("/"))):
+        raise ValueError("input paths must be relative regular files under the manifest directory")
+    parts = relative.split("/")
+    directory = os.dup(root_fd)
+    try:
+        for part in parts[:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+        with os.fdopen(fd, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
+                raise ValueError(f"input file is not a regular file within {limit} bytes: {relative!r}")
+            data = stream.read(limit + 1)
+        if len(data) != info.st_size or len(data) > limit:
+            raise ValueError(f"input size changed during bounded read: {relative!r}")
+        return data
+    finally:
+        os.close(directory)
+
+
+def fields(value, expected, label):
+    if type(value) is not dict or value.keys() != set(expected.split()):
+        raise ValueError(f"invalid {label} fields")
+
+
+def matches(value, pattern):
+    return type(value) is str and re.fullmatch(pattern, value) is not None
+
+
+def load_payload_manifest(path):
+    """Return validated metadata, exact manifest bytes, immutable payloads and optional report."""
+    path = Path(path)
+    root = os.open(path.parent.resolve(strict=True), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        raw = checked_input_file(root, path.name, MAX_INPUT_BYTES)
+        manifest = json.loads(raw.decode("utf-8"), object_pairs_hook=strict_object,
+                              parse_float=reject_number, parse_constant=reject_number)
+        fields(manifest, "schema evidence_kind producer_candidate_sha run_id result_key_hex native_evidence messages",
+               "publication manifest")
+        if manifest["schema"] != INPUT_SCHEMA or manifest["evidence_kind"] not in ("synthetic-adapter", "native-regional"):
+            raise ValueError("invalid input schema or evidence kind")
+        if (not matches(manifest["producer_candidate_sha"], r"[0-9a-f]{40}")
+                or not matches(manifest["run_id"], r"[A-Za-z0-9_-]{1,64}")):
+            raise ValueError("invalid input producer revision or run ID")
+        key, native = manifest["result_key_hex"], manifest["native_evidence"]
+        if key is not None and not matches(key, r"0001[0-9a-f]{128}"):
+            raise ValueError("invalid canonical ResultKey")
+        if manifest["evidence_kind"] == "native-regional" and (key is None or native is None):
+            raise ValueError("native-regional input requires ResultKey and evidence provenance")
+        if native is not None:
+            fields(native, "h1_revision report_path report_sha256", "native evidence")
+            if not matches(native["h1_revision"], r"[0-9a-f]{40}") or not matches(native["report_sha256"], r"[0-9a-f]{64}"):
+                raise ValueError("invalid native evidence revision or SHA-256")
+        messages = manifest["messages"]
+        if type(messages) is not list or not 1 <= len(messages) <= MAX_INPUT_MESSAGES:
+            raise ValueError("input must contain 1..11 messages")
+        total = 0
+        for ordinal, message in enumerate(messages):
+            fields(message, "ordinal codec path length sha256", "input message")
+            if type(message["ordinal"]) is not int or message["ordinal"] != ordinal:
+                raise ValueError("input ordinals must be contiguous from zero")
+            if type(message["codec"]) is not int or message["codec"] != GFR_PUBLICATION_CODEC:
+                raise ValueError("input codec must be GFR-PUBLIC-1")
+            length = message["length"]
+            if type(length) is not int or not 1 <= length <= MAX_INPUT_BYTES:
+                raise ValueError("invalid input payload length")
+            total += length
+            if total > MAX_INPUT_BYTES or not matches(message["sha256"], r"[0-9a-f]{64}"):
+                raise ValueError("input aggregate capacity or invalid SHA-256")
+
+        # Read each distinct path once. Repeated ordinals preserve their own
+        # identity and must agree with the same immutable bytes.
+        seen = {path.name: raw}
+
+        def verified_file(name, limit, sha):
+            if type(name) is not str or name == path.name:
+                raise ValueError("input path conflicts with the manifest")
+            if name not in seen:
+                seen[name] = checked_input_file(root, name, limit)
+            data = seen[name]
+            if len(data) > limit or hashlib.sha256(data).hexdigest() != sha:
+                raise ValueError(f"input SHA-256/size mismatch for {name!r}")
+            return data
+
+        payloads = tuple(verified_file(m["path"], m["length"], m["sha256"]) for m in messages)
+        if any(len(data) != m["length"] for data, m in zip(payloads, messages)):
+            raise ValueError("input payload does not have its declared length")
+        report = None
+        if native is not None:
+            if any(native["report_path"] == message["path"] for message in messages):
+                raise ValueError("native report path conflicts with a payload")
+            report = verified_file(native["report_path"], MAX_INPUT_BYTES, native["report_sha256"])
+        return manifest, raw, payloads, report
+    finally:
+        os.close(root)
 
 
 @dataclass(frozen=True)
@@ -43,6 +162,30 @@ def json_bytes(value):
 
 def origin(service):
     return f"http://127.0.0.1:{PORTS[service]}"
+
+
+def copy_payload_inputs(record, loaded, runner_sha):
+    manifest, raw, payloads, report = loaded
+    manifest_copy = "publication-input-manifest.json"
+    record.artifact(manifest_copy, raw)
+    native = manifest["native_evidence"]
+    if native is not None:
+        report_copy = "publication-input-native-report.bin"
+        record.artifact(report_copy, report)
+        native = dict(native, copied_path=report_copy)
+    messages = []
+    for message, data in zip(manifest["messages"], payloads):
+        copied = f"publication-input-{message['ordinal']:03d}.bin"
+        record.artifact(copied, data)
+        messages.append(dict(message, copied_path=copied, submit_record_id=None, ack_hash=None,
+                             occurrences=[], byte_equal=False))
+    return {
+        "manifest_path": manifest_copy, "manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        "producer_candidate_sha": manifest["producer_candidate_sha"], "producer_run_id": manifest["run_id"],
+        "runner_candidate_sha": runner_sha, "result_key_hex": manifest["result_key_hex"],
+        "native_evidence": native, "native_verification": "NOT_PERFORMED",
+        "messages": messages, "repeat": None,
+    }
 
 
 class Recorder:
@@ -358,7 +501,7 @@ def submit_hash(response):
     return value
 
 
-def observe(record, args, processes, configuration, bootstrap):
+def observe(record, args, processes, configuration, bootstrap, payloads=MARKERS):
     if {name for _, name in socket.if_nameindex()} != {"lo"}:
         raise RuntimeError("refusing official launch outside a loopback-only namespace")
     # Check our isolated namespace before starting any server that binds the
@@ -415,7 +558,7 @@ def observe(record, args, processes, configuration, bootstrap):
     if dev_info["l1_url"].rstrip("/") != origin("anvil"):
         raise RuntimeError("official node reported an unexpected L1 endpoint")
     configuration["l1"]["light_client_address"] = dev_info["l1_light_client_address"]
-    genesis, _ = await_block(record, "first", 0, readiness, processes)
+    genesis, transactions = await_block(record, "first", 0, readiness, processes)
     identity = {
         "schema": "EC16-SOURCE-1",
         "official_commit": configuration["artifacts"]["official_commit"],
@@ -427,21 +570,75 @@ def observe(record, args, processes, configuration, bootstrap):
     # partial transcript once genesis has been observed.
     record.artifact("source-identity.json", json_bytes(identity))
     configuration["start_height_hint"] = start_height
+    return observe_publications(record, processes, genesis, transactions, payloads,
+                                configuration.get("input_identity"))
 
-    first, second = (submit(record, marker) for marker in MARKERS)
-    hashes = (submit_hash(first), submit_hash(second))
-    if hashes[0] == hashes[1]:
+
+def observe_publications(record, processes, genesis, genesis_transactions, payloads=MARKERS, input_identity=None):
+    initial = []
+    for ordinal, payload in enumerate(payloads):
+        response = submit(record, payload)
+        initial.append(response)
+        if input_identity is not None:
+            input_identity["messages"][ordinal]["submit_record_id"] = response.record_id
+    hashes = []
+    for ordinal, response in enumerate(initial):
+        row = input_identity["messages"][ordinal] if input_identity is not None else None
+        tx_hash = submit_hash(response)
+        if row is not None:
+            row["ack_hash"] = tx_hash
+        hashes.append(tx_hash)
+    if input_identity is None and hashes[0] == hashes[1]:
         raise RuntimeError("distinct publication fixtures yielded the same ACK")
-    repeat = submit(record, MARKERS[0])
-    if repeat.status == 200 and submit_hash(repeat) != hashes[0]:
-        raise RuntimeError("repeat submit acknowledged a different hash")
+    repeat = submit(record, payloads[0])
+    repeat_row = {"ordinal": 0, "submit_record_id": repeat.record_id, "status": repeat.status,
+                  "ack_hash": None, "occurrences": [], "byte_equal": False}
+    if input_identity is not None:
+        input_identity["repeat"] = repeat_row
+    if repeat.status == 200:
+        repeat_row["ack_hash"] = submit_hash(repeat)
+        if repeat_row["ack_hash"] != hashes[0]:
+            raise RuntimeError("repeat submit acknowledged a different hash")
+
+    wanted = {}
+    for ordinal, pair in enumerate(zip(hashes, payloads)):
+        wanted.setdefault(pair, []).append(ordinal)
+    evidence = [[] for _ in payloads]
+    if input_identity is not None:
+        for row, positions in zip(input_identity["messages"], evidence):
+            row["occurrences"] = positions
+        if repeat_row["ack_hash"] is not None:
+            repeat_row["occurrences"] = evidence[0]
+
+    def collect(q, block, transactions):
+        selected_index = 0
+        for index, tx in enumerate(transactions):
+            native = tx["transaction"]
+            if native["namespace"] != NAMESPACE:
+                continue
+            data = base64.b64decode(native["payload"], validate=True)
+            ordinals = wanted.get((tx["hash"], data), ())
+            if ordinals:
+                if (tx["index"] != index or tx["block_height"] != q or tx["block_hash"] != block["hash"]
+                        or tx["namespace"] != NAMESPACE):
+                    raise RuntimeError(f"official positional transaction mismatch at q={q} index={index}")
+                occurrence = {"q": q, "source_transaction_index": index,
+                              "pos_in_namespace": tx["pos_in_namespace"], "message_index": selected_index}
+                for ordinal in ordinals:
+                    evidence[ordinal].append(occurrence)
+                    if input_identity is not None:
+                        input_identity["messages"][ordinal]["byte_equal"] = True
+                if repeat_row["ack_hash"] is not None and 0 in ordinals:
+                    repeat_row["byte_equal"] = True
+            selected_index += 1
 
     deadline = time.monotonic() + 65
-    seen = set()
+    height_path = "/v1/node/block-height"
     tip = 0
     blocks = [genesis]
+    collect(0, genesis, genesis_transactions)
     for q in range(1, MAX_CAPTURE_HEIGHT):
-        if time.monotonic() >= deadline:
+        if all(evidence) or time.monotonic() >= deadline:
             break
         wait_for(
             lambda: record.http("first", "GET", height_path),
@@ -451,15 +648,9 @@ def observe(record, args, processes, configuration, bootstrap):
         block, transactions = await_block(record, "first", q, deadline, processes)
         blocks.append(block)
         tip = q
-        for tx in transactions:
-            for i, marker in enumerate(MARKERS):
-                if tx["hash"] == hashes[i] and tx["transaction"]["namespace"] == NAMESPACE:
-                    if base64.b64decode(tx["transaction"]["payload"], validate=True) == marker:
-                        seen.add(i)
-        if len(seen) == len(MARKERS):
-            break
-    if len(seen) != len(MARKERS):
-        raise TimeoutError("two publications not found in bounded complete source prefix")
+        collect(q, block, transactions)
+    if not all(evidence):
+        raise TimeoutError("publications not found in bounded complete source prefix")
 
     missing_position = f"{API}/transaction/0/{genesis['num_transactions']}/noproof"
     missing = record.http("first", "GET", missing_position)
@@ -475,13 +666,13 @@ def observe(record, args, processes, configuration, bootstrap):
             raise RuntimeError(f"second reader observed a different block at q={q}")
 
     return {
-        "tip": tip, "distinct_submit_ids": [first.record_id, second.record_id],
+        "tip": tip, "distinct_submit_ids": [response.record_id for response in initial],
         "exact_repeat_id": repeat.record_id, "exact_repeat_status": repeat.status,
         "missing_record_id": missing.record_id, "missing_status": missing.status,
     }
 
 
-def offline(args, observations):
+def offline(args, observations, input_identity=None, payloads=MARKERS):
     binary = str(args.replay_binary)
     bundle = str(args.run / "bundle")
     first = str(args.run / "offline-first")
@@ -508,16 +699,30 @@ def offline(args, observations):
             raise RuntimeError(f"offline public projection mismatch for {filename}")
     receipts = json.loads((Path(first) / "receipts.json").read_bytes())
     by_id = {item["submit_record_id"]: item for item in receipts["publications"]}
+
+    def verify_receipt(captured, row, payload):
+        positions = [{key: occurrence[key] for key in ("q", "source_transaction_index")}
+                     for occurrence in row["occurrences"]]
+        if (not captured or bytes(captured["payload"]) != payload
+                or captured["transaction_hash"] != row["ack_hash"] or captured["positions"] != positions):
+            raise RuntimeError(f"offline replay changed manifest submit record {row['submit_record_id']}")
+
     positions = []
-    for record_id in observations["distinct_submit_ids"]:
+    for ordinal, record_id in enumerate(observations["distinct_submit_ids"]):
         captured = by_id.get(record_id)
         if not captured or not captured["positions"]:
             raise RuntimeError(f"offline replay could not confirm publication {record_id}")
+        if input_identity is not None:
+            verify_receipt(captured, input_identity["messages"][ordinal], payloads[ordinal])
         positions.append(captured["positions"])
     missing_id = observations["missing_record_id"]
     if missing_id not in receipts["unavailable_records"]:
         raise RuntimeError("actual out-of-bounds query did not remain unavailable in replay")
     repeat_id = observations["exact_repeat_id"]
+    if input_identity is not None:
+        if input_identity["repeat"]["ack_hash"] is not None:
+            verify_receipt(by_id.get(repeat_id), input_identity["repeat"], payloads[0])
+        observations["byte_equality"] = True
     observations.update({
         "public_sha256": receipts["public_sha256"], "distinct_publication_positions": positions,
         "repeat_publication_positions": by_id.get(repeat_id, {}).get("positions", []),
@@ -532,12 +737,20 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--candidate", required=True)
     parser.add_argument("--replay-binary", type=Path, required=True)
+    parser.add_argument("--payload-manifest", type=Path)
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.run_id):
         parser.error("invalid run ID")
     if not re.fullmatch(r"[a-f0-9]{40}", args.candidate):
         parser.error("invalid candidate SHA")
+    loaded = None
+    if args.payload_manifest is not None:
+        try:
+            loaded = load_payload_manifest(args.payload_manifest)
+        except (OSError, ValueError, RecursionError) as exc:
+            parser.error(f"invalid payload manifest: {exc}")
 
+    started = time.monotonic_ns()
     (args.run / "bundle").mkdir()
     record = Recorder(args.run / "bundle")
     processes = Processes(args.run / "process")
@@ -551,7 +764,12 @@ def main():
             "wrapper": json.loads((args.run / "launch-command.json").read_bytes()),
         },
         "authentication": "unauthenticated HTTP restricted to task namespace loopback",
+        "input_mode": "marker-default" if loaded is None else loaded[0]["evidence_kind"],
     }
+    if loaded is not None:
+        configuration["input_identity"] = copy_payload_inputs(record, loaded, args.candidate)
+    input_identity = configuration.get("input_identity")
+    payloads = MARKERS if loaded is None else loaded[2]
     record.artifact("image-verification.json", (args.run / "image-verification.json").read_bytes())
     record.artifact("build-command.txt", (args.run / "build-command.txt").read_bytes())
     for name in ("index.json", "manifest-amd64.json", "config.json"):
@@ -561,7 +779,7 @@ def main():
     outcome = None
     error = None
     try:
-        outcome = observe(record, args, processes, configuration, bootstrap)
+        outcome = observe(record, args, processes, configuration, bootstrap, payloads)
     except BaseException as exc:
         error = exc
     finally:
@@ -593,18 +811,32 @@ def main():
             }))
         if error is not None:
             raise error
-        offline(args, outcome)
+        offline(args, outcome, input_identity, payloads)
     except BaseException as exc:
         (args.run / "result.json").write_bytes(json_bytes({
             "status": "INCOMPLETE", "capture_kind": "official", "error": str(exc),
             "candidate_sha": args.candidate, "run_id": args.run_id,
+            **result_input_fields(configuration, started),
         }))
         raise
     (args.run / "result.json").write_bytes(json_bytes({
         "status": "PASS", "capture_kind": "official", "candidate_sha": args.candidate,
-        "run_id": args.run_id, **outcome,
+        "run_id": args.run_id, **outcome, **result_input_fields(configuration, started),
     }))
     print(f"recorded and replayed official dev-node evidence at {args.run}")
+
+
+def result_input_fields(configuration, started):
+    result = {
+        "input_mode": configuration["input_mode"],
+        "wall_capture_duration_ns": time.monotonic_ns() - started,
+        "official_timing": {"proposed_at": "Unknown", "finalized_at": "Unknown", "live_at_proposal": "Unknown"},
+        "pe_exports": "Unsupported", "commitment_trust": "trusted local official API; QC/VID unverified",
+    }
+    if "input_identity" in configuration:
+        result["input_identity"] = configuration["input_identity"]
+        result["publication_scope"] = "byte-publication-only"
+    return result
 
 
 if __name__ == "__main__":

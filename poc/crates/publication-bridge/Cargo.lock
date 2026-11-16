@@ -1419,6 +1419,7 @@ dependencies = [
  "poc-types",
  "poc-viewer-gfr",
  "sim-espresso",
+ "sim-transport",
 ]
 
 [[package]]
@@ -1941,6 +1942,15 @@ dependencies = [
 [[package]]
 name = "sim-espresso"
 version = "0.1.0"
+
+[[package]]
+name = "sim-transport"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+]
 
 [[package]]
 name = "slab"

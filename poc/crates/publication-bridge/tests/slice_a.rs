@@ -423,3 +423,5 @@ fn fixture() -> (CheckedSetup, FixtureReader, RegionalResult) {
     };
     (setup, reader, result)
 }
+
+mod b_cases;

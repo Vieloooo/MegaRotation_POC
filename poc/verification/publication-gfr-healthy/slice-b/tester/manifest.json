@@ -1,0 +1,254 @@
+{
+  "candidate": "d289066082e0b89964e16653360a5c72356142f8",
+  "commands": [
+    {
+      "actual_exit": 101,
+      "command": "flock -x -w 60 -E 75 /tmp/megaroation-poc-heavy.lock timeout --kill-after=5s 180s cargo test --locked --offline --manifest-path poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.toml -- --test-threads=1",
+      "expected_exit": 101,
+      "label": "a-original",
+      "local_wall_elapsed_seconds": "0.086185",
+      "stderr": "a-original.stderr",
+      "stdout": "a-original.stdout",
+      "timed_out": false
+    },
+    {
+      "actual_exit": 0,
+      "command": "flock -x -w 60 -E 75 /tmp/megaroation-poc-heavy.lock timeout --kill-after=5s 180s cargo update --workspace --offline --manifest-path poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.toml",
+      "expected_exit": 0,
+      "label": "a-lock",
+      "local_wall_elapsed_seconds": "0.425063",
+      "stderr": "a-lock.stderr",
+      "stdout": "a-lock.stdout",
+      "timed_out": false
+    },
+    {
+      "actual_exit": 0,
+      "binaries_sha256": {
+        ".build/target/debug/deps/core-262479bdb4efde3c": "9210b3c3b1ae39a26c4fce2c5f8495188a2987c6f39a15ccfd610f6620a54885",
+        ".build/target/debug/deps/credits-6799348066748216": "7812b618e4d896e04c569ae7c175ad9b4cbbb5e7afa11722576e2549634040c6",
+        ".build/target/debug/deps/reassembly-905db51e8d98cb18": "65397696d93f2e01a7908347b35c8eca00d15a844f693f490b50a9a52c39a23f",
+        ".build/target/debug/deps/route_fixture-e1d54f92f88e6f6e": "faca13edc8551588b8548a9888765ea276eb4ce119bb453748fe905165a4a1a1",
+        ".build/target/debug/deps/services-fb375fbb1a22fe30": "a1f8785290f8598df1c58455f9144772c190f52de9466625f8d74797e3cdf9e2"
+      },
+      "cargo_lock_sha256": "8fa606d9c3f6746add91ac9f7d5410856e093870100f63029021a5c388cc6dee",
+      "command": "flock -x -w 60 -E 75 /tmp/megaroation-poc-heavy.lock timeout --kill-after=5s 180s cargo test --locked --offline --manifest-path poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.toml -- --test-threads=1",
+      "expected_exit": 0,
+      "label": "b",
+      "local_wall_elapsed_seconds": "106.283133",
+      "stderr": "b.stderr",
+      "stdout": "b.stdout",
+      "tests": [
+        "backward_record_cannot_reopen_closed_scope",
+        "close_before_offer_and_failed_receipt_do_not_create_or_erase_scope",
+        "complete_record_identity_keeps_empty_and_same_pc_lifecycle_members",
+        "exact_fragment_literal_and_capacity_boundaries",
+        "exact_parameters_checked_before_duplicate_identity_and_restore",
+        "forged_same_key_scope_rejects_before_touching_legitimate_open_task",
+        "record_source_profile_and_config_are_not_interchangeable",
+        "same_position_different_sealed_record_conflicts",
+        "stale_and_cross_instance_plans_reject_without_rollback",
+        "charge_and_release_require_matching_owner_outcomes",
+        "limits_and_shared_unavailability_leave_credit_unchanged",
+        "stale_cross_instance_and_missing_ack_do_not_free_existing_budget",
+        "reader_prefix_still_waits_for_earlier_complete_object",
+        "reverse_and_duplicate_actual_deliveries_complete_once",
+        "third_incomplete_destination_object_is_bounded_without_losing_first",
+        "unregistered_delivery_and_same_binding_changed_digest_reject",
+        "custody_requires_registered_receipts_then_public_proof_and_body_complete_separately",
+        "custody_stale_cross_instance_and_finalization_conflicts_preserve_pending_intents",
+        "watermark_requires_verified_task_exact_parameters_and_source_reader"
+      ],
+      "tests_passed": 19,
+      "timed_out": false
+    },
+    {
+      "actual_exit": 0,
+      "binaries_sha256": {
+        ".build/target/debug/deps/slice_a-f5670a04f46cf37c": "4c9810bd4c5ee0f86639de1ebcc151aee294997cea15d0b22ad7048e30502cfd"
+      },
+      "cargo_lock_sha256": "8f989a26f39618d4bfc5722736f3880c9647b910a6f99a459f0abe4e21c07a5c",
+      "command": "flock -x -w 60 -E 75 /tmp/megaroation-poc-heavy.lock timeout --kill-after=5s 180s cargo test --locked --offline --manifest-path poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.toml -- --test-threads=1",
+      "expected_exit": 0,
+      "label": "a-regression",
+      "local_wall_elapsed_seconds": "77.080456",
+      "stderr": "a-regression.stderr",
+      "stdout": "a-regression.stdout",
+      "tests": [
+        "bounds_rerender_and_tail_contradiction_are_not_silently_normalized",
+        "full_offer_partial_storage_and_real_file_receipt_preserve_one_task",
+        "independent_private_wire_literals_and_negatives",
+        "invalid_proof_then_valid_variants_do_not_poison_later_completeness",
+        "missing_basis_precedes_boolean_checker_and_profile_mismatch_rejects",
+        "offer_waits_for_actual_l1_inputs_then_uses_merge",
+        "production_fixture_profile_rejected_and_context_failure_preserved",
+        "public_cut_excludes_future_bodies_and_preserves_original_positions",
+        "recorded_before_selection_and_g_unchanged",
+        "recorded_waits_for_later_valid_proof_without_poisoning_task",
+        "sealed_internal_gfr_cache_can_advance_empty_q_without_optional_binding",
+        "source_hole_is_not_public_incompleteness",
+        "valid_synthetic_proof_does_not_bypass_bad_execution_root",
+        "wrong_source_or_reader_never_records"
+      ],
+      "tests_passed": 14,
+      "timed_out": false
+    },
+    {
+      "actual_exit": 0,
+      "command": "python3 -B /home/jy/.codex/worktrees/1e2f/megaroation_poc/poc/verification/publication-gfr-healthy/slice-b/tester/check-vectors.py",
+      "expected_exit": 0,
+      "label": "vectors",
+      "local_wall_elapsed_seconds": "0.045762",
+      "stderr": "vectors.stderr",
+      "stdout": "vectors.stdout",
+      "timed_out": false
+    }
+  ],
+  "contract": "H3-B-1",
+  "environment": {
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_HOME": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/.build/cargo",
+    "CARGO_TARGET_DIR": "/home/jy/.codex/worktrees/1e2f/megaroation_poc/.build/target",
+    "PATH": "/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/home/jy/.local/codex-proxy/bin:/home/jy/.local/bin:/home/jy/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/usr/local/cuda/bin:/home/jy/.pyenv/shims:/home/jy/.pyenv/bin:/home/jy/.cargo/bin:/home/jy/miniconda3/bin:/home/jy/miniconda3/condabin:/home/jy/.local/bin:/home/jy/bin:/home/jy/.local/bin:/home/jy/.codex/tmp/arg0-linux/codex-arg0VTanO3:/home/jy/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/home/jy/.codex/tmp/arg0-linux/codex-arg0s630lS:/home/jy/.codex/packages/app-server-daemon/releases/0.168.0-x86_64-unknown-linux-musl/codex-path:/home/jy/.codex/tmp/arg0-linux/codex-arg04JowK1:/home/jy/.codex/packages/app-server-daemon/releases/0.167.2-x86_64-unknown-linux-musl/codex-path:/home/jy/.codex/tmp/arg0-linux/codex-arg0XDtkHz:/home/jy/.codex/packages/app-server-daemon/releases/0.167.1-x86_64-unknown-linux-musl/codex-path:/home/jy/.codex/tmp/arg0-linux/codex-arg0leb73u:/home/jy/.codex/packages/app-server-daemon/releases/0.167.0-x86_64-unknown-linux-musl/codex-path:/home/jy/.codex/tmp/arg0-linux/codex-arg0FOxjg1:/home/jy/.local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/jy/bin:/home/jy/.local/bin:/home/jy/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/jy/.foundry/bin:/~/.cargo/bin:/home/jy/cmake-3.31.3-linux-x86_64/bin:/usr/local/go/bin:/home/jy/gurobi_optimizer/gurobi1301/linux64/bin"
+  },
+  "hashed_inputs": 144,
+  "incomplete_cases": [],
+  "older_capture_manifests_verified": {
+    "h3-a-e59d026-acceptance-v1": "4d32a56fc24e1217b97de73854dbc0f2c65bdc7f7d5ab63bf898d42a6551aa95",
+    "h3-c-bca02b-acceptance-v1": "e70e784b8666ee000779a22597b86c9d24b5d9b8035c81bacb04d052f5a57a9e"
+  },
+  "open_gates": [
+    "Actual H1 root/aux and controlled grant/Ack integration",
+    "Genuine Native certificates and historical context",
+    "H2 action application",
+    "Healthy 15-worker M1"
+  ],
+  "profiles": {
+    "finality_context_owner_ports": "explicitly synthetic",
+    "fixed_fixture_route_seed": 7,
+    "public_source": "SimEspresso fixtures",
+    "real_network_measurements": null,
+    "route_profile": "20 \u00b5s modeled link latency, service6 \u2192 reader1, channel7",
+    "stochastic_matrix": null
+  },
+  "raw_artifact_directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/07/artifacts/simulation/h3-b-d289066-acceptance-v1",
+  "raw_file_sha256": {
+    "a-lock.command": "f1f7d33cf8ba6d08c99b0abecbee04e91ec9d7631b7436db14c7d1ddc089da0e",
+    "a-lock.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "a-lock.local-wall": "9c50efbdd78dddebb48de53e675e2f9077bdef32366cb4731b730012ce45b8d0",
+    "a-lock.lock.sha256": "6b371a413d0ecdf890e7aa2d84b3a34369726f200c8bc7507a5822dd8066b70a",
+    "a-lock.revision-after": "83322f0d2affdec2e49daf117ef3574676dc20b3f9ad13d7be85cb7e6bc58104",
+    "a-lock.revision-before": "691d08c6fef2c2400f5a6cacec3055ec18ac914655a6bc8891f2b1999e63ae49",
+    "a-lock.stderr": "cbc337213ba9e437696e75e94f3a01ba80c7a1d3e0cc40315d91cdedea94b8eb",
+    "a-lock.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "a-original.command": "cb65db9d3384c03ceb4969bbfccfdf2a8c6bf5e49f3e65f7f94296e04be2f2a8",
+    "a-original.exit": "39b8dc3fc8b44765c8e6f1adee04c5b465e555ab791cc42d0d9e810d5b64297c",
+    "a-original.local-wall": "54a542bc68f2b620e2a748efd7a8abab43c8d326086d292597287a0561bda020",
+    "a-original.lock.sha256": "f21eb0da9eb7253a286dc18c532447f552a7ecc1009679cedd51364958729e71",
+    "a-original.revision-after": "691d08c6fef2c2400f5a6cacec3055ec18ac914655a6bc8891f2b1999e63ae49",
+    "a-original.revision-before": "691d08c6fef2c2400f5a6cacec3055ec18ac914655a6bc8891f2b1999e63ae49",
+    "a-original.stderr": "794e555236aa6fb026c320b02bb11decd1e36887c71454ec5766ea9e7f80ccd2",
+    "a-original.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "a-regression.binary.sha256": "e4da6fc8bc398917cb4077b3d4fab9602ee94357cbd9daf9ebf9b2d0383cedd1",
+    "a-regression.command": "cb65db9d3384c03ceb4969bbfccfdf2a8c6bf5e49f3e65f7f94296e04be2f2a8",
+    "a-regression.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "a-regression.local-wall": "6db0cf769e90141b18ffc1f2f96aaa8335f0ee23d414d9a83d1bde02a1127520",
+    "a-regression.lock.sha256": "6b371a413d0ecdf890e7aa2d84b3a34369726f200c8bc7507a5822dd8066b70a",
+    "a-regression.revision-after": "9fa179cdcad764960c57e13aa795a68b9ed8facebbe09ede88c4883be5799b6e",
+    "a-regression.revision-before": "83322f0d2affdec2e49daf117ef3574676dc20b3f9ad13d7be85cb7e6bc58104",
+    "a-regression.stderr": "2dc019e91644e044826b094fb0fd1c38c30ce47d77fd98d340c74e36fd2975d7",
+    "a-regression.stdout": "8669f0d2ceab6ce6254b82e65e2be4d0f092dd3f4744f751c935330e611bd645",
+    "b.binary.sha256": "486c07c992b431d75ac54b63b5e42de3bd7e6a770a2eaaf4e92aa8aaed1b332b",
+    "b.command": "3ba190ba14ce47664c92c5ec0f5360e29a4ed146da8d3656789ec774da32afdc",
+    "b.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "b.local-wall": "028b881e8a6f3ab74a1fe9c4e5e253608cf1a6c2212f4c093c1a85d4f685b9d9",
+    "b.lock.sha256": "8525cd0bd4323d563673def0dd5a397b8a44fbd740b8022c84118ca2131be5f0",
+    "b.revision-after": "83322f0d2affdec2e49daf117ef3574676dc20b3f9ad13d7be85cb7e6bc58104",
+    "b.revision-before": "83322f0d2affdec2e49daf117ef3574676dc20b3f9ad13d7be85cb7e6bc58104",
+    "b.stderr": "89ffa80fcc04c77fbdc7c9ba396f85b96894d2a49d3c1dda6f2d4ee6843dc829",
+    "b.stdout": "60127ee146c2e18d3577a9669d0d12f63f5c0f50c4269657c0b04788d74fa53e",
+    "cargo-version.txt": "c10ec31b8c6e6e2693cf65fc1971b41edbc3da1ae7db6f9f3f36c4823f8dcab5",
+    "environment.txt": "818b19ceccaf1c6668446aea4bed71fc87cb3a1d6c5a775c2673d148aaa5e73d",
+    "flock-version.txt": "b9647d7992ef9f6bd9f2496e599e132b6f0e20177948585ebe7aa68d0c6e607a",
+    "python-version.txt": "e55cc531440b2fc2f0cb402829c0ffd3a4729acd95a238badab9b8be261070c6",
+    "revision.after": "9fa179cdcad764960c57e13aa795a68b9ed8facebbe09ede88c4883be5799b6e",
+    "revision.before": "691d08c6fef2c2400f5a6cacec3055ec18ac914655a6bc8891f2b1999e63ae49",
+    "rustc-version.txt": "4fdff2578428e9c5c08ddd7a0d3079c1a106b1cdaa46e73e46f7cd32b0fb9cad",
+    "slice-a.lock.diff": "161a92ed4eea6c2ebd4bfcc603bb479e727521e7d8f7a99dc549e88ea2794536",
+    "slice-a.lock.original": "27fa993956b33e3afdf8e9647ca1619159e9d8b4486f03a046343a83c5add118",
+    "slice-a.lock.resolved": "8f989a26f39618d4bfc5722736f3880c9647b910a6f99a459f0abe4e21c07a5c",
+    "sources.after": "6165f42c5fcbc35774502c6139b6130523bea2e178c2bfb458ee64ccda48c794",
+    "sources.before": "329bfbb4870703c39364f9e0f45bbd4210fecc3209d14d915c4b6121a92e3502",
+    "vectors.command": "6bc910f0c571a05bc2f6e842a377c9fb450fa7b40924af0ab0acc817352ddcf1",
+    "vectors.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "vectors.local-wall": "46a674d6b7cad9286f0026e5e068f5d32bd1930d1626d7a12bd1375083191b12",
+    "vectors.revision-after": "9fa179cdcad764960c57e13aa795a68b9ed8facebbe09ede88c4883be5799b6e",
+    "vectors.revision-before": "9fa179cdcad764960c57e13aa795a68b9ed8facebbe09ede88c4883be5799b6e",
+    "vectors.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vectors.stdout": "37743173536ed9ca67f3c5e101f689005fff0541f3c1d22bf57ef943f3825423"
+  },
+  "revision_after": {
+    "branch": "codex/h3-publication-gfr",
+    "head": "d289066082e0b89964e16653360a5c72356142f8",
+    "status": [
+      " M poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.lock",
+      "?? poc/docs/h3-healthy-api-consumption-map-v1.md",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.lock",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.toml",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/README.md",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/pre-run-adapter-corrections.json",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/preparation-freeze.json",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/core.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/credits.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/reassembly.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/route_fixture.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/services.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/tester/check-vectors.py",
+      "?? poc/verification/publication-gfr-healthy/slice-b/tester/run.sh"
+    ]
+  },
+  "revision_before": {
+    "branch": "codex/h3-publication-gfr",
+    "head": "d289066082e0b89964e16653360a5c72356142f8",
+    "status": [
+      "?? poc/docs/h3-healthy-api-consumption-map-v1.md",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.lock",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/Cargo.toml",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/README.md",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/pre-run-adapter-corrections.json",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/preparation-freeze.json",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/core.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/credits.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/reassembly.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/route_fixture.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/independent-harness/tests/services.rs",
+      "?? poc/verification/publication-gfr-healthy/slice-b/tester/run.sh"
+    ]
+  },
+  "runner_files_sha256": {
+    "check-vectors.py": "8f8c8528b62d01a550251628c47098d23fd642b63e6bd1c80f391011fa193b1c",
+    "run.sh": "507445167c2ebc85dea3e46fe0b876165a6847fd4a3ac80f5200cfed7ac0b6cb"
+  },
+  "source_diff": {
+    "poc/verification/publication-gfr-healthy/slice-a/independent-harness/Cargo.lock": {
+      "authorized_changes": "Only local sim-transport package and poc-publication-bridge dependency edge in A test harness lock",
+      "original_sha256": "27fa993956b33e3afdf8e9647ca1619159e9d8b4486f03a046343a83c5add118",
+      "resolved_sha256": "8f989a26f39618d4bfc5722736f3880c9647b910a6f99a459f0abe4e21c07a5c"
+    }
+  },
+  "timeouts": [],
+  "tools": {
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "flock": "flock from util-linux 2.37.2",
+    "python": "Python 3.12.8",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.95.0\nLLVM version: 22.1.2"
+  },
+  "vector_groups": [
+    "record IDs and projections",
+    "submission and finalized bindings",
+    "transport frame and segmentation",
+    "exact parameter equality",
+    "descriptor scope derivation"
+  ],
+  "verdict": "PASS",
+  "worktree": "/home/jy/.codex/worktrees/1e2f/megaroation_poc"
+}
