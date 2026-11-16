@@ -32,7 +32,7 @@ Builder在上述冻结基线上进行接口工作树检查：Rust/Cargo1.95.0，
 ```sh
 export PATH="/mnt/reth/jy/regional_BFT_sim/.tooling/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:$PATH"
 export CARGO_HOME="$PWD/.build/cargo"
-export CARGO_TARGET_DIR="$PWD/.build/target"
+export CARGO_TARGET_DIR="$PWD/.build/target/derivation"
 export CARGO_BUILD_JOBS=2
 flock /tmp/megaroation-poc-heavy.lock cargo check --locked --offline \
   --manifest-path poc/crates/derivation/Cargo.toml
@@ -46,3 +46,17 @@ python3 poc/verification/derivation/independent_reference.py --check
 ## 后续验收
 
 阶段A继续无batch fallback、前序接纳WAIT、真实09同区块多RESUME、D-ahead切面、whole-marker原子性、checkpoint验证。11精确接口SHA尚未交付；真实payload/DA/批次执行与substitution属于阶段B。13恢复策略及受控runtime接线保持开放；组件里程碑不增加完整accepted功能计数。
+
+已只读核对总协调修订 `0c15aac` 和功能handoff修订 `32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77`，以及源checkout的 `poc/docs/commander/restart-free-handoff-track-20261116.md`。D/fallback/cut无需等待BFT同cid进程恢复；本合同原先即未施加该门禁。批次延迟/暂停、实际Batcher crash和BFT进程恢复分别报告；D的checkpoint重放不代表后两种恢复。没有为读取通知覆盖工作树或修改其他owner路径。
+
+## 11 接入所需字段与不变量
+
+此清单提出消费者需求，不另定义编码，待11准确接口提交后冻结阶段B适配。
+
+1. 已接纳输入必须绑定09实际finalized `CursorAdvanced` 的 `(block,tx,log)`、block/transaction hash、既有 `BatchWire` 与commitment；保留实际inclusion，下载时刻不参与窗口判断。
+2. 11提供commitment校验后的唯一typed frame/record接口，明确1–2条记录的wire顺序、连续height及first/last绑定；D不能通过任意本地bytes或bool补齐该能力。
+3. 每条记录需有03 `Metadata` 的height/timestamp/origin和源Kept普通交易规范字节。D按自身实际parent重新生成DEP并执行；源parent/epoch hash若在线格式中存在，仅保留为证据，不用于选择D parent或canonical L1。
+4. 区分缺数据/commitment不符而保持原位置WAIT、已取得并认证字节的格式失败，以及成功解码。具体失败分类以固定来源和11接口联合冻结，不将缺数据转成空batch。
+5. 提供同frame剩余记录的确定性顺序及可重放依据；发生同高度替代后，下一条必须针对新的实际D parent重新检查。checkpoint与历史cut需要可重复取得此前实际接纳的相同输入。
+
+接口提交 `3b1b34fce6f3a3bac5099d53bdf5f7df56079f80` 经独立Verifier只读检查，无实现前阻断问题；范围仅类型、配置、窗口谓词及位置语义，未宣称实现验收。后续源码候选与正式结果另行记录。
