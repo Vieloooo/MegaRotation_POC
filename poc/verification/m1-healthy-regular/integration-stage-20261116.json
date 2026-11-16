@@ -1,0 +1,148 @@
+{
+  "schema": "M1-INTEGRATION-STAGE-1",
+  "date": "2026-11-16",
+  "timezone": "Asia/Shanghai",
+  "worktree": "/home/jy/.codex/worktrees/5d7a/megaroation_poc",
+  "branch": "codex/poc-m1-regular",
+  "last_tested_integration": "012bb0b7d9efe5bd22ec544321eed8c12219b9d8",
+  "m0": "35d382ac445cc8bc779f0d18fd23cb57e54680da",
+  "main_observed": "35d382ac445cc8bc779f0d18fd23cb57e54680da",
+  "main_update_attempted": false,
+  "m1_status": "NOT_RUN",
+  "accepted_scope": [
+    "mechanical harness",
+    "H2 trusted-input pure reducer",
+    "H3 Slice A shared completeness/publication adapter with synthetic injected proof tests"
+  ],
+  "releases": {
+    "dispatch": {
+      "source": "d55d39f73593676325bdc0fbb7ba3845ca93025f",
+      "consumed": "daebb514d4bf1ea596b828e320257bf54b68ceaa"
+    },
+    "h2": {
+      "delivery": "b639076fb50f5fcbc06e309f67b1fb6125697242",
+      "owner_tested": "2340f9c1c8cbc3bc4be57a5c18f884cc74390563",
+      "merge": "f9220e7811b42fe137a96f93143b38246d201565"
+    },
+    "h3_slice_a": {
+      "delivery": "f0ad79e33933f23eb527af62c6bc5096a77844fb",
+      "owner_tested": "e59d026e8c08b64ff744b57c63cc7756f0b34019",
+      "merge": "012bb0b7d9efe5bd22ec544321eed8c12219b9d8"
+    }
+  },
+  "harness": {
+    "freeze": "3f4b671224c0b68bbd2ede40934822c33eafcbe8",
+    "failed_candidate": "5c978db105d52e8df3b7f5104175e0552a37263c",
+    "verified_candidate": "1ade576f2312a75c3b9652eb8147d47d0ad6cb09",
+    "independent_commands": 101,
+    "tester_tests": 12
+  },
+  "final_integration_results": {
+    "h2_component": 8,
+    "h2_independent": 27,
+    "h3_independent": 14,
+    "gfr_codec_capacity": 167,
+    "gfr_rules": 117,
+    "gfr_fixture_replays": 4,
+    "fixture_replay_seed": 42,
+    "fixture_wall_pauses_ms": [
+      0,
+      2
+    ],
+    "timeouts": 0,
+    "status": "PASS_FOR_SCOPED_COMPONENT_AND_FIXTURE_CHECKS"
+  },
+  "system_matrix": {
+    "required_runs": 24,
+    "executed_runs": 0,
+    "status": "NOT_RUN",
+    "seeds": [
+      7,
+      42,
+      99
+    ],
+    "start_orders": [
+      "forward",
+      "reverse"
+    ],
+    "wall_pauses_ms": [
+      0,
+      2
+    ]
+  },
+  "protocol_workers_started": 0,
+  "official_nodes_started": 0,
+  "ports_not_ready": [
+    "h1.runtime",
+    "h1.session",
+    "h2.manager",
+    "h3.bridge",
+    "h3.official_artifact",
+    "oracle.protocol"
+  ],
+  "missing_runtime_materials": [
+    "reviewed typed API/runtime binding",
+    "real durable receipts/controlled grant-Ack",
+    "complete publication/lifecycle transport",
+    "actual-run fixtures/workload/profile/schedule",
+    "independent native crypto/execution/public replay oracle",
+    "actual M1 result bytes for official readback"
+  ],
+  "pins": {
+    "regional_bft": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+    "rust": "1.95.0",
+    "commonware": "2026.10.0"
+  },
+  "reports": [
+    {
+      "path": "poc/verification/m1-healthy-regular/candidate-review-5c978db.md",
+      "sha256": "55c8923c2cf2f945063e01f6357d71bf9f8bf873358f141d2191b980c43b65a4"
+    },
+    {
+      "path": "poc/verification/m1-healthy-regular/candidate-review-1ade576.md",
+      "sha256": "a6760370c26e0718e2df45fff272fcd16eda68fa69893cc7f72005a247592dfa"
+    },
+    {
+      "path": "poc/verification/m1-healthy-regular/integration-review-f9220e.md",
+      "sha256": "055f7d721a83c953449d2b7016b1a184eb4e5e36d9e5ce69639599ee3c0941ab"
+    },
+    {
+      "path": "poc/verification/m1-healthy-regular/integration-review-012bb0.md",
+      "sha256": "f514bb5db1614f8b6d1047b216965417668a5f83a21945f4274921bdc1132c75"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/verification-5c978db-first/artifact-seal.json",
+      "bytes": 478737,
+      "sha256": "cef347b1bea3e9de356e0a8b6e04467199e0e61ac3e79a8403cf68abca0c3476"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/verification-1ade576-final/artifact-seal.json",
+      "bytes": 852280,
+      "sha256": "6b2e7002377f81d7b29cc4e64c13a9a86d0dda6efcb32308cc7becfd4dbe4033"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/mechanical-1ade576-run01/artifact-manifest.json",
+      "bytes": 34824,
+      "sha256": "3ac3a3b2f21f9636a018f601763b3c374ecff582fc6a47460edfb9c50a877870"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/integration-f9220e-h2-run01/artifact-manifest.json",
+      "bytes": 45243,
+      "sha256": "cea4fd7fae02c1d94491d372d724219cd05bda61ae23c0fd8f888ba7d0f32a1b"
+    },
+    {
+      "path": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/m1-regular/artifacts/integration-012bb0-h2-h3a-run01/artifact-manifest.json",
+      "bytes": 64480,
+      "sha256": "14361527ec6913f10a157bf31d5acbfee3610488e5211756576e021013b301ad"
+    }
+  ],
+  "limits": [
+    "Not a 15-worker run or native cryptographic verification",
+    "No official QC/VID verification or PE timing claim",
+    "M1 R2-first-G endpoint not reached",
+    "No main CAS/push/deploy",
+    "Force, BFT OS restart, DA/D/RESUME and Web outside this stage"
+  ]
+}
