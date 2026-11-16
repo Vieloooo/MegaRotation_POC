@@ -1,0 +1,590 @@
+{
+  "attempts": [
+    {
+      "candidate_disposition": {
+        "G_API": "INCONCLUSIVE",
+        "G_CRYPTO": "outside declared profile",
+        "G_PE_TIMING": "UNSUPPORTED",
+        "G_REPLAY": "INCONCLUSIVE for official record"
+      },
+      "commands": [
+        "flock -w 600 /tmp/megaroation-poc-heavy.lock cargo test --manifest-path poc/crates/espresso-compatibility/Cargo.toml --locked --offline -- --test-threads=1",
+        "poc/scenarios/espresso-compatibility/run-local.sh ec16-official-8750535-run01 8750535d8f02e920353c1ca827c78046e72d578a",
+        "/usr/bin/python3 poc/verification/espresso-compatibility/check_capture.py --vectors poc/verification/espresso-compatibility/vectors-v1.json --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-8750535-run01-tester/vectors-oracle.json"
+      ],
+      "configured_reasoning_effort": "high",
+      "crate_tests": {
+        "count": 8,
+        "status": "PASS",
+        "test_harness_wall_seconds": 27.92
+      },
+      "evidence": [
+        {
+          "directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-8750535-run01",
+          "files": 21,
+          "manifest": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-8750535-run01/SHA256SUMS",
+          "manifest_sha256": "427e4f883c0f2f8cbaf718e00b2e15b0c132003cab916f2c0c0ca2b78ebfe814"
+        },
+        {
+          "directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-8750535-run01-tester",
+          "files": 15,
+          "manifest": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-8750535-run01-tester/SHA256SUMS",
+          "manifest_sha256": "28e69eaf0c9cc88384a5a3d0b3ef0782cd986fdbdbe3650541b6277f3f0f2dac"
+        }
+      ],
+      "frozen_vectors": {
+        "count": 5,
+        "status": "PASS"
+      },
+      "git_candidate": "8750535d8f02e920353c1ca827c78046e72d578a",
+      "official_run": {
+        "cause": "Default network configuration calls Anvil::spawn before applying explicit --rpc-url; sanitized child PATH provides no anvil executable.",
+        "detail": "owned process espresso exited early with status 101",
+        "exit": 1,
+        "pinned_source": "fd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171",
+        "source_location": "crates/espresso/node/src/lib.rs:1514-1516",
+        "status": "INCOMPLETE",
+        "wall_seconds_including_lock_wait": 27.82
+      },
+      "official_run_raw_oracle": {
+        "detail": "official process exited before genesis capture",
+        "status": "INCONCLUSIVE"
+      },
+      "reasoning_effort_runtime_visibility": "role config only",
+      "result_sha256": "4a02f56bee7a65a31fdea822a126925a112302414af969c7bb2ad8ca94f5a525",
+      "run_id": "ec16-official-8750535-run01",
+      "runtime_model": "gpt-6.1-sol",
+      "seed": null
+    },
+    {
+      "candidate_sha": "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+      "commands": [
+        "flock -w 600 /tmp/megaroation-poc-heavy.lock cargo test --manifest-path poc/crates/espresso-compatibility/Cargo.toml --locked --offline -- --test-threads=1",
+        "poc/scenarios/espresso-compatibility/run-local.sh ec16-official-6248072-run02 6248072b3fd0eee1ae468f0961a4d3589291cba6",
+        "/usr/bin/python3 poc/verification/espresso-compatibility/check_capture.py --vectors poc/verification/espresso-compatibility/vectors-v1.json --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/vectors-oracle.json ",
+        "/usr/bin/python3 poc/verification/espresso-compatibility/check_capture.py /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle --candidate 6248072b3fd0eee1ae468f0961a4d3589291cba6 --reader first --audit-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first/public-audit.bin --projection-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first/public-projection.json --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/offline-first-oracle.json ",
+        "/usr/bin/python3 poc/verification/espresso-compatibility/check_capture.py /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle --candidate 6248072b3fd0eee1ae468f0961a4d3589291cba6 --reader first --audit-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first-delayed/public-audit.bin --projection-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first-delayed/public-projection.json --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/offline-first-delayed-oracle.json ",
+        "/usr/bin/python3 poc/verification/espresso-compatibility/check_capture.py /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle --candidate 6248072b3fd0eee1ae468f0961a4d3589291cba6 --reader requery --audit-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-requery/public-audit.bin --projection-file /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-requery/public-projection.json --output /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/offline-requery-oracle.json ",
+        "/usr/bin/python3 /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/summarize-observations.py /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02 /mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester"
+      ],
+      "evidence": [
+        {
+          "directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02",
+          "files": 116,
+          "manifest": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/SHA256SUMS",
+          "manifest_sha256": "a983c8a2d8c70de3a0064b9614a08892f382feddca5795ec3062ae210153a88e"
+        },
+        {
+          "directory": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester",
+          "files": 27,
+          "manifest": "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02-tester/SHA256SUMS",
+          "manifest_sha256": "d6702d85e80d2bdc159c5f84fbe6a645258801072318436f41384ce4c5b0d599"
+        }
+      ],
+      "fixture_tests": {
+        "command_wall_seconds": 24.28,
+        "count": 8,
+        "harness_wall_seconds": 24.14,
+        "status": "PASS"
+      },
+      "independent_reports": {
+        "offline-first": {
+          "audit_bytes": 889,
+          "basis": "independent raw payload/list and audit consistency; trusted local API; no QC/VID verification",
+          "bundle_unique_bytes": 235726,
+          "capture_kind": "official",
+          "complete_blocks": 6,
+          "manifest_sha256": "08bdc1aec6b5735df90ab3ceeab7a6fe13868fd0dc8212c78158ddbf2fe61dfb",
+          "native_transactions": 2,
+          "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+          "publications": [
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 0
+                }
+              ],
+              "record_id": 19,
+              "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+            },
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a423a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 1
+                }
+              ],
+              "record_id": 20,
+              "transaction_hash": "TX~aXSr8Y71groRBWO4EFG64gt07CBoYPWAeQAblMSWH15_"
+            },
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 0
+                }
+              ],
+              "record_id": 21,
+              "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+            }
+          ],
+          "raw_payload_cross_checks": 6,
+          "reader_id": "first",
+          "repeated_public_responses": 0,
+          "source_id": "EC16:13c2cc6d232444486b12122cca75024fd4d52d6a1793e95f197ac3d506fe3540",
+          "status": "PASS",
+          "tip": 5,
+          "unavailable_records": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            57
+          ]
+        },
+        "offline-first-delayed": {
+          "audit_bytes": 889,
+          "basis": "independent raw payload/list and audit consistency; trusted local API; no QC/VID verification",
+          "bundle_unique_bytes": 235726,
+          "capture_kind": "official",
+          "complete_blocks": 6,
+          "manifest_sha256": "08bdc1aec6b5735df90ab3ceeab7a6fe13868fd0dc8212c78158ddbf2fe61dfb",
+          "native_transactions": 2,
+          "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+          "publications": [
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 0
+                }
+              ],
+              "record_id": 19,
+              "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+            },
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a423a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 1
+                }
+              ],
+              "record_id": 20,
+              "transaction_hash": "TX~aXSr8Y71groRBWO4EFG64gt07CBoYPWAeQAblMSWH15_"
+            },
+            {
+              "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+              "positions": [
+                {
+                  "q": 5,
+                  "source_transaction_index": 0
+                }
+              ],
+              "record_id": 21,
+              "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+            }
+          ],
+          "raw_payload_cross_checks": 6,
+          "reader_id": "first",
+          "repeated_public_responses": 0,
+          "source_id": "EC16:13c2cc6d232444486b12122cca75024fd4d52d6a1793e95f197ac3d506fe3540",
+          "status": "PASS",
+          "tip": 5,
+          "unavailable_records": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            57
+          ]
+        },
+        "offline-requery": {
+          "audit_bytes": 889,
+          "basis": "independent raw payload/list and audit consistency; trusted local API; no QC/VID verification",
+          "bundle_unique_bytes": 235726,
+          "capture_kind": "official",
+          "complete_blocks": 6,
+          "manifest_sha256": "08bdc1aec6b5735df90ab3ceeab7a6fe13868fd0dc8212c78158ddbf2fe61dfb",
+          "native_transactions": 2,
+          "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+          "publications": [],
+          "raw_payload_cross_checks": 6,
+          "reader_id": "requery",
+          "repeated_public_responses": 0,
+          "source_id": "EC16:13c2cc6d232444486b12122cca75024fd4d52d6a1793e95f197ac3d506fe3540",
+          "status": "PASS",
+          "tip": 5,
+          "unavailable_records": []
+        }
+      },
+      "independent_vectors": {
+        "final_public_sha256": "98a1a83ae5f930ef101e6babcec2a28475c855d94c48f9ecf759e5ff3b4c6f39",
+        "frozen_prefix_vectors": 5,
+        "source_id": "EC16:c3e6b516cf687dbc813d30c0363c2d428f1fec992b6e806edc147ae007cfeac6",
+        "status": "PASS"
+      },
+      "official_observations": {
+        "bootstrap_anvil": {
+          "argv": [
+            "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bin/anvil",
+            "-p",
+            "0",
+            "--slots-in-an-epoch",
+            "0",
+            "--balance",
+            "1000000"
+          ],
+          "artifact": "bootstrap-anvil-10-517771399.json",
+          "bootstrap_assigned_port": "Unobserved",
+          "bootstrap_exit_status": "Unobserved",
+          "cleanup": {
+            "checked_after_owned_parent_wait": true,
+            "leftover_namespace_pids": []
+          },
+          "dedicated_l1": {
+            "chain_id": 31337,
+            "light_client_address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+            "mode": "dedicated Anvil",
+            "url": "http://127.0.0.1:18775"
+          },
+          "dedicated_l1_chain_id_record": 1,
+          "direct_process_exit": {
+            "anvil": {
+              "namespace_pid": 3,
+              "returncode": 0
+            },
+            "espresso": {
+              "namespace_pid": 7,
+              "returncode": 0
+            }
+          },
+          "exec_argv": [
+            "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/setup/official-20260918/native/lib/ld-linux-x86-64.so.2",
+            "--library-path",
+            "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/setup/official-20260918/native/lib",
+            "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/setup/official-20260918/native/anvil",
+            "-p",
+            "0",
+            "--slots-in-an-epoch",
+            "0",
+            "--balance",
+            "1000000"
+          ],
+          "namespace_pid": 10,
+          "namespace_ppid": 7,
+          "port_args": [
+            [
+              "-p",
+              "0"
+            ]
+          ],
+          "start_ticks": 517771399
+        },
+        "bundle_unique_bytes": 235726,
+        "candidate_sha": "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+        "capture_manifest_sha256": "08bdc1aec6b5735df90ab3ceeab7a6fe13868fd0dc8212c78158ddbf2fe61dfb",
+        "configured_reasoning_effort": "high",
+        "exact_repeat_publication_positions": [
+          {
+            "q": 5,
+            "source_transaction_index": 0
+          }
+        ],
+        "gate_status": {
+          "G_API": "PASS",
+          "G_CRYPTO": "OUTSIDE_DECLARED_PROFILE",
+          "G_ENV": "PASS_NATIVE_LOOPBACK",
+          "G_PE_TIMING": "UNSUPPORTED",
+          "G_REPLAY": "PASS"
+        },
+        "genesis_block_hash": "BLOCK~sB00vV70LzX8IOk1r5YHkzJamfBZ2E9vGwd_JuFMQ7Bm",
+        "http_requests_by_reader": {
+          "first": 58,
+          "requery": 14
+        },
+        "http_status_counts": {
+          "200": 66,
+          "404": 1,
+          "None": 5
+        },
+        "independent_audit_bytes": 889,
+        "local_capture_http_window_seconds": 13.187105698,
+        "missing_probe": {
+          "endpoint": "/v1/availability/transaction/0/0/noproof",
+          "http_status": 404,
+          "record_id": 57
+        },
+        "official_raw_oracles": 3,
+        "original_publication_positions": [
+          [
+            {
+              "q": 5,
+              "source_transaction_index": 0
+            }
+          ],
+          [
+            {
+              "q": 5,
+              "source_transaction_index": 1
+            }
+          ]
+        ],
+        "public_q_range_inclusive": [
+          0,
+          5
+        ],
+        "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "public_theta_us_by_q": [
+          0,
+          1794793206000000,
+          1794793208000000,
+          1794793209000000,
+          1794793210000000,
+          1794793210000000
+        ],
+        "reasoning_effort_runtime_visibility": "role config only",
+        "runtime_model": "gpt-6.1-sol",
+        "seed": null,
+        "source_id": "EC16:13c2cc6d232444486b12122cca75024fd4d52d6a1793e95f197ac3d506fe3540",
+        "submit_receipts": [
+          {
+            "http_status": 200,
+            "local_http_round_trip_ms": 4.180927,
+            "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+            "record_id": 19,
+            "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+          },
+          {
+            "http_status": 200,
+            "local_http_round_trip_ms": 5.300052,
+            "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a423a7631",
+            "record_id": 20,
+            "transaction_hash": "TX~aXSr8Y71groRBWO4EFG64gt07CBoYPWAeQAblMSWH15_"
+          },
+          {
+            "http_status": 200,
+            "local_http_round_trip_ms": 4.904502,
+            "payload_hex": "454331363a6e6f6e2d63727970746f677261706869632d7075626c69636174696f6e3a413a7631",
+            "record_id": 21,
+            "transaction_hash": "TX~HaCXbBcc8EeYJKtrt8F557g9pYdC1qko6Q3WkL6G-ki7"
+          }
+        ],
+        "timing_limits": {
+          "consensus_finalization_time": "Unknown",
+          "live_at_proposal": "Unknown",
+          "live_node_run": "wall-clock local observations",
+          "offline_replay_wall_pauses_ms": [
+            0,
+            37
+          ],
+          "proposal_time": "Unknown",
+          "virtual_time": null
+        }
+      },
+      "official_result": {
+        "candidate_sha": "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+        "capture_kind": "official",
+        "distinct_publication_positions": [
+          [
+            {
+              "q": 5,
+              "source_transaction_index": 0
+            }
+          ],
+          [
+            {
+              "q": 5,
+              "source_transaction_index": 1
+            }
+          ]
+        ],
+        "distinct_submit_ids": [
+          19,
+          20
+        ],
+        "exact_repeat_id": 21,
+        "exact_repeat_status": 200,
+        "missing_record_id": 57,
+        "missing_status": 404,
+        "offline_pause_ms": [
+          0,
+          37
+        ],
+        "public_sha256": "43f106c905bb0877c2131bd7926eb099701d4e3936c0845e96ec7fb36a4e7cf5",
+        "repeat_publication_positions": [
+          {
+            "q": 5,
+            "source_transaction_index": 0
+          }
+        ],
+        "replayed_exactly": true,
+        "requery_matches": true,
+        "run_id": "ec16-official-6248072-run02",
+        "status": "PASS",
+        "tip": 5
+      },
+      "offline_argv": [
+        [
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/target/debug/espresso-compatibility",
+          "replay",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle",
+          "first",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first"
+        ],
+        [
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/target/debug/espresso-compatibility",
+          "replay",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle",
+          "first",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-first-delayed",
+          "--pause-ms",
+          "37"
+        ],
+        [
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/target/debug/espresso-compatibility",
+          "replay",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle",
+          "requery",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/offline-requery"
+        ],
+        [
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/target/debug/espresso-compatibility",
+          "compare",
+          "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02/bundle",
+          "first",
+          "requery"
+        ]
+      ],
+      "result_sha256": "086aa9e9264126365c195b6af7bcd2a7c1434cf656f9b85852d84aa08a69ab59",
+      "run_id": "ec16-official-6248072-run02",
+      "runner_argv": [
+        "timeout",
+        "--signal=TERM",
+        "--kill-after=15s",
+        "250s",
+        "bwrap",
+        "--unshare-user",
+        "--unshare-net",
+        "--unshare-pid",
+        "--die-with-parent",
+        "--new-session",
+        "--ro-bind",
+        "/",
+        "/",
+        "--bind",
+        "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02",
+        "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02",
+        "--tmpfs",
+        "/tmp",
+        "--proc",
+        "/proc",
+        "/usr/bin/python3",
+        "/home/jy/.codex/worktrees/d2be/megaroation_poc/poc/scenarios/espresso-compatibility/capture.py",
+        "--image",
+        "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/setup/official-20260918",
+        "--run",
+        "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/artifacts/ec16-official-6248072-run02",
+        "--run-id",
+        "ec16-official-6248072-run02",
+        "--candidate",
+        "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+        "--replay-binary",
+        "/mnt/reth/jy/megaroation_poc/.build/commander-jobs/16/target/debug/espresso-compatibility"
+      ],
+      "runner_wall_seconds_including_lock_wait": 17.46
+    }
+  ],
+  "branch": "codex/poc-espresso-compatibility",
+  "date_asia_shanghai": "2026-11-16",
+  "feature": "16 Espresso local compatibility",
+  "independent_checker_sha256": "e42e68df3f40c991dcce199ba6fa53d03fd2c6d75f243d0bf3ace9c25ead157a",
+  "limits": {
+    "g_api": "PASS bounded official local publication, complete queries, requery and unavailable probe",
+    "g_crypto": "HotShot QC, VID, Regional FINAL and full Feature 06 integration are outside the verified profile",
+    "g_env": "PASS unmodified image executables in private loopback user/network/PID namespaces",
+    "g_pe_timing": "UNSUPPORTED; proposed_at, finalized_at and live_at_proposal are Unknown",
+    "g_replay": "PASS literal fixtures and the same official capture under two local wall pause settings",
+    "measurements": "finite local wall observations; no external-network measurements or virtual-clock control",
+    "streams": "pinned source inspection only; live streaming and reconnection untested"
+  },
+  "profile": "bounded trusted local official API",
+  "profile_status": "PASS",
+  "replay_binary_sha256": "dcffb26c638cf82c75b4ace68b2e888cf5ce38218c66a33c4712c94139d873d1",
+  "revisions": {
+    "bootstrap_contract_clarification": "2ed1540b507af076b904816ff0cadc47d2e286ef",
+    "candidate": "6248072b3fd0eee1ae468f0961a4d3589291cba6",
+    "contract_and_frozen_vectors": "89925a6ed47cf8a57d6d052d8db192007019661c",
+    "dependency_06": "4b034dfbb6c3e1c7143208347b546daab8dfe298",
+    "interface": "9747268e52410c1e7ce6b79d96df2ca858598a78",
+    "merged_baseline": "bcd30b0879e6c17afc177bfea76f7fee170cc069",
+    "starting_baseline": "ada48a584ad4de15e302c479ee8cd41b9e2a8d9b",
+    "tested": "6248072b3fd0eee1ae468f0961a4d3589291cba6"
+  },
+  "role": {
+    "configured_reasoning_effort": "high",
+    "name": "bft_simulator",
+    "reasoning_effort_runtime_visibility": "role config only",
+    "runtime_model": "gpt-6.1-sol"
+  },
+  "seed": null,
+  "source": {
+    "http_api": "/v1",
+    "image_verification": {
+      "image_config": "sha256:b376be602febaa35fd38c1f4bc1144fb79017bfed274a4a26ed90bf052bfd06f",
+      "index": "sha256:af73f55630690caa35aa0bc015d60dc03333791f966fdcc07b0798e33d4f768e",
+      "manifest_amd64": "sha256:cfb845e49cb5369f77cd8bbda0b4fe4aad340793cfd130b7f2bb631e59d2db66",
+      "native_sha256": {
+        "anvil": "sha256:9db2381d82aab93e80254df301e55eb56628d131967626750a35a179aa49b24e",
+        "espresso-dev-node": "sha256:62f6aec1a217eeda71f1c284dde8501afadf5a359a40c82cd93c68d033de1e94",
+        "kzg10-aztec20-srs-1048584.bin": "sha256:cded83e82e4b49fee4cb2e0f374f996954fe12548ad39100432ee493069ef09d",
+        "lib/ld-linux-x86-64.so.2": "sha256:4f961aefd1ecbc91b6de5980623aa389ca56e8bfb5f2a1d2a0b94b54b0fde894",
+        "lib/libc.so.6": "sha256:de259f5276c4a991f78bf87225d6b40e56edbffe0dcbc0ffca36ec7fe30f3f77",
+        "lib/libcrypto.so.3": "sha256:fca80f7e62d9507f4385f2febcf4b1a1507273e6d4445bf58961078d8af9acec",
+        "lib/libgcc_s.so.1": "sha256:02f3f192bf5f79b811f1e34a650fea443d407408703448906585232383957f60",
+        "lib/libm.so.6": "sha256:3c24a53ee35c2ce0c67240e62bff699c4bddcd7cf8993d5d7ad29157ba072c99",
+        "lib/libssl.so.3": "sha256:e50e007bb0a4bbf1383b250ef34fb4c695b9f3a799decb321efeafa83799587e"
+      },
+      "official_commit": "fd221e8e4b51f5ecec0ae44bc99f6b7f82cd1171",
+      "repository": "espressosystems/espresso-network/espresso-dev-node",
+      "used_layers": {
+        "0": {
+          "sha256": "sha256:32f112e3802cadcab3543160f4d2aa607b3cc1c62140d57b4f5441384f40e927",
+          "size": 29721175
+        },
+        "2": {
+          "sha256": "sha256:19629f561a6be249400cc2d14edfd631a2aaac6b148d813dafcfae6789bc0e33",
+          "size": 67130339
+        },
+        "4": {
+          "sha256": "sha256:97570b8b15bea0ee79596dafd0601cd130c024aae49c3e09fd9ea6c33e89c40f",
+          "size": 64321814
+        },
+        "5": {
+          "sha256": "sha256:7b486d41e6d2d790d8b6c344e85e65e6c24b23d73ba814aaf82522f0ca0b405c",
+          "size": 19403792
+        }
+      }
+    },
+    "namespace": 160016,
+    "protocol": "0.3",
+    "release": "20260918",
+    "trust_basis": "TrustedLocalOfficialApi"
+  },
+  "toolchain": {
+    "bubblewrap": "0.6.1",
+    "capture_python": "Python 3.10.12 (/usr/bin/python3)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "cargo_jobs": 2,
+    "heavy_lock": "/tmp/megaroation-poc-heavy.lock",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)"
+  },
+  "worktree": "/home/jy/.codex/worktrees/d2be/megaroation_poc"
+}
