@@ -1,0 +1,15 @@
+version = 4
+
+[[package]]
+name = "poc-publisher"
+version = "0.1.0"
+dependencies = ["sim-espresso"]
+
+[[package]]
+name = "publisher-espresso-independent-verification"
+version = "0.1.0"
+dependencies = ["poc-publisher", "sim-espresso"]
+
+[[package]]
+name = "sim-espresso"
+version = "0.1.0"
