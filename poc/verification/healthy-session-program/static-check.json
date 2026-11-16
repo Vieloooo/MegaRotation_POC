@@ -1,0 +1,188 @@
+{
+  "schema": "h1-static-check-v1",
+  "baseline": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+  "h1_implementation_candidate": null,
+  "status": "STATIC_PREPARATION_PASS",
+  "execution": {
+    "workdir": "/home/jy/.codex/worktrees/0b8e/megaroation_poc",
+    "command": "python3 - <<'PY'\nimport hashlib,json,pathlib,re,subprocess\nroot=pathlib.Path('/home/jy/.codex/worktrees/0b8e/megaroation_poc')\np=root/'poc/verification/healthy-session-program'\ncap=json.loads((p/'independent-capture.json').read_text())\nfor name,digest in cap['files'].items():\n    norm=cap['format_only_normalization']['files'][name]\n    data=(p/name).read_bytes()\n    assert len(data)-len(data.rstrip(b'\\n'))==1,name\n    assert hashlib.sha256(data).hexdigest()==norm['normalized_sha256'],name\n    original=data+b'\\n'*norm['removed_lf_count']\n    assert hashlib.sha256(original).hexdigest()==digest==norm['original_sha256'],name\n    assert len(original)-len(original.rstrip(b'\\n'))==norm['original_trailing_lf_count'],name\nsrc=json.loads((p/'source-map.json').read_text())\nfor row in src['sources']:\n    if row['id']=='RBFT':\n        data=subprocess.check_output(['git','-C','/mnt/reth/jy/megaroation_poc/regional_BFT_sim','show',row['revision']+':DESIGN.md'])\n    elif row['id'].startswith('CW:'):\n        data=pathlib.Path(row['read_path']).read_bytes()\n        info=pathlib.Path(row['read_path']).parents[1]/'.cargo_vcs_info.json'\n        if not info.exists(): info=pathlib.Path(row['read_path']).parents[2]/'.cargo_vcs_info.json'\n        assert json.loads(info.read_text())['git']['sha1']==row['revision']\n    else:\n        data=subprocess.check_output(['git','show',row['revision']+':'+row['path']],cwd=root)\n    assert hashlib.sha256(data).hexdigest()==row['sha256'],row['id']\nvectors=json.loads((p/'vectors.json').read_text())['vectors']\nassert len(vectors)==75 and len({x['id'] for x in vectors})==75\nassert all(x['runtime_status']=='NOT_RUN' for x in vectors)\nliterals=[]\nfor x in vectors:\n    if x['input_kind']!='literal_time_case': continue\n    a=x['pre']; b=x['event']; recv=b['first_received_local_us']; now=b['current_local_us']\n    actual='REJECT_5A' if recv<a['ts_us']-a['delta_g_us'] else 'REJECT_5C' if recv>=a['next_ts_us']+a['metadata_window_us'] else 'REJECT_5D' if recv>=a['stop_us'] else 'WAIT_TIME' if now<a['ts_us'] else 'ACCEPT_APPLICATION_BUT_DENY_NEW_SIGNATURE' if now>=a['stop_us'] else 'ACCEPT'\n    assert actual==x['expected'],(x['id'],actual,x['expected'])\n    literals.append(x['id'])\nassert 5-(5-1)//3==4\nassert 10_000_000+11*1_000_000==21_000_000\nassert 21_000_000+3_000_000==24_000_000\nassert (24_400_000-10_000_000)//1_000_000==14\nassert list(range(9+1,14))==[10,11,12,13]\naddenda=json.loads((p/'review-addenda.json').read_text())['vectors']\nassert len(addenda)==2 and all(x['runtime_status']=='NOT_RUN' for x in addenda)\nchecked=[]\nfor doc in sorted(list(p.glob('*.md'))+list((root/'poc/docs/healthy-session-program').glob('*.md'))):\n    text=doc.read_text(); lines=text.splitlines()\n    assert all(line==line.rstrip() for line in lines),str(doc)\n    assert sum(line.startswith('```') for line in lines)%2==0,str(doc)\n    for target in re.findall(r'\\]\\(([^)]+)\\)',text):\n        if '://' in target or target.startswith('#'): continue\n        target=target.split('#')[0]\n        assert (doc.parent/target).exists(),(str(doc),target)\n    checked.append(str(doc.relative_to(root)))\ncontracts={str(q.relative_to(root)):hashlib.sha256(q.read_bytes()).hexdigest() for q in sorted((root/'poc/docs/healthy-session-program').glob('*.md'))}\nfor f in p.iterdir():\n    data=f.read_bytes()\n    assert len(data)-len(data.rstrip(b'\\n'))==1,f.name\n    if f.suffix=='.json': json.loads(data)\nsemantic_files=['contract-review.md','expectations.md','planned-matrix.md','review-addenda.json','source-map.json','vectors.json']\nfor name in semantic_files:\n    original=subprocess.check_output(['git','show',':poc/verification/healthy-session-program/'+name],cwd=root)\n    current=(p/name).read_bytes()\n    assert current==original.rstrip(b'\\n')+b'\\n',name\n    if name.endswith('.json'): assert json.loads(current)==json.loads(original),name\nchanged=subprocess.check_output(['git','diff','--name-only'],cwd=root,text=True).splitlines()\nassert all(name.startswith('poc/verification/healthy-session-program/') for name in changed),changed\nchecks=[]\nfor args in [['git','diff','--check','--','poc/verification/healthy-session-program'],['git','diff','HEAD','--check','--','poc/verification/healthy-session-program'],['git','diff','--cached','--check','--','poc/verification/healthy-session-program']]:\n    result=subprocess.run(args,cwd=root,text=True,capture_output=True)\n    if '--cached' not in args: assert result.returncode==0,(args,result.stdout,result.stderr)\n    checks.append({'argv':args,'exit_code':result.returncode,'stdout':result.stdout,'stderr':result.stderr})\ncurrent_hashes={f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.iterdir()) if f.name!='static-check.json'}\nprint(json.dumps({'status':'STATIC_FORMAT_NORMALIZATION_PASS','historical_capture_hashes_reconstructed':4,'fixed_source_hashes_verified':len(src['sources']),'base_recipe_count':len(vectors),'literal_time_cases_checked':literals,'post_review_recipe_count':len(addenda),'markdown_files_checked':checked,'doc_candidate_hashes':contracts,'current_file_hashes':current_hashes,'hash_scope':'static-check.json self hash excluded to avoid circular metadata','semantic_files_verified_against_staged_original':semantic_files,'worktree_changed_paths':changed,'git_diff_checks':checks,'index_note':'Index remains at the original pre-normalization content. Cached check is expected to report the seven old EOF blank lines until lead re-adds; no git add/commit/merge executed.','runtime_status':'NOT_RUN','crypto_status':'NOT_RUN','build_status':'NOT_RUN','limits':'JSON/hash/links/format and independent conditional arithmetic only; no production API, worker, signature, replay or fault execution'},indent=2))\nPY",
+    "exit_code": 0,
+    "result": {
+      "status": "STATIC_FORMAT_NORMALIZATION_PASS",
+      "historical_capture_hashes_reconstructed": 4,
+      "fixed_source_hashes_verified": 25,
+      "base_recipe_count": 75,
+      "literal_time_cases_checked": [
+        "A-5A-MINUS",
+        "A-5A-EQUAL",
+        "A-5A-PLUS",
+        "A-5B-MINUS",
+        "A-5B-EQUAL",
+        "A-5B-PLUS",
+        "A-5C-MINUS",
+        "A-5C-EQUAL",
+        "A-5C-PLUS",
+        "A-5D-MINUS",
+        "A-5D-EQUAL",
+        "A-5D-PLUS",
+        "A-COMPLETE-AFTER-STOP"
+      ],
+      "post_review_recipe_count": 2,
+      "markdown_files_checked": [
+        "poc/docs/healthy-session-program/interfaces-h1-v1.md",
+        "poc/docs/healthy-session-program/preparation.md",
+        "poc/docs/healthy-session-program/task-contract-h1-v1.md",
+        "poc/verification/healthy-session-program/contract-review.md",
+        "poc/verification/healthy-session-program/expectations.md",
+        "poc/verification/healthy-session-program/planned-matrix.md"
+      ],
+      "doc_candidate_hashes": {
+        "poc/docs/healthy-session-program/interfaces-h1-v1.md": "ff9f10558a7535a7088ca487f44f93bfb0e63d49eb94266582fbdcc35f93fccf",
+        "poc/docs/healthy-session-program/preparation.md": "5a6709b59393969b4c31b76b7df989eece86e3e7d0d24d3dcd274aea5a27a9ee",
+        "poc/docs/healthy-session-program/task-contract-h1-v1.md": "002f4d065cbc3f8684eefd166c97d6ebb928eabfd67e491c650bd5c96c22a432"
+      },
+      "current_file_hashes": {
+        "contract-review.md": "85f588ef8a3d0adeb576e7556b68580e0d2191cf395784a2db075046b2affdcb",
+        "expectations.md": "bb821d4e272ad89d701eb8b8087a4f9c3fdb8576476e37c9c537e7a82ac4ca39",
+        "independent-capture.json": "5456eb0610bc2db72b6dddd46cb7755ec05e481b1024fa5914e9ae0eb4cf7f7a",
+        "planned-matrix.md": "79b980aed5ee7cfb1121d897f10a34db163e7a78e41b04ae6036911f09cb7993",
+        "review-addenda.json": "e7febd415a12985aee939e2c9a161a6110ac72eda51b8555469bc4326464b8a0",
+        "source-map.json": "3e7f4066de0195915314484da6fc88e13da11942ab06254cccad80b7a53ae946",
+        "vectors.json": "366e1ef54b1cff02eef9cc720303da8b0c10442309a286e2c1001b5056588665"
+      },
+      "hash_scope": "static-check.json self hash excluded to avoid circular metadata",
+      "semantic_files_verified_against_staged_original": [
+        "contract-review.md",
+        "expectations.md",
+        "planned-matrix.md",
+        "review-addenda.json",
+        "source-map.json",
+        "vectors.json"
+      ],
+      "worktree_changed_paths": [
+        "poc/verification/healthy-session-program/contract-review.md",
+        "poc/verification/healthy-session-program/expectations.md",
+        "poc/verification/healthy-session-program/independent-capture.json",
+        "poc/verification/healthy-session-program/planned-matrix.md",
+        "poc/verification/healthy-session-program/review-addenda.json",
+        "poc/verification/healthy-session-program/source-map.json",
+        "poc/verification/healthy-session-program/static-check.json",
+        "poc/verification/healthy-session-program/vectors.json"
+      ],
+      "git_diff_checks": [
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check",
+            "--",
+            "poc/verification/healthy-session-program"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "HEAD",
+            "--check",
+            "--",
+            "poc/verification/healthy-session-program"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--cached",
+            "--check",
+            "--",
+            "poc/verification/healthy-session-program"
+          ],
+          "exit_code": 2,
+          "stdout": "poc/verification/healthy-session-program/contract-review.md:64: new blank line at EOF.\npoc/verification/healthy-session-program/expectations.md:64: new blank line at EOF.\npoc/verification/healthy-session-program/planned-matrix.md:27: new blank line at EOF.\npoc/verification/healthy-session-program/review-addenda.json:33: new blank line at EOF.\npoc/verification/healthy-session-program/source-map.json:245: new blank line at EOF.\npoc/verification/healthy-session-program/static-check.json:60: new blank line at EOF.\npoc/verification/healthy-session-program/vectors.json:1058: new blank line at EOF.\n",
+          "stderr": ""
+        }
+      ],
+      "index_note": "Index remains at the original pre-normalization content. Cached check is expected to report the seven old EOF blank lines until lead re-adds; no git add/commit/merge executed.",
+      "runtime_status": "NOT_RUN",
+      "crypto_status": "NOT_RUN",
+      "build_status": "NOT_RUN",
+      "limits": "JSON/hash/links/format and independent conditional arithmetic only; no production API, worker, signature, replay or fault execution"
+    }
+  },
+  "scope": "Read-only source/document checks and conditional arithmetic; verification directory only written. No commit.",
+  "runtime_results": "NOT_RUN",
+  "open_findings": [
+    "H1-DOC-01",
+    "H1-DOC-02",
+    "H1-DOC-03"
+  ],
+  "freeze_status": "NOT_READY_UNTIL_Q_DECISIONS_AND_DOC_CLARIFICATIONS",
+  "format_only_normalization": {
+    "phase": "AFTER_H1_DOC_REVIEW_FORMAT_AND_EVIDENCE_INDEX_ONLY",
+    "records": {
+      "contract-review.md": {
+        "original_sha256": "7a5762b95eb05e580bf4ca6227d785dac9e680cee4422f39d38918c718c283a6",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "85f588ef8a3d0adeb576e7556b68580e0d2191cf395784a2db075046b2affdcb",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "expectations.md": {
+        "original_sha256": "fc4347787b32a37ee28dd1a10e863aefed64ce8f5cfdebf84c333ce75afeae58",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "bb821d4e272ad89d701eb8b8087a4f9c3fdb8576476e37c9c537e7a82ac4ca39",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "planned-matrix.md": {
+        "original_sha256": "59d861606212bb151e28bbb114fbdded6121f9f9842cbccd70ab65eb5f614631",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "79b980aed5ee7cfb1121d897f10a34db163e7a78e41b04ae6036911f09cb7993",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "review-addenda.json": {
+        "original_sha256": "48c1910c1274665f04765948f51470ba4a6bf11fd29c5256cc7df71f93dea797",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "e7febd415a12985aee939e2c9a161a6110ac72eda51b8555469bc4326464b8a0",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "source-map.json": {
+        "original_sha256": "7222602120d30ce794d10378c4b912fa8dae3af18e48a2c873662ecda0ff46ae",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "3e7f4066de0195915314484da6fc88e13da11942ab06254cccad80b7a53ae946",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "static-check.json": {
+        "original_sha256": "fdb7ebf3c5a08161f8333f0d72ea19b61f8c482c6e73743ff32d403b57d98118",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "c454c58e386509c6ac128d81f0f2f9ccbe360bee71cb3854ed5162ef725af32a",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      },
+      "vectors.json": {
+        "original_sha256": "dd5fdab5531a79f25d3e65f0f0714ee549d8e059fc79fcb54384893d5130f1c1",
+        "original_trailing_lf_count": 2,
+        "normalized_sha256": "366e1ef54b1cff02eef9cc720303da8b0c10442309a286e2c1001b5056588665",
+        "normalized_trailing_lf_count": 1,
+        "removed_lf_count": 1
+      }
+    },
+    "notes": [
+      "Each listed original file had two trailing LF bytes; one was removed without changing its body.",
+      "The four original independent capture hashes remain historical and unchanged; capture metadata supplies reconstruction checks.",
+      "For static-check.json, normalized_sha256 records the intermediate one-LF file before this authorized command/evidence-index refresh. Current self hash is intentionally not embedded.",
+      "Current hashes for the other seven verification artifacts are in execution.result.current_file_hashes.",
+      "No protocol, acceptance, vector, Markdown body, M0 status, or implementation semantics changed. No git add/commit/merge performed."
+    ]
+  }
+}

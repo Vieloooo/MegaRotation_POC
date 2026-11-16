@@ -1,0 +1,244 @@
+{
+  "schema": "h1-source-map-v1",
+  "stage": "DOCS_STATIC_PREPARATION",
+  "baseline": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+  "plan": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+  "candidate": null,
+  "h1_contract_status": "NOT_READ_AT_INDEPENDENT_CAPTURE",
+  "independence_order": [
+    "Read primary v10/v2 and pinned dependency contracts",
+    "Send source-derived expectations to lead",
+    "Inspect old compatibility boundary locations only",
+    "Write this independent package and freeze hashes",
+    "Only then read H1 Docer documents"
+  ],
+  "runtime_status": "NOT_RUN",
+  "sources": [
+    {
+      "id": "AGENTS",
+      "path": "AGENTS.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "all",
+      "sha256": "5c99ced956be33dd449a952ceebffeb22b92c335fd69b1bbd23c1f6af2c4e56a",
+      "read_path": "AGENTS.md"
+    },
+    {
+      "id": "ROOT",
+      "path": "DESIGN.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "all",
+      "sha256": "e4b93a400cb4da02ddf55f47763062aecbcdb1b81e9a7a9d0fcb28e89801b2f8",
+      "read_path": "DESIGN.md"
+    },
+    {
+      "id": "SKILL",
+      "path": ".agents/skills/regional-bft-conformance/SKILL.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "all",
+      "sha256": "125af723d15454b1311a2147bde3e8716cd12a89c76161ff2df21f8c52e5a8fd",
+      "read_path": ".agents/skills/regional-bft-conformance/SKILL.md"
+    },
+    {
+      "id": "HANDOFF",
+      "path": "formalization_v10/poc_v2_xuelab_handoff_zh.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "1–7",
+      "sha256": "f82c49f19305484ecf7c3a5d1a34eb4c4752db5cfd8fa1b406f2220a681eff05",
+      "read_path": "formalization_v10/poc_v2_xuelab_handoff_zh.md"
+    },
+    {
+      "id": "SETUP",
+      "path": "formalization_v10/poc_v2_xuelab_setup_zh.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3,7",
+      "sha256": "a14555319ce66b01474fb033715acd93938fe41b041fa0dbf56062cd5ba93b07",
+      "read_path": "formalization_v10/poc_v2_xuelab_setup_zh.md"
+    },
+    {
+      "id": "V2",
+      "path": "formalization_v10/poc_design_zh_v2.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3–6,9.1,10,12–14",
+      "sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab",
+      "read_path": "formalization_v10/poc_design_zh_v2.md"
+    },
+    {
+      "id": "ARCH",
+      "path": "formalization_v10/00_arch_zh_v0_1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "2.2–2.3,3",
+      "sha256": "2de0929fc2f75fda51802c7c354146849a285a247283ca1d8fc7338b2a8e8871",
+      "read_path": "formalization_v10/00_arch_zh_v0_1.md"
+    },
+    {
+      "id": "SP",
+      "path": "formalization_v10/02_session_program_zh_v0_1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3.1–3.12,4.1–4.10",
+      "sha256": "a8cafc846acffda6b2d08915b9ccc251825c33cf84e776dae94d67611db47eb2",
+      "read_path": "formalization_v10/02_session_program_zh_v0_1.md"
+    },
+    {
+      "id": "SM",
+      "path": "formalization_v10/03_session_manager_zh_v0_1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3.1–3.10,4.1–4.3",
+      "sha256": "dbcc467b6f3f52d7832112217c3caf27de1e09bdda11b9745393aea326fd5954",
+      "read_path": "formalization_v10/03_session_manager_zh_v0_1.md"
+    },
+    {
+      "id": "GFR",
+      "path": "formalization_v10/09_finality_rules_zh_v0_1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3.2–3.4,4.2–4.3",
+      "sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc",
+      "read_path": "formalization_v10/09_finality_rules_zh_v0_1.md"
+    },
+    {
+      "id": "PIPE",
+      "path": "formalization_v10/10_pipelines_zh_v0_1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "3.3–3.4",
+      "sha256": "f5e2d90daadd2ff83d3099621ea16ba46816236aefa05d61a97a4da15b8d97a3",
+      "read_path": "formalization_v10/10_pipelines_zh_v0_1.md"
+    },
+    {
+      "id": "SIMT",
+      "path": "poc/docs/contracts/task-contract-sim-transport-kernel-v1.md",
+      "revision": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+      "section": "2–7",
+      "sha256": "fa8d694d255524a8511a5988d63b26448814be6733d53e59c291a18246aaa1dd",
+      "read_path": "poc/docs/contracts/task-contract-sim-transport-kernel-v1.md"
+    },
+    {
+      "id": "MILESTONES",
+      "path": "poc/docs/milestones/README.md",
+      "revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "section": "all",
+      "sha256": "52e83a1b3013707a14a1220e5c962a807e07c9a8dd1816afbc32a7d47f0e65a0",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/milestones/README.md"
+    },
+    {
+      "id": "H1",
+      "path": "poc/docs/milestones/H1-healthy-session-program-zh.md",
+      "revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "section": "all",
+      "sha256": "682d0ba04d4f5dcc1f51198b375d33a26f76e7ad10d1acc35d2a18a40b143714",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/milestones/H1-healthy-session-program-zh.md"
+    },
+    {
+      "id": "H2",
+      "path": "poc/docs/milestones/H2-session-manager-zh.md",
+      "revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "section": "all",
+      "sha256": "98eea3590ea1d5e034ae2ca90b54bb03dd931726eeece34ba6b1851325d005f6",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/milestones/H2-session-manager-zh.md"
+    },
+    {
+      "id": "H3",
+      "path": "poc/docs/milestones/H3-publication-gfr-zh.md",
+      "revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "section": "all",
+      "sha256": "d71f9f17f9778f84daae15958972ccf380fce54d00baf6186ebadfe195b5b3ca",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/milestones/H3-publication-gfr-zh.md"
+    },
+    {
+      "id": "M0",
+      "path": "poc/docs/milestones/M0-foundation-merge-zh.md",
+      "revision": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+      "section": "all",
+      "sha256": "d1fbb6a8e8cf7f6cfae1f2d8fddf101eba8d06501553286494332e66fbef26ac",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/milestones/M0-foundation-merge-zh.md"
+    },
+    {
+      "id": "NR",
+      "path": "poc/docs/contracts/normal-running-reg-a-preparation-v1.md",
+      "revision": "8a5e3002dc579fedd3bc9f21cfac2c4fe90209a3",
+      "section": "2–9 (superseded scope clauses excluded)",
+      "sha256": "8acf24c5529d2af2fc9d70813d72e8ea48583c516b19ec0d5c91028d63f34dd5",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/contracts/normal-running-reg-a-preparation-v1.md"
+    },
+    {
+      "id": "MPX",
+      "path": "poc/docs/contracts/task-contract-mock-plan-execution-v2.md",
+      "revision": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "section": "2–6",
+      "sha256": "a18d2b33f9c541abc81b4fead601c3ccaead6221c90dc43345d52a850429cc15",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/contracts/task-contract-mock-plan-execution-v2.md"
+    },
+    {
+      "id": "MPX-PUBLIC",
+      "path": "poc/docs/contracts/mock-plan-public-interface-v1.md",
+      "revision": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "section": "1–5",
+      "sha256": "4c5381e2809122fc4c05173f1f6412cd227edfaa846ca9bbfd9511d861cff7f8",
+      "read_path": "/mnt/reth/jy/megaroation_poc/poc/docs/contracts/mock-plan-public-interface-v1.md"
+    },
+    {
+      "id": "RBFT",
+      "path": "DESIGN.md",
+      "revision": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "section": "2–3.1,5",
+      "sha256": "0749ff8bef9ad18b3794788d9f72c887126f4a2368dcf6adcb8587853eee3eae",
+      "read_path": "/mnt/reth/jy/megaroation_poc/regional_BFT_sim/DESIGN.md"
+    },
+    {
+      "id": "CW:Automaton",
+      "path": "commonware-consensus-2026.10.0/src/lib.rs",
+      "revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+      "release": "2026.10.0",
+      "section": "143–204,312–348",
+      "sha256": "d3ec69eafb075810c0c793c0ab3a450ba6024ecbd2cbf6a4e96ea53be7872931",
+      "read_path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-consensus-2026.10.0/src/lib.rs"
+    },
+    {
+      "id": "CW:Simplex",
+      "path": "commonware-consensus-2026.10.0/src/simplex/mod.rs",
+      "revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+      "release": "2026.10.0",
+      "section": "1–155",
+      "sha256": "f2745799e26a93b55fd1aa8178d1252e3a10717eac28a1fcc1f25335bcae829d",
+      "read_path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-consensus-2026.10.0/src/simplex/mod.rs"
+    },
+    {
+      "id": "CW:N3f1",
+      "path": "commonware-utils-2026.10.0/src/faults.rs",
+      "revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+      "release": "2026.10.0",
+      "section": "33–97",
+      "sha256": "f443c640e027d71263cb908fbb8bfd32ccf09d26bad80585f10495179fc2c1f9",
+      "read_path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-utils-2026.10.0/src/faults.rs"
+    },
+    {
+      "id": "CW:Clock",
+      "path": "commonware-runtime-2026.10.0/src/lib.rs",
+      "revision": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+      "release": "2026.10.0",
+      "section": "525–540",
+      "sha256": "597401d525e6ea38f803f816217fda11c3089b4433c4fbdddd8fbf1d13af011d",
+      "read_path": "/mnt/reth/jy/regional_BFT_sim/.tooling/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/commonware-runtime-2026.10.0/src/lib.rs"
+    }
+  ],
+  "authority_notes": [
+    "Latest milestone scope overrides NR draft single-cid/R0-only/parking-excluded statements.",
+    "NR draft timing numbers are conditional vector parameters, not accepted performance or liveness calibration.",
+    "03 remains sole canonical public object/identity owner.",
+    "H1 runtime parking preserves original engine; H2 owns Manager decisions; H3 owns publication/GFR.",
+    "M0 verified exact SHA and shared-path authorization required before implementation.",
+    "Local submodule directory is empty; source was read only from initialized /mnt/reth/jy/megaroation_poc/regional_BFT_sim whose actual toplevel and HEAD match gitlink."
+  ],
+  "paper": {
+    "title": "Simplex Consensus: A Simple and Fast Consensus Protocol",
+    "url": "https://eprint.iacr.org/2023/463",
+    "landing_page_observation": "2023-06-02 last of 3 revisions",
+    "pdf_status": "NOT_READ_HTTP_403",
+    "versions_status": "NOT_READ_HTTP_403",
+    "limit": "Expectations use pinned Regional BFT DESIGN and Commonware protocol/deviation sources. No independent proof of paper claims is asserted."
+  },
+  "scope_limits": [
+    "No H1 implementation candidate or M0 integrated candidate reviewed",
+    "No build, cryptographic test, worker, deterministic replay, crash, or official Espresso run performed",
+    "No runtime PASS implied by hashes/arithmetic",
+    "01 recovery and full I1/04 gates remain OPEN"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "h1-review-addenda-v1",
+  "origin": "POST_INDEPENDENT_CAPTURE_CONTRACT_REVIEW",
+  "runtime_status": "NOT_RUN",
+  "vectors": [
+    {
+      "id": "RV-TRANSPORT-MAILBOX",
+      "finding": "H1-DOC-01",
+      "pre": "base config permits only cid A; live route plus sender/receiver ReliableMailbox each owns normalized config; existing A obligation",
+      "event": [
+        "actual verified result supplies cid B",
+        "install B in proposed route-only admission layer",
+        "enqueue and receive B reliable frame"
+      ],
+      "baseline_static_outcome": "ContextMismatch via unchanged mailbox config; this is a source-based prediction, not a run",
+      "required_after_freeze": "consistent committed admission visible to all affected mailboxes; preserve A full state and old ACK interpretation; wrong/stale admission atomic rejection",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "RV-LIFECYCLE-DURABLE-FAILURE",
+      "finding": "H1-DOC-02",
+      "pre": "A Running with pending work; lifecycle close A and schedule B",
+      "event": [
+        "persist A terminal",
+        "root/Ack commit or required receipt fails",
+        "late A completion and actual sign attempt"
+      ],
+      "expected": "fail closed or abort healthy scenario; no A resurrection/new signing/uncommitted release; preserve persisted disposition",
+      "runtime_status": "NOT_RUN"
+    }
+  ]
+}

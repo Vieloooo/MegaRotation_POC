@@ -1,0 +1,1057 @@
+{
+  "schema": "h1-independent-expectations-v1",
+  "status": "SOURCE_DERIVED_PRE_CONTRACT_REVIEW",
+  "runtime_status": "NOT_RUN",
+  "parameters": {
+    "genesis_timestamp_us": 10000000,
+    "genesis_height": 0,
+    "slot_us": 1000000,
+    "window": [
+      1,
+      10
+    ],
+    "stop_us": 21000000,
+    "delta_g_us": 2000,
+    "metadata_window_us": 200000,
+    "grace_us": 3000000,
+    "parameter_status": "source proposal; numerical vectors are conditional, not liveness calibration"
+  },
+  "crypto_fixture_status": "NO_GOLDEN_BLS_BYTES; symbolic recipes only",
+  "vectors": [
+    {
+      "id": "A-5A-MINUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10997999,
+        "current_local_us": 11000000
+      },
+      "expected": "REJECT_5A",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5A-EQUAL",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10998000,
+        "current_local_us": 11000000
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5A-PLUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10998001,
+        "current_local_us": 11000000
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5B-MINUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10998000,
+        "current_local_us": 10999999
+      },
+      "expected": "WAIT_TIME",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5B-EQUAL",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10998000,
+        "current_local_us": 11000000
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5B-PLUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 10998000,
+        "current_local_us": 11000001
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5C-MINUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 12199999,
+        "current_local_us": 12199999
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5C-EQUAL",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 12200000,
+        "current_local_us": 12200000
+      },
+      "expected": "REJECT_5C",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5C-PLUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 1,
+        "ts_us": 11000000,
+        "next_ts_us": 12000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 12200001,
+        "current_local_us": 12200001
+      },
+      "expected": "REJECT_5C",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5D-MINUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 10,
+        "ts_us": 20000000,
+        "next_ts_us": 21000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 20999999,
+        "current_local_us": 20999999
+      },
+      "expected": "ACCEPT",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5D-EQUAL",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 10,
+        "ts_us": 20000000,
+        "next_ts_us": 21000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 21000000,
+        "current_local_us": 21000000
+      },
+      "expected": "REJECT_5D",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-5D-PLUS",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 10,
+        "ts_us": 20000000,
+        "next_ts_us": 21000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 21000001,
+        "current_local_us": 21000001
+      },
+      "expected": "REJECT_5D",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "A-COMPLETE-AFTER-STOP",
+      "group": "NR6",
+      "source": "SP:3.8",
+      "input_kind": "literal_time_case",
+      "pre": {
+        "all_non_time_checks": "VALID",
+        "height": 10,
+        "ts_us": 20000000,
+        "next_ts_us": 21000000,
+        "stop_us": 21000000,
+        "delta_g_us": 2000,
+        "metadata_window_us": 200000
+      },
+      "event": {
+        "first_received_local_us": 20999999,
+        "current_local_us": 21000000
+      },
+      "expected": "ACCEPT_APPLICATION_BUT_DENY_NEW_SIGNATURE",
+      "required_evidence": [
+        "original ingress record",
+        "pending callback identity",
+        "Accept outcome",
+        "actual signing exit audit"
+      ],
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "NB-EARLY",
+      "group": "NR6",
+      "source": "SP:3.9",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "parent h0; window1–10; valid entered; local=10,999,999us",
+      "event": "Build/NotBefore",
+      "expected": "NotBefore=11,000,000us; WAIT; no self-advance/view reset",
+      "required_evidence": "original absolute local timer",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "NB-LAST",
+      "group": "NR6",
+      "source": "SP:3.9",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "parent h10",
+      "event": "NotBefore",
+      "expected": "positive infinity; legal existing consensus messages allowed only before stop",
+      "required_evidence": "NotBefore plus sign audit",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SLOT-NOT-VIEW",
+      "group": "NR6",
+      "source": "SP:3.7",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "view7; parent h1; local=13,400,000us",
+      "event": "Build",
+      "expected": "physical h3 with virtual h2 padding; not h7; no naked tail padding",
+      "required_evidence": "physical body and independent Apply/Merge",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "MISSING-BODY",
+      "group": "NR6",
+      "source": "SP:3.8; CW:Automaton",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "authenticated header, no matching body",
+      "event": "verify callback then matching body delivery",
+      "expected": "WAIT_MISSING with producer alive; resume original work/first receive pair once body arrives",
+      "required_evidence": "header/body raw bytes, ingress, work id, callback lifetime",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "MISSING-L1",
+      "group": "NR6",
+      "source": "SP:3.8; MPX:6",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid full proposal; required origin metadata not locally delivered",
+      "event": "Accept then independently deliver verified L1 prefix",
+      "expected": "WAIT_MISSING; no vote before inputs; same first_received on retry",
+      "required_evidence": "per-reader header/control prefix and callback records",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "INGRESS-HB",
+      "group": "NR6",
+      "source": "NR:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "qualifying header ingress10,998,000; matching complete body ingress10,999,000; authentication completes11,001,000us",
+      "event": "finish authentication",
+      "expected": "first_received=10,999,000us; not11,001,000",
+      "required_evidence": "original header/body ingress plus authentication completion",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "INGRESS-BH",
+      "group": "NR6",
+      "source": "NR:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "body ingress10,998,000; qualifying header ingress10,999,000us",
+      "event": "authenticate matching header",
+      "expected": "first_received=10,999,000us",
+      "required_evidence": "paired proposal identity and original ingress",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "INGRESS-LATE-AUTH",
+      "group": "NR6",
+      "source": "NR:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "admitted authentic header at10,997,999 and body10,997,999; authenticated late; later duplicate pair10,999,000us",
+      "event": "finish earlier header authentication before permanent result",
+      "expected": "earliest qualifying pair10,997,999; permanent5a reject; later duplicate cannot repair",
+      "required_evidence": "bounded authentication queue and all pair ingress",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "INGRESS-UNAUTHORIZED",
+      "group": "NR6",
+      "source": "NR:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "unauthorized early header; later real leader header+body valid",
+      "event": "complete authentication",
+      "expected": "unauthorized header cannot reserve first_received; use earliest qualifying authentic pair",
+      "required_evidence": "transport/leader identity evidence",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "WAIT-RETRY",
+      "group": "NR6",
+      "source": "SP:3.8; CW:Automaton",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "first_received10,998,000; current10,999,999; WAIT_TIME",
+      "event": "local clock reaches11,000,000; duplicate delivery",
+      "expected": "ACCEPT exactly once using10,998,000; no false/no producer drop",
+      "required_evidence": "admission record and native callback",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "LOCAL-REJECT-ABSTAIN",
+      "group": "NR6",
+      "source": "CW:Automaton; SP:3.8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "same proposal admissible at one honest node but local time rejection at another",
+      "event": "map local permanent rejection into native callback",
+      "expected": "no claim of context-wide invalidity; precise abstention/cancel behavior remains FREEZE_REQUIRED",
+      "required_evidence": "independent liveness/safety argument and callback trace",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PID-REAL",
+      "group": "NR1",
+      "source": "H1:scope; V2:2.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "15 registered3×5 workers; R0 initially selected",
+      "event": "observe process/engine registration",
+      "expected": "15 distinct live OS PID; five R0 real engines; ten nonmembers no R0 sign; own Clock/reader/root",
+      "required_evidence": "PID process manifests, key ownership, raw engine frames",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PID-BINDING",
+      "group": "NR1",
+      "source": "NR:3.1; MPX:4.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid pid/member/identity/signer mapping",
+      "event": "replace any pid/member/signer/run/config/cid/epoch/codec",
+      "expected": "atomic rejection; zero illicit sign/send; no ScriptedProvenance",
+      "required_evidence": "raw envelope plus pre/post root/queue/counter",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "NONMEMBER-ROOT",
+      "group": "NR1",
+      "source": "NR:2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "R1/R2 worker without R0 native scope",
+      "event": "Clock/reader step",
+      "expected": "real root commit; explicit native-witness-not-applicable; no fake policy or signature",
+      "required_evidence": "complete grant/Ack/root and effect scope",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "REGISTRY-POP",
+      "group": "NR1",
+      "source": "MPX:4.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "03 registry namespace PoC/Registry/PoP/v1",
+      "event": "verify exact keys and wrong namespace/key/bit mutation",
+      "expected": "valid map passes; mutations reject; no cast pid to SignerIndex",
+      "required_evidence": "actual public keys/PoPs and signature verifier results",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CLOCK-OFFSET",
+      "group": "NR2",
+      "source": "V2:4.1–4.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "tau=11,000,000us; offsets[-1000,-500,0,500,1000]",
+      "event": "all roles read NodeClock",
+      "expected": "local values[10,999,000;10,999,500;11,000,000;11,000,500;11,001,000]; max pairwise2000us",
+      "required_evidence": "sample/lease plus per-read manager/build/engine audit",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CLOCK-RPC",
+      "group": "NR2",
+      "source": "V2:4.2–4.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "fixed offsets and rate1",
+      "event": "vary sample one-way latency250us→10,000us; delay/reorder replies",
+      "expected": "offset unchanged; old replies never current timestamp; no grant lease refresh",
+      "required_evidence": "request/as_of/delivery/sequence/lease trace",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "LEASE-EQUAL",
+      "group": "NR2",
+      "source": "SIMT:6; V2:4.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "lease_end_tick=L",
+      "event": "read/sign at L-1,L,L+1",
+      "expected": "valid at L-1 if other guards hold; deny at L and L+1; ClockUnsafe closes affected cid",
+      "required_evidence": "actual signing exit and durable terminal",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CLOCK-RENEW-TERMINAL",
+      "group": "NR8",
+      "source": "V2:4.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "cid terminated after unsafe Clock",
+      "event": "deliver new valid sample and duplicate Enter",
+      "expected": "clock recovers; old cid cannot revive",
+      "required_evidence": "terminal/Enter/sign records",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CREATE-IDEMPOTENT",
+      "group": "LC",
+      "source": "SP:3.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "existing cid/descriptor/instance",
+      "event": "Create duplicate and mismatched descriptor",
+      "expected": "exact duplicate returns original handle/state; mismatch rejects; no new engine",
+      "required_evidence": "stable handle token audit and creation count",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PREP-ROOT-ONLY",
+      "group": "PREP",
+      "source": "SM:3.1–3.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid descriptor; root/download URL only",
+      "event": "Prepare/Enter",
+      "expected": "WAIT; cannot Ready/Enter",
+      "required_evidence": "missing-material reason and no enter/sign",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PREP-EXACT",
+      "group": "PREP",
+      "source": "SM:3.2; SM:3.7",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "same height but different anchor id or execution prefix",
+      "event": "supply full state for other anchor",
+      "expected": "REJECT mismatch; no shared height-only execution cache",
+      "required_evidence": "canonical anchor, ordered execution inputs, independent state",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PREP-COMPLETE",
+      "group": "PREP",
+      "source": "SM:3.2; SM:3.7",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "fixed anchor; valid incomplete preparation",
+      "event": "deliver remaining verified checkpoint/chain/inputs",
+      "expected": "Ready only after exact state replay/evidence; idempotent repeated material",
+      "required_evidence": "execution trace, Ready evidence and original handle",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PREP-STALE",
+      "group": "PREP",
+      "source": "SM:3.7; SM:4.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "preparation generation cancelled or cid terminal",
+      "event": "late work completion/material for old generation",
+      "expected": "no Ready/Enter/sign resurrection; no reattribute to current cid",
+      "required_evidence": "work id/generation/cid plus terminal and Ack",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ENTER-ONCE",
+      "group": "LC",
+      "source": "SP:3.5; SM:3.8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "Ready and scheduled member; before start",
+      "event": "Enter then repeat after advanced view",
+      "expected": "first Enter once; original entry_time and view/locks/sign history unchanged; NotBefore respected",
+      "required_evidence": "entered_at, view snapshots, engine identity",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ENTER-INVALID",
+      "group": "LC",
+      "source": "SP:3.5; SM:4.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "nonmember or not Ready/scheduled or terminated or current=stop",
+      "event": "Enter",
+      "expected": "nonmember/terminated/stop reject; missing readiness/scheduling WAIT; no engine initialization",
+      "required_evidence": "command result and no-sign/creation trace",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PARK-ABA",
+      "group": "LC",
+      "source": "SM:3.9; SM:4.2–4.3; H1:scope",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "A running view7 with lock/signature/deadline and WAIT; B Ready",
+      "event": "Pause A, Enter B, Pause B, resume A within same PID",
+      "expected": "A original instance/view/lock/sign history/first receive/pending callback/deadline preserved; no second Enter; only one scheduled per session",
+      "required_evidence": "before/after state commitments, timer/work ids, PID",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PARK-DEADLINE",
+      "group": "LC",
+      "source": "SM:4.2; SP:3.6; V2:4.3",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "A paused with original local timeout D",
+      "event": "resume after D but before stop",
+      "expected": "handle original expired deadline under authorized scheduler; do not set now+timeout",
+      "required_evidence": "original timer and resumed event trace",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PARK-STOP",
+      "group": "LC",
+      "source": "SM:4.2; SP:4.9",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "A paused, current reaches stop",
+      "event": "resume A",
+      "expected": "TIME terminal before first consensus action; no new signatures",
+      "required_evidence": "persistent terminal and sign audit",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CLOSE-ALL-PHASES",
+      "group": "LC",
+      "source": "SM:3.10; SM:4.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "same session/branch has Assigned,Preparing,Ready,Running,Paused",
+      "event": "public close then stale material/timer/callback",
+      "expected": "all applicable entries terminal; retain historical outputs; duplicate close idempotent",
+      "required_evidence": "lifecycle provenance, scope list, full root/Ack",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CID-ISOLATION",
+      "group": "LC",
+      "source": "SP:3.1–3.2; H1:scope",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "two valid same-session descriptors with different anchors",
+      "event": "same view/work/timer/storage coordinates in A and B",
+      "expected": "different cid namespaces and state; A event/signature cannot serve B; fresh B does not copy A lock",
+      "required_evidence": "namespace/scope/partition/id mappings and negative proof checks",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PERMITS-FUTURE",
+      "group": "LC",
+      "source": "SIMT:3; H1:scope",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "kernel carries prior queues/counters/dedup/tombstones; next cid only becomes known from actual result",
+      "event": "install validated new cid capability",
+      "expected": "FREEZE_REQUIRED; preserve all history and pending old obligations; no future preknowledge/empty replacement",
+      "required_evidence": "versioned permission transition and pre/post full state",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SIGN-RACE",
+      "group": "NR8",
+      "source": "SP:3.7–3.8; SP:4.9; V2:5.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "Build/verify/certify authorized before Close/stop",
+      "event": "finish after persistent terminal/lease expiry",
+      "expected": "deny new signature at actual exit; no late new sign or callback-generated unauthorized send",
+      "required_evidence": "grant/work/terminal/sign order",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SIGN-CACHE",
+      "group": "NR8",
+      "source": "SP:3.1; SP:4.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "same cid/epoch/view/kind has one signed subject",
+      "event": "repeat subject then conflict; run Close",
+      "expected": "same valid prior output attributable as history; conflicting subject denied; no new signing after Close",
+      "required_evidence": "signed bytes and Created/CacheHit/Denied distinction",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "FINAL-HISTORICAL",
+      "group": "NR5",
+      "source": "SP:3.10; SP:4.5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid actual Finalization from fixed historical config",
+      "event": "verify before start, during, and after stop without NodeClock",
+      "expected": "same true result; no current-time Accept; not global eligibility",
+      "required_evidence": "exact proof/body/descriptor/registry/domain bytes",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "FINAL-PROOF-FIRST",
+      "group": "DELIVERY",
+      "source": "SP:3.12; RBFT:2.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid proof, body/ancestor missing",
+      "event": "observe proof then deliver matching body/ancestry",
+      "expected": "ProofObserved first; WAIT complete RegionalResult; only after independent validation emit contiguous delivery",
+      "required_evidence": "raw proof/body/ancestry and separate timestamps",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "FINAL-BODY-MUTATION",
+      "group": "NR5",
+      "source": "SP:3.10; MPX:3",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "valid final proof binds physical digest",
+      "event": "alter body,parent,metadata,raw invalid tx or substitute native hash",
+      "expected": "reject bound subject mismatch even if native hash coincides for filtered raw tx",
+      "required_evidence": "canonical body and both independently recomputed hashes",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-3",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "three distinct legal signers",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-DUP",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "four entries but only three distinct signers",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-KIND",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "Notarization in Final entry",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-DOMAIN",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "namespace",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-CID",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "cid",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-EPOCH",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "epoch",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-VIEW",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "view",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-WRONG-SUBJECT",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "proposal/parent/payload",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-MALFORMED",
+      "group": "NR5",
+      "source": "SP:4.5; V2:3.3; RBFT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real valid four-signer Finalization",
+      "event": "truncated/trailing/invalid bitmap",
+      "expected": "REJECT_FINAL; no proof-observed/final-delivery from invalid proof",
+      "required_evidence": "real BLS artifact; each mutation separate; no symbolic proof claims",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CERT-4",
+      "group": "NR5",
+      "source": "V2:3.3; CW:N3f1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "four distinct registered valid signers",
+      "event": "actual Finalization verify",
+      "expected": "true if all context/subject/format conditions hold",
+      "required_evidence": "real BLS proof generated in later authorized runtime run",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ENTER-SKEW",
+      "group": "NR7",
+      "source": "SP:4.6–4.8; V2:6.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "same cid Enter offsets[0,20,100,500,1500]ms",
+      "event": "real independent startup",
+      "expected": "no all-Ready barrier; earliest qualifying quorum at500ms only if other premises hold; all-five interval at1500ms; never from first Enter",
+      "required_evidence": "per-worker readiness, Enter/view/cid, declared fixed U",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "SPLIT-3-2",
+      "group": "NR7",
+      "source": "SP:4.6; V2:6.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "five live honest workers split across two valid cids3/2",
+      "event": "observe bounded interval",
+      "expected": "neither cid has q4; no bounded liveness claim; agreement stays per cid",
+      "required_evidence": "valid descriptors/anchors and per-cid active set",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "CHANNEL-RESOLVER",
+      "group": "NR3",
+      "source": "RBFT:2; NR:8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "real five-engine no-restart run",
+      "event": "delay body/cert to force real resolver request/response",
+      "expected": "all four channels observed; baseline zero resolver disclosed if zero; fixture alone insufficient",
+      "required_evidence": "native vote/certificate/resolver/body bytes and controlled envelopes",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "TEN-PHYSICAL",
+      "group": "NR4",
+      "source": "V2:6.3; NR:8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "healthy calibrated profile1–10; actual tx workload",
+      "event": "run fixed window",
+      "expected": "ten physical blocks for this healthy case; filtered tx/padding/execution independently checked; not ten views assumption",
+      "required_evidence": "raw tx, pre/post roots, physical/native hashes, all proof/delivery",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ACK-ATOMIC",
+      "group": "NR9",
+      "source": "SIMT:4–5; V2:5.1",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "full Ack effects includes valid send and later invalid effect",
+      "event": "validate complete batch",
+      "expected": "zero visible queue/reader/counter/release mutation; native authorized IO need not roll back",
+      "required_evidence": "before/after root/state and full rejected Ack bytes",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ACK-DURABILITY",
+      "group": "NR9",
+      "source": "SIMT:5; NR:3.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "planned custody/root with no real persistence receipt",
+      "event": "attempt confirm/release",
+      "expected": "deny release; no synthetic receipt; only real matching persisted owner/transition/candidate/root can confirm",
+      "required_evidence": "sync and exact persisted bytes/receipt binding",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ACK-REPLAY",
+      "group": "NR9",
+      "source": "NR:3.2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "already committed grant",
+      "event": "exact retry, mutated retry, duplicate release",
+      "expected": "exact retry returns original whole Ack; mutation rejects; no second logical release",
+      "required_evidence": "grant/Ack/root hashes and downstream count",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "ACK-STALE",
+      "group": "NR9",
+      "source": "SIMT:5",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "custody record durable but plan stale/cross-instance",
+      "event": "confirm",
+      "expected": "fail closed; retain/recover obligation; never silently delete",
+      "required_evidence": "persisted transition id and unchanged release obligations",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "WALL-REPLAY",
+      "group": "NR10",
+      "source": "V2:5.1; NR:8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "fixed inputs,seeds7/42/99",
+      "event": "startup forward/reverse × wall pause0/2ms",
+      "expected": "complete canonical virtual trace/native frames equal per seed; PID/wall separate declared diagnostics",
+      "required_evidence": "same candidate/profile hash and raw traces with comparer",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "REGULAR-FULL",
+      "group": "M1",
+      "source": "GFR:4.2–4.3; H1; H2; H3",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "R0→R1→R2 valid live pipeline",
+      "event": "h10 and h20 results accepted at G",
+      "expected": "windows1–10,11–20,21–30; R2 first qualified result enters G; regional Final alone insufficient",
+      "required_evidence": "real lifecycle and publication/GFR replay positions",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "REGULAR-END",
+      "group": "M1",
+      "source": "GFR:4.3; PIPE:3.4; H2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "R0 last accepted h9; grace3s; R1 fixed window11–20; OPTIONAL scenario specifically requires physical h11",
+      "event": "prepare known valid h9-anchor candidate and produce h11 before22.2s; public SessionEnd24s",
+      "expected": "for OPTIONAL h11-physical target use actual early preparation/production and retain cached result; fixed window11–20 always; no guessed future anchor/cid; failure to produce h11 alone is not a general liveness violation",
+      "required_evidence": "actual early preparation/Enter/Final, public coverage, later G acceptance",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "PUBLIC-BODY-LATER",
+      "group": "M1",
+      "source": "GFR:3.2–3.4",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "proof public q5/body public q7; reader gets material later",
+      "event": "replay independent readers",
+      "expected": "q_avail7; local cache/arrival does not substitute public body; local missing WAIT at same event",
+      "required_evidence": "published bytes and original positions per reader",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "OFFICIAL-SAME-BYTES",
+      "group": "M1",
+      "source": "H3:scope",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "one actual M1 RegionalResult canonical publication artifact",
+      "event": "official local dev-node submit/readback",
+      "expected": "same payload/hash and namespace/q/index; separate wall/Unknown evidence; no QC/VID or deterministic time claim",
+      "required_evidence": "artifact origin hash and HTTP/node receipt",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "FRESH-COMPATIBILITY",
+      "group": "NR0",
+      "source": "H1:acceptance; NR:8",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "accurate integrated M0 SHA and final shared-shim candidate identified",
+      "event": "Fresh existing healthy, two-real-alone, proof-before-body, Close/lease, crypto negatives plus full affected Fresh matrix after shared changes",
+      "expected": "old constructor/domain/wire/recovery-reader semantics preserved; actual current-SHA evidence; no inherited PASS from fec7ade",
+      "required_evidence": "tree/patch/lock hashes, exact commands and named tested revision",
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "id": "REGULAR-END-LATE-SLOT",
+      "group": "M1",
+      "source": "GFR:4.3; SP:3.7; V2:6.3; H2",
+      "input_kind": "symbolic_trace_recipe",
+      "pre": "R0 SessionEnd at24s; last accepted physical h9; R1 fixed window11–20; first legal Build local24,400,000us; necessary inputs/quorum and remaining time budget available",
+      "event": "Enter/Build after SessionEnd",
+      "expected": "Build physical h14 by local slot; Merge covers missing virtual heights10–13 from h9 anchor; no shifted window; accept only if entire extension meets publication and Expire rules; absence of physical h11 is not automatic failure",
+      "required_evidence": "actual local-clock/slot, independent Merge and public admission positions; applicable liveness budget",
+      "runtime_status": "NOT_RUN"
+    }
+  ],
+  "baseline": "e1a435712ec492cae2bbff120a51ffd507eebf45",
+  "h1_candidate": null
+}
