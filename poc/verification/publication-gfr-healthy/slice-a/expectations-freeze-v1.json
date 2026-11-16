@@ -1,0 +1,60 @@
+{
+  "schema": "H3-SLICE-A-SOURCE-EXPECTATION-FREEZE-1",
+  "baseline": "a1bee707b92b6b550a1b53c914e667994db15c84",
+  "dispatch": "d55d39f73593676325bdc0fbb7ba3845ca93025f",
+  "dispatch_path": "poc/docs/milestones/M1-implementation-dispatch-20261116.md",
+  "dispatch_sha256": "4a211cd38a5db108dc3b8548a87c19e599cb3870e534e513b41e487b4c5cc8b6",
+  "chronology": "Source expectations and vectors written before reading new sliceA contract/annex or any H3 Builder candidate. Existing accepted components read as dependencies.",
+  "artifacts": [
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/source-expectations-v1.md",
+      "sha256": "426f886c6a686975c16dc10d74f5bfa7800d60b572069fecec5989d57cb20485"
+    },
+    {
+      "path": "poc/verification/publication-gfr-healthy/slice-a/vectors-v1.json",
+      "sha256": "896a774ba0ae7bf6f9a8422ac96fc842a0d57872ce9d0dfba20326a24ccff374"
+    }
+  ],
+  "accepted_component_pins": [
+    {
+      "path": "poc/crates/viewer-gfr/src/publications.rs",
+      "sha256": "04ed8cdda2dd357b4047b4d4003b600e54731ac398bec24b69e3ff01d7eaa054"
+    },
+    {
+      "path": "poc/crates/viewer-gfr/src/api.rs",
+      "sha256": "13a95666aae42d5bec869b2547a35d8c3432a10334165a258c1de56f23a2f74f"
+    },
+    {
+      "path": "poc/crates/publisher/src/lib.rs",
+      "sha256": "1706d75458684a5bf97a1357e7d0837fffb7f282e1fd1c1c438fac0ede35991f"
+    },
+    {
+      "path": "poc/crates/publisher/src/codec.rs",
+      "sha256": "a9c6c143d0c570591d6f69892ee977644abf3e19dbfab7f9c86427b7be1b5364"
+    },
+    {
+      "path": "poc/crates/publisher/src/store.rs",
+      "sha256": "1ea9ee81fdc0a03c041652a6db00d9864787e7929ff92f41f5ec3c8f848b8bad"
+    },
+    {
+      "path": "poc/crates/types/src/domain/objects.rs",
+      "sha256": "3d49888368cb197e51000403324a7c424415c8ef2fd678220a0ac2bcc447ff20"
+    },
+    {
+      "path": "poc/crates/authorization/src/schedule.rs",
+      "sha256": "a986e793d3318efcacd3896d6d1eadb580e4273b6108e4777aaba93f01f7092c"
+    },
+    {
+      "path": "poc/crates/core/src/merge/mod.rs",
+      "sha256": "653e3923ea0cdd1ffd57b38952204ce638569841a5e35183596c0f2bfca3cbd4"
+    },
+    {
+      "path": "poc/crates/sim-espresso/src/reader.rs",
+      "sha256": "e40f563c83748379e9effff29b4fc0df43eb45444f5a3a68676783af0c03a39a"
+    }
+  ],
+  "case_count": 10,
+  "candidate_execution": "NOT_RUN",
+  "native_crypto": "NOT_RUN",
+  "private_wire_literals": "pending exact annex; additive mapping before coding that surface"
+}
