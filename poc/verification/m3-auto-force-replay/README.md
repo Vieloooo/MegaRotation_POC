@@ -30,6 +30,6 @@ python3 -B poc/verification/m3-auto-force-replay/generate_auto_force.py \
 
 M1 和 M2 使用原有生成及投影测试入口，见 [M1/M2 生成命令与证据](../../web/m1-gfr-replay/README.md)。
 
-合同样本通过 Firefox 158.0 单文件验收，覆盖十二个阶段入口、播放/暂停、单步、拖动、筛选和回退。样本含 40 帧，SHA-256 为 `d844692ae715af92565c985a04c234c542afd11cd350ef3f3bebeddc757484df`。投影测试检查 signer 前缀落后、q 增加但 θ 停滞、重复签名、不同 digest 和历史选区顺序。
+合同样本通过 Firefox 158.0 单文件验收，覆盖十二个阶段入口、播放/暂停、单步、拖动、筛选和回退。样本含 40 帧，SHA-256 为 `c3836dbbae97b732122dcaae7b27a3c2794607f91758f322d3763cc98d8f7de2`。投影测试检查 signer 前缀落后、q 增加但 θ 停滞、重复签名、不同 digest、历史选区顺序、原始输入缺失或被篡改，以及失败时保留已有输出。
 
-正式入口所需输入包括通过 checker 的主运行 manifest、`report.json`、`verified-controls.json` 和 `public-replay.json`。样本提交时，AF01 正式封存运行仍待提供。开发轨迹用于检查字段形状。首次广播、广播确认与签名前观察依据使用各自的 trace 记录。若要逐次查看签名与广播前重新核验的内部输入，runtime 需单独记录每次 recheck 的观察值和理由。
+正式入口所需输入包括通过 checker 的主运行 manifest、`report.json`、`verified-controls.json`、`verified-l1-headers.json` 和 `public-replay.json`。样本提交时，AF01 正式封存运行仍待提供。开发轨迹用于检查字段形状。首次广播、广播确认与签名前观察依据使用各自的 trace 记录。若要逐次查看签名与广播前重新核验的内部输入，runtime 需单独记录每次 recheck 的观察值和理由。

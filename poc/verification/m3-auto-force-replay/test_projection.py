@@ -1,7 +1,18 @@
+import hashlib
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from model import historical_choice, signature_set, signer_view
 from sample import PROFILE, poll, sample_projection, tip
+from projection import AutoBundle
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
 
 
 class ProjectionTests(unittest.TestCase):
@@ -44,6 +55,46 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(historical_choice(policy, 0, 3, 7, 3), (2, [2, 1, 0], 7, 7))
         self.assertEqual(historical_choice({**policy, "enabled_mask": 0}, 0, 9, 7, 3),
                          (None, [2, 1, 0], 7, 9))
+
+
+class SealTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        (self.root / "raw").mkdir()
+        self.file = self.root / "raw" / "profile.json"
+        self.file.write_bytes(b"{}")
+        candidate = "a" * 40
+        revision = {"head": candidate, "status": ""}
+        manifest = {"candidate": candidate, "status": "COMPLETED", "scenario": "outage", "seed": 42,
+                    "schema": "M3-AUTO-FORCE-RUN-1", "before": revision, "after": revision,
+                    "files": {"raw/profile.json": {"bytes": 2, "sha256": sha(b"{}")}}}
+        raw = json.dumps(manifest).encode()
+        (self.root / "manifest.json").write_bytes(raw)
+        (self.root / "manifest.sha256").write_text(sha(raw) + "  manifest.json\n")
+
+    def test_missing_and_corrupted_raw_input(self):
+        bundle = AutoBundle(self.root)
+        self.assertEqual(bundle.read("raw/profile.json"), b"{}")
+        self.file.write_bytes(b"[]")
+        with self.assertRaisesRegex(ValueError, "raw/profile.json"):
+            bundle.read("raw/profile.json")
+        self.file.unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "profile.json"):
+            bundle.read("raw/profile.json")
+
+    def test_missing_checker_keeps_existing_output(self):
+        out = self.root / "auto-force.html"
+        out.write_bytes(b"prior page")
+        result = subprocess.run(
+            [sys.executable, "-B", str(Path(__file__).with_name("generate_auto_force.py")),
+             "--bundle", str(self.root), "--independent", str(self.root / "not-present"), "--output", str(out)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"report.json", result.stderr)
+        self.assertEqual(out.read_bytes(), b"prior page")
 
 
 if __name__ == "__main__":

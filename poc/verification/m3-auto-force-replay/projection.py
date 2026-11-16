@@ -16,13 +16,14 @@ from model import assemble, event, historical_choice, position_name, require, se
 
 
 KINDS = ("WorkerOffline", "EspressoHeartbeat", "GovernancePoll", "GovernanceSignature", "GovernanceState",
-         "GovernanceSubmission", "L1Included", "L1Finalized", "L1ReaderAvailable", "ForceActivated", "GPadding")
+         "GovernanceSubmission", "L1Included", "L1Finalized", "L1ReaderAvailable", "ForceActivated", "GPadding", "RunFailed")
 RPC = "raw/l1/raw-rpc-bundle.json"
 HUB = "raw/l1/hub-l1.jsonl"
 GOV = "raw/governance.jsonl"
 TRANSACTION = "raw/l1/governance-transaction.json"
 ORACLE = "public-replay.json"
 CONTROLS = "verified-controls.json"
+HEADERS = "verified-l1-headers.json"
 REPORT = "report.json"
 
 
@@ -76,27 +77,30 @@ def hex_value(value):
 
 def load_checker(directory, bundle):
     result, hashes = {}, {}
-    for name in (REPORT, ORACLE, CONTROLS):
+    for name in (REPORT, ORACLE, CONTROLS, HEADERS):
         data = (directory / name).read_bytes()
         hashes[name] = sha256(data)
         result[name] = json.loads(data)
     report = result[REPORT]
     equal((report["status"], report["mode"], report["candidate"], report["manifest_sha256"]),
           ("PASS", "outage", bundle.manifest["candidate"], bundle.manifest_hash), "independent AF01 report binding")
-    for name, field in ((ORACLE, "public_sha256"), (CONTROLS, "controls_sha256")):
+    for name, field in ((ORACLE, "public_sha256"), (CONTROLS, "controls_sha256"), (HEADERS, "l1_headers_sha256")):
         if field in report:
             equal(hashes[name], report[field], f"checker authentication of {name}")
     control = only(result[CONTROLS], CONTROLS)
-    return report, result[ORACLE], control, hashes
+    return report, result[ORACLE], control, result[HEADERS], hashes
 
 
-def project_l1(bundle, trace, control, report, profile):
+def project_l1(bundle, trace, control, report, profile, checker_headers):
     rpc = bundle.json(RPC)
     hub_rows = bundle.jsonl(HUB)
     hub = {(r["command"]["op"], r["command"].get("height"), r["command"].get("reader")): (i, r)
            for i, r in enumerate(hub_rows, 1) if r["command"]["op"] in ("mine", "finalize", "deliver")}
     block, tx, log = control["position"]
     headers = rpc["blocks"]
+    equal([{"height": int(row["number"], 16), "timestamp_s": int(row["timestamp"], 16),
+            "hash": list(bytes.fromhex(hex_value(row["hash"])))} for row in headers],
+          checker_headers, "independent verified historical Anvil headers")
     header = headers[block]
     receipt_index, receipt = only(((i, r) for i, r in enumerate(rpc["receipts"])
                                    if r["transactionHash"] == control["tx_hash"]), "Force receipt")
@@ -162,7 +166,7 @@ def project_l1(bundle, trace, control, report, profile):
             events.append(at("l1", "reader" if height == block and reader == "A" else None,
                              f"Reader {reader} 已读 ℓ{height}", row,
                              [("实际 L1 hash", item["hash"]), ("L1 timestamp", seconds(hdr["timestamp_us"]))], refs))
-    return events, l1
+    return events, l1, rpc["config"]["genesisOrigin"]
 
 
 def project_governance(bundle, trace, report, control, profile):
@@ -182,6 +186,13 @@ def project_governance(bundle, trace, report, control, profile):
     prepared = only(trace["GovernanceSubmission"], "GovernanceSubmission")
     transaction = bundle.json(TRANSACTION)
     equal(transaction, prepared["detail"], "durable prepared transaction")
+    hub_rows = bundle.jsonl(HUB)
+    hub_prepare = only((row for row in hub_rows if row["command"]["op"] == "governance_prepare"),
+                       "one hub governance preparation")
+    attempts = [(line, row) for line, row in enumerate(hub_rows, 1)
+                if row["command"]["op"] in {"governance_broadcast", "governance_reconcile"}]
+    equal((hub_prepare["result"], hub_prepare["command"]["tick_us"]), (transaction, prepared["tick_us"]),
+          "prepared trace/journal matches actual driver request")
     approvals = transaction["signers"]
     digest, request = signature_set(approvals, profile["threshold"])
     equal((transaction["hash"], transaction["digest"], transaction["request"], digest, transaction["nonce"]),
@@ -193,6 +204,13 @@ def project_governance(bundle, trace, report, control, profile):
     equal(ordered_addresses, control["signers"], "actual recovered addresses")
     require(set(ordered_addresses) <= set(report["committee"]["members"]), "threshold signer outside committee")
     equal([item["signature"] for item in ordered], control["signatures"], "canonical packed EIP-712 signatures")
+    equal(transaction["signature_pack"], "0x" + "".join(hex_value(sig) for sig in control["signatures"]),
+          "durable signature package matches mined transaction")
+    equal((request["request_id"], request["control_seq"], request["target_beta"],
+           request["enabled_mask"], request["order"], request["signed_floor"]),
+          (int(control["request_id"], 16), control["seq"], control["target"],
+           control["policy"]["enabled_mask"], control["policy"]["order"], control["l1_floor"]),
+          "signed policy matches independently decoded actual receipt")
     approvals_ref = f"{CONTROLS}[0] · signers / signatures"
     eligible = {}
     first_decision = None
@@ -226,25 +244,43 @@ def project_governance(bundle, trace, report, control, profile):
     equal(durable, [{"phase": r["detail"]["phase"], "tick_us": r["tick_us"], "detail": r["detail"]["evidence"]}
                     for r in states], "governance journal to trace")
     first_attempt = next(r["seq"] for r in states if r["detail"]["phase"] in {"SubmittedUnknown", "Submitted"})
+    signature_seqs = {r["detail"]["signer"]: r["seq"] for r in trace["GovernanceSignature"]}
     for i, row in enumerate(states, 1):
         phase = row["detail"]["phase"]
         value = row["detail"]["evidence"]
-        stage = "submit" if row["seq"] == first_attempt else {"Signed": "signed", "Submitted": "submitted"}.get(phase)
+        stage = ("submit" if row["seq"] == first_attempt else
+                 {"Signed": "signed", "Prepared": "prepared", "Submitted": "submitted"}.get(phase))
         if phase == "Submitted":
             equal(value["hash"], control["tx_hash"], "reconciled actual broadcast uses prepared hash")
         facts = [("阶段", phase)]
-        if phase in {"Signed", "Prepared", "SubmittedUnknown", "Submitted"}:
-            facts += [("Digest", digest), ("实际门槛", f"{profile['threshold']}/{profile['signer_count']}"),
-                      ("达到门槛的地址", ordered_addresses)]
+        if phase == "Signed":
+            initial = list(value["signatures"].values())
+            equal(signature_set(initial, profile["threshold"]), (digest, request), "durable threshold signature set")
+            require(all(raw_signed[sig["signer"]] == sig and signature_seqs[sig["signer"]] < row["seq"]
+                        for sig in initial), "threshold state used a signature before its trace event")
+            facts += [("Digest", digest), ("达到门槛时的 signer 地址", [sig["address"] for sig in initial]),
+                      ("治理门槛", f"{profile['threshold']}/{profile['signer_count']}")]
         if phase in {"Prepared", "SubmittedUnknown", "Submitted"}:
+            require(all(signature_seqs[sig["signer"]] < row["seq"] for sig in approvals),
+                    "prepared transaction used a future signature")
+            facts += [("Digest", digest), ("实际打包签名地址", ordered_addresses)]
             facts += [("交易 hash", control["tx_hash"]), ("持久准备 τ", seconds(prepared["tick_us"])),
                       ("Nonce", transaction["nonce"])]
         if row["seq"] == first_attempt:
             equal(row["tick_us"], report["l1_stages"]["submit_us"], "first actual broadcast attempt")
+        refs = [f"{GOV}:{i}", f"{REPORT} · governance"]
         if phase.startswith("Submitted"):
-            facts.append(("首次实际广播尝试 τ（checker）", seconds(report["l1_stages"]["submit_us"])))
-        events.append(at("l1" if phase.startswith("Submitted") else "governance", stage, f"治理 · {phase}", row, facts,
-                         [f"{GOV}:{i}", f"{REPORT} · governance", approvals_ref]))
+            require(bool(attempts), "governance broadcast missing driver response")
+            line, attempt = attempts.pop(0)
+            equal((attempt["command"]["tick_us"], attempt["result"]), (row["tick_us"], value), "driver broadcast evidence")
+            facts.extend([("首次实际广播尝试 τ（checker）", seconds(report["l1_stages"]["submit_us"])),
+                          ("L1 driver 状态", value["status"]), ("重读持久交易", value["reloaded"])])
+            refs.append(f"{HUB}:{line}")
+        if phase in {"Prepared", "SubmittedUnknown", "Submitted"}:
+            refs.extend([ref(prepared), TRANSACTION, approvals_ref])
+        events.append(at("l1" if phase.startswith("Submitted") else "governance", stage,
+                         f"治理 · {phase}", row, facts, refs))
+    require(not attempts, "driver broadcasts omitted from governance trace")
     return events
 
 
@@ -265,7 +301,8 @@ def historical_ref(config, new, control, floor, history, actual_hash):
                        bytes.fromhex(actual_hash), bytes([new["region"]]))
 
 
-def project_force(bundle, trace, raw, old, new, config, control, profile, oracle, report, espresso, l1):
+def project_force(trace, raw, old, new, config, control, profile, oracle, report, espresso, l1, old_floor,
+                  head, old_state, covering):
     observed = only(trace["ForceActivated"], "ForceActivated")
     d = observed["detail"]
     position = raw["detail"]["position"]
@@ -275,6 +312,9 @@ def project_force(bundle, trace, raw, old, new, config, control, profile, oracle
     equal(d["position"], position, "actual activation position")
     equal(raw["tick_us"], report["force"]["activation_tick_us"], "actual activation tick")
     equal(raw["tick_us"], observed["tick_us"], "activation announcement tick")
+    equal((d["old_branch"], d["new_branch"], d["head_height"], hex_value(d["record_id"])),
+          (old["beta"], new["beta"], head["height"], hex_value(raw["detail"]["id"])), "activation matches GFR commit")
+    equal((control["target"], position["kind"]), (old["beta"], "Force"), "Force targets open branch")
     equal(position["key_us"], control["act_us"], "Force public act")
     block, tx, log = control["position"]
     equal(position["index"]["L1"], {"block": block, "tx": tx, "log": log}, "Force position")
@@ -282,6 +322,10 @@ def project_force(bundle, trace, raw, old, new, config, control, profile, oracle
     equal((q_star, bool(espresso[q_star]["messages"])), (witness["q_star"], False),
           "first covering empty Espresso block")
     equal(d["espresso_q"], q_star, "activation covering q")
+    require(covering["seq"] < raw["seq"], "covering heartbeat was not finalized before Force")
+    old_end = config["genesis"]["timestamp_us"] + (old["window"][1] + 1) * config["l2_slot_us"] + profile["grace_us"]
+    equal(old_end, position["key_us"], "old SessionEnd and public Force key tie")
+    equal(oracle["regular"], [], "old SessionEnd suppressed after tied Force")
     require(not raw["detail"]["append"] and l1[block]["readers"]["A"]["trace"]["tick_us"] <= raw["tick_us"]
             and espresso[q_star]["finalized_us"] <= raw["tick_us"], "Force public coverage/order")
     [closed, assigned] = raw["detail"]["events"]
@@ -290,9 +334,12 @@ def project_force(bundle, trace, raw, old, new, config, control, profile, oracle
     verify_assignment(d["descriptor"], new)
     equal(assigned["body"]["SessionAssigned"]["descriptor"], d["descriptor"], "atomic selected descriptor")
     selected, cycle, floor, history = historical_choice(control["policy"], old["region"],
-                                                         new["reference"]["origin"], block, 3)
+                                                         new["reference"]["origin"], block, old_floor)
     anchor = trace_anchor(d["descriptor"]["anchor"])
-    equal((anchor, new["anchor"]), (trace_anchor(witness["anchor"]), anchor), "selected physical anchor")
+    equal((anchor, new["anchor"], hex_value(witness["anchor_root"])),
+          (trace_anchor(witness["anchor"]), anchor, old_state), "selected physical anchor")
+    equal(anchor, {key: head[key] for key in ("height", "origin", "physical", "timestamp_us")},
+          "activation anchor equals actual old G head")
     first = max(anchor["height"] + 1, (control["act_us"] + profile["force_init_us"]
                                       - config["genesis"]["timestamp_us"]) // config["l2_slot_us"] + 1)
     equal((new["window"], new["region"], new["beta"], new["session"], new["source_region"]),
@@ -307,13 +354,14 @@ def project_force(bundle, trace, raw, old, new, config, control, profile, oracle
     computed = historical_ref(config, new, control, floor, history, actual_hash)
     equal((computed, new["historical_rule_ref"]), (new["authorization_ref"], computed),
           "historical authorization hash")
-    refs = [ref(observed), f"{RPC} · blocks[{history}]", f"{ORACLE}.force[0].historical_plan",
+    refs = [ref(observed), f"{RPC} · blocks[{history}]", f"{ORACLE}.force[0].historical_plan", f"{HEADERS}[{history}]",
             f"{CONTROLS}[0]", "raw/descriptor-b1-r1.bin", espresso[q_star]["file"]]
     return at("g", "force", f"Force 激活 · R{old['region']} → R{selected}", raw, [
         ("公开 act", seconds(position["key_us"])), ("Force L1 位置", control["position"]),
         ("控制覆盖 x − Mₐ", seconds(position["key_us"] - profile["announcement_us"])),
         ("Espresso watermark", f"q{q_star} · θ {seconds(espresso[q_star]['key_us'])}"),
         ("水位 finalized τ", seconds(espresso[q_star]["finalized_us"])),
+        ("旧 SessionEnd 公开键（推导）", seconds(old_end)),
         ("同键全序", "L1 controls → Expire → SessionEnd → Espresso"),
         ("生命周期", "BranchClosed(β0) + SessionAssigned"), ("G", f"保留 h{anchor['height']}"),
     ], refs, pc=position_name(position), duty=f"R{selected} · β{new['beta']}/r{new['session']} [{first},{first+9}]",
@@ -322,11 +370,12 @@ def project_force(bundle, trace, raw, old, new, config, control, profile, oracle
              ("首个启用且具备资格的区域", f"R{selected}"), ("签署 floor", control["l1_floor"]),
              ("有效 floor", floor), ("历史 L1 高度 max(Ref.origin, floor)", history),
              ("实际历史 header hash", actual_hash), ("Ref.origin", new["reference"]["origin"]),
+             ("固定等权 registry（空禁任）", config["registry_hash"]),
              ("authorization_ref 重算", computed), ("连接 anchor", anchor), ("cid", new["cid"]),
              ("后继窗口", new["window"])])
 
 
-def project_public(bundle, trace, profile, config, control, report, oracle, l1):
+def project_public(bundle, trace, profile, config, control, report, oracle, l1, old_floor):
     espresso = bundle.bins("espresso", decode_espresso)
     old, new = [decode_descriptor(bundle.read(path), path)
                 for path in ("raw/genesis-descriptor.bin", "raw/descriptor-b1-r1.bin")]
@@ -408,14 +457,25 @@ def project_public(bundle, trace, profile, config, control, report, oracle, l1):
     expected = oracle["expected"]
     equal(len(trace["GAccepted"]) + len(pad), len(expected), "checker virtual G inventory")
     last, state = config["genesis"], config["genesis_state_root"]
-    for source_seq, raw in enumerate(trace["GfrReplayRecord"]):
+    control_q = only(oracle["force"], "one independent Force")["q_star"]
+    records = trace["GfrReplayRecord"]
+    replay_order = [r["detail"]["position"]["kind"] for r in records]
+    equal(replay_order, ["Espresso"] * control_q + ["Force"] + ["Espresso"] * (len(espresso) - control_q),
+          "Force precedes its covering Espresso replay event")
+    next_q = 0
+    for source_seq, raw in enumerate(records):
         record = raw["detail"]
         equal(record["source_seq"], source_seq, "ordered source_seq")
         position = record["position"]
         kind = position["kind"]
+        if kind == "Espresso":
+            equal((position["index"]["Espresso"], position["key_us"]),
+                  (next_q, espresso[next_q]["key_us"]), "actual replay position and PELG key")
+            next_q += 1
         pc = position_name(position)
         if kind == "Force":
-            events.append(project_force(bundle, trace, raw, old, new, config, control, profile, oracle, report, espresso, l1))
+            events.append(project_force(trace, raw, old, new, config, control, profile, oracle, report, espresso,
+                                        l1, old_floor, last, state, heartbeat[control_q]))
         elif not record["append"]:
             equal(kind, "Espresso", "unanticipated replay event")
             events.append(at("g", None, f"处理 q{position['index']['Espresso']} · G 保持 h{last['height']}", raw, pc=pc))
@@ -450,7 +510,7 @@ def project_public(bundle, trace, profile, config, control, report, oracle, l1):
 
 def formal_projection(path, independent):
     bundle = AutoBundle(path)
-    report, oracle, control, hashes = load_checker(independent, bundle)
+    report, oracle, control, checked_headers, hashes = load_checker(independent, bundle)
     raw_profile = bundle.json("raw/profile.json")
     auto = raw_profile["auto_force"]
     equal((raw_profile["schema"], raw_profile["seed"], auto["scenario"]), ("M3-AUTO-FORCE-1", 42, "outage"),
@@ -459,14 +519,15 @@ def formal_projection(path, independent):
           (2, 3, 2, 3), "actual governance committee")
     profile = {**raw_profile, **auto, "signer_count": auto["committee"], "force_init_us": 3_000_000}
     trace = read_trace(bundle.read("raw/trace.jsonl"), KINDS)
+    require(not trace["RunFailed"], "sealed AF01 trace contains a runtime failure")
     complete = only(trace["SmokeComplete"], "AF01 completion")
     equal((complete["detail"], bundle.json("raw/summary.json")),
           (bundle.manifest["summary"], bundle.manifest["summary"]), "sealed recovery summary")
     config = decode_config(bundle.read("raw/config.bin"), "raw/config.bin")
     equal(oracle["config_ref"], config["ref"], "actual execution config")
-    l1_events, headers = project_l1(bundle, trace, control, report, profile)
+    l1_events, headers, old_floor = project_l1(bundle, trace, control, report, profile, checked_headers)
     governance = project_governance(bundle, trace, report, control, profile)
-    public = project_public(bundle, trace, profile, config, control, report, oracle, headers)
+    public = project_public(bundle, trace, profile, config, control, report, oracle, headers, old_floor)
     provenance = {"candidate": bundle.manifest["candidate"], "manifest SHA-256": bundle.manifest_hash,
                   "bundle": path.name, "independent": independent.name,
                   **{f"{name} SHA-256": hash for name, hash in hashes.items()},

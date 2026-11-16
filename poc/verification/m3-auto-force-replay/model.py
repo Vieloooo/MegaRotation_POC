@@ -13,7 +13,15 @@ def seconds(us):
 def position_name(value):
     if value is None:
         return "—"
-    return f"{value['kind']} {value['index']} · {seconds(value['key_us'])}"
+    kind, index = value["kind"], value["index"]
+    if kind == "Espresso":
+        location = f"q{index['Espresso']}"
+    elif kind == "Force":
+        p = index["L1"]
+        location = f"({p['block']},{p['tx']},{p['log']})"
+    else:
+        location = str(index)
+    return f"{kind} {location} · {seconds(value['key_us'])}"
 
 
 def event(lane, stage, label, tick, seq, facts=(), refs=(), **state):
