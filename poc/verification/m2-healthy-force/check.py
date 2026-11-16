@@ -93,7 +93,8 @@ def trace_rows(raw):
             yield row
 
 
-def check_frames(raw, public, proto_file, trace):
+def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pids=()):
+    grant_pids = set(range(15)) if grant_pids is None else set(grant_pids)
     proto = NativeProto(proto_file)
     counts = Counter()
     pending = None
@@ -235,8 +236,8 @@ def check_frames(raw, public, proto_file, trace):
                 require(key not in terminal, "repeated terminal effect")
                 terminal[key] = (tick, grant[2], grant[3], p.get(3, b"").decode())
         counts["acks"] += 1
-    require(pending is None and set(binds) == set(range(15)), "lost Ack or worker")
-    for pid in range(15):
+    require(pending is None and set(binds) == grant_pids, "lost Ack or expected worker grant")
+    for pid in sorted(grant_pids):
         entries = list(journal(reference(raw, pid, "root-step"), b"I1SHEAD1", "root-step", binds[pid]))
         for (index, digest, disk), (grant, ack, wire_grant, wire_ack) in zip(entries, paired[pid], strict=True):
             require(index == ack[10] and digest == ack[11], "Ack durable record identity")
@@ -270,7 +271,8 @@ def check_frames(raw, public, proto_file, trace):
             spawn[pid] = detail["os_pid"], seq
         elif kind == "WorkerExit":
             require(pid not in exits and spawn[pid][0] == detail["os_pid"], "unexpected worker exit identity")
-            require(detail["exit"] == 0 and detail["expected"], "unplanned worker exit")
+            if pid not in faulted_pids:
+                require(detail["exit"] == 0 and detail["expected"], "unplanned worker exit")
             exits[pid] = seq
         elif kind == "ManagerCommitted":
             revision = detail["revision"]
@@ -382,10 +384,10 @@ def bind_hub_calls(path, transcript):
     return len(calls)
 
 
-def driver_times(hub_path, rpc_path, evm, control):
+def driver_times(hub_path, rpc_path, evm, control, *, bind_calls=bind_hub_calls, replay_commands=False):
     rpc = load_rows(rpc_path)
     virtual = [row for row in rpc if "command" in row]
-    hub_operations = bind_hub_calls(hub_path, virtual)
+    hub_operations = bind_calls(hub_path, virtual)
     transcript = [r["startup_rpc"] for r in rpc if "startup_rpc" in r]
     require(len(transcript) == 1, "missing unique Anvil startup evidence")
     automine = [r for r in transcript[0] if r["request"]["method"] == "anvil_getAutomine"]
@@ -393,8 +395,8 @@ def driver_times(hub_path, rpc_path, evm, control):
     chain = [r for r in transcript[0] if r["request"]["method"] == "eth_chainId"]
     require(len(chain) == 1 and int(chain[0]["response"]["result"], 16) == evm["config"]["chainId"],
             "RPC chain ID")
-    by_id = {entry["reply"]["id"]: entry for entry in rpc if "reply" in entry}
-    require(len(by_id) == sum("reply" in entry for entry in rpc), "duplicate driver reply")
+    ids = [entry["reply"]["id"] for entry in rpc if "reply" in entry]
+    require(replay_commands or len(set(ids)) == len(ids), "duplicate driver reply")
     imported = importlib.import_module("independent_codec")
     including_height = control["position"][0]
     canonical_block = evm["blocks"][including_height]
@@ -407,8 +409,8 @@ def driver_times(hub_path, rpc_path, evm, control):
     all_mined = set()
     for row in virtual:
         cmd, output = row["command"], row["reply"]
-        reply = by_id[cmd["id"]]
-        require(reply["reply"] == output, "virtual driver command and raw RPC transcript disagree")
+        reply = row
+        require(output["id"] == cmd["id"], "virtual driver command and raw RPC transcript disagree")
         now = output["reference_us"]
         included = output["included_height"]
         finalized = output["finalized_height"]
@@ -419,10 +421,17 @@ def driver_times(hub_path, rpc_path, evm, control):
         for reader, height in output["visible_heights"].items():
             require(reader_prior.get(reader, 0) <= height <= finalized, "reader saw unfinalized or regressing prefix")
             reader_prior[reader] = height
-        if output["status"] != "ready":
-            continue
         calls = reply["rpc"]
         methods = [call["request"]["method"] for call in calls]
+        if output["status"] != "ready":
+            if replay_commands and cmd["op"] == "submit":
+                submitted = imported.hx(imported.keccak256(imported.as_bytes(cmd["raw"])))
+                if submitted == control["tx_hash"]:
+                    [send] = [c for c in calls if c["request"]["method"] == "eth_sendRawTransaction"]
+                    require(send["request"]["params"] == [cmd["raw"]],
+                            "uncertain Force send did not submit the prepared bytes")
+                    stages.setdefault("submit_us", now)
+            continue
         if cmd["op"] == "submit" and output["result"].get("submitted_tx_hash", "").lower() == control["tx_hash"]:
             first_raw_send = "eth_sendRawTransaction" in methods
             if first_raw_send and "submit_us" not in stages:

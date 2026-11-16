@@ -25,6 +25,10 @@ use serde::{Deserialize, de::DeserializeOwned};
 use serde_json::json;
 use sha2::{Digest as _, Sha256};
 
+#[path = "../../../m3-auto-force/historical_plan.rs"]
+mod historical_plan;
+use historical_plan::{ActivePolicy, Header, Policy};
+
 const PUBLICATION_CODEC: u32 = 0x47465201;
 type NativeScheme = Scheme<PublicKey, MinSig>;
 type NativeFinal = Finalization<NativeScheme, Digest>;
@@ -79,11 +83,16 @@ fn result(
     mut input: &[u8],
     q: u64,
     message: usize,
+    historical: bool,
 ) -> Proof {
     let desc = Descriptor::decode(frame(&mut input)).expect("canonical descriptor");
-    authorization
-        .validate_descriptor(&desc)
-        .expect("config, Plan and cid binding");
+    if historical && desc.plan.leader_rule.rule_id == 2 {
+        historical_plan::check_descriptor_base(&desc, authorization);
+    } else {
+        authorization
+            .validate_descriptor(&desc)
+            .expect("config, Plan and cid binding");
+    }
     let target = Hash32::try_from(take(&mut input, 32)).unwrap();
     let proof_bytes = frame(&mut input);
     assert!(input.is_empty(), "trailing GFRP proof bytes");
@@ -178,6 +187,7 @@ struct Control {
     act_us: u64,
     target: u64,
     l1_floor: u64,
+    policy: Option<Policy>,
 }
 
 #[derive(Clone)]
@@ -192,10 +202,16 @@ struct Duty {
     anchor: Anchor,
     reference: BlockRef,
     cid: Option<Cid>,
+    active_policy: Option<ActivePolicy>,
 }
 
 impl Duty {
-    fn check_descriptor(&mut self, descriptor: &Descriptor) {
+    fn check_descriptor(
+        &mut self,
+        descriptor: &Descriptor,
+        authorization: &StaticScheduleProvider,
+        historical_headers: Option<&[Header]>,
+    ) {
         let plan = &descriptor.plan;
         assert_eq!((plan.session.beta, plan.session.r), (self.beta, self.r));
         assert_eq!(plan.cause, self.cause);
@@ -207,6 +223,14 @@ impl Duty {
         assert_eq!(plan.reference_block, self.reference);
         assert_eq!((plan.window.h_min, plan.window.h_max), (self.min, self.max));
         assert_eq!(descriptor.anchor, self.anchor);
+        if let Some(policy) = self.active_policy {
+            policy.check_plan(descriptor, authorization, historical_headers.unwrap());
+        } else {
+            assert_eq!(
+                plan.leader_rule,
+                poc_types::domain::RuleSpec::static_schedule()
+            );
+        }
         assert_eq!(*self.cid.get_or_insert(descriptor.cid), descriptor.cid);
     }
 
@@ -215,13 +239,20 @@ impl Duty {
             beta: self.beta,
             r: self.r + 1,
             cause: BoundaryCause::Handoff,
-            region: (self.beta + self.r + 1) % 3,
+            region: match self.active_policy {
+                Some(active) => active
+                    .policy
+                    .select(Some(self.region))
+                    .expect("evidence profile requires an eligible historical handoff"),
+                None => (self.beta + self.r + 1) % 3,
+            },
             source_region: Some(self.region),
             min: self.max + 1,
             max: self.max + 10,
             anchor: anchor.clone(),
             reference: self.anchor.block.clone(),
             cid: None,
+            active_policy: self.active_policy,
         }
     }
 }
@@ -348,11 +379,14 @@ fn append(
 
 fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
-    assert_eq!(
-        args.len(),
-        6,
-        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US"
+    assert!(
+        (6..=7).contains(&args.len()),
+        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US [ACTUAL_L1_JSON]"
     );
+    let headers: Option<Vec<Header>> = args.get(6).map(|path| {
+        serde_json::from_slice(&fs::read(path).unwrap()).expect("actual L1 header projection")
+    });
+    let historical_headers = headers.as_deref();
     let raw = Path::new(&args[0]);
     let path = |name: &str| raw.join(name).to_str().unwrap().to_owned();
     let config: PublicConfig = read(&path("config.bin"));
@@ -365,6 +399,22 @@ fn main() {
     let expiry: u64 = args[4].parse().unwrap();
     let init: u64 = args[5].parse().unwrap();
     let mut controls: Vec<Control> = serde_json::from_slice(&fs::read(&args[1]).unwrap()).unwrap();
+    assert!(
+        controls
+            .iter()
+            .all(|c| c.policy.is_some() == headers.is_some())
+    );
+    if let Some(headers) = historical_headers {
+        assert!(!headers.is_empty());
+        for (index, header) in headers.iter().enumerate() {
+            assert_eq!(header.height, index as u64);
+            let nominal = &l1.rows[index].header;
+            assert_eq!(
+                (header.height, header.timestamp_s),
+                (nominal.height, nominal.timestamp_s)
+            );
+        }
+    }
     controls.sort_by_key(|c| (c.act_us, c.position));
     assert!(
         controls
@@ -436,7 +486,7 @@ fn main() {
                     let recorded = bodies.entry(digest).or_insert_with(|| (body.clone(), q));
                     assert_eq!(recorded.0, body);
                 }
-                1 => proofs.push(result(&authorization, input, q, message)),
+                1 => proofs.push(result(&authorization, input, q, message, headers.is_some())),
                 kind => panic!("unexpected GFRP kind {kind}"),
             }
         }
@@ -480,6 +530,7 @@ fn main() {
         anchor: genesis.anchor.clone(),
         reference: genesis.anchor.block,
         cid: None,
+        active_policy: None,
     };
     let mut floor = 0;
     let mut halted = false;
@@ -492,7 +543,18 @@ fn main() {
 
     for (q, &theta) in q_thetas.iter().enumerate() {
         let q = q as u64;
-        assert!(l1.rows.last().unwrap().header.timestamp_us().unwrap() >= theta.saturating_sub(ma));
+        let covering_tip_us = historical_headers.map_or_else(
+            || l1.rows.last().unwrap().header.timestamp_us().unwrap(),
+            |headers| {
+                headers
+                    .last()
+                    .unwrap()
+                    .timestamp_s
+                    .checked_mul(1_000_000)
+                    .unwrap()
+            },
+        );
+        assert!(covering_tip_us >= theta.saturating_sub(ma));
         loop {
             let end = if halted {
                 u64::MAX
@@ -534,7 +596,7 @@ fn main() {
                             continue;
                         };
                         let mut closed_duty = duty.clone();
-                        closed_duty.check_descriptor(desc);
+                        closed_duty.check_descriptor(desc, &authorization, historical_headers);
                         let mut old_chain = global.clone();
                         let mut height = old_chain.head.block.height + 1;
                         for id in &item.blocks[first..] {
@@ -562,13 +624,37 @@ fn main() {
                     }
                     let beta = duty.beta + 1;
                     let r = duty.r + u64::from(global.head.block.height > duty.anchor.block.height);
-                    let region = (beta + r) % 3;
+                    let source_region = duty.region;
+                    let active_policy = c.policy.map(|policy| {
+                        let headers = historical_headers.expect("missing M3 history");
+                        let inclusion = &headers[usize::try_from(c.position[0]).unwrap()];
+                        assert_eq!(
+                            inclusion.timestamp_s.checked_mul(1_000_000).unwrap() + ma,
+                            c.act_us
+                        );
+                        ActivePolicy {
+                            policy,
+                            position: c.position,
+                            control_seq: c.seq,
+                            signed_floor: c.l1_floor,
+                            effective_floor: floor.max(c.position[0]),
+                        }
+                    });
+                    let region = match active_policy {
+                        Some(active) => active
+                            .policy
+                            .select(Some(source_region))
+                            .expect("evidence profile requires an eligible historical Force"),
+                        None => (beta + r) % 3,
+                    };
                     let min = (global.head.block.height + 1).max(
                         (c.act_us + init - config.genesis.timestamp_us) / config.l2_slot_us + 1,
                     );
-                    floor = floor.max(c.position[0]).max(c.l1_floor);
+                    floor = active_policy.map_or_else(
+                        || floor.max(c.position[0]).max(c.l1_floor),
+                        |active| active.effective_floor,
+                    );
                     let prior_beta = duty.beta;
-                    let source_region = duty.region;
                     duty = Duty {
                         beta,
                         r,
@@ -580,8 +666,9 @@ fn main() {
                         anchor: global.head.clone(),
                         reference: global.head.block.clone(),
                         cid: None,
+                        active_policy,
                     };
-                    json!({
+                    let mut projection = json!({
                         "seq":c.seq,"position":c.position,"act_us":c.act_us,"valid":true,
                         "q_star":q, "closed_beta":prior_beta, "anchor":global.head,
                         "anchor_root":global.state.root().unwrap(), "native_hash":global.native,
@@ -589,7 +676,12 @@ fn main() {
                         "h_min":min,"h_max":min+9,"floor":floor,
                         "latest_ready_us":timestamp(&config, min)-1000,
                         "expiry_key_us":timestamp(&config, global.head.block.height + 1)+expiry,
-                    })
+                    });
+                    if let Some(active) = active_policy {
+                        projection["historical_plan"] = active
+                            .projection(global.head.block.origin, historical_headers.unwrap());
+                    }
+                    projection
                 };
                 force.push(result);
             } else if next == expire {
@@ -636,7 +728,7 @@ fn main() {
                 {
                     continue;
                 }
-                duty.check_descriptor(desc);
+                duty.check_descriptor(desc, &authorization, historical_headers);
                 chosen = Some((item, first));
                 break;
             }
