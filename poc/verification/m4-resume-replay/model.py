@@ -15,6 +15,7 @@ STAGES = {
     "inbox_advanced": ("l1", "Inbox 接纳"),
     "l1_finalized": ("l1", "L1 finalized"),
     "l1_available": ("l1", "L1 reader 可读"),
+    "d_available": ("d", "D reader 可读"),
     "da_wait": ("da", "等待已接纳 DA"),
     "da_verified": ("da", "DA 校验"),
     "d_append": ("d", "D 派生"),
@@ -163,7 +164,8 @@ class Replay:
     def view(self):
         return {"chains": {name: self.chain_view(chain) for name, chain in self.chains.items()},
                 "duty": self.duty, "pc": self.pc,
-                "d_position": self.d_position,
+                "d_position": ({"kind":"BlockEnd", "height":self.d_position[0]}
+                               if self.d_position and self.d_position[1] == 2**64 - 1 else self.d_position),
                 "comparison": comparison(self.chains["g"], self.chains["d"])}
 
     def finalized(self, height):
@@ -227,7 +229,8 @@ class Replay:
         self.da[position] = detail
 
     def derive(self, detail):
-        position = l1pos(detail["position"])
+        position = (l1pos(detail["position"]) if detail["reason"] == "batch" else
+                    (detail["processed_through"], 2**64 - 1, 2**64 - 1))
         blocks = detail["blocks"]
         require(blocks, "empty D append")
         require(self.d_position is None or self.d_position <= position, "D position regressed")
@@ -308,13 +311,15 @@ class Replay:
             batch, source = self.batches[position]
             current = self.chains["gprime"]
             require(position in self.da and len(current) - 1 == batch["previous"], "G′ Inbox sources not yet available")
-            adopted = self.append(current, [{**block, "provenance": "Inbox"} for block in source])
+            provenance = "Inbox · 来源重建" if detail.get("reconstructed") else "Inbox"
+            adopted = self.append(current, [{**block, "provenance": provenance} for block in source])
         else:
             cut = self.cuts[l1pos(detail["resume_position"])]
             require(detail["source"] == "cut" and detail["cut_id"] == cut["cut_id"]
                     and list(position) == self.resumes[l1pos(detail["resume_position"])]["cursor_position"],
                     "G′ needs the matching CursorSet and cut")
-            adopted = [{**block, "provenance": "CursorSet"} for block in cut["chain"][:cut["target"] + 1]]
+            provenance = "CursorSet · 来源重建" if detail.get("reconstructed") else "CursorSet"
+            adopted = [{**block, "provenance": provenance} for block in cut["chain"][:cut["target"] + 1]]
         require(detail["head"] == adopted[-1]["native"], "G′ materialization mismatch")
         self.chains["gprime"] = adopted
         self.gprime_position = position
@@ -409,7 +414,7 @@ class Replay:
             require(block["height"] == hmax and duty["branch"] == self.duty["branch"]
                     and duty["r"] == self.duty["r"] + 1 and duty["tail"] == "NEXT"
                     and duty["window"] == [hmax + 1, hmax + self.profile["tb"]]
-                    and duty["ref"] == block["physical"] and duty["cid"] not in self.branch_cids,
+                    and duty["anchor"] == block["physical"] and duty["cid"] not in self.branch_cids,
                     "regular handoff must use the current full-window tail")
             self.duty = duty
             self.branch_cids.add(duty["cid"])
@@ -452,6 +457,11 @@ class Replay:
             self.derive(detail)
         elif kind == "gprime_update":
             self.gprime(detail)
+        elif kind == "d_available":
+            if detail["reader"] == "A" and detail["head"] is not None:
+                head = self.chains["d"][-1]
+                require(detail["head"] == head["height"] and detail["native"] == head["native"],
+                        "observed D delivery differs from folded prefix")
         elif kind == "compare":
             require(detail == comparison(self.chains["g"], self.chains["d"]), "recorded native comparison differs")
         elif kind == "resume_submitted":
@@ -527,14 +537,17 @@ def project(tape, mode, provenance):
     require(tape["schema"] == SCHEMA, "unsupported normalized M4 input version")
     replay = Replay(tape["profile"])
     frames = []
-    last_seq = -1
+    last_position = (-1, -1)
     last_tick = -1
     for event in tape["events"]:
         seq, tick = event["seq"], event["tick_us"]
-        require(uint(seq) and uint(tick) and seq > last_seq and tick >= last_tick, "nonmonotonic trace order")
+        suborder = event.get("suborder", 0)
+        require(uint(seq) and uint(suborder) and uint(tick) and (seq, suborder) > last_position
+                and tick >= last_tick and (seq != last_position[0] or tick == last_tick),
+                "nonmonotonic trace order")
         require(event["kind"] in STAGES and isinstance(event["refs"], list) and event["refs"], "invalid event/source")
         require(isinstance(event["detail"], dict), "invalid event detail")
-        last_seq, last_tick = seq, tick
+        last_position, last_tick = (seq, suborder), tick
         lane, label = STAGES[event["kind"]]
         change = replay.step(event)
         frames.append({**event, "lane": lane, "label": label, "change": change, **replay.view()})

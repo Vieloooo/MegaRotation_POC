@@ -30,3 +30,18 @@ M4 后端合同已在 `a5ed3a8` 冻结，独立预期为 `e190a26`。集成主�
 | 恢复首块 | 区域交付与其 body/proof、Espresso 公开完整位置 `q_avail`、GFR 接纳位置和 tick。首块 physical parent 为历史派生 anchor 的连接 ID，执行前 root 与 `D(h_res)` 的执行后 root 核对。 |
 
 最小待锁定项是主运行 manifest/checker 的文件与摘要约定，以及上述关联对应的 M4 trace 事件名。G′ 的实际物化、切面的内容身份和原子后缀替换记录需与 D/GFR 分别输出。反馈原始事件路径与字段即可完成后续映射。
+
+## 后端开发运行已见字段
+
+以下字段已经用开发运行核对过，用于正式映射的预检。正式页要求同一候选的封存输入和独立 PASS。
+
+| 原始位置 | 映射到回放 |
+| --- | --- |
+| `raw/trace.jsonl` 的 BatchSubmitted、L1Included、L1Finalized、L1ReaderAvailable | 批次准备与提交证据、真实 Anvil 收录和 A/B reader 时间。用 `raw/l1/raw-rpc-bundle.json` 核对交易、receipt 和 CursorAdvanced。 |
+| `raw/derivation/batch-h*.json`、`accepted-A-*.json`、`da/0x*.bin` 与 `*.receipt` | 批次来源 snapshot 的 `position` 和编码 `gpos`，signed/DA 证据、实际 commitment、accepted payload。 |
+| `raw/derivation/trace.jsonl` 的 `reader,tick_us,l1_height,step,new_items`，Hub 的 DerivationAvailable | D 的 batch 采用、晚到处理、BlockEnd 处窗口回退及 CursorSet 填充。通过 reader、L1 height、tick 联接到 Hub seq，保留原始 D 行号。 |
+| ResumeSubmitted、真实双日志、`raw/derivation/cut-A-*.json` 和 `cut-B-*.json` | 确切交易、两个 L1 位置、精确 serde 字节以及 A/B 对同一历史切面的核对。 |
+| GReset、GDerived、GfrReplayRecord 的 `resume`、ResumeActivated | 用控制位置、Cut 摘要及提交记录联接为一个原子帧。该帧保留共同 native 前缀、旧 G revocation、新 DER 采用和生命周期批次。 |
+| RegionalDelivered、PublisherRecorded、GAccepted、`raw/results/*.bin`、`raw/espresso/*.bin` | 实际区域交付、规范物理父连接、正文及最终证明消息索引、`q_avail` 和最后接纳。 |
+
+G′ 当前从认证批次与精确切面重建。开发日志可给出相关 reader 观察的 tick/seq，单独的实际物化时刻需要 G′ 事件。DA 校验采用实际持久对象及接纳证明，单独的获取完成时刻需要 DA 事件。GFR WAIT 的实测路径需要候选输出显式 WAIT 原因、阻塞公共位置与持续时点。

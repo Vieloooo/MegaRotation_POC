@@ -76,7 +76,7 @@ def sample_tape():
         result = block(height, old[-1], "old G", "regional", origin, old[-1]["physical"])
         old.append(result)
         handoff = ({"branch": 0, "r": 1, "region": 1, "tail": "NEXT", "cid": "样本 cid R1",
-                    "window": [11, 20], "ref": result["physical"]} if height == 10 else None)
+                    "window": [11, 20], "anchor": result["physical"], "ref": genesis["physical"]} if height == 10 else None)
         regional(result, height - 1, result["timestamp_us"] + 40_000, cid, (height + 2) // 2, handoff=handoff)
         if handoff:
             add(result["timestamp_us"] + 48_000, "worker_lifecycle", kind_label="Closed", cid=cid,
@@ -110,7 +110,7 @@ def sample_tape():
     d2 = block(2, d1, "D", "window-fallback", 4)
     d2["ordinary_count"] = 0
     d.append(d2)
-    add(15_510_000, "d_append", "fallback", "v10 GFR §5.4", position=[7, 0, 0],
+    add(15_510_000, "d_append", "fallback", "v10 GFR §5.4", input_point="BlockEnd ℓ7",
         reason="window-fallback", blocks=[d2], origin=3, window=4, processed_through=7, next_origin=4)
     add(15_510_000, "compare", "divergence", "v10 架构 §3.3", common_height=2,
         common_prefix=1, first_diff=2)
@@ -118,7 +118,7 @@ def sample_tape():
     d3 = block(3, d2, "D", "window-fallback", 5)
     d3["ordinary_count"] = 0
     d.append(d3)
-    add(17_510_000, "d_append", reason="window-fallback", position=[8, 0, 0], blocks=[d3],
+    add(17_510_000, "d_append", reason="window-fallback", input_point="BlockEnd ℓ8", blocks=[d3],
         origin=4, window=4, processed_through=8, next_origin=5, rule="v10 GFR §5.4")
 
     resume_pos, cursor_pos = [9, 0, 1], [9, 0, 0]

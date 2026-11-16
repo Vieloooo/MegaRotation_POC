@@ -51,8 +51,6 @@ class Sealed:
         return self.data[relative]
 
     def trace_row(self, relative, line):
-        if relative not in self.lines:
-            self.lines[relative] = self.read(relative).splitlines()
         require(uint(line) and 0 < line <= len(self.lines[relative]), f"{relative}: no line {line}")
         return json.loads(self.lines[relative][line - 1])
 
@@ -64,7 +62,9 @@ class Sealed:
                 f"{path}: missing evidence locator")
         if "line" in ref:
             line = ref["line"]
-            require(uint(line) and 0 < line <= len(content.splitlines()), f"{path}: no line {line}")
+            if path not in self.lines:
+                self.lines[path] = content.splitlines()
+            require(uint(line) and 0 < line <= len(self.lines[path]), f"{path}: no line {line}")
         if "bytes" in ref:
             offset, length = ref["bytes"]
             require(uint(offset) and uint(length) and 0 < length <= len(content) - offset,
@@ -131,15 +131,35 @@ def load_formal(bundle, independent):
     report_bytes = read_bound(independent, "report.json")
     report = json.loads(report_bytes)
     require(report["status"] == "PASS" and report["candidate"] == candidate
-            and report["manifest_sha256"] == manifest_hash and report["scenario"] == "DR01",
-            "checker PASS does not bind this DR01 candidate and manifest")
-    tape_bytes = read_bound(independent, TAPE)
-    require(sha(tape_bytes) == report["resume_replay_sha256"],
-            "checker digest does not bind normalized M4 tape")
-    tape = json.loads(tape_bytes)
+            and report["manifest_sha256"] == manifest_hash,
+            "checker PASS does not bind this candidate and manifest")
+    provenance = {"candidate": candidate, "manifest": manifest_hash, "report": sha(report_bytes)}
+    sealed = Sealed(bundle, manifest)
+    if "resume_replay_sha256" in report:
+        require(report["scenario"] == "DR01", "normalized checker report is not DR01")
+        tape_bytes = read_bound(independent, TAPE)
+        require(sha(tape_bytes) == report["resume_replay_sha256"],
+                "checker digest does not bind normalized M4 tape")
+        tape = json.loads(tape_bytes)
+        provenance["checker_tape"] = sha(tape_bytes)
+    else:
+        require(manifest["schema"] == "M4-D-RESUME-RUN-1" and manifest["scenario"] == "preset-resume"
+                and report["seed"] == manifest["seed"] == 42, "only verified DR01 production evidence is supported")
+        require(manifest["before"] == manifest["after"] and manifest["before"]["head"] == candidate
+                and not manifest["before"]["status"], "run source snapshot differs from clean candidate")
+        from raw_m4 import Mapper
+
+        outputs = {"public":"public-replay.json", "d":"independent-D.json",
+                   "headers":"verified-l1-headers.json", "cuts":"verified-cuts.json"}
+        checker_outputs = {}
+        for key, name in outputs.items():
+            raw = read_bound(independent, name)
+            provenance[name] = sha(raw)
+            checker_outputs[key] = json.loads(raw)
+        tape = Mapper(sealed, manifest, report, checker_outputs).tape()
+        provenance["normalized_view"] = sha(json.dumps(tape, sort_keys=True, separators=(",", ":")).encode())
     require(tape["mode"] == "observed" and tape["profile"]["seed"] == manifest["seed"],
             "checker tape must contain observed data for sealed seed")
-    sealed = Sealed(bundle, manifest)
     require(tape["events"], "empty evidence tape")
     recorded = {}
     for event in tape["events"]:
@@ -150,5 +170,4 @@ def load_formal(bundle, independent):
             recorded[l1pos(detail["position"])] = detail
         if event["kind"] == "resume_cut":
             sealed.check_cut(detail, recorded[l1pos(detail["position"])])
-    return project(tape, "sealed", {"candidate": candidate, "manifest": manifest_hash,
-                                   "report": sha(report_bytes), "tape": sha(tape_bytes)})
+    return project(tape, "sealed", provenance)

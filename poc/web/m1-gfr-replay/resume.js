@@ -77,6 +77,7 @@ function inspect(frame) {
   const {detail, change, kind} = frame;
   const omit = new Set(["block", "blocks", "before", "after", "revoked", "adopted", "fill", "prefix", "anchor", "duty"]);
   const parts = [`<dl class="facts">${fields(pretty(detail, omit))}</dl>`];
+  if (detail.reconstructed) parts.unshift('<p class="subtitle">G′ 按 Inbox 接纳来源与历史切面重建。</p>');
   if (detail.header) parts.push(`<details open><summary>收录坐标</summary><dl class="facts">${fields(pretty(detail.header))}</dl></details>`);
   if (detail.anchor) parts.push(`<details open><summary>目标 anchor 与历史派生切面</summary>
     <dl class="facts">${fields(pretty(detail.anchor))}</dl>
@@ -101,7 +102,7 @@ function inspect(frame) {
   if (kind === "compare") parts.push('<p class="subtitle">高度差表示进度差。共高 native hash 的首处不同定位实际分歧。</p>');
   const refs = frame.refs.map(ref => `<li><code>${esc([ref.label, ref.path, ref.locator].filter(Boolean).join(" · "))}</code></li>`);
   byId("inspector").innerHTML = `<div class="inspector-head"><div><h2>${esc(frame.label)}</h2>
-    <p>虚拟 τ ${time(frame.tick_us)} · ${data.mode === "sample" ? "样本 seq" : "Trace seq"} ${frame.seq}</p></div></div>
+    <p>虚拟 τ ${time(frame.tick_us)} · ${data.mode === "sample" ? "样本 seq" : "Trace seq"} ${frame.seq}${frame.suborder ? ` · 同观察序号内第 ${frame.suborder + 1} 项` : ""}</p></div></div>
     ${parts.join("")}<details open><summary>证据位置</summary><ul class="evidence">${refs.join("")}</ul></details>`;
 }
 
