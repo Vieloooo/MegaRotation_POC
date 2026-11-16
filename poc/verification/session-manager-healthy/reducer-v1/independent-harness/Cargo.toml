@@ -1,0 +1,17 @@
+[package]
+name = "h2-reducer-independent"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+poc-session-manager = { path = "../../../../crates/session-manager" }
+poc-types = { path = "../../../../crates/types" }
+poc-viewer-gfr = { path = "../../../../crates/viewer-gfr" }
+
+[profile.dev]
+debug = "line-tables-only"

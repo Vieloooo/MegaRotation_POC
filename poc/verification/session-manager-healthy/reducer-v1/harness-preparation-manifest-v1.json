@@ -1,0 +1,14 @@
+{
+  "schema": "h2-independent-harness-pre-candidate-v1",
+  "test_count": 22,
+  "execution": "NOT_RUN",
+  "only_check": "rustfmt --edition 2024 succeeded; no cargo build/test",
+  "files": {
+    "COVERAGE.md": "86217068d03d9cf57fe3f82c06286ee1f2217ec9ccdeed4a6e5388f3609a61e7",
+    "Cargo.toml": "a91a6b24d98b4abdb7159d178c9148b802be0e9df042c672ea83694b5ce06a29",
+    "README.md": "9674631bf08aeeb5b5c31bc9b5f0ef96e606989beb86f355887eb7c9d8f43932",
+    "src/fixtures.rs": "39b2b698b7cfde2116c7e89e11b3abbe0d1182d92a650ef0a10c5a96f4d2b2bf",
+    "src/lib.rs": "7c6ceb56e944ff68debfc3a64e6135537b722366a9a21f5fde4b8a0d512bba43",
+    "tests/independent.rs": "d5178e8c262efb2c04f6301fa64094be5f9978fee68babbf31712ebcecbdba20"
+  }
+}

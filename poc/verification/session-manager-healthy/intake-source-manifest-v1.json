@@ -1,0 +1,156 @@
+{
+  "status": "PREPARATION_ONLY_NOT_FROZEN_NOT_IMPLEMENTED_NOT_TESTED",
+  "baseline": "4a9a6b0a92a11e5778833988bb6524d929f4608e",
+  "checkout": "/home/jy/.codex/worktrees/a6cf/megaroation_poc",
+  "source_checkout_read_only": "/mnt/reth/jy/megaroation_poc",
+  "bft_gitlink": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+  "commonware_release": "2026.10.0",
+  "commonware_upstream": "92a2f68a0e131c8b69de41e84aec37da6280f212",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "5c99ced956be33dd449a952ceebffeb22b92c335fd69b1bbd23c1f6af2c4e56a"
+    },
+    {
+      "path": "DESIGN.md",
+      "sha256": "e4b93a400cb4da02ddf55f47763062aecbcdb1b81e9a7a9d0fcb28e89801b2f8"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_handoff_zh.md",
+      "sha256": "f82c49f19305484ecf7c3a5d1a34eb4c4752db5cfd8fa1b406f2220a681eff05"
+    },
+    {
+      "path": "formalization_v10/poc_v2_xuelab_setup_zh.md",
+      "sha256": "a14555319ce66b01474fb033715acd93938fe41b041fa0dbf56062cd5ba93b07"
+    },
+    {
+      "path": "formalization_v10/poc_design_zh_v2.md",
+      "sha256": "95868b06d71b170dce84c9ec612beae83c161595520390191130feadd12d88ab"
+    },
+    {
+      "path": "formalization_v10/00_arch_zh_v0_1.md",
+      "sha256": "2de0929fc2f75fda51802c7c354146849a285a247283ca1d8fc7338b2a8e8871"
+    },
+    {
+      "path": "formalization_v10/02_session_program_zh_v0_1.md",
+      "sha256": "a8cafc846acffda6b2d08915b9ccc251825c33cf84e776dae94d67611db47eb2"
+    },
+    {
+      "path": "formalization_v10/03_session_manager_zh_v0_1.md",
+      "sha256": "dbcc467b6f3f52d7832112217c3caf27de1e09bdda11b9745393aea326fd5954"
+    },
+    {
+      "path": "formalization_v10/04_publisher_zh_v0_1.md",
+      "sha256": "80999009464571ed8f4b1e129b83c67638121829286ebefbf6f3f6c127f8da41"
+    },
+    {
+      "path": "formalization_v10/09_finality_rules_zh_v0_1.md",
+      "sha256": "6922b77e1de0c8eaddde9f08d08d6734ae63844d406f0e6e32438e33ba0dabcc"
+    },
+    {
+      "path": "poc/docs/milestones/README.md",
+      "sha256": "52e83a1b3013707a14a1220e5c962a807e07c9a8dd1816afbc32a7d47f0e65a0"
+    },
+    {
+      "path": "poc/docs/milestones/H2-session-manager-zh.md",
+      "sha256": "98eea3590ea1d5e034ae2ca90b54bb03dd931726eeece34ba6b1851325d005f6"
+    },
+    {
+      "path": "poc/docs/contracts/normal-running-reg-a-preparation-v1.md",
+      "sha256": "8acf24c5529d2af2fc9d70813d72e8ea48583c516b19ec0d5c91028d63f34dd5"
+    },
+    {
+      "path": ".codex/config.toml",
+      "sha256": "5f4611c9dd5c89fadf251c9d83d2dfd0d45c6e8d6cf125ad7729eb2379deba09"
+    },
+    {
+      "path": ".codex/agents/bft_spec.toml",
+      "sha256": "b7229692295858a4ad1d075757f89dcd999c68907138216c89109a012d8b8942"
+    },
+    {
+      "path": ".codex/agents/bft_verifier.toml",
+      "sha256": "98dc81c4cd7af3d521142ebd361bf9859b82605242851d5dab095db90dfe8628"
+    },
+    {
+      "path": ".agents/skills/regional-bft-conformance/SKILL.md",
+      "sha256": "125af723d15454b1311a2147bde3e8716cd12a89c76161ff2df21f8c52e5a8fd"
+    },
+    {
+      "path": "poc/docs/contracts/regular-preparation-v1.md",
+      "sha256": "c49cbd724dd36eb8f8eb13e57b79f0e9c0b9f20805eccee0dd5668aa5c059278"
+    }
+  ],
+  "pinned_interfaces": [
+    {
+      "revision": "e9c15e04bc83b335668f3ecd837367aa87344a89",
+      "path": "poc/crates/types/src/domain/objects.rs",
+      "sha256": "3d49888368cb197e51000403324a7c424415c8ef2fd678220a0ac2bcc447ff20"
+    },
+    {
+      "revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "path": "poc/crates/viewer-gfr/src/codec.rs",
+      "sha256": "993c8bbe224372d34e9eb3c05f37365a492909444960ef47f828eddf3284baf1"
+    },
+    {
+      "revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "path": "poc/crates/viewer-gfr/src/api.rs",
+      "sha256": "13a95666aae42d5bec869b2547a35d8c3432a10334165a258c1de56f23a2f74f"
+    },
+    {
+      "revision": "788291735ce6db3c3eb78b4594a28d730cce71cd",
+      "path": "poc/docs/contracts/task-contract-viewer-gfr-v1.md",
+      "sha256": "0a622d8504f48ad63305b917ee30da0d5e07f366512bd10018345ecedd5bfabb"
+    }
+  ],
+  "tools": {
+    "git": "git version 2.34.1",
+    "python": "Python 3.12.8"
+  },
+  "bft_sources": [
+    {
+      "repository_read_only": "/mnt/reth/jy/regional_BFT_sim",
+      "revision": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "path": "DESIGN.md",
+      "sha256": "0749ff8bef9ad18b3794788d9f72c887126f4a2368dcf6adcb8587853eee3eae"
+    },
+    {
+      "repository_read_only": "/mnt/reth/jy/regional_BFT_sim",
+      "revision": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "path": "README.md",
+      "sha256": "6f12994133943938b8ff3ff7f149308dd653358ec64762fd117e7158af422d73"
+    },
+    {
+      "repository_read_only": "/mnt/reth/jy/regional_BFT_sim",
+      "revision": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "path": "AGENTS.md",
+      "sha256": "9c5db2936e195df61059fa53050ca18d00889c74d68d192dffb17caa172ebd0b"
+    },
+    {
+      "repository_read_only": "/mnt/reth/jy/regional_BFT_sim",
+      "revision": "691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6",
+      "path": "Cargo.toml",
+      "sha256": "1f0e4e7fb1fae2dcaa8752ec23c055a8fd92347e6b53e0c973d8209ccbef55e2"
+    }
+  ],
+  "roles": {
+    "lead": {
+      "requested": "GPT-6 Astra / ultra",
+      "repository_configuration": "gpt-6-astra / ultra",
+      "runtime_metadata_independently_visible": false
+    },
+    "docer": {
+      "role": "bft_spec",
+      "tool_role_model": "gpt-6-astra",
+      "effort": "xhigh",
+      "task": "/root/h2_spec"
+    },
+    "verifier": {
+      "role": "bft_verifier",
+      "tool_role_model": "gpt-6-astra",
+      "effort": "xhigh",
+      "task": "/root/h2_verifier"
+    },
+    "builder_started": false,
+    "simulator_started": false
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "scope": "DOCUMENT_VALIDATION_ONLY",
+  "behavioral_tests_run": false,
+  "checks": [
+    {
+      "check": "source_hashes",
+      "manifest": "source-manifest-v1.json",
+      "entries_verified": 24,
+      "result": "OK"
+    },
+    {
+      "check": "source_hashes",
+      "manifest": "intake-source-manifest-v1.json",
+      "entries_verified": 26,
+      "result": "OK"
+    },
+    {
+      "check": "source_first_freeze_unchanged",
+      "files": 3,
+      "result": "OK"
+    },
+    {
+      "check": "yaml_syntax_unique_vector_ids",
+      "vector_count": 11,
+      "execution_status": "NOT_RUN",
+      "result": "OK"
+    },
+    {
+      "check": "local_markdown_links_whitespace",
+      "links_verified": 19,
+      "files": 4,
+      "result": "OK"
+    }
+  ],
+  "final_contract_sha256": "837ed8f317e890c3b7a8e393f768cc69c62f7bcf4cec54790816ccc311340754",
+  "independent_review_sha256": "0bf4e7277c2feba7a739835a1f7d06f4500d214aec1f1835bec0bf4efc46bb6a"
+}

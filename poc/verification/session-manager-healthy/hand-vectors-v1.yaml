@@ -1,0 +1,315 @@
+# Hand-authored protocol vectors, not executable tests or candidate outputs.
+# All outcomes below are expected; every execution_status is NOT_RUN.
+# Sources/abbreviations and exact revisions are in independent-expectations-v1.md.
+schema: H2-INDEPENDENT-PREPARATION-1
+execution_status: NOT_RUN
+contract_status: PENDING_M0_SHA_AND_ACCEPTED_H1_H2_INTERFACES
+identity_policy: Reuse accepted O3 canonical descriptor/cid and O7 lifecycle codecs.
+symbols:
+  A9: Verified physical predecessor block at height 9 and its exact execution state.
+  A10: Verified physical child of A9 at height 10; not yet publicly accepted.
+  cid_A: O3 canonical cid for session [0,1], anchor A9, fixed window [11,20].
+  cid_B: O3 canonical cid for session [0,1], anchor A10, fixed window [11,20].
+  handles: H_A and H_B denote distinct original native engine identities, not fabricated digests.
+  evidence: Symbolic verified evidence must be replaced by authentic encoded inputs in native runs.
+
+vectors:
+  - id: V-READY
+    gate: model_fixture
+    source: [SM_58_83, SM_190_206, SP_170_184]
+    trigger: PrepareCandidate then EnterCandidate with successively supplied material.
+    prestate:
+      cid: cid_A
+      phase: Assigned
+      selection: Candidate
+      entered: false
+      scheduled: cid_A
+      clock_safe: true
+      local_time_us: 10800000
+      stop_us: 21000000
+    sequence:
+      - input: anchor_id_and_matching_root_only
+        guard: Full state and execution evidence absent.
+        expected: {phase: Preparing, ready_state: null, enter: WAIT, signatures: 0}
+      - input: complete_state_from_other_anchor_at_height_9
+        guard: Exact anchor identity/prefix mismatch.
+        expected: {material: REJECT, entered: false, signatures: 0}
+      - input: verified_checkpoint_plus_ordered_native_prefix_to_A9_and_exact_post_state
+        guard: Source, Plan, membership, anchor metadata and execution state all verified.
+        expected: {phase: Ready, enter: SUCCESS_ONCE, next_phase: Running, view_initialization_count: 1}
+      - input: duplicate_Enter_after_view_progress
+        guard: Existing nonterminated entered instance.
+        expected: original_entry_result_and_original_handle_view_timers_signing_history
+    outcome_evidence:
+      - Anchor id/height, complete state, checkpoint provenance and ordered execution inputs.
+      - One Create and one actual Enter, original entry time and no early proposal before NotBefore.
+
+  - id: V-SELECT-BEFORE-READY
+    gate: model_fixture
+    source: [SM_224, SM_263, GFR_379]
+    trigger: Verified local SessionAssigned for cid_A.
+    prestate:
+      same_session: [0,1]
+      A: {cid: cid_A, phase: Preparing, selection: Candidate, entered: false}
+      B: {cid: cid_B, phase: Running, selection: Candidate, entered: true}
+      scheduled: cid_B
+    guard: Complete authenticated lifecycle body selects exact A9 identity, not just height 9.
+    expected:
+      A: {phase: Preparing, selection: Selected, entered: false}
+      B: {phase: Terminated, selection: Excluded, entered: true, close_reason: Excluded}
+      scheduled: null
+      next_step: Prepare A; Enter only after verified ReadyState and all local guards.
+      prohibited: Continue B while waiting for A, or make A Ready merely because Selected.
+    outcome_evidence:
+      - GFR source position/full body and B durable terminal marker before its next scheduling grant.
+      - A material WAIT distinct from public selection success.
+
+  - id: V-ABA
+    gate: model_then_actual_native_engine
+    source: [SP_52_60, SP_119, SM_214, SM_257, V2_195]
+    trigger: Higher candidate readiness then public choice of the original lower candidate.
+    prestate:
+      session: [0,1]
+      window: [11,20]
+      A:
+        handle: H_A
+        phase: Running
+        selection: Candidate
+        entered: true
+        entry_time_us: 10800000
+        view: 7
+        signature_records: original_S_A
+        first_received: {proposal_P: 11020000}
+        absolute_deadline_us: 11500000
+        pending_request: verify_P_original_receiver
+      B: {handle: H_B, phase: Preparing, selection: Candidate, entered: false}
+    sequence:
+      - input: B Ready at local time 11200000
+        guard: B is the highest Ready legal anchor from the selected predecessor chain.
+        expected: {A_phase: Paused, B_phase: Running, scheduled: cid_B, A_close: false}
+      - input: Public SessionEnd at key 14000000 selects A9 because A10 was not timely accepted.
+        guard: Local GFR emitted complete close/assignment record; local A clock still below 21000000.
+        expected:
+          scheduled: cid_A
+          A_handle: H_A
+          A_entry_time_us: 10800000
+          A_first_received_P: 11020000
+          A_deadline_us: 11500000
+          A_signature_records: contains_exact_original_S_A
+          A_pending_request: same_original_request_if_not_legitimately_completed_or_cancelled_by_native_rules
+          B_phase: Terminated
+          B_selection: Excluded
+          no_second_Enter: true
+          deadline_handling: Due at original absolute deadline; process by accepted controlled runtime semantics, never reset to resume plus timeout.
+    outcome_evidence:
+      - Native handle/lifetime evidence and complete pre-pause and resumed view/vote/lock/journal snapshots.
+      - Signed bytes preserved; first-receive value unchanged; timer/request IDs and grant/Ack causality.
+      - The view 7 value is illustrative; actual native test must reach its recorded state through real engine events.
+
+  - id: V-CLOSE-SCOPE
+    gate: model_fixture
+    source: [SM_225_242, GFR_270]
+    trigger: BranchClosed branch 0 with reason Force; replay; then delayed material.
+    prestate:
+      branch_0:
+        - {session: [0,1], cid: cid_A, phase: Paused, entered: true}
+        - {session: [0,1], cid: cid_B, phase: Running, entered: true}
+        - {session: [0,2], cid: future_C, phase: Preparing, entered: false}
+      other_branch:
+        - {session: [1,0], cid: D, phase: Assigned, entered: false}
+      independent_task: {key: [cid_A, old_final_hash], phase: Submitted}
+    guard: Authenticated local lifecycle input; this is a reserved M2 boundary fixture, not actual Force activation.
+    expected:
+      branch_0_phases: [Terminated, Terminated, Terminated]
+      other_branch_phase: Assigned
+      terminal_write_before_Program_Close: true
+      replay_creates_or_enters_instances: false
+      future_C_late_state_completion_may_enter: false
+      late_new_candidate_for_closed_branch_may_run: false
+      task_deleted: false
+      task_retry: May STOP on this actual public exclusion, with history retained; not because Program.Close erased it.
+    outcome_evidence:
+      - Affected-cid list includes Preparing successor and Paused candidate.
+      - Original terminal reason, scope source position, immutable task history and no post-terminal sign.
+
+  - id: V-LIFE-SAME-PC
+    gate: model_fixture
+    source: [GFR_379, O7_123_136, O7_165]
+    trigger: A full-window Espresso record with two lifecycle bodies, then exact replay.
+    prestate: Old selected S0 open; successor Prepared; no lifecycle in this record yet consumed.
+    record:
+      position: {key_us: 100, kind: Espresso, index_q: 7}
+      events_in_order:
+        - {body: SessionClosed, session: [0,0], reason: Complete}
+        - {body: SessionAssigned, descriptor: successor_exact_descriptor}
+    guard: Complete local committed record and all canonical source checks pass.
+    expected:
+      applied_event_count_first_delivery: 2
+      applied_event_count_exact_replay: 0
+      identities_differ: true
+      dedupe_key: position_plus_kind_plus_complete_canonical_body
+      no_half_record_signing: true
+      forged_same_id_changed_body: REJECT
+    manual_position_hex: '0001 0000000000000064 04 0000000000000007'
+    manual_session_closed_projection_segments:
+      - '0001'
+      - '00000013'
+      - '0001 0000000000000064 04 0000000000000007'
+      - '01'
+      - '0000000000000000 0000000000000000 01'
+    outcome_evidence:
+      - Reuse O7 codec; compare against literal projection segments independently; no hard-coded fabricated descriptor bytes.
+      - Entire event projections/ids, batch commit and acknowledgement sequence.
+
+  - id: V-TIME-VS-PUBLIC
+    gate: model_fixture
+    source: [SM_259, GFR_96, GFR_139_148, GFR_248, PUB_137]
+    trigger: Local clock reaches stop and then SessionEnd key while public watermark stalls.
+    prestate:
+      session: [0,0]
+      stop_us: 11000000
+      public_end_us: 14000000
+      latest_complete_public_key_us: 10900000
+      selected: true
+      task: {key: old_final_result, phase: Queued}
+    sequence:
+      - input: {local_clock_us: 11000000}
+        guard: Inclusive local stop guard.
+        expected: {phase: Terminated, reason: Time, selection: Selected, new_signatures: 0}
+      - input: {local_clock_us: 15000000, public_watermark_us: 10900000}
+        guard: Public event coverage still missing.
+        expected: {public_handoff: false, invented_lifecycle: false, move_window: false, task_deleted: false}
+    outcome_evidence:
+      - Independent columns for virtual tick, NodeClock, Espresso theta, replay pc and wall diagnostics.
+      - Publication task still retries if public rules have not excluded it and service is available.
+
+  - id: V-CLOCK-UNSAFE
+    gate: model_then_actual_native_engine
+    source: [V2_186_198, V2_216, SP_416]
+    trigger: ClockUnsafe after work started; stale sample; genuine safe clock recovery.
+    prestate: Current cid_A running with pending async signing-related work and durable prior votes.
+    guard: Unsafe/lease failure is delivered through the accepted controlled input path.
+    expected:
+      current_cid_A_terminal: true
+      new_signatures_from_pending_completion: 0
+      fresh_Enter_while_unsafe: REJECT
+      stale_sample_renews_lease: false
+      grant_alone_renews_lease: false
+      safe_recovery_revives_cid_A: false
+      persisted_prior_signature_history: unchanged
+      close_reason_encoding: OPEN_LEAD_H1_DECISION
+      paused_or_never_entered_other_candidates_scope: OPEN_LEAD_H1_DECISION
+    outcome_evidence:
+      - Original clock-domain/sample sequence/as_of/lease and sign-time recheck.
+      - Named accepted ClockUnsafe reason/scope policy before implementation approval.
+
+  - id: V-SE9
+    gate: model_then_native_then_M1_integration
+    source: [H2_11, SP_215_230, GFR_109, GFR_231_263]
+    trigger: h10 is not timely public; already prepared A9 successor publishes h11 before selection.
+    prestate:
+      ts_us_per_height: 1000000
+      local_clock_offset_us: 0
+      TB: 10
+      T_win_us: 200000
+      T_grace_us: 3000000
+      W_exp_us: 30000000
+      predecessor: {session: [0,0], region: 0, window: [1,10], stop_us: 11000000, public_end_us: 14000000}
+      successor: {session: [0,1], region: 1, window: [11,20], stop_us: 21000000, public_end_us: 24000000, anchor: A9}
+      G_last_accepted_physical: A9
+      A9_state: Complete state verified by execution of exact A9 prefix.
+      native_admission_assumptions: Authentic proposal, full bodies, valid metadata/DEP/root, genuine q4 final proof.
+    sequence:
+      - input: {kind: successor_ready_enter, local_time_us: 10800000}
+        guard: Exact A9 state, membership, safe clock; Candidate is locally scheduled.
+        expected: Enter allowed before selection; proposal waits for NotBefore 11000000.
+      - input: {kind: build_B11, local_time_us: 11000000, physical_parent: A9}
+        guard: h11 in [11,20]; state includes deterministic padding at h10.
+        expected: Physical height 11; no physical height 10 is invented.
+      - input: {kind: first_receive_B11, local_time_us: 11020000}
+        guard: '11020000 >= 10998000; current >= 11000000; 11020000 < 12200000; 11020000 < 21000000.'
+        expected: Original first-receive value retained through WAIT/retry/pause/selection.
+      - input: {kind: public_complete_B11, q: 11, theta_us: 11300000}
+        guard: Genuine valid final proof and entire required physical ancestry public.
+        expected: {q_avail: 11, selected: false, G_accept: false, cache_original_public_positions: true}
+      - input: {kind: SessionEnd_S0, key_us: 14000000, complete_public_coverage: true, complete_L1_control_coverage: true}
+        guard: Last accepted predecessor physical remains A9; earlier events processed.
+        expected:
+          old_closed_reason: Complete
+          successor_anchor: A9
+          successor_window: [11,20]
+          successor_selected_cid: cid_A
+          G_head_height_immediately_after_SessionEnd: 9
+      - input: {kind: Espresso, q: 12, theta_us: 14000000, contains_first_public_complete_old_B10: true}
+        guard: 'SessionEnd precedes this event; cached B11 public key11300000<successor_end24000000; acceptance14000000<h10_expiry40000000 and h11_expiry41000000.'
+        expected:
+          old_B10_accepted: false
+          append_virtual_heights: [10,11]
+          physical_heights: [11]
+          padding_heights: [10]
+          q_avail_B11: 11
+          admission_key_B11_us: 14000000
+          original_first_receive_B11_us: 11020000
+          G_head_height: 11
+    outcome_evidence:
+      - Real produced h11 bytes, original complete ingress and first-receive identity, native ACCEPT before parent use/finality.
+      - q11 proof/body objects, q12 processing, exact SessionEnd source and independent GFR replay.
+      - Executed h10 padding and h11 state changes; prefix/state witnesses, not empty-block success only.
+
+  - id: V-LATE11
+    gate: model_then_native_negative
+    source: [SP_217_230, H2_11]
+    trigger: Prepare only after predecessor SessionEnd, then newly create a supposed h11 proposal.
+    prestate: V-SE9 parameters; successor was not Ready before local time14000000.
+    input: {physical_height: 11, actual_first_receive_us: 14020000}
+    guard: 'Accept5c requires actual_first_receive_us < 12200000; violated.'
+    expected:
+      Accept: REJECT_PERMANENT
+      original_first_receive_us: 14020000
+      backdate_to_11020000: prohibited
+      redefine_window_start: prohibited
+      claim_h11_native_gate_passed: prohibited
+    outcome_evidence:
+      - Actual original ingress bytes/time, failed time guard and unchanged window[11,20].
+
+  - id: V-OLD-FINAL
+    gate: model_then_actual_native_engine
+    source: [SP_222_246, SP_420, SM_188, PUB_101_139]
+    trigger: Stop first, then receive a completed proof assembled entirely from pre-stop signatures.
+    prestate:
+      phase: Terminated
+      close_reason: Time
+      selection: Selected
+      stop_us: 11000000
+      public_end_us: 14000000
+      signed_before_us: 11000000
+      result_key: [old_cid, old_block_hash]
+    sequence:
+      - input: {kind: proof_without_full_ancestry, local_time_us: 11100000}
+        guard: Historical proof valid under exact original domain; required body absent.
+        expected: Proof may verify; RegionalResult/Offer remains WAIT for missing material.
+      - input: {kind: complete_verified_ancestry_and_anchor_basis, local_time_us: 11200000}
+        guard: Actual complete Res matches historical context; no public exclusion yet.
+        expected: Single existing/new verified publication task may be offered/forwarded; producer remains terminal.
+      - input: duplicate_same_complete_result
+        guard: Same cid and target body hash.
+        expected: Same PublicationTask; no duplicate allocation or second decision.
+    outcome_evidence:
+      - Pre-stop signed bytes plus native verifier, exact chain/source checks and unique result task.
+      - Actual public exclusion/cutoff required for STOPPED; local observation time alone cannot invalidate historical proof.
+
+  - id: V-SPLIT
+    gate: model_then_actual_native_engine
+    source: [SP_344_387, V2_306_318]
+    trigger: Three healthy members schedule cid_A while two schedule cid_B.
+    prestate: Fixed five-member equal-weight committee; all processes alive; both candidates share logical session but have distinct anchors/cids.
+    guard: q=4 applies separately to each cid; no committee shrinkage or cross-cid vote aggregation.
+    expected:
+      A_active_weight: 3
+      B_active_weight: 2
+      any_valid_q4_participation_interval: false
+      liveness_deadline_from_first_Enter: prohibited
+      guaranteed_progress_claim: INAPPLICABLE_PREMISE
+    outcome_evidence:
+      - Every member's scheduled cid/entry/clock interval and unchanged committee registry.
+      - Recompute common-participation start only after a fixed set of at least4 actually runs the same cid with inputs.
