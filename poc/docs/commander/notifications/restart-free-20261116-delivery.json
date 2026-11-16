@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "date": "2026-11-16",
+  "notification_commit": "04e0536127a67b82a955031b050cd2f0c39542d4",
+  "notification_file": "poc/docs/commander/notifications/restart-free-20261116.json",
+  "method": "mcp__codex_app__send_message_to_thread",
+  "model_and_thinking_overrides": false,
+  "deliveries": [
+    {
+      "threadId": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
+      "hostId": "remote-ssh-discovered:xuelab_jump",
+      "message_sha256": "6765ace3c9d6a92b7a6efdb26d4800f2473bb3ee2c4bd4c8425af75963b8cf7c",
+      "started_at": "2026-11-16T00:57:32.945Z",
+      "finished_at": "2026-11-16T00:58:12.225Z",
+      "status": "tool-acknowledged",
+      "isError": false,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"threadId\":\"01a1e1c6-25a9-7021-bd85-fcccd42bf829\"}"
+          }
+        ],
+        "isError": false
+      },
+      "exception": null
+    },
+    {
+      "threadId": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "hostId": "remote-ssh-discovered:xuelab_jump",
+      "message_sha256": "d544b335dfefb032712b7db6657492162915e03c6dfa6a11059b9a1291daf02a",
+      "started_at": "2026-11-16T00:58:53.076Z",
+      "finished_at": "2026-11-16T00:58:58.229Z",
+      "status": "tool-acknowledged",
+      "isError": false,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"threadId\":\"01a1e1cb-d959-7de3-b6ec-cb83f999085c\"}"
+          }
+        ],
+        "isError": false
+      },
+      "exception": null
+    },
+    {
+      "threadId": "01a1e1cc-4bbd-75b3-8c75-0c9745613cde",
+      "hostId": "remote-ssh-discovered:xuelab_jump",
+      "message_sha256": "94d0cc612f10695b93a00386842391c3773ad184056cd73d50910527b9711443",
+      "started_at": "2026-11-16T00:59:15.782Z",
+      "finished_at": "2026-11-16T00:59:19.890Z",
+      "status": "tool-acknowledged",
+      "isError": false,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"threadId\":\"01a1e1cc-4bbd-75b3-8c75-0c9745613cde\"}"
+          }
+        ],
+        "isError": false
+      },
+      "exception": null
+    },
+    {
+      "threadId": "01a1e1cc-a0b6-7161-afe5-881d30b01f4f",
+      "hostId": "remote-ssh-discovered:xuelab_jump",
+      "message_sha256": "0fb761f26e972ecb96511ef8e94b1703662f601ca765db4063a6f7b863f4880f",
+      "started_at": "2026-11-16T00:59:35.930Z",
+      "finished_at": "2026-11-16T00:59:39.012Z",
+      "status": "tool-acknowledged",
+      "isError": false,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"threadId\":\"01a1e1cc-a0b6-7161-afe5-881d30b01f4f\"}"
+          }
+        ],
+        "isError": false
+      },
+      "exception": null
+    },
+    {
+      "threadId": "01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2",
+      "hostId": "remote-ssh-discovered:xuelab_jump",
+      "message_sha256": "2e5106ebcd7860a3c9165f290c81288706f4dae14212daa23c51797113b47b95",
+      "started_at": "2026-11-16T00:59:56.835Z",
+      "finished_at": "2026-11-16T01:00:00.865Z",
+      "status": "tool-acknowledged",
+      "isError": false,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"threadId\":\"01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2\"}"
+          }
+        ],
+        "isError": false
+      },
+      "exception": null
+    }
+  ],
+  "complete": true,
+  "success_count": 5,
+  "uncertain_count": 0
+}

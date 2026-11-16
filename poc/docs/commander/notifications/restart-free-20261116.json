@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "date": "2026-11-16",
+  "authorization": "User explicitly authorized self-contained notices and continued independent PoC work.",
+  "maximum_active_chats": 5,
+  "send_only_to": [
+    "01",
+    "07",
+    "11",
+    "12",
+    "16"
+  ],
+  "deferred_idle_features": [
+    "02",
+    "06",
+    "09"
+  ],
+  "notifications": [
+    {
+      "feature": "01",
+      "threadId": "01a1e1c6-25a9-7021-bd85-fcccd42bf829",
+      "title": "PoC 01 本地恢复续作与 I1 验收",
+      "prompt": "总协调通知（用户已授权，2026-11-16）：交接文档已更新。规则修订提交为 0c15aac；对应功能handoff的明确修订提交为 32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77。源checkout /mnt/reth/jy/megaroation_poc，完整说明 /mnt/reth/jy/megaroation_poc/poc/docs/commander/restart-free-handoff-track-20261116.md。你自己的worktree可能尚无这些文档，请只读上述源路径或git show该提交；不reset、不切回旧候选，不为读通知覆盖现有修改。\n\n核心决议：完整01的R1–R18只约束同cid进程恢复及相应故障验收，不是regular、主动Force或RESUME所有测试的统一前置。允许先实现并验证BFT worker持续运行的profile；进程异常退出时记录失败/中断，不能空journal自动重新加入。内存Pause/选回仍保留原engine/view/签名历史和timer。唯一虚拟时钟、有效sample/lease、timer、真实签名/证书、状态准备、Close门禁、完整grant/Ack后输出及公共重放仍不可省略。\n\n主动Force须由授权M走真实L1和合法branch/Tail/act处理；健康委员会上的Force验证控制路径，不代替自动停滞检测。RESUME可由批次延迟/暂停导致独立D按真实窗口fallback，再依据精确L1位置的历史cut对齐G；已接纳DA缺失仍WAIT，不准跳过数据补空块或直接G=D。Batcher服务自身重启与BFT进程恢复分开，延迟profile不冒充实际服务crash案例。\n\n五个活跃chat上限不变；你当前任务继续，不用等01，也不扩大到别的owner文件。Astra/ultra及既定Docer→独立Verifier→单Builder→复核→Tester流程保持。源码改动前冻结本阶段合同；重任务继续用flock /tmp/megaroation-poc-heavy.lock和任务独立数据盘。仅按实际覆盖报告profile PASS；原完整feature与01故障验收不因新增profile自动通过，三完整accepted功能一批合并计数不变。\n\n你的任务仍是完整01收尾，从原接手快照8a81391c7a0b08be3ce1d2adf3b44e8bf4bbc509继续当前实现/独立审查，不删R1–R18、不暂停当前修复。native恢复源码/proto/wire/原型manifest仍由你独占；本通知未把这些文件移交给02。后续02/04的普通运行路线会单独分配adapter和精确稳定基线，不消费未经审查的恢复WIP。请发布可只读复用的普通运行接口/已验证基线、不可稳定依赖的字段及最小共享文件需求，以便总协调安排短小串行移交；这项接口说明不能取代你的恢复验收。无需跨chat发送消息，在进展与交付记录中给出准确SHA即可。",
+      "hostId": "remote-ssh-discovered:xuelab_jump"
+    },
+    {
+      "feature": "07",
+      "threadId": "01a1e1cb-d959-7de3-b6ec-cb83f999085c",
+      "title": "PoC 07 Viewer GFR 与独立重放",
+      "prompt": "总协调通知（用户已授权，2026-11-16）：交接文档已更新。规则修订提交为 0c15aac；对应功能handoff的明确修订提交为 32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77。源checkout /mnt/reth/jy/megaroation_poc，完整说明 /mnt/reth/jy/megaroation_poc/poc/docs/commander/restart-free-handoff-track-20261116.md。你自己的worktree可能尚无这些文档，请只读上述源路径或git show该提交；不reset、不切回旧候选，不为读通知覆盖现有修改。\n\n核心决议：完整01的R1–R18只约束同cid进程恢复及相应故障验收，不是regular、主动Force或RESUME所有测试的统一前置。允许先实现并验证BFT worker持续运行的profile；进程异常退出时记录失败/中断，不能空journal自动重新加入。内存Pause/选回仍保留原engine/view/签名历史和timer。唯一虚拟时钟、有效sample/lease、timer、真实签名/证书、状态准备、Close门禁、完整grant/Ack后输出及公共重放仍不可省略。\n\n主动Force须由授权M走真实L1和合法branch/Tail/act处理；健康委员会上的Force验证控制路径，不代替自动停滞检测。RESUME可由批次延迟/暂停导致独立D按真实窗口fallback，再依据精确L1位置的历史cut对齐G；已接纳DA缺失仍WAIT，不准跳过数据补空块或直接G=D。Batcher服务自身重启与BFT进程恢复分开，延迟profile不冒充实际服务crash案例。\n\n五个活跃chat上限不变；你当前任务继续，不用等01，也不扩大到别的owner文件。Astra/ultra及既定Docer→独立Verifier→单Builder→复核→Tester流程保持。源码改动前冻结本阶段合同；重任务继续用flock /tmp/megaroation-poc-heavy.lock和任务独立数据盘。仅按实际覆盖报告profile PASS；原完整feature与01故障验收不因新增profile自动通过，三完整accepted功能一批合并计数不变。\n\n继续你已获分配的纯GFR、regular/Expire/HALT、q_avail、WAIT原位置、checkpoint及独立A/B reader；本阶段不等待01。已接受的03依赖为e9c15e04bc83b335668f3ecd837367aa87344a89；06组件交付为4b034dfbb6c3e1c7143208347b546daab8dfe298（源码与已测试8ba78f1一致），沿既有正常合并基线继续。路径只归你：poc/crates/viewer-gfr/、poc/verification/viewer-gfr/及07专属合同/报告，不能共改根types/core/manifest。\n\n真实04 FinalVerifier尚未交付，保留真证书gate；纯向量可明确标注fixture，但不能将bool桩计为真证书验证。04将可按无重启健康profile提供证书，不要求其先完成01全部恢复。当前不替10/13实现完整Force/RESUME；只冻结兼容的公共事件边界并明确报告尚未支持的控制。优先发布可消费的ReplayPosition/lifecycle和reader接口提交，不让无关恢复门禁阻止本职实现。",
+      "hostId": "remote-ssh-discovered:xuelab_jump"
+    },
+    {
+      "feature": "11",
+      "threadId": "01a1e1cc-4bbd-75b3-8c75-0c9745613cde",
+      "title": "PoC 11 批次与 DA 服务组件",
+      "prompt": "总协调通知（用户已授权，2026-11-16）：交接文档已更新。规则修订提交为 0c15aac；对应功能handoff的明确修订提交为 32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77。源checkout /mnt/reth/jy/megaroation_poc，完整说明 /mnt/reth/jy/megaroation_poc/poc/docs/commander/restart-free-handoff-track-20261116.md。你自己的worktree可能尚无这些文档，请只读上述源路径或git show该提交；不reset、不切回旧候选，不为读通知覆盖现有修改。\n\n核心决议：完整01的R1–R18只约束同cid进程恢复及相应故障验收，不是regular、主动Force或RESUME所有测试的统一前置。允许先实现并验证BFT worker持续运行的profile；进程异常退出时记录失败/中断，不能空journal自动重新加入。内存Pause/选回仍保留原engine/view/签名历史和timer。唯一虚拟时钟、有效sample/lease、timer、真实签名/证书、状态准备、Close门禁、完整grant/Ack后输出及公共重放仍不可省略。\n\n主动Force须由授权M走真实L1和合法branch/Tail/act处理；健康委员会上的Force验证控制路径，不代替自动停滞检测。RESUME可由批次延迟/暂停导致独立D按真实窗口fallback，再依据精确L1位置的历史cut对齐G；已接纳DA缺失仍WAIT，不准跳过数据补空块或直接G=D。Batcher服务自身重启与BFT进程恢复分开，延迟profile不冒充实际服务crash案例。\n\n五个活跃chat上限不变；你当前任务继续，不用等01，也不扩大到别的owner文件。Astra/ultra及既定Docer→独立Verifier→单Builder→复核→Tester流程保持。源码改动前冻结本阶段合同；重任务继续用flock /tmp/megaroation-poc-heavy.lock和任务独立数据盘。仅按实际覆盖报告profile PASS；原完整feature与01故障验收不因新增profile自动通过，三完整accepted功能一批合并计数不变。\n\n继续独立Batcher/Certifier/DA/accepted_view组件，不等待01。准确依赖是03 e9c15e04bc83b335668f3ecd837367aa87344a89和09 c443ae925ed549b046731c2d8ef3dd9ce0311d24（组件源码与已测试87daee8一致）。你独占poc/crates/batch-services/、poc/verification/batch-services/及11专属合同/报告。09合约/ABI/driver只消费，不并发修改；01 native与根types/manifest不在你的写集合。\n\n优先冻结并发布唯一frame/DA payload编码、commitment/签名、accepted-record接口及实际本地Anvil receipt+DA样本，供12消费；不要等01/08整项完成才提供这些组件。测试可让BFT节点始终存活，暂停/延迟批次提交并恢复可用性，为D fallback场景提供真实输入。服务自身crash/restart继续按原范围独立验证；真实G/gpos来源和完整G′仍待实际上游接入，不能用fixture宣布11整体通过。将准确接口SHA和样本路径写进进展，供总协调转交12。",
+      "hostId": "remote-ssh-discovered:xuelab_jump"
+    },
+    {
+      "feature": "12",
+      "threadId": "01a1e1cc-a0b6-7161-afe5-881d30b01f4f",
+      "title": "PoC 12 独立 D 派生与 ResumeCut",
+      "prompt": "总协调通知（用户已授权，2026-11-16）：交接文档已更新。规则修订提交为 0c15aac；对应功能handoff的明确修订提交为 32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77。源checkout /mnt/reth/jy/megaroation_poc，完整说明 /mnt/reth/jy/megaroation_poc/poc/docs/commander/restart-free-handoff-track-20261116.md。你自己的worktree可能尚无这些文档，请只读上述源路径或git show该提交；不reset、不切回旧候选，不为读通知覆盖现有修改。\n\n核心决议：完整01的R1–R18只约束同cid进程恢复及相应故障验收，不是regular、主动Force或RESUME所有测试的统一前置。允许先实现并验证BFT worker持续运行的profile；进程异常退出时记录失败/中断，不能空journal自动重新加入。内存Pause/选回仍保留原engine/view/签名历史和timer。唯一虚拟时钟、有效sample/lease、timer、真实签名/证书、状态准备、Close门禁、完整grant/Ack后输出及公共重放仍不可省略。\n\n主动Force须由授权M走真实L1和合法branch/Tail/act处理；健康委员会上的Force验证控制路径，不代替自动停滞检测。RESUME可由批次延迟/暂停导致独立D按真实窗口fallback，再依据精确L1位置的历史cut对齐G；已接纳DA缺失仍WAIT，不准跳过数据补空块或直接G=D。Batcher服务自身重启与BFT进程恢复分开，延迟profile不冒充实际服务crash案例。\n\n五个活跃chat上限不变；你当前任务继续，不用等01，也不扩大到别的owner文件。Astra/ultra及既定Docer→独立Verifier→单Builder→复核→Tester流程保持。源码改动前冻结本阶段合同；重任务继续用flock /tmp/megaroation-poc-heavy.lock和任务独立数据盘。仅按实际覆盖报告profile PASS；原完整feature与01故障验收不因新增profile自动通过，三完整accepted功能一批合并计数不变。\n\n继续独立D、原生窗口/fallback和按L1位置冻结的ResumeCut，不等待BFT同cid进程恢复。准确依赖是03 e9c15e04bc83b335668f3ecd837367aa87344a89和09 c443ae925ed549b046731c2d8ef3dd9ce0311d24。你独占poc/crates/derivation/、poc/verification/derivation/及12专属合同/报告；根core/types/manifest、09合约和11frame编码不在你的写集合。\n\n11仍拥有唯一batch frame/DA编码。在其接口到位前，继续来源/合同/独立预期、无frame状态推进、完整窗口后的deposit-only、实际D parent执行、CursorSet顺序和切面规则，不自己创建另一种batch格式。需要的11字段/不变量形成精确清单；只有受该接口影响的部分等待。完整窗口依据真实finalized输入，reader下载延迟不改inclusion；已接纳DA不可读停在原位置WAIT。RESUME切面按具体(block,tx,log)独立保存，D不回退，不读G替代D。批次暂停/延迟场景与实际Batcher崩溃场景分开报告。",
+      "hostId": "remote-ssh-discovered:xuelab_jump"
+    },
+    {
+      "feature": "16",
+      "threadId": "01a1e1cb-88da-7822-b4fd-4d0bdaf96bc2",
+      "title": "PoC 16 Espresso 本地兼容验证",
+      "prompt": "总协调通知（用户已授权，2026-11-16）：交接文档已更新。规则修订提交为 0c15aac；对应功能handoff的明确修订提交为 32a3eb6b31ff8c1dfe2d05dbc2ed26c0c031bb77。源checkout /mnt/reth/jy/megaroation_poc，完整说明 /mnt/reth/jy/megaroation_poc/poc/docs/commander/restart-free-handoff-track-20261116.md。你自己的worktree可能尚无这些文档，请只读上述源路径或git show该提交；不reset、不切回旧候选，不为读通知覆盖现有修改。\n\n核心决议：完整01的R1–R18只约束同cid进程恢复及相应故障验收，不是regular、主动Force或RESUME所有测试的统一前置。允许先实现并验证BFT worker持续运行的profile；进程异常退出时记录失败/中断，不能空journal自动重新加入。内存Pause/选回仍保留原engine/view/签名历史和timer。唯一虚拟时钟、有效sample/lease、timer、真实签名/证书、状态准备、Close门禁、完整grant/Ack后输出及公共重放仍不可省略。\n\n主动Force须由授权M走真实L1和合法branch/Tail/act处理；健康委员会上的Force验证控制路径，不代替自动停滞检测。RESUME可由批次延迟/暂停导致独立D按真实窗口fallback，再依据精确L1位置的历史cut对齐G；已接纳DA缺失仍WAIT，不准跳过数据补空块或直接G=D。Batcher服务自身重启与BFT进程恢复分开，延迟profile不冒充实际服务crash案例。\n\n五个活跃chat上限不变；你当前任务继续，不用等01，也不扩大到别的owner文件。Astra/ultra及既定Docer→独立Verifier→单Builder→复核→Tester流程保持。源码改动前冻结本阶段合同；重任务继续用flock /tmp/megaroation-poc-heavy.lock和任务独立数据盘。仅按实际覆盖报告profile PASS；原完整feature与01故障验收不因新增profile自动通过，三完整accepted功能一批合并计数不变。\n\n16完全不依赖01、04或三类handoff完成。继续使用06已交付公共日志/reader接口，准确依赖4b034dfbb6c3e1c7143208347b546daab8dfe298（被测试组件8ba78f1ace3b383caa1c4360401c645d25907326）。你独占poc/crates/espresso-compatibility/、poc/scenarios/espresso-compatibility/、poc/verification/espresso-compatibility/及16专属文档；不改06组件或根共享声明。\n\n固定官方release/commit/镜像，完成本机任务专属dev-node、真实publication/query/finality录制及离线回放。官方节点墙钟行为与离线确定性重放分开；不能假定支持外部虚拟时钟。缺可核验proposed_at/live字段时保留缺失，不伪造时限前提。若环境确实阻塞，报告准确依赖和已完成准备并释放活跃槽，不无期限等待01或空转重试；不修改共享Docker/SSH/代理服务。其余无阻塞工作继续。",
+      "hostId": "remote-ssh-discovered:xuelab_jump"
+    }
+  ]
+}

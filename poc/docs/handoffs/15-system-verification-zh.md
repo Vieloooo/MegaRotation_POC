@@ -1,5 +1,7 @@
 # 15 15-worker 全系统验收与可重放证据
 
+> **2026-11-16普通运行路线修订：** 报告可单列无BFT进程重启的15-worker regular/主动Force/RESUME通过情况，无须先完成01；完整I1/所有原故障矩阵仍保留。场景PASS和完整feature accepted分开，三功能合并计数不得用未完成故障范围替代。 详见[不重启worker的交接路线](../commander/restart-free-handoff-track-20261116.md)。
+
 > 调度以[五chat分层依赖v2](../commander/dependency-plan-v2.md)及最新总协调派发为准。下文原基线要求约束真实接线/完整验收；获明确分配的独立组件可先实现。
 
 > **新会话启动任务**
