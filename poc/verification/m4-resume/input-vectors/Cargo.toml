@@ -1,0 +1,18 @@
+[package]
+name = "m4-input-vectors"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+batch-services = { path = "../../../crates/batch-services" }
+l1-adapter = { path = "../../../crates/l1-adapter" }
+poc-derivation = { path = "../../../crates/derivation" }
+poc-core = { path = "../../../crates/core" }
+poc-types = { path = "../../../crates/types" }
+serde_json = "=1.0.154"
+
+[profile.dev]
+debug = "line-tables-only"
