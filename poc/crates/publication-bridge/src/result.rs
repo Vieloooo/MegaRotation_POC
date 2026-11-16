@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use poc_publisher::{CodecError, StateCodec};
 use poc_types::domain::{
-    AnchorEvidence, AnchorEvidenceSource, Canonical, CanonicalObject, ConfigRef, Descriptor,
+    AnchorEvidence, AnchorEvidenceSource, L1Position, Canonical, CanonicalObject, ConfigRef, Descriptor,
     InputMissing, PhysicalBlock, RegionalResult, ResultKey,
 };
 use poc_viewer_gfr::{
@@ -54,6 +54,7 @@ impl BridgeResult {
         let (tag, reference) = match &result.anchor_evidence.source {
             AnchorEvidenceSource::Genesis(reference) => (0, reference.encode()),
             AnchorEvidenceSource::Regional(reference) => (1, reference.encode()),
+            AnchorEvidenceSource::Resume(reference) => (2, reference.encode()),
             _ => return Err(BridgeError::InvalidResult),
         };
         let descriptor = result.descriptor.encode_checked()?;
@@ -139,6 +140,7 @@ impl BridgeResult {
         let source = match tag {
             0 => AnchorEvidenceSource::Genesis(ConfigRef::decode(input.frame(34)?)?),
             1 => AnchorEvidenceSource::Regional(ResultKey::decode(input.frame(66)?)?),
+            2 => AnchorEvidenceSource::Resume(L1Position::decode(input.frame(26)?)?),
             _ => return Err(BridgeError::InvalidEncoding),
         };
         let anchor_len = input.count(MAX_ANCHOR_OBJECTS)?;

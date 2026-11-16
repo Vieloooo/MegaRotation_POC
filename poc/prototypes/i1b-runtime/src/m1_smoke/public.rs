@@ -99,7 +99,7 @@ impl ContextVerifier for Context<'_> {
                     None => return InputStatus::Reject(InputError::InvalidSource),
                 }
             }
-            BoundaryCause::Force => &descriptor.anchor,
+            BoundaryCause::Force | BoundaryCause::Resume => &descriptor.anchor,
             _ => return InputStatus::Reject(InputError::InvalidSource),
         };
         let checked_plan = match public.plan_bases.get(&descriptor.cid) {
@@ -136,11 +136,14 @@ fn public_anchor(
             AnchorEvidenceSource::Genesis(descriptor.plan.config_ref),
         ));
     }
+    if let Some((at,basis))=view.resumes.iter().rev().find(|(_,basis)|basis.target.anchor==descriptor.anchor) {
+        return Some((basis.target.clone(),AnchorEvidenceSource::Resume(*at)));
+    }
     let entry = view.entries.iter().find(|entry| {
         entry.block.state.metadata == descriptor.anchor.metadata()
             && entry.block.physical_digest == Some(descriptor.anchor.block.block_id)
     })?;
-    let GlobalSource::Regional(key) = entry.source;
+    let GlobalSource::Regional(key) = entry.source else {return None};
     Some((
         ExecutionAnchor {
             anchor: descriptor.anchor.clone(),
@@ -152,8 +155,14 @@ fn public_anchor(
 }
 
 impl Public {
+    #[cfg(test)]
     pub fn new(root: &Path, force: bool, auto: bool) -> M1Result<Self> {
-        let inputs = PublicInputs::fixture()?;
+        Self::new_mode(root, force, auto, false)
+    }
+
+    pub fn new_mode(root:&Path, force:bool,auto:bool,resume:bool) -> M1Result<Self> {
+        let mut inputs = PublicInputs::fixture()?;
+        if resume {inputs.config.chain_id=31337;}
         let setup = inputs.setup()?;
         let finality = NativeFinality(inputs.plans()?);
         let config = &inputs.config;
@@ -177,10 +186,10 @@ impl Public {
                 .unwrap_or_else(|_| "commonware-2026.10.0".into()),
         };
         let mut parameters = parameters();
-        if auto {
+        if auto || resume {
             parameters.expiry_us = 30 * SECOND;
         }
-        let anvil_l1 = force.then(|| if auto { super::l1::Reader::regional() } else { super::l1::Reader::default() });
+        let anvil_l1 = force.then(|| if resume {super::l1::Reader::resumable()} else if auto { super::l1::Reader::regional() } else { super::l1::Reader::default() });
         let reader_l1: &dyn L1ControlReader = match &anvil_l1 {
             Some(reader) => reader,
             None => &l1,
@@ -275,7 +284,7 @@ impl Public {
             next_q: 0,
             next_commit: 0,
             parameters,
-            auto,
+            auto: auto || resume,
         })
     }
 
@@ -312,7 +321,7 @@ impl Public {
         now: u64,
     ) -> M1Result<Install> {
         self.ensure_worker_l1_projection(now)?;
-        let (execution, _) = public_anchor(&self.replay, &descriptor)
+        let (execution, source) = public_anchor(&self.replay, &descriptor)
             .ok_or_else(|| super::problem("Missing GFR execution anchor"))?;
         let plan_basis = self.replay.public_state().plan_bases.get(&descriptor.cid).copied()
             .map(|basis| {
@@ -321,10 +330,22 @@ impl Public {
                     "Install historical header commitment disagrees with real L1")?;
                 Ok::<_, Box<dyn std::error::Error>>(basis.encode())
             }).transpose()?;
+        let (resume_cut,resume_cut_digest)=match source {
+            AnchorEvidenceSource::Resume(position)=>{
+                let bytes=self.anvil_l1.as_ref().and_then(|reader|reader.cut_bytes(position))
+                    .ok_or_else(||super::problem("missing verified install cut"))?.to_vec();
+                let digest=self.replay.public_state().resumes.get(&position)
+                    .ok_or_else(||super::problem("missing selected resume"))?.digest;
+                (Some(bytes),Some(digest))
+            }
+            _=>(None,None),
+        };
         Ok(Install {
             descriptor,
             execution,
-            history,
+            history: if resume_cut.is_some(){Vec::new()} else {history},
+            resume_cut,
+            resume_cut_digest,
             prepared_at_us: now,
             plan_basis,
             projected_l1_lag_us: self.anvil_l1.as_ref().map(|_| super::l1::WORKER_VISIBILITY_LAG_US),

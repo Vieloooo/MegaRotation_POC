@@ -6,7 +6,7 @@ use std::{
 
 use poc_types::domain::{
     BlockRef, Boundary, BoundaryCause, DomainError, MAX_FIXTURE_ROWS, ProgramConfig, RuleSpec,
-    authorization_ref, regional_cid,
+    authorization_ref, regional_cid, derived_anchor_id, ReplayKind, L1Position, InputError,
 };
 use sim_espresso::MAX_BLOCKS;
 
@@ -17,7 +17,7 @@ use crate::{
     ReplayPosition, ReplayReads, ReplayRecord, ReplayResult, ReplayServices, ReplayState,
     ReplayStatus, SessionId, SupportingCuts, Tail, VerificationProfile, VerifierBinding, Window,
     compare_positions,
-    frontier::{OrderedEvent, Sources, add, input_missing, u64_index},
+    frontier::{OrderedEvent, Sources, add, input_missing, u64_index, expiry_key, session_end_key},
     publications::{Candidate, Evaluation, ResultExclusion, interval_unexpired},
     reader::validate_source_id,
 };
@@ -119,6 +119,7 @@ fn genesis_state(
             l1_floor: genesis.anchor.block.origin,
             policies: BTreeMap::new(),
             plan_bases: BTreeMap::new(),
+            resumes: BTreeMap::new(),
             tail: Tail::Pending(boundary.clone()),
             pc: None,
             selected: BTreeMap::new(),
@@ -131,6 +132,7 @@ fn genesis_state(
         cuts: SupportingCuts::default(),
         anchors: BTreeMap::from([(genesis.anchor.block.block_id, genesis.clone())]),
         next_q: 0,
+        head_anchor: genesis.anchor.block.block_id,
     };
     state.public.tail = match resolve(&mut state, boundary, services, reads.l1, &Cell::new(None)) {
         Ok(tail) => tail,
@@ -350,7 +352,7 @@ fn advance(
             break;
         };
         if let InputRef::L1(control) = &event.input_ref
-            && control.force_branch().is_none()
+            && control.force_branch().is_none() && control.resume_control().is_none()
         {
             return Ok(ReplayStatus::UnsupportedControl {
                 position: event.position,
@@ -413,6 +415,7 @@ fn apply_event(
         }
         InputRef::Expire(_) => expire(&mut staged, &mut record)?,
         InputRef::SessionEnd(_) => regular(&mut staged, &mut record, services, reads.l1, &used_origin)?,
+        InputRef::L1(control) if control.kind == ReplayKind::Resume => resume(&mut staged, control, &mut record, services, reads.l1, &used_origin)?,
         InputRef::L1(control) => force(&mut staged, control, &mut record, services, reads.l1, &used_origin)?,
     }
     sources.support(&mut staged.cuts, event, used_origin.get())?;
@@ -514,6 +517,7 @@ fn append(
     let source = GlobalSource::Regional(candidate.key);
     for block in suffix {
         if let Some(digest) = block.physical_digest {
+            state.head_anchor = digest;
             let metadata = &block.virtual_block.metadata;
             let anchor = Anchor {
                 block: BlockRef {
@@ -624,8 +628,8 @@ fn force(
     let (r, source_region) = match &state.public.tail {
         Tail::Next(current) => {
             let contributed = state.public.entries.last().is_some_and(|entry| {
-                let GlobalSource::Regional(key) = entry.source;
-                key.cid == current.cid && entry.block.physical_digest.is_some()
+                matches!(entry.source, GlobalSource::Regional(key) if key.cid == current.cid)
+                    && entry.block.physical_digest.is_some()
             });
             (add(current.plan.session.r, u64::from(contributed))?, Some(current.plan.region))
         }
@@ -668,6 +672,110 @@ fn force(
         lifecycle(record, LifecycleBody::SessionAssigned { descriptor: descriptor.clone() });
     }
     change_duty(state, record, successor);
+    Ok(())
+}
+
+fn resume(
+    state: &mut ReplayState, control: &ControlRef, record: &mut ReplayRecord,
+    services: &ReplayServices<'_>, l1: &dyn L1ControlReader, used_header: &Cell<Option<u64>>,
+) -> StepResult<()> {
+    let command = control.resume_control().ok_or(GfrError::InvalidSource)?;
+    let basis = match l1.resume_cut(control.position) {
+        InputStatus::Ready(cut) => cut,
+        InputStatus::Wait(_) => return Err(StepError::Wait(Missing::ResumeCut { position: control.position })),
+        InputStatus::Reject(error) => return Err(GfrError::Input(error).into()),
+    };
+    let header = match l1.header(control.position.block) {
+        InputStatus::Ready(header) => header,
+        InputStatus::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
+        InputStatus::Reject(error) => return Err(GfrError::Input(error).into()),
+    };
+    if basis.position != control.position || basis.set_position != (L1Position { log: command.set_log, ..control.position })
+        || basis.config_ref != state.public.config.reference()? || basis.genesis != state.public.genesis
+        || basis.including_block != header.reference() || basis.transaction_hash != command.transaction_hash
+        || basis.target.anchor.block.height != command.target_height || basis.blocks.len() > MAX_FIXTURE_ROWS {
+        return Err(GfrError::InvalidSource.into());
+    }
+    let mut native_parent = basis.genesis.native_hash;
+    let mut execution = &basis.genesis.state;
+    for row in &basis.blocks {
+        let data = &row.virtual_block;
+        let metadata = &data.metadata;
+        if row.physical_digest.is_some() || metadata.height != add(execution.metadata.height,1)?
+            || metadata.origin < execution.metadata.origin || metadata.origin > add(execution.metadata.origin,1)?
+            || metadata.timestamp_us != poc_core::metadata::l2_timestamp_us(&state.public.config, metadata.height)?
+            || row.native_block.parent != native_parent || row.native_block.digest()? != row.native_hash
+            || &row.native_block.metadata != metadata || row.native_block.dep != data.dep
+            || data.pre_state_root != execution.root()? {
+            return Err(GfrError::InvalidSource.into());
+        }
+        let dep = match services.dep.at(metadata) {
+            InputStatus::Ready(dep) => dep,
+            InputStatus::Wait(missing) => return Err(StepError::Wait(input_missing(missing))),
+            InputStatus::Reject(error) => return Err(GfrError::Input(error).into()),
+        };
+        let applied = poc_core::execution::apply_with_byte_limit(execution,metadata,&dep,&data.transactions,
+            state.public.config.byte_limit as usize).map_err(|_| GfrError::Input(InputError::InvalidSource))?;
+        if dep != data.dep || applied.state != row.state || applied.kept != row.native_block.kept
+            || row.native_block.post_state_root != row.state.root()? {
+            return Err(GfrError::InvalidSource.into());
+        }
+        execution=&row.state;
+        native_parent=row.native_hash;
+    }
+    let anchor=&basis.target.anchor;
+    if execution.metadata != anchor.metadata() || execution != &basis.target.state
+        || native_parent != basis.target.native_hash
+        || anchor.block.block_id != derived_anchor_id(command.target_height, native_parent) {
+        return Err(GfrError::InvalidSource.into());
+    }
+    let common = state.public.entries.iter().zip(&basis.blocks)
+        .take_while(|(old,new)| old.block.native_hash==new.native_hash).count();
+    state.public.entries.truncate(common);
+    for row in &basis.blocks[common..] {
+        state.public.entries.push(ChainEntry {
+            block: row.clone(),
+            source: GlobalSource::Derived { resume_position: control.position, height: row.state.metadata.height },
+            position: record.position.clone(),
+        });
+    }
+    state.head_anchor=anchor.block.block_id;
+    state.anchors.insert(state.head_anchor,basis.target.clone());
+    let branch=state.public.branch;
+    let beta=add(branch,1)?;
+    let session=SessionId {beta,r:0};
+    let boundary=Boundary {
+        input: PlanInput {cause: BoundaryCause::Resume, session: session.clone(), source_region: None,
+            window: Window {h_min:add(command.target_height,1)?,h_max:add(command.target_height,10)?},
+            reference_block:anchor.block.clone()},
+        anchor:Some(anchor.clone()),
+    };
+    state.public.closed_branches.insert(branch);
+    state.public.branch=beta;
+    state.public.l1_floor=anchor.block.origin;
+    state.public.policies.insert(beta,ActivePolicy {policy:command.policy,force:control.position,
+        control_seq:control.control_seq,floor:anchor.block.origin});
+    record.effects.push(ReplayEffect::Reset{resume_position:control.position,target_height:command.target_height,cut_digest:basis.digest});
+    lifecycle(record,LifecycleBody::BranchClosed{branch,reason:CloseReason::Resume});
+    lifecycle(record,LifecycleBody::Resumed{control_seq:control.control_seq,branch:beta,anchor:anchor.clone(),
+        derived_prefix:basis.blocks.iter().map(|row|row.virtual_block.clone()).collect()});
+    let expiry=expiry_key(&state.public.config,state.public.parameters,boundary.input.window.h_min)?;
+    let end=session_end_key(&state.public.config,state.public.parameters,&boundary.input.window)?;
+    let tail=if expiry<record.position.key_us || end<record.position.key_us {
+        state.public.closed_branches.insert(beta);
+        state.public.closed_sessions.insert(session_key(&session));
+        lifecycle(record,LifecycleBody::SessionClosed{session,reason:CloseReason::Expired});
+        Tail::Halt{boundary,anchor:anchor.clone()}
+    } else {
+        let tail=resolve(state,boundary,services,l1,used_header)?;
+        if let Tail::Next(descriptor)=&tail {
+            state.public.selected.insert(session_key(&descriptor.plan.session),descriptor.clone());
+            lifecycle(record,LifecycleBody::SessionAssigned{descriptor:descriptor.clone()});
+        }
+        tail
+    };
+    state.public.resumes.insert(control.position,basis);
+    change_duty(state,record,tail);
     Ok(())
 }
 

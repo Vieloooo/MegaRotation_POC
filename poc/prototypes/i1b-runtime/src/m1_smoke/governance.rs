@@ -173,8 +173,8 @@ impl Signer {
         }).unwrap_or(0);
         let begin = start.max(assignment);
         let progress = state.entries.iter().rev().find_map(|row| {
-            let GlobalSource::Regional(key) = row.source;
-            (key.cid == descriptor.cid).then_some(row.position.key_us)
+            matches!(row.source,GlobalSource::Regional(key) if key.cid==descriptor.cid)
+                .then_some(row.position.key_us)
         }).unwrap_or(begin);
         let observation = state.records.iter().rev().find(|record|
             matches!(record.position.kind, ReplayKind::Espresso)
@@ -406,6 +406,8 @@ mod tests {
             prepared_at_us: 13 * SECOND,
             projected_l1_lag_us: None,
             plan_basis: None,
+            resume_cut: None,
+            resume_cut_digest: None,
         };
         let material = ReadyMaterial::prepare(
             fixture.public.inputs.clone(),

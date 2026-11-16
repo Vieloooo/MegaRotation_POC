@@ -140,6 +140,12 @@ impl DerivationIdentity {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum DerivationCause {
+    AcceptedBatch {
+        position: L1Position,
+        commitment: Hash32,
+        record_index: u16,
+        substituted: bool,
+    },
     Fallback {
         window_end: u64,
         frontier: L1BlockRef,

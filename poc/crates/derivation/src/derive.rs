@@ -34,10 +34,35 @@ pub enum Step {
     BlockComplete {
         block: L1BlockRef,
     },
+    AcceptedRecord {
+        position: L1Position,
+        record_index: u16,
+        height: u64,
+        outcome: BatchDisposition,
+    },
     Fallback {
         height: u64,
         origin: u64,
     },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BatchDisposition {
+    Applied,
+    Substituted,
+    Old,
+    Late,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct PendingRecord {
+    position: L1Position,
+    index: u16,
+    commitment: Hash32,
+    height: u64,
+    origin: u64,
+    ordinary: Vec<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -86,6 +111,14 @@ pub struct Checkpoint {
     current_epoch: u64,
     epoch_has_output: bool,
     cuts: Vec<CutIndex>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pending: Vec<PendingRecord>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    batch_actions: u64,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 /// Independent D state. Only verified L1 and the configured 03 deposits can advance it.
@@ -164,6 +197,8 @@ impl Derivation {
                 current_epoch,
                 epoch_has_output: false,
                 cuts: Vec::new(),
+                pending: Vec::new(),
+                batch_actions: 0,
             },
             cuts: BTreeMap::new(),
             #[cfg(test)]
@@ -240,7 +275,12 @@ impl Derivation {
                     .count(),
             )
             .ok_or(Reject::CheckpointMismatch)?;
-        if u64::try_from(actions).ok() != Some(expected.action_count) {
+        if expected.batch_actions > (actions as u64).saturating_mul(2)
+            || u64::try_from(actions)
+                .ok()
+                .and_then(|n| n.checked_add(expected.batch_actions))
+                != Some(expected.action_count)
+        {
             return Err(Reject::CheckpointMismatch.into());
         }
         while state.checkpoint.action_count < expected.action_count {
@@ -401,6 +441,11 @@ impl Derivation {
             .action_count
             .checked_add(1)
             .ok_or(Reject::Arithmetic("action count"))?;
+        if let Some(step) = self.advance_batch(inputs)? {
+            self.checkpoint.action_count = count;
+            self.checkpoint.batch_actions += 1;
+            return Ok(step);
+        }
         let step = match self.checkpoint.cursor.clone() {
             Cursor::Start { block } => self.open(inputs, block)?,
             Cursor::Open {
@@ -529,13 +574,27 @@ impl Derivation {
     ) -> Result<Step, Halt> {
         let pos = position(&event.position);
         match &event.event {
-            EventWire::CursorAdvanced { batch, .. } => Err(wait(
-                InputPoint::Log(pos),
-                WaitReason::Feature11AcceptedPayloadRequired {
-                    commitment: hash32(&batch.commitment)
-                        .ok_or(Reject::Source("invalid accepted commitment"))?,
-                },
-            )),
+            EventWire::CursorAdvanced { batch, .. } => {
+                let commitment = hash32(&batch.commitment)
+                    .ok_or(Reject::Source("invalid accepted commitment"))?;
+                let payload = inputs.payload(pos).ok_or_else(|| {
+                    wait(
+                        InputPoint::Log(pos),
+                        WaitReason::Feature11AcceptedPayloadRequired { commitment },
+                    )
+                })?;
+                for (index, row) in payload.frame().records.iter().enumerate() {
+                    self.checkpoint.pending.push(PendingRecord {
+                        position: pos,
+                        index: index as u16,
+                        commitment,
+                        height: row.block_number,
+                        origin: row.epoch_num,
+                        ordinary: row.transactions.clone(),
+                    });
+                }
+                Ok(Step::Event { position: pos })
+            }
             EventWire::CursorSet { next, resume, .. } => {
                 self.set(inputs, block, &event.position, next, resume)
             }
@@ -553,6 +612,102 @@ impl Derivation {
                 Ok(Step::Event { position: pos })
             }
         }
+    }
+
+    fn advance_batch(&mut self, inputs: &VerifiedInputs<'_>) -> Result<Option<Step>, Halt> {
+        let parent = self.head_metadata();
+        let (height, timestamp_us) = self.next_height_time(parent)?;
+        let Some(index) = self
+            .checkpoint
+            .pending
+            .iter()
+            .position(|row| row.height <= height)
+        else {
+            return Ok(None);
+        };
+        let row = &self.checkpoint.pending[index];
+        let at = InputPoint::Log(row.position);
+        let (item, disposition) = if row.height < height {
+            (None, BatchDisposition::Old)
+        } else if self
+            .config
+            .inclusion_is_late(row.origin, row.position.block)?
+        {
+            (None, BatchDisposition::Late)
+        } else {
+            let next_origin = parent
+                .origin
+                .checked_add(1)
+                .ok_or(Reject::Arithmetic("batch next origin"))?;
+            let mut substitute = row.origin < parent.origin || row.origin > next_origin;
+            if !substitute {
+                let origin = require_header(inputs, row.origin, at)?;
+                validate_time(self.config.public(), &origin, row.origin)?;
+                let time = origin.timestamp_us()?;
+                substitute = timestamp_us < time;
+                if timestamp_us.saturating_sub(time) > self.config.public().t_drift_us {
+                    substitute = if !row.ordinary.is_empty() {
+                        true
+                    } else if row.origin == next_origin {
+                        substitute
+                    } else {
+                        let next = require_header(inputs, next_origin, at)?;
+                        validate_time(self.config.public(), &next, next_origin)?;
+                        timestamp_us >= next.timestamp_us()?
+                    };
+                }
+            }
+            let origin = if substitute {
+                let next = require_header(inputs, next_origin, at)?;
+                validate_time(self.config.public(), &next, next_origin)?;
+                if timestamp_us < next.timestamp_us()? {
+                    parent.origin
+                } else {
+                    next_origin
+                }
+            } else {
+                row.origin
+            };
+            let cause = DerivationCause::AcceptedBatch {
+                position: row.position,
+                commitment: row.commitment,
+                record_index: row.index,
+                substituted: substitute,
+            };
+            let ordinary = if substitute {
+                &[][..]
+            } else {
+                row.ordinary.as_slice()
+            };
+            let item = self.execute_item(
+                inputs,
+                self.derived_prefix().last(),
+                Metadata {
+                    height,
+                    timestamp_us,
+                    origin,
+                },
+                cause,
+                at,
+                ordinary,
+            )?;
+            (
+                Some(item),
+                if substitute {
+                    BatchDisposition::Substituted
+                } else {
+                    BatchDisposition::Applied
+                },
+            )
+        };
+        let row = self.checkpoint.pending.remove(index);
+        self.commit_items(item);
+        Ok(Some(Step::AcceptedRecord {
+            position: row.position,
+            record_index: row.index,
+            height: row.height,
+            outcome: disposition,
+        }))
     }
 
     fn set(
@@ -678,6 +833,7 @@ impl Derivation {
             resume_position,
             evidence_digest: digest("PoC/Derivation/ResumeCutCheckpoint/v1", &encoded),
         };
+        self.checkpoint.pending.clear();
         self.commit_items(staged);
         self.checkpoint.cuts.push(checked_cut);
         self.cuts.insert(resume_position, cut);
@@ -695,6 +851,18 @@ impl Derivation {
         metadata: Metadata,
         cause: DerivationCause,
         at: InputPoint,
+    ) -> Result<DerivedItem, Halt> {
+        self.execute_item(inputs, parent, metadata, cause, at, &[])
+    }
+
+    fn execute_item(
+        &self,
+        inputs: &VerifiedInputs<'_>,
+        parent: Option<&DerivedItem>,
+        metadata: Metadata,
+        cause: DerivationCause,
+        at: InputPoint,
+        ordinary: &[Vec<u8>],
     ) -> Result<DerivedItem, Halt> {
         let header = require_header(inputs, metadata.origin, at)?;
         validate_time(self.config.public(), &header, metadata.origin)?;
@@ -726,7 +894,7 @@ impl Derivation {
             parent_state,
             &metadata,
             &dep,
-            &[],
+            ordinary,
             self.config.public().byte_limit as usize,
         )?;
         let native_block = NativeBlock {

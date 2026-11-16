@@ -24,6 +24,7 @@ pub struct PublicReplayState {
     pub branch: u64,
     pub l1_floor: u64,
     pub policies: BTreeMap<u64, crate::ActivePolicy>,
+    pub resumes: BTreeMap<poc_types::domain::L1Position, crate::ResumeBasis>,
     pub plan_bases: BTreeMap<poc_types::domain::Cid, crate::HistoricalPlan>,
     pub tail: Tail,
     pub pc: Option<ReplayPosition>,
@@ -77,6 +78,7 @@ pub struct ReplayState {
     pub(crate) cuts: SupportingCuts,
     pub(crate) anchors: BTreeMap<Hash32, ExecutionAnchor>,
     pub(crate) next_q: u64,
+    pub(crate) head_anchor: Hash32,
 }
 
 impl ReplayState {
@@ -116,11 +118,7 @@ impl ReplayState {
     }
 
     pub(crate) fn last_anchor(&self) -> &Anchor {
-        let Some(entry) = self.public.entries.last() else {
-            return &self.public.genesis.anchor;
-        };
-        // G only appends intervals ending in a physical block.
-        &self.anchors[&entry.block.physical_digest.expect("physical G head")].anchor
+        &self.anchors[&self.head_anchor].anchor
     }
 }
 

@@ -2,7 +2,7 @@ use super::{M1Result, check, problem, profile::PublicInputs};
 use poc_types::domain::{
     FinalizedL1Reader, Hash32, InputMissing, InputStatus, L1BlockRef, L1Header, L1Position,
 };
-use poc_viewer_gfr::{ControlRef, L1ControlReader, RegionalPolicy};
+use poc_viewer_gfr::{ControlRef, L1ControlReader, RegionalPolicy, ResumeControl, ResumeBasis};
 use serde_json::{Value, json};
 use std::{
     env,
@@ -97,6 +97,8 @@ pub(super) struct Reader {
     headers: Vec<L1Header>,
     controls: Vec<Vec<ControlRef>>,
     regional: bool,
+    resumable: bool,
+    cuts: std::collections::BTreeMap<L1Position, (ResumeBasis, Vec<u8>)>,
 }
 
 impl Reader {
@@ -106,6 +108,14 @@ impl Reader {
 
     pub fn regional() -> Self {
         Self { regional: true, ..Self::default() }
+    }
+
+    pub fn resumable() -> Self {
+        Self { regional: true,resumable:true, ..Self::default() }
+    }
+
+    pub fn cut_bytes(&self, at:L1Position) -> Option<&[u8]> {
+        self.cuts.get(&at).map(|(_,bytes)|bytes.as_slice())
     }
 
     pub fn receive(&mut self, value: &Value, inputs: &PublicInputs) -> M1Result<L1Header> {
@@ -166,7 +176,36 @@ impl Reader {
                         controls.push(ControlRef::static_force(at, seq, branch));
                     }
                 }
+                Some("cursor_advanced" | "cursor_set") if self.resumable => {},
+                Some("resume") if self.resumable => {
+                    let position=&event["position"];
+                    let at=L1Position {block:field(position,"block")?,tx:field(position,"tx")?,log:field(position,"log")?};
+                    let set=&event["set"];
+                    let policy=&event["policy"];
+                    let order:[u8;3]=serde_json::from_value(policy["order"].clone())?;
+                    check(at.block==height && field(set,"block")?==at.block && field(set,"tx")?==at.tx
+                        && set["tx_hash"]==position["tx_hash"] && field(event,"act")?==header.timestamp_s+10, "RESUME pair")?;
+                    let policy=super::checked(RegionalPolicy::from_parts([u8::try_from(field(policy,"enabled_mask")?)?,
+                        order[0],order[1],order[2]],field(policy,"l1_floor")?))?;
+                    controls.push(ControlRef::resume(at,field(event,"seq")?,ResumeControl {
+                        target_height:field(event,"height")?,signed_origin:field(event,"origin")?,
+                        policy,set_log:field(set,"log")?,transaction_hash:bytes32(&position["tx_hash"])?,
+                    }));
+                }
                 _ => return Err(problem("unexpected event in healthy Force L1 prefix")),
+            }
+        }
+        if self.resumable && let Some(cuts)=value["derivation"]["cuts"].as_array() {
+            for raw in cuts {
+                let bytes:Vec<u8>=serde_json::from_value(raw["bytes"].clone())?;
+                let cut=super::m4::project_cut(&bytes)?;
+                let digest:Hash32=serde_json::from_value(raw["digest"].clone())?;
+                let position:L1Position=serde_json::from_value(raw["position"].clone())?;
+                check(cut.digest==digest && cut.position==position,"RESUME cut disagrees with committed reference")?;
+                let actual=if cut.position.block==height {Some(&header)} else {self.headers.get(cut.position.block as usize)};
+                check(actual.is_some_and(|h|h.reference()==cut.including_block),"RESUME cut header does not belong to reader")?;
+                check(self.cuts.get(&cut.position).is_none_or(|old|old==&(cut.clone(),bytes.clone())),"conflicting cut")?;
+                self.cuts.insert(cut.position,(cut,bytes));
             }
         }
         self.headers.push(header.clone());
@@ -204,6 +243,10 @@ impl L1ControlReader for Reader {
         SOURCE
     }
 
+    fn resume_cut(&self, position:L1Position)->InputStatus<ResumeBasis> {
+        self.cuts.get(&position).map(|(basis,_)|InputStatus::Ready(basis.clone()))
+            .unwrap_or(InputStatus::Wait(InputMissing::ControlCoverage(position.block)))
+    }
     fn controls_at(&self, height: u64) -> InputStatus<Vec<ControlRef>> {
         self.controls.get(height as usize).cloned().map_or(
             InputStatus::Wait(InputMissing::ControlCoverage(height)),

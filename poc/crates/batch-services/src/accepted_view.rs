@@ -529,6 +529,9 @@ impl FinalizedBlock {
     pub fn accepted(&self) -> &[AcceptedRecord] {
         &self.accepted
     }
+    /// Complete normalized 09 output, available only after a verified named read.
+    pub fn verified_block(&self) -> &Value { &self.block }
+
     pub fn raw_block(&self) -> &Value {
         &self.block["header_and_transactions"]
     }

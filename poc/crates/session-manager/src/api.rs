@@ -61,6 +61,7 @@ pub struct PreparedRef {
 pub enum ManagerInput {
     RegisterCandidate(VerifiedCandidate),
     ConsumeRecord(VerifiedReplayInput),
+    ConsumeResume { input: VerifiedReplayInput, material: Option<poc_viewer_gfr::ResumeBasis> },
     PreparationCompleted(PreparedRef),
     Receipt(ActionReceipt),
     Schedule(SessionId),
@@ -282,6 +283,7 @@ pub enum CommitStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WaitReason {
+    ResumeMaterial { position: poc_types::domain::L1Position },
     SourceGap { expected: u64, received: u64 },
     Preparation { cid: Cid },
     ClockDisabled,

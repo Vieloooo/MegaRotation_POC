@@ -127,7 +127,7 @@ impl StaticScheduleProvider {
         if input.window.h_min <= self.config.genesis.block.height {
             return Err(PlanError::InvalidWindow);
         }
-        if input.session.beta == 0 || basis.active.floor < basis.active.force.block
+        if input.session.beta == 0 || (input.cause == poc_types::domain::BoundaryCause::Force && basis.active.floor < basis.active.force.block)
             || basis.height != input.reference_block.origin.max(basis.active.floor)
         {
             return Err(PlanError::PlanMismatch);

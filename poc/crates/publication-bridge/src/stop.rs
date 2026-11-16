@@ -455,7 +455,7 @@ impl LedgerState {
                     branch,
                     reason,
                 } if matches!((event.position.kind, *reason),
-                    (ReplayKind::Expire, CloseReason::Expired) | (ReplayKind::Force, CloseReason::Force)) => {
+                    (ReplayKind::Expire, CloseReason::Expired) | (ReplayKind::Force, CloseReason::Force) | (ReplayKind::Resume, CloseReason::Resume)) => {
                     first_basis(
                         self.branches
                             .entry(*branch)
@@ -478,10 +478,15 @@ impl LedgerState {
                         basis,
                     );
                 }
+                LifecycleBody::Resumed { .. } if event.position.kind == ReplayKind::Resume => {}
+                LifecycleBody::SessionClosed { session, reason: CloseReason::Expired }
+                    if event.position.kind == ReplayKind::Resume => {
+                    first_basis(self.sessions.entry((session.beta,session.r)).or_insert_with(||basis.clone()),basis);
+                }
                 LifecycleBody::SessionAssigned { descriptor }
                     if matches!(
                         event.position.kind,
-                        ReplayKind::SessionEnd | ReplayKind::Espresso | ReplayKind::Force
+                        ReplayKind::SessionEnd | ReplayKind::Espresso | ReplayKind::Force | ReplayKind::Resume
                     ) =>
                 {
                     ledger.verify_descriptor(descriptor)?;

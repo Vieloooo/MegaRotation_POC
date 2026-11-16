@@ -9,6 +9,9 @@ rust-version = "1.95.0"
 publish = false
 
 [dependencies]
+batch-services = { path = "../../crates/batch-services" }
+poc-derivation = { path = "../../crates/derivation" }
+l1-adapter = { path = "../../crates/l1-adapter" }
 sim-espresso = { path = "../../crates/sim-espresso" }
 poc-publisher = { path = "../../crates/publisher" }
 poc-publication-bridge = { path = "../../crates/publication-bridge" }

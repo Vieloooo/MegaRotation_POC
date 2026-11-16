@@ -108,6 +108,7 @@ pub(crate) struct State {
     pub guards: GuardState,
     pub next_source_seq: u64,
     pub records: Vec<Arc<AcceptedRecord>>,
+    pub resumes: BTreeMap<poc_types::domain::L1Position, Arc<poc_viewer_gfr::ResumeBasis>>,
     pub actions: BTreeMap<ActionId, ActionEntry>,
     pub results: BTreeMap<ResultKey, ResultTask>,
 }

@@ -41,7 +41,7 @@ pub fn step(label: &str, reader: &str, result: &ReplayResult) {
     let state = result.state.public_state();
     let records: Vec<_> = result.added_records.iter().map(record).collect();
     let entries: Vec<_> = state.entries.iter().map(|entry| {
-        let GlobalSource::Regional(key) = entry.source;
+        let key=match entry.source { GlobalSource::Regional(key)=>json!(key),GlobalSource::Derived{resume_position,height}=>json!({"resume_position":resume_position,"height":height})};
         json!({
             "h": entry.block.virtual_block.metadata.height, "acceptance": entry.position, "source": key,
             "physical": entry.block.physical_digest, "virtual": entry.block.virtual_block,
@@ -108,12 +108,13 @@ fn record(record: &ReplayRecord) -> Value {
                 last,
                 source: GlobalSource::Regional(key),
             } => json!({"effect": "APPEND", "first": first, "last": last, "key": key}),
+            ReplayEffect::Append { .. } => unreachable!("DER uses a cut reset"),
             ReplayEffect::Duty { before, after } => {
                 json!({"effect": "DUTY", "before": tail(before), "after": tail(after)})
             }
             ReplayEffect::Reset {
                 resume_position,
-                target_height,
+                target_height, ..
             } => json!({"effect": "RESET", "position": resume_position, "target": target_height}),
         })
         .collect();

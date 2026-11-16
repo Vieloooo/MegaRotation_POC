@@ -798,7 +798,8 @@ fn replay_event_binding_mutations_and_cardinality() {
                 tx: 0,
                 log: 0
             },
-            target_height: 0
+            target_height: 0,
+            cut_digest: Hash32::new([0;32]),
         };
         129
     ];

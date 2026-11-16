@@ -185,6 +185,32 @@ pub struct VerifierBinding<'a> {
 pub trait L1ControlReader: FinalizedL1Reader {
     fn source_id(&self) -> &[u8];
     fn controls_at(&self, height: u64) -> InputStatus<Vec<ControlRef>>;
+    /// The exact immutable cut read from the verified derivation associated with this L1 reader.
+    fn resume_cut(&self, position: L1Position) -> InputStatus<ResumeBasis> {
+        InputStatus::Wait(InputMissing::ControlCoverage(position.block))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResumeBasis {
+    pub position: L1Position,
+    pub set_position: L1Position,
+    pub config_ref: crate::ConfigRef,
+    pub including_block: poc_types::domain::L1BlockRef,
+    pub transaction_hash: Hash32,
+    pub digest: Hash32,
+    pub genesis: ExecutionAnchor,
+    pub target: ExecutionAnchor,
+    /// Contiguous derived rows from the child of genesis through the target inclusive.
+    pub blocks: Vec<MergedBlock>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResumeControl {
+    pub target_height: u64,
+    pub signed_origin: u64,
+    pub policy: RegionalPolicy,
+    pub set_log: u64,
+    pub transaction_hash: Hash32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -196,6 +222,7 @@ pub struct ControlRef {
 }
 
 impl ControlRef {
+    const POLICY_RESUME: &'static [u8] = b"PoC/PolicyResume/v1";
     const POLICY_FORCE: &'static [u8] = b"PoC/PolicyForce/v1";
     const STATIC_FORCE: &'static [u8] = b"PoC/StaticForce/v1";
 
@@ -213,6 +240,31 @@ impl ControlRef {
         source_bytes.extend_from_slice(&policy.mask_and_order());
         source_bytes.extend_from_slice(&policy.signed_floor.to_be_bytes());
         Self { position, kind: ReplayKind::Force, control_seq, source_bytes }
+    }
+
+    pub fn resume(position: L1Position, control_seq: u64, resume: ResumeControl) -> Self {
+        let mut source_bytes = Self::POLICY_RESUME.to_vec();
+        source_bytes.extend_from_slice(&resume.target_height.to_be_bytes());
+        source_bytes.extend_from_slice(&resume.signed_origin.to_be_bytes());
+        source_bytes.extend_from_slice(&resume.policy.mask_and_order());
+        source_bytes.extend_from_slice(&resume.policy.signed_floor.to_be_bytes());
+        source_bytes.extend_from_slice(&resume.set_log.to_be_bytes());
+        source_bytes.extend_from_slice(resume.transaction_hash.as_bytes());
+        Self {position, kind: ReplayKind::Resume, control_seq, source_bytes}
+    }
+    pub fn is_policy_resume(&self) -> bool { self.source_bytes.starts_with(Self::POLICY_RESUME) }
+    pub fn resume_control(&self) -> Option<ResumeControl> {
+        let bytes = self.source_bytes.strip_prefix(Self::POLICY_RESUME)?;
+        if self.kind != ReplayKind::Resume || bytes.len()!=68 {return None;}
+        let number=|offset| Some(u64::from_be_bytes(bytes.get(offset..offset+8)?.try_into().ok()?));
+        let set_log=number(28)?;
+        let signed_origin=number(8)?;
+        if set_log >= self.position.log || signed_origin > self.position.block {return None;}
+        Some(ResumeControl {
+            target_height: number(0)?, signed_origin, policy: RegionalPolicy::from_parts(
+                bytes[16..20].try_into().ok()?, number(20)?).ok()?,
+            set_log, transaction_hash: Hash32::new(bytes[36..].try_into().ok()?),
+        })
     }
 
     pub fn is_policy_force(&self) -> bool {
@@ -254,6 +306,7 @@ pub enum Tail {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GlobalSource {
     Regional(ResultKey),
+    Derived { resume_position: L1Position, height: u64 },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -298,6 +351,7 @@ pub enum ReplayEffect {
     Reset {
         resume_position: L1Position,
         target_height: u64,
+        cut_digest: Hash32,
     },
 }
 

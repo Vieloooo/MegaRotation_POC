@@ -184,7 +184,13 @@ impl Manager {
         if local_time_us < self.state.local_time_us {
             return Err(ManagerError::ClockRegression);
         }
-        if let ManagerInput::ConsumeRecord(input) = &input {
+        let replay = match &input {
+            ManagerInput::ConsumeRecord(input) | ManagerInput::ConsumeResume {input,..} => Some(input),
+            _=>None,
+        };
+        if let Some(replay) = replay {
+            let incoming = match &input { ManagerInput::ConsumeResume {material,..}=>material.as_ref(), _=>None };
+            let input=replay;
             if input.source != self.binding.gfr_source {
                 return Err(ManagerError::SourceConflict);
             }
@@ -194,7 +200,8 @@ impl Manager {
                     .state
                     .record(input.seq)
                     .ok_or(ManagerError::SourceConflict)?;
-                if original.record != input.record {
+                if original.record != input.record || incoming.is_some_and(|basis|
+                    self.state.resumes.get(&basis.position).map(Arc::as_ref)!=Some(basis)) {
                     return Err(ManagerError::SourceConflict);
                 }
                 return Ok(PlanOutcome::Unchanged(
@@ -222,7 +229,8 @@ impl Manager {
         let mut planner = Planner::new(&self.binding, &self.config, next);
         let update = match &input {
             ManagerInput::RegisterCandidate(candidate) => planner.register_candidate(candidate),
-            ManagerInput::ConsumeRecord(record) => planner.consume_record(record),
+            ManagerInput::ConsumeRecord(record) => planner.consume_record(record,None),
+            ManagerInput::ConsumeResume {input,material} => planner.consume_record(input,material.as_ref()),
             ManagerInput::PreparationCompleted(prepared) => planner.complete_preparation(prepared),
             ManagerInput::Receipt(receipt) => planner.apply_receipt(receipt),
             ManagerInput::Schedule(session) => planner.schedule(session),
@@ -712,12 +720,6 @@ fn validate_descriptor(
     config: &PublicConfig,
     descriptor: &Descriptor,
 ) -> Result<(), ManagerError> {
-    if matches!(
-        descriptor.plan.cause,
-        BoundaryCause::Resume
-    ) {
-        return Err(ManagerError::Unsupported);
-    }
     if descriptor.plan.config_ref != binding.public_config {
         return Err(ManagerError::InvalidBinding);
     }

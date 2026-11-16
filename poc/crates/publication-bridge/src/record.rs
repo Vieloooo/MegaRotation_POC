@@ -1,9 +1,9 @@
 use poc_types::domain::{
     Anchor, Boundary, Canonical, CanonicalObject, CloseReason, ConfigRef, Descriptor, Hash32,
-    L1Position, LifecycleBody, LifecycleEvent, ReplayIndex, ReplayKind, ReplayPosition, ResultKey, SessionId,
+    L1Position, LifecycleBody, LifecycleEvent, ReplayIndex, ReplayKind, ReplayPosition, ResultKey, SessionId, VirtualBlock, Metadata,
 };
 use poc_viewer_gfr::{
-    GfrParameters, GlobalSource, InputRef, ReplayEffect, ReplayRecord, ReplayState, Tail,
+    GfrParameters, GlobalSource, InputRef, ResumeBasis, ReplayEffect, ReplayRecord, ReplayState, Tail,
     VerificationProfile, encode_position, lifecycle_id, lifecycle_projection,
 };
 
@@ -37,6 +37,7 @@ pub struct RecordDelivery {
     record: ReplayRecord,
     events: Vec<Hash32>,
     materials: Vec<MaterialReference>,
+    resume_material: Option<ResumeBasis>,
 }
 
 impl RecordDelivery {
@@ -79,8 +80,14 @@ impl RecordDelivery {
                 .map(lifecycle_id)
                 .collect::<Result<_, _>>()?,
             materials: Vec::new(),
+            resume_material: match &record.input_ref {
+                InputRef::L1(control) if control.kind == ReplayKind::Resume => public.resumes.get(&control.position).cloned(),
+                _ => None,
+            },
         })
     }
+
+    pub fn resume_material(&self) -> Option<&ResumeBasis> { self.resume_material.as_ref() }
 
     pub fn id(&self) -> Hash32 {
         self.id
@@ -162,14 +169,14 @@ fn record_projection(record: &ReplayRecord) -> Result<Vec<u8>, BridgeError> {
             input.push(&height.to_be_bytes())?;
         }
         InputRef::L1(control) => {
-            let tag = if control.is_policy_force() { 4 } else { 3 };
+            let tag = if control.is_policy_resume() { 5 } else if control.is_policy_force() { 4 } else { 3 };
             input.tag(tag)?;
             input.frame(&control.position.encode())?;
             input.push(&control.control_seq.to_be_bytes())?;
-            let branch = control.force_branch().ok_or(BridgeError::InvalidResult)?;
-            if tag == 4 {
+            if tag != 3 {
                 input.frame(&control.source_bytes)?;
             } else {
+                let branch = control.force_branch().ok_or(BridgeError::InvalidResult)?;
                 input.push(&branch.to_be_bytes())?;
             }
         }
@@ -197,13 +204,19 @@ fn record_projection(record: &ReplayRecord) -> Result<Vec<u8>, BridgeError> {
                 part.frame(&tail_projection(before)?)?;
                 part.frame(&tail_projection(after)?)?;
             }
-            ReplayEffect::Reset { .. } => return Err(BridgeError::InvalidResult),
+            ReplayEffect::Reset { resume_position, target_height, cut_digest } => {
+                part.tag(2)?;
+                part.frame(&resume_position.encode())?;
+                part.push(&target_height.to_be_bytes())?;
+                part.push(cut_digest.as_bytes())?;
+            }
+            ReplayEffect::Append { .. } => return Err(BridgeError::InvalidResult),
         }
         out.frame(&part.bytes)?;
     }
     out.count(record.events.len())?;
     for event in &record.events {
-        if event.position != record.position || matches!(event.body, LifecycleBody::Resumed { .. })
+        if event.position != record.position
         {
             return Err(BridgeError::InvalidResult);
         }
@@ -258,6 +271,12 @@ fn check_input(bytes: &[u8], position: &ReplayPosition) -> Result<(), BridgeErro
             };
             encoded == *at && control.regional_policy().is_some()
         }
+        (5, ReplayKind::Resume, ReplayIndex::L1(at)) => {
+            let encoded = L1Position::decode(input.frame(MAX_PROJECTION)?)?;
+            let control = poc_viewer_gfr::ControlRef {position:encoded,kind:ReplayKind::Resume,
+                control_seq:input.u64()?,source_bytes:input.frame(128)?.to_vec()};
+            encoded == *at && control.resume_control().is_some()
+        }
         _ => false,
     };
     if !matched {
@@ -305,6 +324,25 @@ pub(crate) fn restored_events(
                 branch: event.u64()?,
                 reason: reason(event.tag()?)?,
             },
+            3 => {
+                let control_seq=event.u64()?;
+                let branch=event.u64()?;
+                let anchor=Anchor::decode(event.frame(MAX_PROJECTION)?)?;
+                let count=event.count(poc_types::domain::MAX_FIXTURE_ROWS)?;
+                let mut derived_prefix=Vec::with_capacity(count);
+                for _ in 0..count {
+                    let mut block=Reader(event.frame(MAX_PROJECTION)?);
+                    let metadata=Metadata::decode(block.frame(MAX_PROJECTION)?)?;
+                    let mut dep=Vec::new();
+                    for _ in 0..block.count(MAX_PROJECTION/4)? {dep.push(block.frame(MAX_PROJECTION)?.to_vec());}
+                    let pre_state_root=Hash32::new(block.fixed()?);
+                    let mut transactions=Vec::new();
+                    for _ in 0..block.count(MAX_PROJECTION/4)? {transactions.push(block.frame(MAX_PROJECTION)?.to_vec());}
+                    block.finish()?;
+                    derived_prefix.push(VirtualBlock{metadata,dep,pre_state_root,transactions});
+                }
+                LifecycleBody::Resumed{control_seq,branch,anchor,derived_prefix}
+            },
             _ => return Err(BridgeError::InvalidEncoding),
         };
         event.finish()?;
@@ -333,6 +371,11 @@ fn check_effect(bytes: &[u8]) -> Result<(), BridgeError> {
         1 => {
             check_tail(part.frame(MAX_PROJECTION)?)?;
             check_tail(part.frame(MAX_PROJECTION)?)?;
+        }
+        2 => {
+            L1Position::decode(part.frame(MAX_PROJECTION)?)?;
+            part.u64()?;
+            part.fixed::<32>()?;
         }
         _ => return Err(BridgeError::InvalidEncoding),
     }

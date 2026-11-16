@@ -15,7 +15,7 @@ use commonware_cryptography::{
 use commonware_parallel::Sequential;
 use poc_authorization::{HistoricalPlan, POP_NAMESPACE, PlanOutcome, StaticScheduleProvider, ValidatedRegistry};
 use poc_core::{
-    fixture::{CheckedSetup, check_setup, reg_a_l1_fixture},
+    fixture::{DepProvider, CheckedSetup, check_setup, reg_a_l1_fixture},
     merge::{initial_padding, merge},
     metadata::{MetadataProvider as _, RegionalMetadata, l2_timestamp_us},
 };
@@ -274,6 +274,10 @@ pub(crate) struct Install {
     pub projected_l1_lag_us: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plan_basis: Option<Vec<u8>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resume_cut: Option<Vec<u8>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resume_cut_digest: Option<Hash32>,
 }
 
 pub(crate) struct ReadyMaterial {
@@ -298,6 +302,39 @@ impl ReadyMaterial {
         let basis = install.plan_basis.as_deref().map(HistoricalPlan::decode)
             .transpose().map_err(|_| Error("malformed historical Plan basis"))?;
         let mut anchor = inputs.genesis.clone();
+        if install.descriptor.plan.cause == BoundaryCause::Resume {
+            let cut_bytes=install.resume_cut.as_ref().ok_or(Error("missing RESUME cut"))?;
+            let cut=super::m4::project_cut(cut_bytes).map_err(|_|Error("malformed RESUME cut"))?;
+            let historical=basis.as_ref().ok_or(Error("missing RESUME Plan basis"))?;
+            if Some(cut.digest)!=install.resume_cut_digest || cut.genesis != inputs.genesis || cut.config_ref!=install.descriptor.plan.config_ref
+                || historical.active.force!=cut.position || historical.height!=cut.target.anchor.block.origin
+                || !install.history.is_empty() {
+                return Err(Error("contradictory RESUME anchor source"));
+            }
+            // Independently replay the positioned prefix against the fixed local execution inputs.
+            for row in &cut.blocks {
+                let dep=match setup.dep().at(&row.state.metadata) {
+                    InputStatus::Ready(dep)=>dep,
+                    _=>return Err(Error("RESUME missing deposits")),
+                };
+                let applied=poc_core::execution::apply_with_byte_limit(&anchor.state,&row.state.metadata,&dep,
+                    &row.virtual_block.transactions,inputs.config.byte_limit as usize)
+                    .map_err(|_|Error("RESUME derived execution"))?;
+                if applied.state!=row.state || applied.kept!=row.native_block.kept
+                    || row.native_block.parent!=anchor.native_hash || row.virtual_block.pre_state_root!=anchor.state.root().map_err(domain)?
+                    || dep!=row.virtual_block.dep {
+                    return Err(Error("RESUME invalid derived state"));
+                }
+                anchor.state=applied.state;
+                anchor.native_hash=row.native_hash;
+            }
+            if anchor.state!=cut.target.state || anchor.native_hash!=cut.target.native_hash {
+                return Err(Error("RESUME wrong target state"));
+            }
+            anchor=cut.target;
+        } else if install.resume_cut.is_some() || install.resume_cut_digest.is_some() {
+            return Err(Error("RESUME cut on regional Install"));
+        }
         let mut prior_initial = inputs.genesis.anchor.clone();
         for (r, step) in install.history.iter().enumerate() {
             let tip = step.chain.last().ok_or(Error("M1 empty anchor history"))?;
@@ -349,14 +386,17 @@ impl ReadyMaterial {
         }
         let descriptor = &install.descriptor;
         let force = descriptor.plan.cause == BoundaryCause::Force;
-        let expected_session = if force {
+        let resume = descriptor.plan.cause == BoundaryCause::Resume;
+        let expected_session = if resume {
+            SessionId { beta:1,r:0 }
+        } else if force {
             // This profile switches from the old branch after the regular
             // predecessor completed. The selected old duty has no G contribution.
             SessionId { beta: 1, r: install.history.len() as u64 }
         } else {
             SessionId { beta: 0, r: install.history.len() as u64 }
         };
-        let reference = if force { &anchor.anchor } else { &prior_initial };
+        let reference = if force || resume { &anchor.anchor } else { &prior_initial };
         let validated_plan = match basis {
             Some(basis) => schedules.validate_historical_plan(&descriptor.plan, &Reference(reference), &basis),
             None => schedules.validate_plan(&descriptor.plan, &Reference(reference)),

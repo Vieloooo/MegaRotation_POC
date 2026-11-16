@@ -6,6 +6,6 @@ mod source;
 #[cfg(test)]
 mod tests;
 
-pub use derive::{Advance, Checkpoint, Derivation, Step};
+pub use derive::{Advance, BatchDisposition, Checkpoint, Derivation, Step};
 pub use model::*;
-pub use source::{DriverSource, DriverSourceError, FixtureSource, VerifiedInputs};
+pub use source::{DriverSource, DriverSourceError, FixtureSource, GatewaySource, VerifiedInputs};

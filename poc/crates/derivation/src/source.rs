@@ -16,6 +16,151 @@ pub enum DriverSourceError {
 }
 
 /// Owns the checked 09 driver and collects only successful named reader block queries.
+/// Receipts and accepted frames from a single existing 09/11 gateway.
+pub struct GatewaySource {
+    reader: String,
+    identity: DerivationIdentity,
+    blocks: BTreeMap<u64, ObservedBlock>,
+    payloads:
+        BTreeMap<poc_types::domain::L1Position, batch_services::accepted_view::AcceptedPayload>,
+}
+
+impl GatewaySource {
+    pub fn new(
+        config: &DerivationConfig,
+        driver: &Config,
+        reader: String,
+        genesis: Hash32,
+    ) -> Result<Self, Reject> {
+        let bad = || Reject::Configuration("gateway identity");
+        if !driver.readers.contains(&reader)
+            || driver.genesis_height != config.public().genesis.block.height
+            || driver.genesis_origin != config.public().genesis.block.origin
+        {
+            return Err(bad());
+        }
+        let identity = DerivationIdentity::new(
+            config,
+            L1Identity::Driver {
+                chain_id: driver.chain_id,
+                config_ref: hash32(&driver.config_ref).ok_or_else(bad)?.into(),
+                inbox: hex_array(&driver.inbox).ok_or_else(bad)?,
+                authority: hex_array(&driver.authority).ok_or_else(bad)?,
+                submitter: hex_array(&driver.submitter).ok_or_else(bad)?,
+                l1_genesis_hash: genesis,
+                l1_genesis_timestamp_s: driver.genesis_timestamp_seconds,
+                slot_seconds: driver.slot_seconds,
+                announcement_seconds: driver.announcement_seconds,
+                finality_delay_us: driver.finality_delay_us,
+                adapter_revision: L1_ADAPTER_REVISION.into(),
+            },
+        )?;
+        Ok(Self {
+            reader,
+            identity,
+            blocks: BTreeMap::new(),
+            payloads: BTreeMap::new(),
+        })
+    }
+    pub fn receive_block(
+        &mut self,
+        block: &batch_services::accepted_view::FinalizedBlock,
+    ) -> Result<(), Reject> {
+        let L1Identity::Driver {
+            chain_id,
+            inbox,
+            config_ref,
+            l1_genesis_hash,
+            ..
+        } = &self.identity.l1
+        else {
+            unreachable!()
+        };
+        let domain = block.domain();
+        if block.reader() != self.reader
+            || domain.chain_id != *chain_id
+            || domain.inbox != *inbox
+            || domain.config_ref.as_bytes() != config_ref.as_bytes()
+        {
+            return Err(Reject::Source("different gateway domain or reader"));
+        }
+        let observed = read_block(block.verified_block())?;
+        if observed.header.height != block.height()
+            || (block.height() == 0 && observed.header.hash != *l1_genesis_hash)
+        {
+            return Err(Reject::Source("different gateway block identity"));
+        }
+        match self.blocks.entry(block.height()) {
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert(observed);
+            }
+            std::collections::btree_map::Entry::Occupied(entry)
+                if entry.get().stamp == observed.stamp => {}
+            _ => return Err(Reject::Source("conflicting gateway block")),
+        }
+        Ok(())
+    }
+    pub fn receive_payload(
+        &mut self,
+        payload: batch_services::accepted_view::AcceptedPayload,
+    ) -> Result<(), Reject> {
+        let accepted = payload.accepted();
+        let pos = accepted.position();
+        let block = self
+            .blocks
+            .get(&pos.block)
+            .ok_or(Reject::Source("payload before verified acceptance"))?;
+        let event = block
+            .events
+            .iter()
+            .find(|event| position(&event.position) == pos)
+            .ok_or(Reject::Source("payload without verified acceptance"))?;
+        let EventWire::CursorAdvanced { batch, .. } = &event.event else {
+            return Err(Reject::Source("payload is not CursorAdvanced"));
+        };
+        // Bind the separately sealed payload to this exact position and receipt in the same history.
+
+        let L1Identity::Driver {
+            chain_id,
+            inbox,
+            config_ref,
+            ..
+        } = &self.identity.l1
+        else {
+            unreachable!()
+        };
+        let domain = accepted.domain();
+        if domain.chain_id != *chain_id
+            || domain.inbox != *inbox
+            || domain.config_ref.as_bytes() != config_ref.as_bytes()
+            || batch.as_ref() != accepted.submission()
+            || accepted.evidence().header["hash"].as_str().and_then(hash32)
+                != Some(block.header.hash)
+            || accepted.evidence().transaction["hash"].as_str()
+                != Some(event.position.tx_hash.as_str())
+            || accepted.evidence().reader != self.reader
+        {
+            return Err(Reject::Source("contradictory accepted payload"));
+        }
+        match self.payloads.entry(pos) {
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert(payload);
+            }
+            std::collections::btree_map::Entry::Occupied(entry)
+                if entry.get().da_object().payload() == payload.da_object().payload() => {}
+            _ => return Err(Reject::Source("conflicting accepted payload")),
+        }
+        Ok(())
+    }
+    pub fn inputs(&self) -> VerifiedInputs<'_> {
+        VerifiedInputs {
+            identity: &self.identity,
+            view: InputView::Driver(&self.blocks),
+            payloads: Some(&self.payloads),
+        }
+    }
+}
+
 pub struct DriverSource<R> {
     driver: Driver<R>,
     reader: String,
@@ -107,6 +252,7 @@ impl<R: Rpc> DriverSource<R> {
         VerifiedInputs {
             identity: &self.identity,
             view: InputView::Driver(&self.blocks),
+            payloads: None,
         }
     }
 }
@@ -153,6 +299,7 @@ impl FixtureSource {
         VerifiedInputs {
             identity: &self.identity,
             view: InputView::Fixture(&self.reader),
+            payloads: None,
         }
     }
 }
@@ -161,6 +308,9 @@ impl FixtureSource {
 pub struct VerifiedInputs<'a> {
     identity: &'a DerivationIdentity,
     view: InputView<'a>,
+    payloads: Option<
+        &'a BTreeMap<poc_types::domain::L1Position, batch_services::accepted_view::AcceptedPayload>,
+    >,
 }
 
 #[derive(Clone, Copy)]
@@ -175,6 +325,12 @@ enum InputView<'a> {
 }
 
 impl VerifiedInputs<'_> {
+    pub(crate) fn payload(
+        &self,
+        pos: poc_types::domain::L1Position,
+    ) -> Option<&batch_services::accepted_view::AcceptedPayload> {
+        self.payloads?.get(&pos)
+    }
     pub fn identity(&self) -> &DerivationIdentity {
         self.identity
     }
@@ -236,6 +392,7 @@ impl<'a> VerifiedInputs<'a> {
         Self {
             identity,
             view: InputView::Cases { headers, blocks },
+            payloads: None,
         }
     }
 }

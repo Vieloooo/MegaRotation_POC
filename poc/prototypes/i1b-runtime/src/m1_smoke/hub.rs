@@ -101,6 +101,8 @@ enum Event {
     GovernanceSubmit(gov::Request),
     GovernanceResolve,
     ContrastCutoff,
+    M4Batch(u64),
+    M4Resume,
 }
 
 struct Hub {
@@ -134,12 +136,16 @@ struct Hub {
     submitted_control: Option<String>,
     governance_applied: bool,
     contrast_complete: bool,
+    resume: bool,
+    derived_head: Option<ExecutionAnchor>,
+    conflict_seen: bool,
+    included_cursor: u64,
 }
 
-pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64, scenario: Option<Scenario>) -> M1Result<()> {
+pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64, scenario: Option<Scenario>, resume:bool) -> M1Result<()> {
     fs::create_dir(&root)?;
     let root = root.canonicalize()?;
-    let public = Public::new(&root, force, scenario.is_some())?;
+    let public = Public::new_mode(&root, force, scenario.is_some(),resume)?;
     let governors = if scenario.is_some() {
         (0..3).map(|id| gov::Signer::new(id, &public.replay)).collect::<M1Result<_>>()?
     } else {
@@ -181,7 +187,7 @@ pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64, scenario
         history: Vec::new(),
         publication_pending: false,
         force, wall_pause_ms, l1,
-        reader_b: if scenario.is_some() { l1::Reader::regional() } else { l1::Reader::default() },
+        reader_b: if resume {l1::Reader::resumable()} else if scenario.is_some() { l1::Reader::regional() } else { l1::Reader::default() },
         scenario,
         governors,
         advertised_l1: None,
@@ -191,6 +197,7 @@ pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64, scenario
         submitted_control: None,
         governance_applied: false,
         contrast_complete: false,
+        resume, derived_head:None, conflict_seen:false, included_cursor:0,
     };
     let execution = hub.run_inner().await;
     let exits = hub.reap(execution.is_ok()).await;
@@ -277,6 +284,14 @@ impl Hub {
                 "broadcast_us":gov::BROADCAST_US,
             });
             profile.as_object_mut().expect("profile object").remove("force");
+        }
+        if self.resume {
+            profile["schema"]=json!("M4-D-RESUME-1");
+            profile["expiry_us"]=json!(30*SECOND);
+            profile["cutoff_us"]=json!(60*SECOND);
+            profile["resume"]=json!({"sequence_window_blocks":4,"submit_us":17*SECOND,
+                "target_height":20,"origin":9,"threshold":2,"heartbeat_us":gov::HEARTBEAT});
+            profile.as_object_mut().expect("profile").remove("force");
         }
         durable_file(&self.root.join("profile.json"), &serde_json::to_vec_pretty(&profile)?)?;
         for number in 0..15u8 {
@@ -416,7 +431,7 @@ impl Hub {
         };
         let cause = &delta.cause().input;
         let (kind, detail) = match cause {
-            ManagerInput::ConsumeRecord(input) => (
+            ManagerInput::ConsumeRecord(input) | ManagerInput::ConsumeResume {input,..} => (
                 "Replay",
                 json!({
                     "source_seq": input.seq, "source": input.source, "record_id": input.validation_ref,
@@ -505,7 +520,7 @@ impl Hub {
 
     async fn manager_actions(&mut self, node: u32) -> M1Result<()> {
         let worker = &self.workers[node as usize];
-        if worker.offline || (self.scenario.is_some() && node < 5 && worker.config.is_none()
+        if worker.offline || ((self.scenario.is_some() || self.resume) && node < 5 && worker.config.is_none()
             && self.now.tick < START_US + u64::from(node) * STARTUP_SKEW_US)
         {
             return Ok(());
@@ -1046,7 +1061,7 @@ impl Hub {
         }
         let selected = match &self.public.replay.public_state().tail {
             poc_viewer_gfr::Tail::Next(descriptor) => descriptor.clone(),
-            _ if self.scenario.is_some() => return Ok(()),
+            _ if self.scenario.is_some() || self.resume => return Ok(()),
             _ => return Err(problem("M1 expected an assigned session")),
         };
         let height = (self.public.replay.public_state().entries.len() as u64 + 1)
@@ -1107,7 +1122,7 @@ impl Hub {
             "action": action_id(id), "height": height, "cid": key.cid, "physical_id": key.block_hash,
             "ack": ack.durable_step_hash, "logical_step_id": ack.logical_step_id,
         }))?;
-        let due = if self.force && self.scenario.is_none() && selected_branch(&result) == 0 && height == 11 {
+        let due = if self.force && self.scenario.is_none() && !self.resume && selected_branch(&result) == 0 && height == 11 {
             self.log("LatePublicationHeld", Some(node), json!({
                 "cid": key.cid, "physical_id": key.block_hash, "height": height, "until_us": l1::ACT_US,
             }))?;
@@ -1129,15 +1144,34 @@ impl Hub {
     }
 
     fn replay(&mut self, finalized: Option<&BridgeResult>) -> M1Result<()> {
-        let (before, records) = self.public.advance()?;
+        let old = if self.resume {self.public.replay.public_state().entries.iter()
+            .map(|row|row.block.native_hash).collect::<Vec<_>>()} else {vec![]};
+        let (mut before, records) = self.public.advance()?;
+        if let Some(effect)=records.iter().flat_map(|(_,event)| &event.record().effects)
+            .find(|effect|matches!(effect,ReplayEffect::Reset{..})) {
+            let ReplayEffect::Reset{resume_position,target_height,cut_digest}=effect else {unreachable!()};
+            before=old.iter().zip(&self.public.replay.public_state().entries)
+                .take_while(|(hash,row)|**hash==row.block.native_hash).count();
+            self.log("GReset",None,json!({"resume_position":resume_position,"cut_digest":cut_digest,
+                "old_height":old.len(),"common_height":before,"target_height":target_height,
+                "old_hashes":&old[before..]}))?;
+        }
         let rows = self.public.replay.public_state().entries[before..].to_vec();
         if !self.force {
             check(rows.len() == 1, "M1 expected exactly one new G block per finalized publication")?;
         }
         for (offset, row) in rows.iter().enumerate() {
-            let GlobalSource::Regional(source) = row.source;
+            let source=match row.source {
+                GlobalSource::Regional(source)=>source,
+                GlobalSource::Derived{resume_position,height}=>{
+                    self.log("GDerived",None,json!({"height":height,"resume_position":resume_position,
+                        "native_hash":row.block.native_hash,"state_root":row.block.state.root()?,
+                        "position":row.position}))?;
+                    continue;
+                }
+            };
             let height = row.block.state.metadata.height;
-            check(finalized.is_none_or(|result| self.scenario.is_some() || source == result.key())
+            check(finalized.is_none_or(|result| self.resume || self.scenario.is_some() || source == result.key())
                 && height == (before + offset + 1) as u64,
                 "G append identity or height does not match its finalized result")?;
             if let Some(identity) = row.block.physical_digest {
@@ -1164,7 +1198,7 @@ impl Hub {
         for (sequence, delivery) in &records {
             self.record_delivery(*sequence, delivery, finalized)?;
         }
-        if self.scenario.is_some() && records.is_empty() {
+        if (self.scenario.is_some() || self.resume) && records.is_empty() {
             return Ok(());
         }
         let records: Arc<[_]> = records.into();
@@ -1196,7 +1230,23 @@ impl Hub {
                 "position": control.position,
             });
         }
+        if let Some(basis)=delivery.resume_material() {
+            detail["resume"]=json!({"position":basis.position,"set_position":basis.set_position,
+                "cut_digest":basis.digest,"target":basis.target});
+        }
         self.log("GfrReplayRecord", None, detail)?;
+        if let Some(basis)=delivery.resume_material() {
+            let state=self.public.replay.public_state();
+            let poc_viewer_gfr::Tail::Next(descriptor)=&state.tail else {return Err(problem("M4 missing assignment"));};
+            check(descriptor.plan.region.get()==2 && descriptor.anchor==basis.target.anchor
+                && descriptor.plan.window.h_min==21 && descriptor.plan.window.h_max==30,"M4 incorrect restoration")?;
+            durable_file(&self.root.join("descriptor-b1-r0.bin"),&descriptor.encode_checked()?)?;
+            self.log("ResumeActivated",None,json!({"position":record.position,"resume_position":basis.position,
+                "set_position":basis.set_position,"record_id":delivery.id(),"descriptor":descriptor,
+                "cut_digest":basis.digest,"anchor_native_hash":basis.target.native_hash,
+                "plan_basis_height":state.plan_bases[&descriptor.cid].height,"l1_floor":state.l1_floor}))?;
+            return Ok(());
+        }
         if let [closed, assigned] = record.events.as_slice()
             && let (
                 LifecycleBody::SessionClosed {
@@ -1297,6 +1347,12 @@ impl Hub {
             self.schedule_l1()?;
         }
         fs::create_dir(self.root.join("results"))?;
+        if self.resume {
+            self.schedule(10*SECOND, Event::Heartbeat)?;
+            self.schedule(11_500_000,Event::M4Batch(1))?;
+            self.schedule(15_750_000,Event::M4Batch(2))?;
+            self.schedule(17*SECOND,Event::M4Resume)?;
+        }
         if let Some(scenario) = self.scenario {
             self.journal("Observing", json!({"scenario":scenario.name()}))?;
             self.schedule(10 * SECOND, Event::Heartbeat)?;
@@ -1332,7 +1388,7 @@ impl Hub {
                 continue;
             }
             let (key, event) = self.events.pop_first().expect("peeked M1 next event");
-            if key.tick > if self.scenario.is_some() { 60 * SECOND } else { CUT_US } {
+            if key.tick > if self.scenario.is_some() || self.resume { 60 * SECOND } else { CUT_US } {
                 return Err(problem(format!("M1 virtual cutoff at G height {height}")));
             }
             self.now = key;
@@ -1354,15 +1410,13 @@ impl Hub {
                                 LifecycleBody::SessionAssigned { descriptor }
                                     if descriptor.plan.region == self.workers[node as usize].pid.region())
                         });
-                        self.commit_manager(
-                            node,
-                            ManagerInput::ConsumeRecord(VerifiedReplayInput {
-                                source: self.source,
-                                seq: *sequence,
-                                record: delivery.record().clone(),
-                                validation_ref: delivery.id(),
-                            }),
-                        )?;
+                        let input=VerifiedReplayInput {
+                            source:self.source,seq:*sequence,record:delivery.record().clone(),validation_ref:delivery.id(),
+                        };
+                        let input=if input.record.position.kind==ReplayKind::Resume {
+                            ManagerInput::ConsumeResume{input,material:delivery.resume_material().cloned()}
+                        } else {ManagerInput::ConsumeRecord(input)};
+                        self.commit_manager(node,input)?;
                     }
                     let delay = if assigned {
                         1_000 + u64::from(node % 5) * STARTUP_SKEW_US
@@ -1433,11 +1487,11 @@ impl Hub {
                     self.grant(key.1, input::Kind::Deliver(envelope)).await?;
                 }
                 Event::Publish(node, action, result) => {
-                    if self.scenario.is_some() && !self.public.espresso_idle() {
+                    if (self.scenario.is_some() || self.resume) && !self.public.espresso_idle() {
                         self.schedule(self.now.tick + FINALIZE_US, Event::Publish(node, action, result))?;
                         continue;
                     }
-                    if self.force && self.scenario.is_none() && self.now.tick == l1::ACT_US && self.wall_pause_ms != 0 {
+                    if self.force && self.scenario.is_none() && !self.resume && self.now.tick == l1::ACT_US && self.wall_pause_ms != 0 {
                         tokio::time::sleep(Duration::from_millis(self.wall_pause_ms)).await;
                     }
                     let staged = self.public.propose(result, self.now.tick)?;
@@ -1463,7 +1517,7 @@ impl Hub {
                             self.journal("RecoveryObserved", json!({"height":result.result().block.metadata.height,"cid":result.key().cid}))?;
                         }
                     }
-                    if self.force && self.scenario.is_none() && selected_branch(&result) == 0
+                    if self.force && self.scenario.is_none() && !self.resume && selected_branch(&result) == 0
                         && result.result().block.metadata.height == 11
                     {
                         check(self.public.replay.public_state().branch == 1
@@ -1478,6 +1532,8 @@ impl Hub {
                     self.publication_pending = false;
                 }
                 Event::L1(event) => self.run_l1(event)?,
+                Event::M4Batch(height)=>self.m4_batch(height)?,
+                Event::M4Resume=>self.m4_resume().await? ,
                 Event::OfflineRegion => self.offline_region().await?,
                 Event::Heartbeat => self.heartbeat()?,
                 Event::FinalizeHeartbeat(q) => {
@@ -1556,6 +1612,7 @@ impl Hub {
                 }
             }
         }
+        if self.resume {return check(self.reached_cutoff() && self.conflict_seen,"M4 cutoff failed");}
         if self.scenario.is_some() {
             return check(self.reached_cutoff(), "M3 acceptance cutoff not reached");
         }
@@ -1571,17 +1628,17 @@ impl Hub {
     }
 
     fn stop_height(&self) -> usize {
-        if self.force { 16 } else { 21 }
+        if self.force && !self.resume { 16 } else { 21 }
     }
 
     fn schedule_l1(&mut self) -> M1Result<()> {
         self.schedule(0, Event::L1(l1::Event::Genesis))?;
         self.schedule(5 * SECOND, Event::L1(l1::Event::Deploy))?;
-        if self.scenario.is_none() {
+        if self.scenario.is_none() && !self.resume {
             self.schedule(l1::SUBMIT_US, Event::L1(l1::Event::Submit))?;
             self.schedule(13 * SECOND, Event::L1(l1::Event::Retry))?;
         }
-        for height in 1..=if self.scenario.is_some() { 30 } else { 13 } {
+        for height in 1..=if self.scenario.is_some() || self.resume { 30 } else { 13 } {
             let inclusion = height * l1::L1_SLOT_US;
             self.schedule(inclusion, Event::L1(l1::Event::Mine(height)))?;
             self.schedule(inclusion + l1::FINALITY_US, Event::L1(l1::Event::Finalize(height)))?;
@@ -1621,6 +1678,9 @@ impl Hub {
                 }
             }
             l1::Event::Mine(height) => {
+                if self.resume && let Some(cursor)=detail["cursor_at_end"]["cursor"]["height"].as_u64() {
+                    self.included_cursor=cursor;
+                }
                 self.log("L1Included", None, json!({"height": height, "timestamp_s":detail["timestamp"],"hash":detail["hash"]}))?;
                 if let Some(hash) = self.submitted_control.as_deref()
                     && let Some(receipt) = detail["receipts"].as_array().and_then(|rows|
@@ -1657,7 +1717,36 @@ impl Hub {
                 self.log("L1ReaderAvailable", None, json!({
                     "reader": reader, "height": height, "hash": header.hash,
                 }))?;
-                if reader == "A" && self.scenario.is_some() {
+                if self.resume {
+                    self.log("DerivationAvailable",None,json!({"reader":reader,"l1_height":height,
+                        "head":detail["derivation"]["head"],"h1":detail["derivation"]["h1"],
+                        "h2":detail["derivation"]["h2"],"wait":detail["derivation"]["wait"],
+                        "cuts":detail["derivation"]["cuts"].as_array().map(|cuts| cuts.iter().map(|cut|
+                            json!({"file":cut["file"],"position":cut["position"],"digest":cut["digest"]})).collect::<Vec<_>>())}))?;
+                    if reader=="A" {
+                        if !detail["derivation"]["head"].is_null() {
+                            self.derived_head=Some(serde_json::from_value(detail["derivation"]["head"].clone())?);
+                        }
+                        if height==7 {
+                            let current=&self.public.replay.public_state().entries;
+                            let h1:Hash32=serde_json::from_value(detail["derivation"]["h1"].clone())?;
+                            let h2:Hash32=serde_json::from_value(detail["derivation"]["h2"].clone())?;
+                            check(current[0].block.native_hash==h1 && current[1].block.native_hash!=h2,
+                                "M4 expected ordinary D h1 and conflicting fallback D h2")?;
+                            let g2=current[1].block.native_hash;
+                            self.conflict_seen=true;
+                            self.log("DerivationConflict",None,json!({"height":2,"g_hash":g2,"d_hash":h2,"common_h1":h1}))?;
+                        }
+                    } else if let Some(cuts)=detail["derivation"]["cuts"].as_array() {
+                        use poc_viewer_gfr::L1ControlReader;
+                        for cut in cuts {
+                            let pos:L1Position=serde_json::from_value(cut["position"].clone())?;
+                            check(self.reader_b.resume_cut(pos)==self.public.public_l1().resume_cut(pos),
+                                "M4 independent reader cut mismatch")?;
+                        }
+                    }
+                }
+                if reader == "A" && (self.scenario.is_some() || self.resume) {
                     self.replay(None)?;
                 }
             }
@@ -1665,8 +1754,50 @@ impl Hub {
         Ok(())
     }
 
+    fn m4_batch(&mut self,height:u64)->M1Result<()> {
+        use batch_services::source::FixtureSnapshot;
+        let state=self.public.replay.public_state();
+        let index=usize::try_from(height-1)?;
+        let row=state.entries.get(index).ok_or_else(||problem("M4 target batch not committed in G"))?;
+        check(!row.block.native_block.kept.is_empty(),"M4 requires ordinary transactions")?;
+        let (parent,native_parent)=if index==0 {
+            (state.genesis.state.clone(),state.genesis.native_hash)
+        } else {(state.entries[index-1].block.state.clone(),state.entries[index-1].block.native_hash)};
+        let l1=self.public.public_l1().finalized_tip().ok_or_else(||problem("M4 no finalized L1"))?;
+        let snapshot=FixtureSnapshot {
+            source_fixture:super::m4::SOURCE_FIXTURE.into(),
+            gpos:checked(poc_viewer_gfr::encode_position(&row.position))?,
+            position:row.position.clone(),config:self.public.inputs.config.clone(),dep:self.public.inputs.dep.clone(),
+            parent,native_parent,blocks:vec![row.block.virtual_block.clone()],
+            control_coverage:L1Position {block:l1.height,tx:u64::MAX,log:u64::MAX},processed_resumes:vec![],
+        };
+        let value=self.l1.as_mut().expect("M4 port").step(json!({"op":"m4_prepare_batch","tick_us":self.now.tick,
+            "snapshot":snapshot}))?;
+        self.log("BatchSubmitted",None,value)
+    }
+
+    async fn m4_resume(&mut self)->M1Result<()> {
+        let state=self.public.replay.public_state();
+        let d=self.derived_head.as_ref().ok_or_else(||problem("M4 no verified D head"))?.clone();
+        check(self.conflict_seen && state.entries.len()<20 && d.state.metadata.height<20
+            && self.included_cursor<20 && self.public.espresso_tip().is_some_and(|(_,theta)|
+                theta.0<=self.now.tick && self.now.tick-theta.0<SECOND),
+            "M4 scheduled governance prerequisites")?;
+        let request=json!({"op":"m4_resume","tick_us":self.now.tick,"target":20,"origin":9,
+            "g_head":state.entries.len(),"d_head":d.state.metadata.height,"inbox_height":self.included_cursor,
+            "eshot":self.public.espresso_tip().map(|(q,theta)|(q,theta.0))});
+        self.log("ResumePreset",None,request.clone())?;
+        if self.wall_pause_ms>0 {tokio::time::sleep(Duration::from_millis(self.wall_pause_ms)).await;}
+        let result=self.l1.as_mut().expect("M4 port").step(request)?;
+        self.log("ResumeSubmitted",None,result)
+    }
+
     fn reached_cutoff(&self) -> bool {
         let state = self.public.replay.public_state();
+        if self.resume {
+            return state.branch==1 && state.entries.len()==21
+                && matches!(state.entries[20].source,GlobalSource::Regional(key) if state.selected.get(&(1,0)).is_some_and(|d|d.cid==key.cid));
+        }
         match self.scenario {
             None => state.entries.len() == self.stop_height(),
             Some(Scenario::Healthy) => state.entries.len() >= 11 && self.submitted_control.is_none()
@@ -1675,8 +1806,7 @@ impl Hub {
                 self.contrast_complete && self.submitted_control.is_none() && self.governance_signatures.is_empty(),
             Some(Scenario::Outage | Scenario::ReaderLag) => {
                 self.governance_applied && state.entries.last().is_some_and(|entry| {
-                    let GlobalSource::Regional(key) = entry.source;
-                    state.selected.values().any(|d| d.cid == key.cid && d.plan.session.beta > 0)
+                    matches!(entry.source,GlobalSource::Regional(key) if state.selected.values().any(|d|d.cid==key.cid && d.plan.session.beta>0))
                 })
             }
         }
@@ -1702,7 +1832,7 @@ impl Hub {
     }
 
     fn heartbeat(&mut self) -> M1Result<()> {
-        let scenario = self.scenario.expect("M3 heartbeat");
+        let scenario = self.scenario.unwrap_or(Scenario::Healthy);
         if scenario == Scenario::OrderingStopped && self.now.tick >= gov::OUTAGE {
             return Ok(());
         }
@@ -1856,7 +1986,7 @@ impl Hub {
         let entries = &self.public.replay.public_state().entries;
         let height = if self.scenario.is_some() { entries.len() } else { self.stop_height() };
         let tip = entries.get(height.saturating_sub(1)).ok_or_else(|| problem("no G tip at cutoff"))?;
-        let GlobalSource::Regional(result) = tip.source;
+        let GlobalSource::Regional(result) = tip.source else {return Err(problem("cutoff requires a native result"));};
         let summary = json!({
             "status": "Completed", "height": height, "seed": SEED,
             "cid": result.cid, "physical_id": result.block_hash, "native_hash": tip.block.native_hash,

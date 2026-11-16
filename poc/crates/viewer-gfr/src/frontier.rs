@@ -343,6 +343,7 @@ fn validate_controls(
     let mut previous = None;
     for control in controls {
         if (control.is_policy_force() && control.regional_policy().is_none())
+            || (control.is_policy_resume() && control.resume_control().is_none())
             || control.position.block != height
             || !matches!(control.kind, ReplayKind::Force | ReplayKind::Resume)
         {

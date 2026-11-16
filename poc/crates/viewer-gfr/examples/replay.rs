@@ -296,7 +296,7 @@ fn g2(f: &Fixture, s: &Scenario, seed: u64, a: &mut Viewer<'_>, b: &mut Viewer<'
             .physical_digest
             .is_none()
     );
-    let GlobalSource::Regional(key) = successor.state.public_state().entries[10].source;
+    let GlobalSource::Regional(key) = successor.state.public_state().entries[10].source else {panic!("expected regional source")};
     assert_eq!(
         successor.state.public_state().publications.results[&key].q_avail,
         Some(5)
