@@ -1,6 +1,6 @@
 use poc_types::domain::{
     Anchor, Boundary, Canonical, CanonicalObject, CloseReason, ConfigRef, Descriptor, Hash32,
-    LifecycleBody, LifecycleEvent, ReplayIndex, ReplayKind, ReplayPosition, ResultKey, SessionId,
+    L1Position, LifecycleBody, LifecycleEvent, ReplayIndex, ReplayKind, ReplayPosition, ResultKey, SessionId,
 };
 use poc_viewer_gfr::{
     GfrParameters, GlobalSource, InputRef, ReplayEffect, ReplayRecord, ReplayState, Tail,
@@ -161,7 +161,12 @@ fn record_projection(record: &ReplayRecord) -> Result<Vec<u8>, BridgeError> {
             input.tag(2)?;
             input.push(&height.to_be_bytes())?;
         }
-        InputRef::L1(_) => return Err(BridgeError::InvalidResult),
+        InputRef::L1(control) => {
+            input.tag(3)?;
+            input.frame(&control.position.encode())?;
+            input.push(&control.control_seq.to_be_bytes())?;
+            input.push(&control.force_branch().ok_or(BridgeError::InvalidResult)?.to_be_bytes())?;
+        }
     }
     check_input(&input.bytes, &record.position)?;
     out.push(&1u16.to_be_bytes())?;
@@ -229,6 +234,12 @@ fn check_input(bytes: &[u8], position: &ReplayPosition) -> Result<(), BridgeErro
             SessionId::decode(input.frame(MAX_PROJECTION)?)? == *session
         }
         (2, ReplayKind::Expire, ReplayIndex::Height(height)) => input.u64()? == *height,
+        (3, ReplayKind::Force, ReplayIndex::L1(at)) => {
+            let encoded = L1Position::decode(input.frame(MAX_PROJECTION)?)?;
+            input.u64()?; // control sequence
+            input.u64()?; // target branch
+            encoded == *at
+        }
         _ => false,
     };
     if !matched {
@@ -237,7 +248,7 @@ fn check_input(bytes: &[u8], position: &ReplayPosition) -> Result<(), BridgeErro
     input.finish()
 }
 
-/// Restore regular LIFE members from the exact stored record projection. The
+/// Restore LIFE members from the exact stored record projection. The
 /// existing encoder confirms the version, framing and canonical nested bytes.
 pub(crate) fn restored_events(
     projection: &[u8],

@@ -714,7 +714,7 @@ fn validate_descriptor(
 ) -> Result<(), ManagerError> {
     if matches!(
         descriptor.plan.cause,
-        BoundaryCause::Force | BoundaryCause::Resume
+        BoundaryCause::Resume
     ) {
         return Err(ManagerError::Unsupported);
     }

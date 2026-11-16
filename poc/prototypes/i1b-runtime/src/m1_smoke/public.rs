@@ -8,7 +8,7 @@ use poc_publication_bridge::{
 use poc_publisher::{ConfirmOutcome, Publisher, StoreBinding, Submission};
 use poc_types::domain::*;
 use poc_viewer_gfr::{
-    self as gfr, FixtureL1Reader, GlobalSource, InitInput, ReplayReads, ReplayServices,
+    self as gfr, FixtureL1Reader, GlobalSource, InitInput, L1ControlReader, ReplayReads, ReplayServices,
     ReplayState, ReplayStatus, Tail, VerificationProfile, VerifierBinding,
 };
 use serde_json::{Value, json};
@@ -28,6 +28,7 @@ pub(crate) struct Public {
     pub finality: NativeFinality,
     setup: CheckedSetup,
     l1: FixtureL1Reader,
+    anvil_l1: Option<super::l1::Reader>,
     reader: ReaderState,
     espresso: SimEspresso,
     pub replay: ReplayState,
@@ -88,13 +89,16 @@ impl ContextVerifier for Context<'_> {
         let public = self.replay.public_state();
         let session = &descriptor.plan.session;
         let known = public.selected.get(&(session.beta, session.r));
-        let reference = if session.r == 0 {
-            &config.genesis
-        } else {
-            match public.selected.get(&(session.beta, session.r - 1)) {
-                Some(prior) => &prior.anchor,
-                None => return InputStatus::Reject(InputError::InvalidSource),
+        let reference = match descriptor.plan.cause {
+            BoundaryCause::Genesis => &config.genesis,
+            BoundaryCause::Handoff if session.r > 0 => {
+                match public.selected.get(&(session.beta, session.r - 1)) {
+                    Some(prior) => &prior.anchor,
+                    None => return InputStatus::Reject(InputError::InvalidSource),
+                }
             }
+            BoundaryCause::Force => &descriptor.anchor,
+            _ => return InputStatus::Reject(InputError::InvalidSource),
         };
         if known != Some(descriptor)
             || !matches!(
@@ -148,7 +152,7 @@ fn public_anchor(
 }
 
 impl Public {
-    pub fn new(root: &Path) -> M1Result<Self> {
+    pub fn new(root: &Path, force: bool) -> M1Result<Self> {
         let inputs = PublicInputs::fixture()?;
         let setup = inputs.setup()?;
         let finality = NativeFinality(inputs.plans()?);
@@ -172,7 +176,12 @@ impl Public {
             source_revision: std::env::var("M1_CANDIDATE")
                 .unwrap_or_else(|_| "commonware-2026.10.0".into()),
         };
-        let metadata = RegionalMetadata::new(config, &l1)?;
+        let anvil_l1 = force.then(super::l1::Reader::default);
+        let reader_l1: &dyn L1ControlReader = match &anvil_l1 {
+            Some(reader) => reader,
+            None => &l1,
+        };
+        let metadata = RegionalMetadata::new(config, reader_l1)?;
         let init = checked(gfr::init(
             &InitInput::Genesis {
                 config: config.clone(),
@@ -182,7 +191,7 @@ impl Public {
             },
             &ReplayReads {
                 espresso: &reader,
-                l1: &l1,
+                l1: reader_l1,
             },
             &ReplayServices {
                 config,
@@ -230,7 +239,7 @@ impl Public {
             expected: verification.clone(),
             parameters: parameters(),
             espresso_source: SOURCE.to_vec(),
-            l1_source: L1_SOURCE.to_vec(),
+            l1_source: reader_l1.source_id().to_vec(),
             publisher_reader: READER.to_vec(),
             owner_reference: OWNER.to_vec(),
         }))?;
@@ -251,6 +260,7 @@ impl Public {
             finality,
             setup,
             l1,
+            anvil_l1,
             reader,
             espresso,
             replay,
@@ -263,12 +273,39 @@ impl Public {
         })
     }
 
+    pub fn public_l1(&self) -> &dyn L1ControlReader {
+        public_l1(&self.anvil_l1, &self.l1)
+    }
+
+    pub fn deliver_anvil(&mut self, block: &Value) -> M1Result<L1Header> {
+        self.anvil_l1.as_mut().ok_or_else(|| super::problem("Anvil reader missing"))?
+            .receive(block, &self.inputs)
+    }
+
+    pub fn ensure_worker_l1_projection(&self, now: u64) -> M1Result<Option<u64>> {
+        let Some(real) = &self.anvil_l1 else {
+            return Ok(None);
+        };
+        let cutoff = now.saturating_sub(super::l1::WORKER_VISIBILITY_LAG_US);
+        let exposed = self.inputs.l1.rows.iter()
+            .take_while(|row| row.finalized_at_us <= cutoff)
+            .last();
+        let Some(row) = exposed else { return Ok(None); };
+        check(
+            matches!(real.header(row.header.height), InputStatus::Ready(header)
+                if header.timestamp_s == row.header.timestamp_s),
+            "worker metadata projection would expose an undelivered Anvil header",
+        )?;
+        Ok(Some(row.header.height))
+    }
+
     pub fn install(
         &self,
         descriptor: Descriptor,
         history: Vec<AnchorStep>,
         now: u64,
     ) -> M1Result<Install> {
+        self.ensure_worker_l1_projection(now)?;
         let (execution, _) = public_anchor(&self.replay, &descriptor)
             .ok_or_else(|| super::problem("Missing GFR execution anchor"))?;
         Ok(Install {
@@ -276,6 +313,7 @@ impl Public {
             execution,
             history,
             prepared_at_us: now,
+            projected_l1_lag_us: self.anvil_l1.as_ref().map(|_| super::l1::WORKER_VISIBILITY_LAG_US),
         })
     }
 
@@ -324,7 +362,9 @@ impl Public {
             checked(self.stops.permit_dispatch(&result))?,
             "closed public scope cannot dispatch",
         )?;
-        self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)?;
+        if self.anvil_l1.is_none() {
+            self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)?;
+        }
         let mut publisher = checked(Publisher::open(
             self.root.join("publisher"),
             self.store_binding.clone(),
@@ -348,7 +388,7 @@ impl Public {
                 profile: self.verification.clone(),
             }),
             context: &context,
-            l1: &self.l1,
+            l1: public_l1(&self.anvil_l1, &self.l1),
             dep: self.setup.dep(),
         };
         checked(publisher.offer(result.clone(), &inputs))?;
@@ -433,7 +473,9 @@ impl Public {
             self.reader
                 .receive_block(SOURCE, block.clone(), TickUs(tick)),
         )?;
-        self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)?;
+        if self.anvil_l1.is_none() {
+            self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)?;
+        }
         let mut publisher = checked(Publisher::open(
             self.root.join("publisher"),
             self.store_binding.clone(),
@@ -462,7 +504,7 @@ impl Public {
                 profile: self.verification.clone(),
             }),
             context: &context,
-            l1: &self.l1,
+            l1: public_l1(&self.anvil_l1, &self.l1),
             dep: self.setup.dep(),
         };
         let key = submitted.result.key();
@@ -499,12 +541,12 @@ impl Public {
         };
         let old_entries = self.replay.public_state().entries.len();
         let old_records = self.replay.public_state().records.len();
-        let metadata = RegionalMetadata::new(&self.inputs.config, &self.l1)?;
+        let metadata = RegionalMetadata::new(&self.inputs.config, self.public_l1())?;
         let result = gfr::advance_global(
             &self.replay,
             &ReplayReads {
                 espresso: &self.reader,
-                l1: &self.l1,
+                l1: public_l1(&self.anvil_l1, &self.l1),
             },
             &ReplayServices {
                 config: &self.inputs.config,
@@ -549,5 +591,15 @@ pub(crate) fn initial_descriptor(state: &ReplayState) -> M1Result<&Descriptor> {
         other => Err(super::problem(format!(
             "M1 missing selected descriptor: {other:?}"
         ))),
+    }
+}
+
+fn public_l1<'a>(
+    anvil: &'a Option<super::l1::Reader>,
+    fixture: &'a FixtureL1Reader,
+) -> &'a dyn L1ControlReader {
+    match anvil {
+        Some(reader) => reader,
+        None => fixture,
     }
 }

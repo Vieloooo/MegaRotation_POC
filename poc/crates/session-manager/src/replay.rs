@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, sync::Arc};
 
 use poc_types::domain::{
-    Boundary, Cid, CloseReason, Descriptor, Hash32, LifecycleBody, ReplayIndex, ReplayKind,
+    Boundary, BoundaryCause, Cid, CloseReason, Descriptor, Hash32, LifecycleBody, ReplayIndex, ReplayKind,
     ReplayPosition,
 };
 use poc_viewer_gfr::{
@@ -84,11 +84,13 @@ impl Planner<'_> {
         for descriptor in assignments {
             let cid = descriptor.cid;
             let session = &descriptor.plan.session;
-            let predecessor = self.selected_predecessor(descriptor)?.cid;
-            if self
-                .state
-                .guards
-                .physical_tip(predecessor)
+            let predecessor = if descriptor.plan.cause == BoundaryCause::Force {
+                None
+            } else {
+                Some(self.selected_predecessor(descriptor)?.cid)
+            };
+            if predecessor
+                .and_then(|cid| self.state.guards.physical_tip(cid))
                 .is_some_and(|tip| descriptor.anchor.block.height < tip)
             {
                 return Err(ManagerError::InvalidRecord);
@@ -104,7 +106,7 @@ impl Planner<'_> {
             } else {
                 self.register_program(
                     descriptor.clone(),
-                    Some(predecessor),
+                    predecessor,
                     input.validation_ref,
                     Selection::Selected,
                 )?;
@@ -133,9 +135,7 @@ impl Planner<'_> {
 
     fn validate_record(&self, record: &ReplayRecord) -> Result<Vec<Hash32>, ManagerError> {
         let position = &record.position;
-        if matches!(position.kind, ReplayKind::Force | ReplayKind::Resume)
-            || matches!(record.input_ref, InputRef::L1(_))
-        {
+        if position.kind == ReplayKind::Resume {
             return Err(ManagerError::Unsupported);
         }
         encode_position(position).map_err(|_| ManagerError::InvalidRecord)?;
@@ -143,6 +143,9 @@ impl Planner<'_> {
             (ReplayIndex::Espresso(q), InputRef::Espresso(other)) => q == other,
             (ReplayIndex::Height(height), InputRef::Expire(other)) => height == other,
             (ReplayIndex::Session(session), InputRef::SessionEnd(other)) => session == other,
+            (ReplayIndex::L1(at), InputRef::L1(control)) => {
+                position.kind == control.kind && *at == control.position && control.force_branch().is_some()
+            }
             _ => false,
         };
         if !matching_source {
@@ -156,6 +159,9 @@ impl Planner<'_> {
         }
         bound(record.events.len(), CapacityKind::Events, EVENTS)?;
         bound(record.effects.len(), CapacityKind::Effects, EFFECTS)?;
+        if let InputRef::L1(control) = &record.input_ref {
+            validate_force(record, control.force_branch().ok_or(ManagerError::InvalidRecord)?)?;
+        }
         for effect in &record.effects {
             match effect {
                 ReplayEffect::Reset { .. } => return Err(ManagerError::Unsupported),
@@ -178,7 +184,10 @@ impl Planner<'_> {
             match &event.body {
                 LifecycleBody::SessionAssigned { descriptor } => {
                     validate_descriptor(self.binding, self.config, descriptor)?;
-                    if position.kind == ReplayKind::Expire {
+                    if position.kind == ReplayKind::Expire
+                        || (descriptor.plan.cause == BoundaryCause::Force)
+                            != (position.kind == ReplayKind::Force)
+                    {
                         return Err(ManagerError::InvalidRecord);
                     }
                 }
@@ -188,7 +197,9 @@ impl Planner<'_> {
                     }
                 }
                 LifecycleBody::BranchClosed { reason, .. } => {
-                    if position.kind != ReplayKind::Expire || *reason != CloseReason::Expired {
+                    if !matches!((position.kind, *reason),
+                        (ReplayKind::Expire, CloseReason::Expired) | (ReplayKind::Force, CloseReason::Force))
+                    {
                         return Err(ManagerError::Unsupported);
                     }
                 }
@@ -254,7 +265,11 @@ impl Planner<'_> {
         closes: &mut Vec<Cid>,
     ) -> Result<(), ManagerError> {
         let session = &descriptor.plan.session;
-        self.selected_predecessor(descriptor)?;
+        if descriptor.plan.cause == BoundaryCause::Handoff {
+            self.selected_predecessor(descriptor)?;
+        } else if descriptor.plan.cause != BoundaryCause::Force {
+            return Err(ManagerError::InvalidRecord);
+        }
         if self.state.guards.closed_session(session).is_some()
             || self.state.guards.closed_branch(session.beta).is_some()
         {
@@ -361,12 +376,46 @@ impl Planner<'_> {
 }
 
 fn validate_boundary(boundary: &Boundary) -> Result<(), ManagerError> {
-    use poc_types::domain::BoundaryCause;
-    if matches!(
-        boundary.input.cause,
-        BoundaryCause::Force | BoundaryCause::Resume
-    ) {
+    if boundary.input.cause == BoundaryCause::Resume {
         return Err(ManagerError::Unsupported);
     }
     boundary.validate().map_err(|_| ManagerError::InvalidRecord)
+}
+
+fn validate_force(record: &ReplayRecord, target: u64) -> Result<(), ManagerError> {
+    if record.effects.is_empty() && record.events.is_empty() {
+        return Ok(());
+    }
+    let [ReplayEffect::Duty { before, after }] = record.effects.as_slice() else {
+        return Err(ManagerError::InvalidRecord);
+    };
+    let prior = match before {
+        Tail::Next(descriptor) => descriptor.plan.input(),
+        Tail::Pending(boundary) => boundary.input.clone(),
+        Tail::Halt { .. } => return Err(ManagerError::InvalidRecord),
+    };
+    if prior.session.beta != target {
+        return Err(ManagerError::InvalidRecord);
+    }
+    let [closed, remaining @ ..] = record.events.as_slice() else {
+        return Err(ManagerError::InvalidRecord);
+    };
+    if closed.body != (LifecycleBody::BranchClosed { branch: target, reason: CloseReason::Force }) {
+        return Err(ManagerError::InvalidRecord);
+    }
+    let (input, anchor) = match (after, remaining) {
+        (Tail::Next(descriptor), [assigned]) if assigned.body == (LifecycleBody::SessionAssigned {
+            descriptor: descriptor.clone(),
+        }) => (descriptor.plan.input(), &descriptor.anchor),
+        (Tail::Pending(boundary), []) => (
+            boundary.input.clone(), boundary.anchor.as_ref().ok_or(ManagerError::InvalidRecord)?,
+        ),
+        _ => return Err(ManagerError::InvalidRecord),
+    };
+    if input.cause != BoundaryCause::Force || input.session.beta != add(target, 1)?
+        || input.reference_block != anchor.block
+    {
+        return Err(ManagerError::InvalidRecord);
+    }
+    Ok(())
 }

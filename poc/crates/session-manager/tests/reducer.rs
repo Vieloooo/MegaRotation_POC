@@ -1,7 +1,7 @@
 //! Trusted-input fixture. Uses the M0 public object types and the existing config and key fixture.
 use poc_session_manager::*;
 use poc_types::domain::*;
-use poc_viewer_gfr::{GlobalSource, InputRef, ReplayEffect, ReplayRecord};
+use poc_viewer_gfr::{GlobalSource, InputRef, ReplayEffect, ReplayRecord, Tail};
 
 #[path = "../../../verification/mock-plan-execution/implementation-v1/component_fixture.rs"]
 mod component_fixture;
@@ -1043,4 +1043,114 @@ fn session_end_without_early_result_preserves_window_and_waits_for_preparation()
         manager.view().results().keys().collect::<Vec<_>>(),
         vec![&result]
     );
+}
+
+#[test]
+fn force_closes_running_preparing_and_paused_cids_before_releasing_close() {
+    let fixture = Fixture::new(5);
+    let mut manager = fixture.manager();
+    let paused = fixture.successor(&fixture.genesis, 8);
+    let running = fixture.successor(&fixture.genesis, 9);
+    let preparing = fixture.successor(&fixture.genesis, 10);
+    let session = paused.plan.session.clone();
+    enable(&mut manager, 1);
+
+    commit(&mut manager, fixture.candidate(&paused), 1);
+    ready(&mut manager, paused.cid, hash(40), 1);
+    let enter = commit(&mut manager, ManagerInput::Schedule(session.clone()), 1)[0].id;
+    commit(
+        &mut manager,
+        receipt(enter, ReceiptOutcome::Entered { instance_ref: hash(40), entry_time_us: 1 }),
+        1,
+    );
+    commit(&mut manager, fixture.candidate(&running), 2);
+    ready(&mut manager, running.cid, hash(41), 2);
+    let switch = commit(&mut manager, ManagerInput::Schedule(session.clone()), 2);
+    commit(
+        &mut manager,
+        receipt(switch[0].id, ReceiptOutcome::Paused { instance_ref: hash(40) }),
+        2,
+    );
+    let entered_running = receipt(
+        switch[1].id,
+        ReceiptOutcome::Entered { instance_ref: hash(41), entry_time_us: 2 },
+    );
+    commit(&mut manager, entered_running.clone(), 2);
+    commit(&mut manager, fixture.candidate(&preparing), 2);
+    let pending = prepare(&mut manager, preparing.cid, hash(42), 2);
+    let old = [&paused, &running, &preparing];
+    for (descriptor, phase) in old.into_iter().zip([Phase::Paused, Phase::Running, Phase::Preparing]) {
+        assert_eq!(manager.view().program(descriptor.cid).unwrap().phase, phase);
+    }
+
+    let result = ResultKey { cid: running.cid, block_hash: hash(80) };
+    commit(
+        &mut manager,
+        ManagerInput::RetainResult { key: result, verified_result_ref: hash(81) },
+        2,
+    );
+
+    let mut successor = descriptor(
+        &fixture.config,
+        Some(&fixture.genesis),
+        fixture.genesis.anchor.clone(),
+    );
+    successor.plan.session = SessionId { beta: 1, r: 0 };
+    successor.plan.cause = BoundaryCause::Force;
+    successor.plan.reference_block = successor.anchor.block.clone();
+    successor.plan.window = Window { h_min: 16, h_max: 25 };
+    successor.plan.authorization_ref = authorization_ref(
+        successor.plan.config_ref, fixture.config.registry_hash, &successor.plan.input(),
+    ).unwrap();
+    successor.cid = regional_cid(
+        &successor.plan.session, successor.anchor.block.block_id,
+        &ProgramConfig::from_plan(&fixture.config, &successor.plan).unwrap(),
+    ).unwrap();
+    let position = L1Position { block: 6, tx: 0, log: 0 };
+    let record = replay(
+        ReplayPosition { key_us: 22 * SEC, kind: ReplayKind::Force, index: ReplayIndex::L1(position) },
+        InputRef::L1(poc_viewer_gfr::ControlRef::static_force(position, 1, 0)),
+        vec![ReplayEffect::Duty {
+            before: Tail::Next(fixture.genesis.clone()),
+            after: Tail::Next(successor.clone()),
+        }],
+        vec![
+            LifecycleBody::BranchClosed { branch: 0, reason: CloseReason::Force },
+            assigning(&successor),
+        ],
+    );
+    let input = fixture.record(0, record);
+    let delta = plan(&manager, input.clone(), 3);
+    let close = TerminalCause::Public(CloseReason::Force);
+    for descriptor in old {
+        assert_eq!(delta.guards().terminal(descriptor.cid), Some(close));
+        assert!(manager.view().program(descriptor.cid).unwrap().terminal_cause.is_none());
+    }
+    let closes: Vec<_> = delta.intents().iter().filter_map(|intent| match intent.kind {
+        ActionKind::Close { cid, cause, .. } if cause == close => Some((cid, intent.id)),
+        _ => None,
+    }).collect();
+    assert_eq!(closes.len(), 3);
+    for (_, action) in &closes {
+        assert!(!is_dispatchable(&manager, *action, 3));
+    }
+    let commit_ref = CommitRef::for_delta(&delta, hash(99));
+    manager.accept_commit(delta, commit_ref).unwrap();
+    for (cid, action) in closes {
+        assert!(is_dispatchable(&manager, action, 3));
+        let program = manager.view().program(cid).unwrap();
+        assert_eq!(program.phase, Phase::Terminated);
+        assert_eq!(program.terminal_cause, Some(close));
+    }
+    assert_eq!(manager.view().selected(&successor.plan.session), Some(&successor));
+    assert!(matches!(manager.plan(input, 3).unwrap(), PlanOutcome::Unchanged(_)));
+    assert!(matches!(manager.plan(entered_running, 3).unwrap(), PlanOutcome::Unchanged(_)));
+    let late = commit(&mut manager, ManagerInput::PreparationCompleted(pending), 3);
+    assert!(late.iter().all(|intent| !matches!(intent.kind,
+        ActionKind::Enter { .. } | ActionKind::SelectBack { .. }
+    )));
+    assert!(manager.dispatchable(3).iter().any(|intent| matches!(
+        intent.kind, ActionKind::Publish { key, .. } if key == result
+    )));
+    assert_eq!(manager.view().program(preparing.cid).unwrap().phase, Phase::Terminated);
 }

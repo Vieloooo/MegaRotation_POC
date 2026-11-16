@@ -48,6 +48,41 @@ pub fn merge(
         return InputStatus::Ready(MergeOutput { blocks: vec![] });
     };
 
+    expand(anchor, chain, digests, tip.metadata.height, metadata, dep, config)
+}
+
+/// Execute the deposit-only interval before a proposed first physical block.
+/// The returned expansion is provisional until a Final commits the interval.
+pub fn initial_padding(
+    anchor: &ExecutionAnchor,
+    window: &Window,
+    metadata: &dyn MetadataProvider,
+    dep: &dyn DepProvider,
+    config: &PublicConfig,
+) -> MergeOutcome {
+    if let Err(error) = validate_chain(anchor, &[], window, metadata, dep, config) {
+        return InputStatus::Reject(error);
+    }
+    let through = window.h_min - 1;
+    let span = through - anchor.anchor.block.height;
+    if span > MAX_EXPANDED_HEIGHTS as u64 {
+        return InputStatus::Reject(limit(
+            MAX_EXPANDED_HEIGHTS,
+            usize::try_from(span).unwrap_or(usize::MAX),
+        ));
+    }
+    expand(anchor, &[], vec![], through, metadata, dep, config)
+}
+
+fn expand(
+    anchor: &ExecutionAnchor,
+    chain: &[PhysicalBlock],
+    digests: Vec<Hash32>,
+    through: u64,
+    metadata: &dyn MetadataProvider,
+    dep: &dyn DepProvider,
+    config: &PublicConfig,
+) -> MergeOutcome {
     let mut state = anchor.state.clone();
     let mut pre_state_root = match state.root() {
         Ok(root) => root,
@@ -58,7 +93,7 @@ pub fn merge(
     let mut blocks = Vec::new();
 
     // validate_chain checked strict progress and the expansion bound before this loop.
-    for height in (anchor.anchor.block.height + 1)..=tip.metadata.height {
+    for height in (anchor.anchor.block.height + 1)..=through {
         let physical = next_physical.next_if(|(block, _)| block.metadata.height == height);
         let actual = match metadata.at(&anchor.anchor, height) {
             InputStatus::Ready(actual) => actual,

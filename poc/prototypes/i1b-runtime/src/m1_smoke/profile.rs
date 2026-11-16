@@ -16,7 +16,7 @@ use commonware_parallel::Sequential;
 use poc_authorization::{POP_NAMESPACE, PlanOutcome, StaticScheduleProvider, ValidatedRegistry};
 use poc_core::{
     fixture::{CheckedSetup, check_setup, reg_a_l1_fixture},
-    merge::merge,
+    merge::{initial_padding, merge},
     metadata::{MetadataProvider as _, RegionalMetadata, l2_timestamp_us},
 };
 use poc_types::domain::*;
@@ -270,6 +270,8 @@ pub(crate) struct Install {
     pub execution: ExecutionAnchor,
     pub history: Vec<AnchorStep>,
     pub prepared_at_us: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub projected_l1_lag_us: Option<u64>,
 }
 
 pub(crate) struct ReadyMaterial {
@@ -278,6 +280,7 @@ pub(crate) struct ReadyMaterial {
     setup: CheckedSetup,
     l1: FixtureL1Reader,
     inputs: PublicInputs,
+    projected_l1_lag_us: u64,
 }
 
 impl ReadyMaterial {
@@ -287,7 +290,8 @@ impl ReadyMaterial {
         let finality = NativeFinality(schedules.clone());
         let mut l1 = FixtureL1Reader::new(L1_SOURCE.to_vec(), setup.l1().reader())
             .map_err(|_| Error("M1 regional L1 reader"))?;
-        inputs.deliver_l1(&setup, &mut l1, install.prepared_at_us)?;
+        let projected_l1_lag_us = install.projected_l1_lag_us.unwrap_or(0);
+        inputs.deliver_l1(&setup, &mut l1, install.prepared_at_us.saturating_sub(projected_l1_lag_us))?;
         let metadata = RegionalMetadata::new(&inputs.config, &l1).map_err(domain)?;
         let mut anchor = inputs.genesis.clone();
         let mut prior_initial = inputs.genesis.anchor.clone();
@@ -337,17 +341,22 @@ impl ReadyMaterial {
             };
         }
         let descriptor = &install.descriptor;
+        let force = descriptor.plan.cause == BoundaryCause::Force;
+        let expected_session = if force {
+            // This profile switches from the old branch after the regular
+            // predecessor completed. The selected old duty has no G contribution.
+            SessionId { beta: 1, r: install.history.len() as u64 }
+        } else {
+            SessionId { beta: 0, r: install.history.len() as u64 }
+        };
+        let reference = if force { &anchor.anchor } else { &prior_initial };
         if anchor != install.execution
             || descriptor.anchor != anchor.anchor
-            || descriptor.plan.session
-                != (SessionId {
-                    beta: 0,
-                    r: install.history.len() as u64,
-                })
+            || descriptor.plan.session != expected_session
             || descriptor.plan.region != pid.region()
             || schedules.validate_descriptor(descriptor).is_err()
             || !matches!(
-                schedules.validate_plan(&descriptor.plan, &Reference(&prior_initial)),
+                schedules.validate_plan(&descriptor.plan, &Reference(reference)),
                 PlanOutcome::Ready(_)
             )
         {
@@ -359,11 +368,12 @@ impl ReadyMaterial {
             setup,
             l1,
             inputs,
+            projected_l1_lag_us,
         })
     }
 
     pub fn refresh(&mut self, tick: u64) -> Result<()> {
-        self.inputs.deliver_l1(&self.setup, &mut self.l1, tick)
+        self.inputs.deliver_l1(&self.setup, &mut self.l1, tick.saturating_sub(self.projected_l1_lag_us))
     }
 
     pub fn metadata_window_us(&self) -> i64 {
@@ -402,13 +412,32 @@ impl ReadyMaterial {
         parent: Hash32,
         height: u64,
     ) -> InputStatus<PhysicalBlock> {
-        let state = match self.execution(chain) {
+        let metadata = RegionalMetadata::new(&self.inputs.config, &self.l1)
+            .expect("checked M1 metadata configuration");
+        let next_state = if chain.is_empty()
+            && self.descriptor.plan.window.h_min > self.execution.anchor.block.height + 1
+        {
+            match initial_padding(
+                &self.execution,
+                &self.descriptor.plan.window,
+                &metadata,
+                self.setup.dep(),
+                &self.inputs.config,
+            ) {
+                InputStatus::Ready(output) => InputStatus::Ready(
+                    output.blocks.last().expect("nonempty initial padding").state.clone()
+                ),
+                InputStatus::Wait(wait) => InputStatus::Wait(wait),
+                InputStatus::Reject(error) => InputStatus::Reject(error),
+            }
+        } else {
+            self.execution(chain)
+        };
+        let state = match next_state {
             InputStatus::Ready(state) => state,
             InputStatus::Wait(wait) => return InputStatus::Wait(wait),
             InputStatus::Reject(error) => return InputStatus::Reject(error),
         };
-        let metadata = RegionalMetadata::new(&self.inputs.config, &self.l1)
-            .expect("checked M1 metadata configuration");
         let metadata = match metadata.at(&self.execution.anchor, height) {
             InputStatus::Ready(value) => value,
             InputStatus::Wait(wait) => return InputStatus::Wait(wait),

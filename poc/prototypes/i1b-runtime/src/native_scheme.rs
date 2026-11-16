@@ -337,6 +337,11 @@ mod tests {
                 Digest([0x41; 32]),
             );
             let original = proposal.clone();
+            let fresh = Proposal::new(
+                Round::new(Epoch::new(1), View::new(2)),
+                View::new(1),
+                Digest([0x42; 32]),
+            );
             ControlledDriver::run_async(
                 commonware_runtime::tokio::Config::default().with_storage_directory(root.clone()),
                 profile,
@@ -403,9 +408,9 @@ mod tests {
                             input,
                             |_| {
                                 let guarded = saved.lock().unwrap();
-                                assert!(
-                                    Notarize::sign(guarded.as_ref().unwrap(), proposal).is_none()
-                                );
+                                let signer = guarded.as_ref().unwrap();
+                                assert!(Notarize::sign(signer, proposal).is_none());
+                                assert!(Notarize::sign(signer, fresh).is_none());
                                 Ok(())
                             },
                         )
@@ -420,10 +425,11 @@ mod tests {
                 [
                     SignAction::Created as i32,
                     SignAction::CacheHit as i32,
-                    SignAction::Denied as i32
+                    SignAction::Denied as i32,
+                    SignAction::Denied as i32,
                 ]
             );
-            assert!(audits[2].attestation_bytes.is_empty());
+            assert!(audits[2..].iter().all(|row| row.attestation_bytes.is_empty()));
             fs::remove_dir_all(root).unwrap();
         }
     }

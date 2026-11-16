@@ -453,8 +453,9 @@ impl LedgerState {
             match &event.body {
                 LifecycleBody::BranchClosed {
                     branch,
-                    reason: CloseReason::Expired,
-                } if event.position.kind == ReplayKind::Expire => {
+                    reason,
+                } if matches!((event.position.kind, *reason),
+                    (ReplayKind::Expire, CloseReason::Expired) | (ReplayKind::Force, CloseReason::Force)) => {
                     first_basis(
                         self.branches
                             .entry(*branch)
@@ -480,7 +481,7 @@ impl LedgerState {
                 LifecycleBody::SessionAssigned { descriptor }
                     if matches!(
                         event.position.kind,
-                        ReplayKind::SessionEnd | ReplayKind::Espresso
+                        ReplayKind::SessionEnd | ReplayKind::Espresso | ReplayKind::Force
                     ) =>
                 {
                     ledger.verify_descriptor(descriptor)?;

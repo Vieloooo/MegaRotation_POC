@@ -188,6 +188,26 @@ pub struct ControlRef {
     pub source_bytes: Vec<u8>,
 }
 
+impl ControlRef {
+    const STATIC_FORCE: &'static [u8] = b"PoC/StaticForce/v1";
+
+    /// Project a Force from an authenticated, finalized L1 log. The source
+    /// adapter must validate the Authority and the fixed static policy first.
+    pub fn static_force(position: L1Position, control_seq: u64, branch: u64) -> Self {
+        let mut source_bytes = Self::STATIC_FORCE.to_vec();
+        source_bytes.extend_from_slice(&branch.to_be_bytes());
+        Self { position, kind: ReplayKind::Force, control_seq, source_bytes }
+    }
+
+    pub fn force_branch(&self) -> Option<u64> {
+        if self.kind != ReplayKind::Force {
+            return None;
+        }
+        let branch = self.source_bytes.strip_prefix(Self::STATIC_FORCE)?;
+        Some(u64::from_be_bytes(branch.try_into().ok()?))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Tail {
     Next(Descriptor),

@@ -11,7 +11,7 @@ use poc_types::domain::{
 use sim_espresso::MAX_BLOCKS;
 
 use crate::{
-    Anchor, ChainEntry, CloseReason, ExecutionAnchor, GfrError, GfrParameters, GlobalCheckpoint,
+    Anchor, ChainEntry, CloseReason, ControlRef, ExecutionAnchor, GfrError, GfrParameters, GlobalCheckpoint,
     GlobalSource, InitInput, InitResult, InputRef, LifecycleBody, LifecycleEvent, Missing,
     PlanError, PlanInput, PlanOutcome, PublicConfig, PublicReplayState, ReplayEffect,
     ReplayPosition, ReplayReads, ReplayRecord, ReplayResult, ReplayServices, ReplayState,
@@ -116,6 +116,7 @@ fn genesis_state(
             espresso_source: reads.espresso.source_id().to_vec(),
             l1_source: reads.l1.source_id().to_vec(),
             branch: 0,
+            l1_floor: genesis.anchor.block.origin,
             tail: Tail::Pending(boundary.clone()),
             pc: None,
             selected: BTreeMap::new(),
@@ -313,7 +314,9 @@ fn advance(
         let Some(event) = sources.next_event(&result.state, reads, through)? else {
             break;
         };
-        if let InputRef::L1(control) = &event.input_ref {
+        if let InputRef::L1(control) = &event.input_ref
+            && control.force_branch().is_none()
+        {
             return Ok(ReplayStatus::UnsupportedControl {
                 position: event.position,
                 kind: control.kind,
@@ -375,7 +378,7 @@ fn apply_event(
         }
         InputRef::Expire(_) => expire(&mut staged, &mut record)?,
         InputRef::SessionEnd(_) => regular(&mut staged, &mut record, services)?,
-        InputRef::L1(_) => return Err(GfrError::InvalidSource.into()),
+        InputRef::L1(control) => force(&mut staged, control, &mut record, services)?,
     }
     sources.support(&mut staged.cuts, event, used_origin.get())?;
     staged.public.pc = Some(record.position.clone());
@@ -560,6 +563,62 @@ fn regular(
                 descriptor: descriptor.clone(),
             },
         );
+    }
+    change_duty(state, record, successor);
+    Ok(())
+}
+
+fn force(
+    state: &mut ReplayState,
+    control: &ControlRef,
+    record: &mut ReplayRecord,
+    services: &ReplayServices<'_>,
+) -> StepResult<()> {
+    // M2 uses the fixed, public static-schedule-v1 preparation budget.
+    const FORCE_INIT_US: u64 = 3_000_000;
+
+    let branch = state.public.branch;
+    let target = control.force_branch().ok_or(GfrError::InvalidSource)?;
+    if target != branch || state.public.closed_branches.contains(&target) {
+        return Ok(());
+    }
+    let (r, source_region) = match &state.public.tail {
+        Tail::Next(current) => {
+            let contributed = state.public.entries.last().is_some_and(|entry| {
+                let GlobalSource::Regional(key) = entry.source;
+                key.cid == current.cid && entry.block.physical_digest.is_some()
+            });
+            (add(current.plan.session.r, u64::from(contributed))?, Some(current.plan.region))
+        }
+        Tail::Pending(boundary) => (boundary.input.session.r, boundary.input.source_region),
+        Tail::Halt { .. } => return Ok(()),
+    };
+    let anchor = state.last_anchor().clone();
+    let key = add(record.position.key_us, FORCE_INIT_US)?;
+    let genesis = &state.public.config.genesis;
+    let elapsed_slots = key.saturating_sub(genesis.timestamp_us) / state.public.config.l2_slot_us;
+    let first = add(anchor.block.height, 1)?.max(add(add(genesis.block.height, elapsed_slots)?, 1)?);
+    let beta = add(branch, 1)?;
+    let boundary = Boundary {
+        input: PlanInput {
+            cause: BoundaryCause::Force,
+            session: SessionId { beta, r },
+            source_region,
+            window: Window { h_min: first, h_max: add(first, 9)? },
+            reference_block: anchor.block.clone(),
+        },
+        anchor: Some(anchor),
+    };
+    let successor = resolve(state, boundary, services)?;
+    state.public.closed_branches.insert(branch);
+    state.public.branch = beta;
+    state.public.l1_floor = state.public.l1_floor.max(control.position.block);
+    lifecycle(record, LifecycleBody::BranchClosed { branch, reason: CloseReason::Force });
+    if let Tail::Next(descriptor) = &successor {
+        if state.public.selected.insert(session_key(&descriptor.plan.session), descriptor.clone()).is_some() {
+            return Err(GfrError::InvalidSource.into());
+        }
+        lifecycle(record, LifecycleBody::SessionAssigned { descriptor: descriptor.clone() });
     }
     change_duty(state, record, successor);
     Ok(())

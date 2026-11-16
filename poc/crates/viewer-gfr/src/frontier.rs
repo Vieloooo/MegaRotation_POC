@@ -238,23 +238,22 @@ impl<'a> Sources<'a> {
                 ),
             )?;
         }
-        // No control gets committed at this stage.
-        if let Some(control) = self.l1_controls.iter().find_map(|row| row.first()) {
-            let key_us = add(
-                l1_timestamp(&state.public.config, control.position.block)?,
-                state.public.parameters.announcement_us,
-            )?;
-            insert_earlier(
-                &mut earliest,
-                (
-                    ReplayPosition {
-                        key_us,
-                        kind: control.kind,
-                        index: ReplayIndex::L1(control.position),
-                    },
-                    InputRef::L1(control.clone()),
-                ),
-            )?;
+        for control in self.l1_controls.iter().flatten() {
+            let position = ReplayPosition {
+                key_us: add(
+                    l1_timestamp(&state.public.config, control.position.block)?,
+                    state.public.parameters.announcement_us,
+                )?,
+                kind: control.kind,
+                index: ReplayIndex::L1(control.position),
+            };
+            if let Some(pc) = &state.public.pc
+                && compare_positions(&position, pc)? != Ordering::Greater
+            {
+                continue;
+            }
+            insert_earlier(&mut earliest, (position, InputRef::L1(control.clone())))?;
+            break;
         }
         Ok(earliest)
     }

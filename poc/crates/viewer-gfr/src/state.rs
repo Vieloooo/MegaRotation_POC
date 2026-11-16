@@ -22,6 +22,7 @@ pub struct PublicReplayState {
     pub espresso_source: Vec<u8>,
     pub l1_source: Vec<u8>,
     pub branch: u64,
+    pub l1_floor: u64,
     pub tail: Tail,
     pub pc: Option<ReplayPosition>,
     pub selected: BTreeMap<(u64, u64), Descriptor>,

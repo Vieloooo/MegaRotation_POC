@@ -4,7 +4,7 @@ use poc_session_manager::{
     ManagerInput, PlanOutcome, PreparedRef, ReceiptOutcome, VerifiedGenesis, VerifiedReplayInput,
 };
 use poc_types::domain::*;
-use poc_viewer_gfr::{GlobalSource, ReplayEffect, lifecycle_projection};
+use poc_viewer_gfr::{GlobalSource, InputRef, ReplayEffect, lifecycle_projection};
 use prost::Message;
 use serde_json::{Value, json};
 use std::{
@@ -22,7 +22,7 @@ use tokio::{
 };
 
 use super::{
-    M1Result, check, checked, problem,
+    M1Result, check, checked, l1, problem,
     profile::*,
     public::{Public, Submitted, initial_descriptor},
     worker::{Launch, durable_file},
@@ -62,6 +62,7 @@ struct Worker {
     request_seq: u64,
     steps: u64,
     terminal: bool,
+    last_work: Option<p::Work>,
     regional: Regional,
 }
 
@@ -76,7 +77,7 @@ struct Key {
 type Route = (u32, u32, i32);
 enum Event {
     Actions(u32),
-    ApplyRecord(u32, u64, Arc<RecordDelivery>),
+    ApplyRecords(u32, Arc<[(u64, RecordDelivery)]>),
     Grant(u32, p::input::Kind),
     Clock(u32, u64),
     Timer(u32, p::Timer),
@@ -84,6 +85,8 @@ enum Event {
     Publish(u32, ActionId, BridgeResult),
     Finalize(Submitted),
     CutoffRetire(u32),
+    L1(l1::Event),
+    CloseProbe(u32, p::Work),
 }
 
 struct Hub {
@@ -104,13 +107,22 @@ struct Hub {
     scheduled_work: BTreeSet<(u32, Vec<u8>)>,
     history: Vec<AnchorStep>,
     publication_pending: bool,
+    force: bool,
+    wall_pause_ms: u64,
+    l1: Option<l1::Port>,
+    reader_b: l1::Reader,
 }
 
-pub(crate) async fn run(root: PathBuf) -> M1Result<()> {
+pub(crate) async fn run(root: PathBuf, force: bool, wall_pause_ms: u64) -> M1Result<()> {
     fs::create_dir(&root)?;
     let root = root.canonicalize()?;
-    let public = Public::new(&root)?;
-    let source = Hash32::new(hash_parts(b"PoC/M1/GFR/source/v1", &[SOURCE, L1_SOURCE]));
+    let public = Public::new(&root, force)?;
+    let source = Hash32::new(hash_parts(b"PoC/M1/GFR/source/v1", &[SOURCE, public.public_l1().source_id()]));
+    let l1 = if force {
+        Some(l1::Port::start(&root, Hash32::new(*public.inputs.config.reference()?.as_bytes()))?)
+    } else {
+        None
+    };
     let mut hub = Hub {
         trace: File::options()
             .write(true)
@@ -140,10 +152,13 @@ pub(crate) async fn run(root: PathBuf) -> M1Result<()> {
         scheduled_work: BTreeSet::new(),
         history: Vec::new(),
         publication_pending: false,
+        force, wall_pause_ms, l1,
+        reader_b: l1::Reader::default(),
     };
     let execution = hub.run_inner().await;
     let exits = hub.reap(execution.is_ok()).await;
-    let result = execution.and(exits).and_then(|()| hub.complete());
+    let l1 = hub.l1.take().map_or(Ok(()), l1::Port::finish);
+    let result = execution.and(exits).and(l1).and_then(|()| hub.complete());
     if let Err(error) = &result {
         hub.log("RunFailed", None, json!({"reason": error.to_string()}))?;
     }
@@ -192,9 +207,7 @@ impl Hub {
         let public_config = self.public.inputs.config.clone();
         let genesis_bytes = descriptor.encode_checked()?;
         durable_file(&self.root.join("genesis-descriptor.bin"), &genesis_bytes)?;
-        durable_file(
-            &self.root.join("profile.json"),
-            &serde_json::to_vec_pretty(&json!({
+        let mut profile = json!({
                 "schema": "M1-HEALTHY-SMOKE-1", "seed": SEED, "start_us": START_US,
                 "cutoff_us": CUT_US, "announcement_us": parameters().announcement_us,
                 "grace_us": GRACE_US, "expiry_us": EXPIRY_US, "clock_rpc_one_way_us": CLOCK_TRANSIT_US,
@@ -202,8 +215,21 @@ impl Hub {
                 "epsilon_us_by_member": [-1000,-500,0,500,1000],
                 "link_delay_us": LINK_US, "work_us": WORK_US, "local_enter_spacing_us": STARTUP_SKEW_US,
                 "publisher_link_us": PUBLIC_LINK_US, "espresso_finalize_delay_us": FINALIZE_US,
-            }))?,
-        )?;
+            });
+        if self.force {
+            profile["schema"] = json!("M2-HEALTHY-FORCE-1");
+            profile["force"] = json!({
+                "submit_us": l1::SUBMIT_US, "act_us": l1::ACT_US, "force_init_us": 3 * SECOND,
+                "l1_slot_us": l1::L1_SLOT_US, "l1_finality_us": l1::FINALITY_US,
+                "worker_l1_projection": "reg-a-height-timestamp-v1",
+                "worker_l1_visibility_lag_us": l1::WORKER_VISIBILITY_LAG_US,
+                "l1_source": std::str::from_utf8(l1::SOURCE)?,
+                "target_beta": 0, "stop_height": self.stop_height(),
+                "t_replay_us": 100_000, "t_state_us": 500_000, "t_produce_us": 500_000,
+                "t_pack_us": 50_000, "t_pub_us": 200_000, "t_e_us": SECOND, "delta_ts_us": SECOND,
+            });
+        }
+        durable_file(&self.root.join("profile.json"), &serde_json::to_vec_pretty(&profile)?)?;
         for number in 0..15u8 {
             let pid = Pid::new(number)?;
             let node = u32::from(number);
@@ -265,6 +291,7 @@ impl Hub {
                 request_seq: 0,
                 steps: 0,
                 terminal: false,
+                last_work: None,
                 regional: Regional::default(),
             });
             self.log(
@@ -556,6 +583,11 @@ impl Hub {
                         root_hash(&ack)?,
                         ReceiptOutcome::Closed { instance_ref },
                     )?;
+                    if self.force && cause == poc_session_manager::TerminalCause::Public(CloseReason::Force) {
+                        let work = self.workers[node as usize].last_work.clone()
+                            .ok_or_else(|| problem("old Force worker lacks prior native work"))?;
+                        self.schedule(self.now.tick, Event::CloseProbe(node, work))?;
+                    }
                 }
                 _ => return Err(problem("unexpected non-healthy Manager action")),
             }
@@ -615,12 +647,13 @@ impl Hub {
         grant.grant_hash = wire::grant_hash(&grant).to_vec();
         let bytes = grant.encode_to_vec();
         self.frame(0, node, &bytes)?;
-        self.log(
-            "Grant",
-            Some(node),
-            json!({"logical_step_id":grant.logical_step_id,
-            "grant_hash": grant.grant_hash, "input": kind}),
-        )?;
+        let mut detail = json!({
+            "logical_step_id":grant.logical_step_id, "grant_hash": grant.grant_hash, "input": kind,
+        });
+        if self.force {
+            detail["worker_l1_through"] = json!(self.public.ensure_worker_l1_projection(self.now.tick)?);
+        }
+        self.log("Grant", Some(node), detail)?;
         self.send(node, &bytes).await?;
         let rx = &mut self.workers[node as usize].rx;
         let bytes = tokio::time::timeout(WATCHDOG, async {
@@ -836,6 +869,7 @@ impl Hub {
                             .insert((node, work.operation_id.clone())),
                     "invalid or duplicate M1 work continuation",
                 )?;
+                self.workers[node as usize].last_work = Some(work.clone());
                 self.schedule(
                     self.now.tick + work.duration_us,
                     Event::Grant(node, input::Kind::WorkCompleted(work.clone())),
@@ -947,7 +981,9 @@ impl Hub {
         if self.publication_pending || self.workers[node as usize].terminal {
             return Ok(());
         }
-        let height = self.public.replay.public_state().entries.len() as u64 + 1;
+        let selected = initial_descriptor(&self.public.replay)?.clone();
+        let height = (self.public.replay.public_state().entries.len() as u64 + 1)
+            .max(selected.plan.window.h_min);
         let worker = &self.workers[node as usize];
         let Some(body) = worker.regional.bodies.get(&height) else {
             return Ok(());
@@ -956,7 +992,6 @@ impl Hub {
         let Some(proof) = worker.regional.proofs.get(digest.as_bytes()) else {
             return Ok(());
         };
-        let selected = initial_descriptor(&self.public.replay)?.clone();
         let cfg = self.cfg(node)?;
         if selected.cid.as_bytes() != &cfg.cid {
             return Ok(());
@@ -1005,39 +1040,51 @@ impl Hub {
             "action": action_id(id), "height": height, "cid": key.cid, "physical_id": key.block_hash,
             "ack": ack.durable_step_hash, "logical_step_id": ack.logical_step_id,
         }))?;
-        self.schedule(
-            self.now.tick + PUBLIC_LINK_US,
-            Event::Publish(node, id, result),
-        )
+        let due = if self.force && selected_branch(&result) == 0 && height == 11 {
+            self.log("LatePublicationHeld", Some(node), json!({
+                "cid": key.cid, "physical_id": key.block_hash, "height": height, "until_us": l1::ACT_US,
+            }))?;
+            l1::ACT_US
+        } else {
+            self.now.tick + PUBLIC_LINK_US
+        };
+        self.schedule(due, Event::Publish(node, id, result))
     }
 
     fn replay(&mut self, finalized: &BridgeResult) -> M1Result<()> {
         let (before, records) = self.public.advance()?;
         let rows = self.public.replay.public_state().entries[before..].to_vec();
-        check(
-            rows.len() == 1,
-            "M1 expected exactly one new G block per finalized publication",
-        )?;
-        let row = &rows[0];
-        let GlobalSource::Regional(source) = row.source;
-        let identity = row
-            .block
-            .physical_digest
-            .ok_or_else(|| problem("M1 G contained padding"))?;
-        check(
-            source == finalized.key()
-                && source.block_hash == identity
-                && row.block.state.metadata.height == before as u64 + 1
-                && !row.block.native_block.kept.is_empty(),
-            "M1 G append identity or state-changing transaction missing",
-        )?;
-        self.log("GAccepted", None, json!({
-            "height": row.block.state.metadata.height, "cid": source.cid, "physical_id": identity,
-            "parent": finalized.result().block.parent, "native_hash": row.block.native_hash,
-            "state_root": row.block.state.root()?, "position": row.position,
-        }))?;
-        for (sequence, delivery) in records {
-            self.record_delivery(sequence, Arc::new(delivery), finalized)?;
+        if !self.force {
+            check(rows.len() == 1, "M1 expected exactly one new G block per finalized publication")?;
+        }
+        for (offset, row) in rows.iter().enumerate() {
+            let GlobalSource::Regional(source) = row.source;
+            let height = row.block.state.metadata.height;
+            check(source == finalized.key() && height == (before + offset + 1) as u64,
+                "G append identity or height does not match its finalized result")?;
+            if let Some(identity) = row.block.physical_digest {
+                check(source.block_hash == identity && !row.block.native_block.kept.is_empty(),
+                    "G physical block lost result identity or the fixture transaction")?;
+                self.log("GAccepted", None, json!({
+                    "height": height, "cid": source.cid, "physical_id": identity,
+                    "parent": finalized.result().block.parent, "native_hash": row.block.native_hash,
+                    "state_root": row.block.state.root()?, "position": row.position,
+                }))?;
+            } else {
+                check(self.force && row.block.native_block.kept.is_empty(), "unexpected G padding")?;
+                self.log("GPadding", None, json!({
+                    "height": height, "cid": source.cid, "physical_id": source.block_hash,
+                    "native_hash": row.block.native_hash, "state_root": row.block.state.root()?,
+                    "position": row.position,
+                }))?;
+            }
+        }
+        for (sequence, delivery) in &records {
+            self.record_delivery(*sequence, delivery, finalized)?;
+        }
+        let records: Arc<[_]> = records.into();
+        for node in 0..15 {
+            self.schedule(self.now.tick, Event::ApplyRecords(node, Arc::clone(&records)))?;
         }
         Ok(())
     }
@@ -1045,7 +1092,7 @@ impl Hub {
     fn record_delivery(
         &mut self,
         seq: u64,
-        delivery: Arc<RecordDelivery>,
+        delivery: &RecordDelivery,
         finalized: &BridgeResult,
     ) -> M1Result<()> {
         let record = delivery.record();
@@ -1054,10 +1101,17 @@ impl Hub {
                 Some(json!({"first": first, "last": last, "cid":key.cid, "physical_id":key.block_hash})),
             _ => None,
         }).collect::<Vec<_>>();
-        self.log("GfrReplayRecord", None, json!({
+        let mut detail = json!({
             "source_seq": seq, "id": delivery.id(), "position": record.position, "append": append,
             "events": record.events, "event_ids": delivery.event_ids(),
-        }))?;
+        });
+        if let InputRef::L1(control) = &record.input_ref {
+            detail["input"] = json!({
+                "target_beta": control.force_branch(), "control_seq": control.control_seq,
+                "position": control.position,
+            });
+        }
+        self.log("GfrReplayRecord", None, detail)?;
         if let [closed, assigned] = record.events.as_slice()
             && let (
                 LifecycleBody::SessionClosed {
@@ -1094,28 +1148,40 @@ impl Hub {
                 "new_cid": descriptor.cid, "anchor": descriptor.anchor, "window": descriptor.plan.window,
                 "reference_block": descriptor.plan.reference_block, "lifecycle_projection": projections?,
             }))?;
+        } else if let [closed, assigned] = record.events.as_slice()
+            && let (
+                LifecycleBody::BranchClosed { branch, reason: CloseReason::Force },
+                LifecycleBody::SessionAssigned { descriptor },
+            ) = (&closed.body, &assigned.body)
+        {
+            let state = self.public.replay.public_state();
+            let anchor = state.entries.iter().find(|entry|
+                entry.block.physical_digest == Some(descriptor.anchor.block.block_id))
+                .ok_or_else(|| problem("Force anchor is absent from G"))?;
+            durable_file(&self.root.join(format!("descriptor-b{}-r{}.bin",
+                descriptor.plan.session.beta, descriptor.plan.session.r)), &descriptor.encode_checked()?)?;
+            self.log("ForceActivated", None, json!({
+                "position": record.position, "old_branch": branch, "new_branch": descriptor.plan.session.beta,
+                "descriptor": descriptor, "anchor_native_hash": anchor.block.native_hash,
+                "l1_floor": state.l1_floor, "head_height": descriptor.anchor.block.height,
+                "espresso_q": self.public.next_q - 1, "record_id": delivery.id(),
+            }))?;
         } else {
-            check(
-                record.events.is_empty(),
-                "M1 unexpected public lifecycle event",
-            )?;
-        }
-        for node in 0..15 {
-            self.schedule(
-                self.now.tick,
-                Event::ApplyRecord(node, seq, delivery.clone()),
-            )?;
+            check(record.events.is_empty(), "unexpected public lifecycle event")?;
         }
         Ok(())
     }
 
     async fn run_inner(&mut self) -> M1Result<()> {
         self.spawn().await?;
+        if self.force {
+            self.schedule_l1()?;
+        }
         fs::create_dir(self.root.join("results"))?;
         let mut cutoff_scheduled = false;
         while let Some((&next, _)) = self.events.first_key_value() {
             let height = self.public.replay.public_state().entries.len();
-            if height == 21 && next.tick > self.now.tick {
+            if height == self.stop_height() && next.tick > self.now.tick {
                 if cutoff_scheduled {
                     break;
                 }
@@ -1147,28 +1213,25 @@ impl Hub {
             }
             match event {
                 Event::Actions(node) => self.manager_actions(node).await?,
-                Event::ApplyRecord(node, sequence, delivery) => {
-                    let assigned =
-                        delivery
-                            .record()
-                            .events
-                            .iter()
-                            .find_map(|event| match &event.body {
-                                LifecycleBody::SessionAssigned { descriptor } => {
-                                    Some(descriptor.plan.region)
-                                }
-                                _ => None,
-                            });
-                    self.commit_manager(
-                        node,
-                        ManagerInput::ConsumeRecord(VerifiedReplayInput {
-                            source: self.source,
-                            seq: sequence,
-                            record: delivery.record().clone(),
-                            validation_ref: delivery.id(),
-                        }),
-                    )?;
-                    let delay = if assigned == Some(self.workers[node as usize].pid.region()) {
+                Event::ApplyRecords(node, records) => {
+                    let mut assigned = false;
+                    for (sequence, delivery) in records.iter() {
+                        assigned |= delivery.record().events.iter().any(|event| {
+                            matches!(&event.body,
+                                LifecycleBody::SessionAssigned { descriptor }
+                                    if descriptor.plan.region == self.workers[node as usize].pid.region())
+                        });
+                        self.commit_manager(
+                            node,
+                            ManagerInput::ConsumeRecord(VerifiedReplayInput {
+                                source: self.source,
+                                seq: *sequence,
+                                record: delivery.record().clone(),
+                                validation_ref: delivery.id(),
+                            }),
+                        )?;
+                    }
+                    let delay = if assigned {
                         1_000 + u64::from(node % 5) * STARTUP_SKEW_US
                     } else {
                         0
@@ -1231,6 +1294,9 @@ impl Hub {
                     self.grant(key.1, input::Kind::Deliver(envelope)).await?;
                 }
                 Event::Publish(node, action, result) => {
+                    if self.force && self.now.tick == l1::ACT_US && self.wall_pause_ms != 0 {
+                        tokio::time::sleep(Duration::from_millis(self.wall_pause_ms)).await;
+                    }
                     let staged = self.public.propose(result, self.now.tick)?;
                     let key = staged.result.key();
                     let hash = Hash32::new(id32(&staged.dispatch_ref)?);
@@ -1247,7 +1313,39 @@ impl Hub {
                     let detail = self.public.finalize(staged, self.now.tick)?;
                     self.log("PublisherRecorded", None, detail)?;
                     self.replay(&result)?;
+                    if self.force && selected_branch(&result) == 0
+                        && result.result().block.metadata.height == 11
+                    {
+                        check(self.public.replay.public_state().branch == 1
+                            && self.public.replay.public_state().entries.len() == 10,
+                            "same-key old Final changed G or won priority over Force")?;
+                        self.log("LatePublicationExcluded", None, json!({
+                            "q": self.public.next_q - 1, "height": 11,
+                            "cid": result.key().cid, "physical_id": result.key().block_hash,
+                            "head_height": 10, "branch": 1,
+                        }))?;
+                    }
                     self.publication_pending = false;
+                }
+                Event::L1(event) => self.run_l1(event)?,
+                Event::CloseProbe(node, work) => {
+                    check(self.workers[node as usize].terminal, "Force probe before Close")?;
+                    let ack = self.grant(node, input::Kind::WorkCompleted(work.clone())).await?;
+                    let app: Value = serde_json::from_slice(&ack.application_events_json)?;
+                    let discarded = app["work"].as_array().is_some_and(|items| items.iter().any(|item|
+                        item["event"] == "work_discarded"
+                            && item["reason"] == "unknown_or_retired_work"
+                            && item["work"]["operation_id"] == json!(work.operation_id)
+                    ));
+                    check(discarded && ack.effects.iter().all(|effect| !matches!(
+                        effect.kind, Some(effect::Kind::Sign(_) | effect::Kind::Send(_)))),
+                        "old Force instance executed post-terminal work or emitted a new output")?;
+                    self.log("CloseProbe", Some(node), json!({
+                        "cid": Cid::new(Hash32::new(id32(&work.cid)?)),
+                        "operation_id": work.operation_id, "discarded": true,
+                        "reason": "unknown_or_retired_work", "ack": ack.durable_step_hash,
+                        "logical_step_id": ack.logical_step_id,
+                    }))?;
                 }
                 Event::CutoffRetire(node) => {
                     let cfg = self.cfg(node)?;
@@ -1276,24 +1374,90 @@ impl Hub {
             }
         }
         check(
-            self.public.replay.public_state().entries.len() == 21
-                && self.history.len() == 2
+            self.public.replay.public_state().entries.len() == self.stop_height()
+                && self.history.len() == if self.force { 1 } else { 2 }
                 && self
                     .workers
                     .iter()
                     .all(|worker| worker.config.is_some() && worker.terminal),
-            "incomplete healthy M1 smoke",
+            "incomplete healthy smoke",
         )
+    }
+
+    fn stop_height(&self) -> usize {
+        if self.force { 16 } else { 21 }
+    }
+
+    fn schedule_l1(&mut self) -> M1Result<()> {
+        self.schedule(0, Event::L1(l1::Event::Genesis))?;
+        self.schedule(5 * SECOND, Event::L1(l1::Event::Deploy))?;
+        self.schedule(l1::SUBMIT_US, Event::L1(l1::Event::Submit))?;
+        self.schedule(13 * SECOND, Event::L1(l1::Event::Retry))?;
+        for height in 1..=13 {
+            let inclusion = height * l1::L1_SLOT_US;
+            self.schedule(inclusion, Event::L1(l1::Event::Mine(height)))?;
+            self.schedule(inclusion + l1::FINALITY_US, Event::L1(l1::Event::Finalize(height)))?;
+        }
+        Ok(())
+    }
+
+    fn run_l1(&mut self, event: l1::Event) -> M1Result<()> {
+        let port = self.l1.as_mut().ok_or_else(|| problem("no L1 driver"))?;
+        let detail = port.step(event.command(self.now.tick))?;
+        match event {
+            l1::Event::Genesis => {
+                let header = self.public.deliver_anvil(&detail)?;
+                self.reader_b.receive(&detail, &self.public.inputs)?;
+                for reader in ["A", "B"] {
+                    self.log("L1ReaderAvailable", None, json!({
+                        "reader": reader, "height": 0, "hash": header.hash,
+                    }))?;
+                }
+            }
+            l1::Event::Deploy | l1::Event::Submit | l1::Event::Retry => {
+                let transactions = detail.as_array().ok_or_else(|| problem("missing submitted transactions"))?;
+                for transaction in transactions {
+                    let mut log = transaction.clone();
+                    log["head_height"] = json!(self.public.replay.public_state().entries.len());
+                    if matches!(event, l1::Event::Submit) {
+                        check(self.public.replay.public_state().branch == 0
+                            && self.public.replay.public_state().entries.len() == 1,
+                            "governance did not submit during healthy R0 production")?;
+                        log["reason"] = json!("scheduled_healthy_force");
+                    }
+                    self.log("L1Submitted", None, log)?;
+                }
+            }
+            l1::Event::Mine(height) => self.log("L1Included", None, json!({
+                "height": height, "timestamp_s": detail["timestamp"], "hash": detail["hash"],
+            }))?,
+            l1::Event::Finalize(height) => {
+                self.log("L1Finalized", None, json!({"height": height}))?;
+                self.schedule(self.now.tick, Event::L1(l1::Event::Deliver(height, "A")))?;
+                self.schedule(self.now.tick + 10_000, Event::L1(l1::Event::Deliver(height, "B")))?;
+            }
+            l1::Event::Deliver(height, reader) => {
+                let header = if reader == "A" {
+                    self.public.deliver_anvil(&detail)?
+                } else {
+                    self.reader_b.receive(&detail, &self.public.inputs)?
+                };
+                self.log("L1ReaderAvailable", None, json!({
+                    "reader": reader, "height": height, "hash": header.hash,
+                }))?;
+            }
+        }
+        Ok(())
     }
 
     fn complete(&mut self) -> M1Result<()> {
         let entries = &self.public.replay.public_state().entries;
-        let height21 = &entries[20];
-        let GlobalSource::Regional(result) = height21.source;
+        let tip = &entries[self.stop_height() - 1];
+        let GlobalSource::Regional(result) = tip.source;
         let summary = json!({
-            "status": "Completed", "height": 21, "seed": SEED,
-            "cid": result.cid, "physical_id": result.block_hash, "native_hash": height21.block.native_hash,
-            "state_root": height21.block.state.root()?, "position": height21.position,
+            "status": "Completed", "height": self.stop_height(), "seed": SEED,
+            "cid": result.cid, "physical_id": result.block_hash, "native_hash": tip.block.native_hash,
+            "state_root": tip.block.state.root()?, "position": tip.position,
             "virtual_cutoff_us": self.now.tick, "worker_count": self.workers.len(),
             "pending_events": self.events.len(),
         });
@@ -1304,6 +1468,10 @@ impl Hub {
         )?;
         Ok(())
     }
+}
+
+fn selected_branch(result: &BridgeResult) -> u64 {
+    result.result().descriptor.plan.session.beta
 }
 
 fn id32(bytes: &[u8]) -> M1Result<Id> {

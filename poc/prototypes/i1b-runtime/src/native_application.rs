@@ -251,8 +251,10 @@ impl Archive {
         }
     }
     pub fn prepare_normal(&mut self, material: ReadyMaterial) {
-        self.height = material.execution.anchor.block.height;
-        self.start_height = self.height + 1;
+        self.start_height = material.descriptor.plan.window.h_min;
+        // The delivery cursor covers physical proposals in this window. The
+        // digest cursor remains the real anchor until the first physical Final.
+        self.height = self.start_height - 1;
         self.normal = Some(material);
     }
 
