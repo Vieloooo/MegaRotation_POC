@@ -1,0 +1,16 @@
+[package]
+name = "m3-plan-vectors"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[workspace]
+
+[dependencies]
+poc-viewer-gfr = { path = "../../../crates/viewer-gfr" }
+poc-types = { path = "../../../crates/types" }
+serde_json = "=1.0.154"
+poc-core = { path = "../../../crates/core" }
+poc-authorization = { path = "../../../crates/authorization" }
+sim-espresso = { path = "../../../crates/sim-espresso" }
