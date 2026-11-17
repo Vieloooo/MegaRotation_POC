@@ -79,8 +79,17 @@ input { accent-color: var(--cyan); }
   border: 1px solid var(--mark-color); color: var(--mark-color); border-radius: 5px; background: var(--panel);
 }
 .mark[hidden] { display: none; }
-.mark[aria-current="true"] { color: var(--bg); background: var(--mark-color); z-index: 1; }
+.mark[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
 .mark:hover { z-index: 2; }
+.mark.block-accepted {
+  min-width: 19px; width: 19px; height: 19px; padding: 0;
+  border-radius: 50%; background: var(--mark-color); color: #0c1320;
+  font-size: 9px; font-weight: 700; z-index: 1;
+}
+.mark.block-accepted[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
+.mark.g.block-accepted { --mark-color: var(--green); }
+.timeline-legend { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.timeline-legend .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--green); margin-right: 6px; }
 .l1 { --mark-color: var(--purple); }
 .espresso { --mark-color: var(--cyan); }
 .regional { --mark-color: var(--amber); }
@@ -505,6 +514,7 @@ function inspect(frame) {
 }
 
 function makePlot() {
+  byId("timeline").insertAdjacentHTML("beforebegin", '<p class="timeline-legend"><span class="legend-dot"></span>实心点表示该链新增或替换区块，悬停查看高度，点击查看事件。</p>');
   const axes = [0, 5, 10, 15, 20, 25, 30].filter((x) => x * 1_000_000 <= data.end_us);
   const plot = (label, axisName, classname, events) =>
     `<div class="timeline-row${isForce && (classname === "l1" || classname === "g") ? " stacked" : ""}" aria-label="${axisName}" data-lane="${classname}">
@@ -513,7 +523,7 @@ function makePlot() {
         ${axes.map((x) => `<span class="${events ? "guide" : "ruler-label"}" style="left:${percent(x * 1_000_000)}">${events ? "" : x + "s"}</span>`).join("")}
         <span class="cursor" style="left:0%"></span>
         ${events ? events.map((event) =>
-          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}${event.excluded ? " excluded" : ""}" style="left:${percent(event.tick)}${event.level === undefined ? "" : `;top:${18 + 32 * event.level}%`}"
+          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}${event.excluded ? " excluded" : ""}${classname === "g" && !event.excluded && event.stage !== "force" ? " block-accepted" : ""}" style="left:${percent(event.tick)}${event.level === undefined ? "" : `;top:${18 + 32 * event.level}%`}"
              data-frame="${frameByEvent.get(`${classname}:${event.index}`)}"
              title="${escape(event.title)} · ${seconds(event.tick)}">${event.label}</button>`).join("") : ""}
       </div></div>`;

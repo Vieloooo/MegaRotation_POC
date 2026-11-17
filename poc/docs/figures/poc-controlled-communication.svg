@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="510" viewBox="0 0 1040 510" role="img" aria-labelledby="title description">
+  <title id="title">Session Program 经 Hub 传递一条投票</title>
+  <desc id="description">Hub 给节点 A 发送 Grant。A 执行并落盘，通过 Ack 返回投票。Hub 验证 Ack 后将投票排入 A 到 B 的队列。到交付时刻，Hub 给节点 B 发送携带投票的新 Grant。B 执行并落盘后向 Hub 返回 Ack。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L9 4.5L0 9Z" fill="#236297"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="1038" height="508" rx="14" fill="#fff" stroke="#c8d5e3"/>
+  <g font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" text-anchor="middle" fill="#172b44">
+    <path d="M178 80V486" fill="none" stroke="#a3b4c6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="43" y="22" width="270" height="60" rx="9" fill="#edf6f1" stroke="#bad2c5"/>
+    <text x="178" y="47" font-size="20" font-weight="700">节点 A</text>
+    <text x="178" y="69" font-size="16">Session Program / Simplex</text>
+    <path d="M520 80V486" fill="none" stroke="#a3b4c6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="385" y="22" width="270" height="60" rx="9" fill="#eaf2fb" stroke="#b6cbe0"/>
+    <text x="520" y="47" font-size="20" font-weight="700">Hub</text>
+    <text x="520" y="69" font-size="16">调度器与虚拟链路</text>
+    <path d="M862 80V486" fill="none" stroke="#a3b4c6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="727" y="22" width="270" height="60" rx="9" fill="#edf6f1" stroke="#bad2c5"/>
+    <text x="862" y="47" font-size="20" font-weight="700">节点 B</text>
+    <text x="862" y="69" font-size="16">Session Program / Simplex</text>
+    <path d="M520 125H178" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="349" y="113" font-size="18" font-weight="600">① Grant · 本步输入 @ τ₀</text>
+    <rect x="40" y="143" width="276" height="62" rx="8" fill="#f3f8f5" stroke="#c6dacf"/>
+    <text x="178" y="167" font-size="17">运行 Simplex，产生投票</text>
+    <text x="178" y="189" font-size="17">本步输出写入持久日志</text>
+    <path d="M178 239H520" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="349" y="227" font-size="18" font-weight="600">② Ack · 带发给 B 的投票 @ τ₀</text>
+    <rect x="371" y="257" width="298" height="62" rx="8" fill="#f2f7fc" stroke="#c8d8e7"/>
+    <text x="520" y="281" font-size="17">核验 Ack 和持久化记录</text>
+    <text x="520" y="303" font-size="17">投票进入 A → B 的 VOTE 队列</text>
+    <path d="M520 355H862" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="691" y="343" font-size="18" font-weight="600">③ Grant · 交付投票 @ τ₁</text>
+    <rect x="724" y="373" width="276" height="62" rx="8" fill="#f3f8f5" stroke="#c6dacf"/>
+    <text x="862" y="397" font-size="17">将投票交给 Simplex</text>
+    <text x="862" y="419" font-size="17">执行本步并落盘</text>
+    <path d="M862 470H520" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="691" y="458" font-size="18" font-weight="600">④ Ack · 回传本步结果</text>
+  </g>
+</svg>

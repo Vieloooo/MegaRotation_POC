@@ -79,8 +79,17 @@ input { accent-color: var(--cyan); }
   border: 1px solid var(--mark-color); color: var(--mark-color); border-radius: 5px; background: var(--panel);
 }
 .mark[hidden] { display: none; }
-.mark[aria-current="true"] { color: var(--bg); background: var(--mark-color); z-index: 1; }
+.mark[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
 .mark:hover { z-index: 2; }
+.mark.block-accepted {
+  min-width: 19px; width: 19px; height: 19px; padding: 0;
+  border-radius: 50%; background: var(--mark-color); color: #0c1320;
+  font-size: 9px; font-weight: 700; z-index: 1;
+}
+.mark.block-accepted[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
+.mark.g.block-accepted { --mark-color: var(--green); }
+.timeline-legend { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.timeline-legend .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--green); margin-right: 6px; }
 .l1 { --mark-color: var(--purple); }
 .espresso { --mark-color: var(--cyan); }
 .regional { --mark-color: var(--amber); }
@@ -157,6 +166,27 @@ th { color: var(--muted); font-weight: 600; }
 .resume-timeline .d { --mark-color: var(--amber); }
 .resume-timeline .dot { min-width: 9px; width: 9px; height: 9px; border-radius: 50%; }
 .mark { top: var(--mark-top, 50%); }
+.chain-visual { margin-top: 18px; }
+.chain-scroll { overflow-x: auto; padding: 10px 0; }
+.chain-grid { display: flex; min-width: max-content; gap: 5px; align-items: stretch; }
+.chain-labels { position: sticky; left: 0; z-index: 2; background: var(--panel); }
+.chain-column, .chain-labels { display: grid; grid-template-rows: 47px repeat(3, 54px); gap: 5px; }
+.chain-labels > div { width: 50px; display: flex; align-items: center; font-weight: 700; }
+.chain-column { width: 96px; }
+.chain-height { text-align: center; font-size: 12px; color: var(--muted); }
+.chain-height strong { display: block; color: var(--text); }
+.chain-height.fork { color: #ffb4a9; }
+.chain-block { display: flex; flex-direction: column; justify-content: center; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-soft); text-align: center; font-size: 12px; }
+.chain-block code { font-size: 10px; }
+.chain-block.empty { border-style: dashed; color: var(--muted); background: transparent; }
+.chain-block.branch-0 { border-color: #fda4af; background: #4c2834; }
+.chain-block.branch-1 { border-color: #73d9ef; background: #16404d; }
+.chain-block.branch-2 { border-color: #ffcf7f; background: #4d3d1f; }
+.regional-tree { overflow-x: auto; margin-top: 12px; }
+.regional-tree ul { list-style: none; padding-left: 22px; border-left: 1px solid var(--line); }
+.regional-tree li { margin: 7px 0; }
+.regional-tree button { font-family: ui-monospace, monospace; }
+.regional-parent { color: var(--muted); font-size: 12px; }
 .chain-comparison { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 12px; }
 .chain-card { background: var(--panel-soft); border: 1px solid var(--line); padding: 12px; border-radius: 8px; min-width: 0; }
 .chain-card h3 { margin-bottom: 6px; }
@@ -230,6 +260,13 @@ th { color: var(--muted); font-weight: 600; }
   </div>
   <div class="jump-list" id="stages"></div>
   <p class="comparison-status" id="pending-position" role="status"></p>
+</section>
+<section class="panel chain-visual" aria-labelledby="chain-visual-title">
+  <h2 id="chain-visual-title">当前帧的链与区域 Final</h2>
+  <p class="subtitle">三条链按高度对齐，使用 native hash 比较。同高度标出一致或分叉，相同颜色和分支编号表示相同区块，短 hash 用于识别。区域 Final 按记录的 physical parent 连接。</p>
+  <div id="chain-visual" class="chain-scroll"></div>
+  <h3>区域 Final 区块树</h3>
+  <div id="regional-tree" class="regional-tree"></div>
 </section>
 <section class="panel provenance" aria-labelledby="compare-title">
   <div class="panel-head">
@@ -382,6 +419,9 @@ function inspect(frame) {
 }
 
 function drawTimeline() {
+  if (!byId("block-legend")) {
+    byId("timeline").insertAdjacentHTML("beforebegin", '<p class="timeline-legend" id="block-legend"><span class="legend-dot"></span>实心点表示该链新增或替换区块，悬停查看高度，点击查看事件。</p>');
+  }
   byId("filters").innerHTML = lanes.map(([lane, label]) =>
     `<label><input type="checkbox" data-filter="${lane}" checked> ${label}</label>`).join("");
   const interval = end > 60000000 ? 10000000 : 5000000;
@@ -390,12 +430,24 @@ function drawTimeline() {
     <div class="plot">${ticks.map(t => `<span class="ruler-label" style="left:${pct(t)}%">${t / 1000000}s</span>`).join("")}</div></div>`
     + lanes.map(([lane, label]) => {
       const marks = frames.flatMap((frame, index) => {
-        if (frame.lane !== lane) return [];
+        const chain = frame.chains[lane];
+        const previous = index ? frames[index - 1].chains[lane] : null;
+        let accepted = "";
+        if (chain && previous) {
+          const changed = chain.filter((block, height) =>
+            height > 0 && (!previous[height] || previous[height].native !== block.native));
+          if (changed.length) {
+            const heights = changed.map(block => `h${block.height}`).join("、");
+            const title = `${lane === "g" ? "G" : lane === "gprime" ? "G′" : "D"} 新增或替换 ${heights} · ${frame.label}`;
+            accepted = `<button type="button" class="mark ${lane} block-accepted" data-frame="${index}" title="${esc(title)}" aria-label="${esc(title)}" style="left:${pct(frame.tick_us)}%;--mark-top:50%"></button>`;
+          }
+        }
+        if (frame.lane !== lane) return accepted ? [accepted] : [];
         if (!frame.stage && ["l1_available", "signer_view"].includes(frame.kind)) return [];
         const marker = stages.find(([stage]) => stage === frame.stage);
         const caption = marker?.[1] || frame.label;
         const top = [28, 72][index % 2];
-        return [`<button class="mark ${lane} ${marker ? "" : "dot"}" data-frame="${index}" title="${esc(caption)}"
+        return [accepted, `<button class="mark ${lane} ${marker ? "" : "dot"}" data-frame="${index}" title="${esc(caption)}"
           aria-label="${esc(caption)}" style="left:${pct(frame.tick_us)}%;--mark-top:${top}%">${marker ? esc(caption) : ""}</button>`];
       });
       return `<div class="timeline-row" data-lane="${lane}"><div class="lane-name">${label}</div>
@@ -429,6 +481,56 @@ function compare(frame) {
         <h3>${title} · h${height}</h3>${rows ? `<dl class="facts">${fields(rows)}</dl>`
           : '<p class="muted empty">此链尚未物化到该高度。</p>'}</article>`;
     }).join("");
+}
+
+function drawChains(frame) {
+  const chains = frame.chains;
+  const rows = [["g", "G"], ["gprime", "G′"], ["d", "D"]];
+  const maxHeight = Math.max(...rows.map(([name]) => chains[name].length)) - 1;
+  const columns = Array.from({length: maxHeight + 1}, (_, height) => {
+    const hashes = [...new Set(rows.map(([name]) => chains[name][height]?.native).filter(Boolean))];
+    const count = rows.filter(([name]) => chains[name][height]).length;
+    const status = hashes.length > 1 ? "分叉" : count > 1 ? "一致" : "待比较";
+    const cells = rows.map(([name, label]) => {
+      const block = chains[name][height];
+      if (!block) return '<div class="chain-block empty">尚未到达</div>';
+      const group = hashes.indexOf(block.native);
+      const branch = hashes.length > 1 ? `branch-${group}` : "";
+      const version = hashes.length > 1 ? `分支 ${group + 1}` : count > 1 ? "相同" : "当前块";
+      const title = `${label} h${height} · ${kindNames[block.kind] || block.kind} · ${block.native}`;
+      return `<div class="chain-block ${branch}" title="${esc(title)}"><span>${version}</span><code>${esc(block.native.slice(0, 8))}</code></div>`;
+    }).join("");
+    return `<div class="chain-column"><div class="chain-height ${hashes.length > 1 ? "fork" : ""}"><strong>h${height}</strong>${status}</div>${cells}</div>`;
+  }).join("");
+  byId("chain-visual").innerHTML = `<div class="chain-grid"><div class="chain-labels"><div>高度</div><div>G</div><div>G′</div><div>D</div></div>${columns}</div>`;
+
+  const nodes = new Map();
+  for (let i = 0; i <= cursor; i++) {
+    const event = frames[i];
+    if (event.kind !== "regional_final" || !event.detail.block?.physical) continue;
+    const block = event.detail.block;
+    if (!nodes.has(block.physical)) nodes.set(block.physical, {block, index: i, children: []});
+  }
+  if (!nodes.size) {
+    byId("regional-tree").innerHTML = '<p class="subtitle">当前帧尚无区域 Final。</p>';
+    return;
+  }
+  const roots = [];
+  for (const node of nodes.values()) {
+    const parent = nodes.get(node.block.physical_parent);
+    if (parent && parent !== node) parent.children.push(node);
+    else roots.push(node);
+  }
+  function branch(node) {
+    const block = node.block;
+    const title = `h${block.height} · physical ${block.physical} · parent ${block.physical_parent}`;
+    const children = node.children.length ? `<ul>${node.children.map(branch).join("")}</ul>` : "";
+    return `<li><button data-frame="${node.index}" title="${esc(title)}">h${block.height} · ${esc(block.physical.slice(0, 10))}</button>${children}</li>`;
+  }
+  byId("regional-tree").innerHTML = roots.map(node => {
+    const parent = node.block.physical_parent || "未知";
+    return `<div><span class="regional-parent">父块 ${esc(parent)}（当前 Final 记录中未出现）</span><ul>${branch(node)}</ul></div>`;
+  }).join("");
 }
 
 function seek(index) {
@@ -467,6 +569,7 @@ function seek(index) {
     const offset = marker.getBoundingClientRect().left - scroll.getBoundingClientRect().left;
     if (offset > scroll.clientWidth - 24 || offset < 115) scroll.scrollLeft += offset - scroll.clientWidth * .65;
   }
+  drawChains(frame);
   compare(frame);
   inspect(frame);
 }

@@ -72,8 +72,17 @@ input { accent-color: var(--cyan); }
   border: 1px solid var(--mark-color); color: var(--mark-color); border-radius: 5px; background: var(--panel);
 }
 .mark[hidden] { display: none; }
-.mark[aria-current="true"] { color: var(--bg); background: var(--mark-color); z-index: 1; }
+.mark[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
 .mark:hover { z-index: 2; }
+.mark.block-accepted {
+  min-width: 19px; width: 19px; height: 19px; padding: 0;
+  border-radius: 50%; background: var(--mark-color); color: #0c1320;
+  font-size: 9px; font-weight: 700; z-index: 1;
+}
+.mark.block-accepted[aria-current="true"] { outline: 2px solid #fff; outline-offset: 2px; z-index: 3; }
+.mark.g.block-accepted { --mark-color: var(--green); }
+.timeline-legend { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.timeline-legend .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--green); margin-right: 6px; }
 .l1 { --mark-color: var(--purple); }
 .espresso { --mark-color: var(--cyan); }
 .regional { --mark-color: var(--amber); }

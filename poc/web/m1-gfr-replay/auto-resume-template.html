@@ -51,6 +51,13 @@
   <div class="jump-list" id="stages"></div>
   <p class="comparison-status" id="pending-position" role="status"></p>
 </section>
+<section class="panel chain-visual" aria-labelledby="chain-visual-title">
+  <h2 id="chain-visual-title">当前帧的链与区域 Final</h2>
+  <p class="subtitle">三条链按高度对齐，使用 native hash 比较。同高度标出一致或分叉，相同颜色和分支编号表示相同区块，短 hash 用于识别。区域 Final 按记录的 physical parent 连接。</p>
+  <div id="chain-visual" class="chain-scroll"></div>
+  <h3>区域 Final 区块树</h3>
+  <div id="regional-tree" class="regional-tree"></div>
+</section>
 <section class="panel provenance" aria-labelledby="compare-title">
   <div class="panel-head">
     <div>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sequencer Rotation · 实验回放</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; background: #0c1320; color: #f0f5fb; }
+    body { margin: 0; }
+    main { max-width: 960px; margin: auto; padding: 48px 24px 64px; }
+    .eyebrow { color: #73d9ef; font-size: .85rem; letter-spacing: .12em; }
+    h1 { margin: 12px 0; font-size: clamp(2rem, 5vw, 3rem); }
+    .intro { color: #b5c5d8; line-height: 1.7; max-width: 700px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 16px; margin-top: 32px; }
+    a { display: block; padding: 22px; border: 1px solid #2d3b51; border-radius: 12px; background: #121d2d; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: #73d9ef; outline: 2px solid #73d9ef; outline-offset: 2px; }
+    .tag { color: #73d9ef; font-size: .85rem; font-weight: 700; }
+    h2 { margin: 10px 0; font-size: 1.2rem; }
+    .grid p { color: #b5c5d8; line-height: 1.6; margin: 0; }
+    footer { margin-top: 36px; color: #9db0c6; font-size: .9rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">SEQUENCER ROTATION · POC</div>
+    <h1>实验回放</h1>
+    <p class="intro">选择一个场景，沿虚拟时间轴查看事件、交接与证据。这些页面展示已封存的实验轨迹，不是实时仿真。</p>
+    <div class="grid">
+      <a href="m1-gfr-replay/index.html"><span class="tag">M1 · REGULAR</span><h2>正常轮转</h2><p>查看区域最终结果进入 G，以及满窗后的两次职责交接。</p></a>
+      <a href="m1-gfr-replay/force.html"><span class="tag">M2 · FORCE</span><h2>Force 交接</h2><p>追踪在途控制、常规交接、Force 激活和新分支首块。</p></a>
+      <a href="m1-gfr-replay/auto-force.html"><span class="tag">M3 · AUTO FORCE</span><h2>自动 Force</h2><p>查看公开生产停滞、治理观察和自动触发的交接。</p></a>
+      <a href="m1-gfr-replay/resume.html"><span class="tag">M4 · RESUME</span><h2>D 与 RESUME</h2><p>比较 G、G′ 和 D，查看历史切面与恢复后的新分支。</p></a>
+      <a href="m1-gfr-replay/auto-resume.html"><span class="tag">M5 · AUTO RESUME</span><h2>自动 RESUME</h2><p>查看 finalized 停止和时间水位冻结两条轨迹及恢复过程。</p></a>
+    </div>
+    <footer>各页面的时间、场景和证据范围以页面内说明为准。使用浏览器后退返回此入口。</footer>
+  </main>
+</body>
+</html>

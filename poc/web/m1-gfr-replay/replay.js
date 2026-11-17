@@ -282,6 +282,7 @@ function inspect(frame) {
 }
 
 function makePlot() {
+  byId("timeline").insertAdjacentHTML("beforebegin", '<p class="timeline-legend"><span class="legend-dot"></span>实心点表示该链新增或替换区块，悬停查看高度，点击查看事件。</p>');
   const axes = [0, 5, 10, 15, 20, 25, 30].filter((x) => x * 1_000_000 <= data.end_us);
   const plot = (label, axisName, classname, events) =>
     `<div class="timeline-row${isForce && (classname === "l1" || classname === "g") ? " stacked" : ""}" aria-label="${axisName}" data-lane="${classname}">
@@ -290,7 +291,7 @@ function makePlot() {
         ${axes.map((x) => `<span class="${events ? "guide" : "ruler-label"}" style="left:${percent(x * 1_000_000)}">${events ? "" : x + "s"}</span>`).join("")}
         <span class="cursor" style="left:0%"></span>
         ${events ? events.map((event) =>
-          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}${event.excluded ? " excluded" : ""}" style="left:${percent(event.tick)}${event.level === undefined ? "" : `;top:${18 + 32 * event.level}%`}"
+          `<button type="button" class="mark ${classname}${event.handoff ? " handoff" : ""}${event.excluded ? " excluded" : ""}${classname === "g" && !event.excluded && event.stage !== "force" ? " block-accepted" : ""}" style="left:${percent(event.tick)}${event.level === undefined ? "" : `;top:${18 + 32 * event.level}%`}"
              data-frame="${frameByEvent.get(`${classname}:${event.index}`)}"
              title="${escape(event.title)} · ${seconds(event.tick)}">${event.label}</button>`).join("") : ""}
       </div></div>`;

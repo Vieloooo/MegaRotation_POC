@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="514" viewBox="0 0 1040 514" role="img" aria-labelledby="title description">
+  <title id="title">Hub 如何调度 Clock RPC</title>
+  <desc id="description">Hub 在虚拟时刻 τ₀ 授权节点发起取时，节点在 Ack 内返回请求。Hub 将去程排到 τ₀ 加 250 微秒，在该时刻采样节点时钟，再将回程排到 τ₀ 加 500 微秒，通过 Grant 交付样本。节点验证样本，更新 ClockView 并确认该步。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L9 4.5L0 9Z" fill="#236297"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="1038" height="512" rx="14" fill="#fff" stroke="#c8d5e3"/>
+  <g font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" text-anchor="middle" fill="#172b44">
+    <path d="M258 80V490" fill="none" stroke="#a3b4c6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="123" y="22" width="270" height="60" rx="9" fill="#edf6f1" stroke="#bad2c5"/>
+    <text x="258" y="47" font-size="20" font-weight="700">节点</text>
+    <text x="258" y="69" font-size="16">受控运行时与本地 ClockView</text>
+    <path d="M782 80V490" fill="none" stroke="#a3b4c6" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <rect x="647" y="22" width="270" height="60" rx="9" fill="#eaf2fb" stroke="#b6cbe0"/>
+    <text x="782" y="47" font-size="20" font-weight="700">Hub</text>
+    <text x="782" y="69" font-size="16">唯一虚拟参考时钟与 Clock 服务</text>
+    <path d="M782 124H258" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="520" y="112" font-size="18" font-weight="600">① Grant · 触发取时 @ τ₀</text>
+    <rect x="115" y="140" width="286" height="40" rx="8" fill="#f3f8f5" stroke="#c6dacf"/>
+    <text x="258" y="164" font-size="17">生成带编号的 ClockRequest</text>
+    <path d="M258 213H782" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="520" y="201" font-size="18" font-weight="600">② Ack · 返回 ClockRequest @ τ₀</text>
+    <rect x="622" y="231" width="320" height="84" rx="8" fill="#f2f7fc" stroke="#c8d8e7"/>
+    <text x="782" y="255" font-size="17">去程 +250 µs</text>
+    <text x="782" y="277" font-size="17">Hub 在 τₛ = τ₀ + 250 µs 采样</text>
+    <text x="782" y="299" font-size="17">样本中的节点读数为 τₛ + εₘ</text>
+    <path d="M782 356H258" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="520" y="344" font-size="18" font-weight="600">③ Grant · 回程 +250 µs，交付样本 @ τ₀ + 500 µs</text>
+    <rect x="92" y="374" width="332" height="62" rx="8" fill="#f3f8f5" stroke="#c6dacf"/>
+    <text x="258" y="398" font-size="17">核验样本并更新 ClockView</text>
+    <text x="258" y="420" font-size="17">本地读数投影到此次 Grant 的时刻</text>
+    <path d="M258 474H782" fill="none" stroke="#236297" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <text x="520" y="462" font-size="18" font-weight="600">④ Ack · 样本处理完成</text>
+  </g>
+</svg>

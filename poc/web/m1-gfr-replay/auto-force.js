@@ -65,6 +65,7 @@ function inspect(index, showPlan = false) {
 }
 
 function drawTimeline() {
+  byId("timeline").insertAdjacentHTML("beforebegin", '<p class="timeline-legend"><span class="legend-dot"></span>实心点表示该链新增或替换区块，悬停查看高度，点击查看事件。</p>');
   byId("filters").innerHTML = lanes.map(([name, label]) => `<label><input type="checkbox" data-filter="${name}" checked> ${label}</label>`).join("");
   byId("timeline").classList.add("auto-plot");
   const grid = Array.from({length: Math.floor(end / 5_000_000) + 1}, (_, i) => i * 5_000_000);
@@ -81,7 +82,8 @@ function drawTimeline() {
         const short = entry.stage === "outage" ? "R0 故障" : entry.stage === "accepted" ? "G 追加"
           : entry.stage === "decision" ? "判定" : entry.stage === "signed" ? "2/3"
           : entry.stage === "force" ? "Force" : entry.label.split(" · ")[0];
-        return [`<button type="button" class="mark ${name} ${marked ? "" : "dot"}" aria-label="${esc(entry.label)}" title="${esc(entry.label)}" data-frame="${index}" style="left:${pct(entry.tick_us)}%;--mark-top:${level}%">${marked ? esc(short) : ""}</button>`];
+        const accepted = name === "g" && (entry.appends?.length || entry.stage === "old-accepted" || entry.stage === "accepted");
+        return [`<button type="button" class="mark ${name} ${marked ? "" : "dot"} ${accepted ? "block-accepted" : ""}" aria-label="${esc(entry.label)}" title="${esc(entry.label)}" data-frame="${index}" style="left:${pct(entry.tick_us)}%;--mark-top:${level}%">${accepted ? "" : marked ? esc(short) : ""}</button>`];
       });
       return `<div class="timeline-row" data-lane="${name}"><div class="lane-name">${label}<span class="lane-head"></span></div><div class="plot"><div class="track"></div><div class="cursor"></div>${buttons.join("")}</div></div>`;
     }).join("");
