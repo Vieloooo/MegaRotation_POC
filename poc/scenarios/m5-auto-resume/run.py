@@ -16,7 +16,7 @@ ROOT = HERE.parents[2]
 spec = importlib.util.spec_from_file_location("m2_launcher", HERE.parent / "m2-healthy-force/run.py")
 baseline = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(baseline)
-JOB = baseline.HOST_ROOT / ".build/commander-jobs/m4-resume"
+JOB = baseline.HOST_ROOT / ".build/commander-jobs/m5-auto-resume"
 CONTRACT = ROOT / "poc/docs/milestones/M5-auto-resume-task-contract-zh.md"
 EXPECTATIONS = ROOT / "poc/verification/m5-auto-resume/source-expectations.md"
 
