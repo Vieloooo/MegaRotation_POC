@@ -22,7 +22,7 @@ M5 主运行与对照分别按各自的 sealed manifest 和独立 checker 绑定
 
 T_prep=12 s、T_drift=15 s、ε=1 s 使可行 timestamp 区间为 [40,40] s。若实际 H_guard 小于 30，最小合法目标是 h30，signed origin 取区间下端的 ℓ13。实际 L1 收录决定 act，起点则由对应 Cut 的 D(h30) 决定。计划后继为 R2 [31,40]。以上是运行前计划，正式回放以封存的实际输入和独立报告为准。
 
-## 开发运行已见的原始字段
+## 正式运行的原始字段
 
 | 原始证据 | 映射 |
 | --- | --- |
@@ -33,4 +33,4 @@ T_prep=12 s、T_drift=15 s、ε=1 s 使可行 timestamp 区间为 [40,40] s。�
 | ResumeEligibility、GovernanceSignature、GovernanceState、GovernanceSubmission | 首个 quorum 的 tick、求解量、观察时合格的成员、实际入包及独立广播/收录记录。 |
 | Anvil、CursorSet、ResumeActivated 和恢复结果 | 精确 L1 坐标和真实 act、精确 Cut、原子重新对齐、R2 新职责和首个 G 接纳。G′ 保留认证来源与历史切面重建标志。 |
 
-开发输入用于验证字段映射，正式页使用同候选的封存运行和独立 PASS。
+以上字段已与候选 `d6a36431a42cb6e155e9d192bea37f154f742eaa` 的封存 AR01 与 AR03 和相应独立 PASS 核对。[证据位置与复现命令](README.md)
