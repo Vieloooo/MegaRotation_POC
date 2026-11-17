@@ -157,12 +157,16 @@ fn public_anchor(
 impl Public {
     #[cfg(test)]
     pub fn new(root: &Path, force: bool, auto: bool) -> M1Result<Self> {
-        Self::new_mode(root, force, auto, false)
+        Self::new_mode(root, force, auto, false, false)
     }
 
-    pub fn new_mode(root:&Path, force:bool,auto:bool,resume:bool) -> M1Result<Self> {
+    pub fn new_mode(root:&Path, force:bool,auto:bool,resume:bool,m5:bool) -> M1Result<Self> {
         let mut inputs = PublicInputs::fixture()?;
         if resume {inputs.config.chain_id=31337;}
+        if m5 {
+            inputs.dep.rows.extend((41..=50).map(|amount| vec![Credit { to: 2, amount }]));
+            inputs.config.dep_fixture_hash = inputs.dep.digest()?;
+        }
         let setup = inputs.setup()?;
         let finality = NativeFinality(inputs.plans()?);
         let config = &inputs.config;
@@ -189,6 +193,7 @@ impl Public {
         if auto || resume {
             parameters.expiry_us = 30 * SECOND;
         }
+        if m5 { parameters.expiry_us = super::m5::EXPIRY_US; }
         let anvil_l1 = force.then(|| if resume {super::l1::Reader::resumable()} else if auto { super::l1::Reader::regional() } else { super::l1::Reader::default() });
         let reader_l1: &dyn L1ControlReader = match &anvil_l1 {
             Some(reader) => reader,
@@ -497,6 +502,10 @@ impl Public {
     }
 
     pub fn heartbeat(&mut self, tick: u64, theta: Option<u64>) -> M1Result<u64> {
+        self.heartbeat_live(tick, theta, true)
+    }
+
+    pub fn heartbeat_live(&mut self, tick: u64, theta: Option<u64>, live: bool) -> M1Result<u64> {
         let q = self.next_q;
         self.next_q += 1;
         let intent = Hash32::new(crate::hash_parts(b"PoC/M3/Espresso heartbeat/v1", &[&q.to_be_bytes()]));
@@ -507,7 +516,7 @@ impl Public {
         if let Some(theta) = theta {
             self.espresso.set_policy(TimestampPolicy::Fixed { theta_us: theta });
         }
-        let proposal = self.espresso.propose(TickUs(tick), true, Vec::new()).map(|block| block.q);
+        let proposal = self.espresso.propose(TickUs(tick), live, Vec::new()).map(|block| block.q);
         if theta.is_some() {
             self.espresso.set_policy(TimestampPolicy::Offset { offset_us: 0, quantum_us: 1 });
         }
@@ -608,6 +617,10 @@ impl Public {
             "proposal_tick_us": block.proposal.proposed_at_us.0,
             "service_receipt": hash, "dispatch_ref": submitted.dispatch_ref}),
         )
+    }
+
+    pub fn coverage_probe(&self, through: &ReplayPosition) -> M1Result<ReplayResult> {
+        self.advance_reader(&self.replay, &self.reader, self.public_l1(), through)
     }
 
     pub fn advance(&mut self) -> M1Result<(usize, Vec<(u64, RecordDelivery)>)> {

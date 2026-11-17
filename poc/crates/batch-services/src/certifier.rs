@@ -81,6 +81,10 @@ impl Certifier {
         })
     }
 
+    pub fn is_available(&self) -> bool {
+        self.available
+    }
+
     pub fn set_available(&mut self, available: bool) {
         self.available = available;
     }

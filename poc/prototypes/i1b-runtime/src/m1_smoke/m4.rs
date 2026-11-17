@@ -79,6 +79,7 @@ struct Feed {
     d: Option<Derivation>,
     pending: BTreeMap<L1Position, AcceptedRecord>,
     received: Option<u64>,
+    inbox_height: Option<u64>,
 }
 
 struct Port {
@@ -100,6 +101,7 @@ struct Port {
     auxiliary: File,
     derivation: File,
     actor_id: u64,
+    observe_resume: bool,
 }
 
 fn key(role: &str) -> M1Result<SigningKey> {
@@ -175,6 +177,7 @@ impl Port {
             derivation,
             root,
             actor_id: 0,
+            observe_resume: std::env::var_os("M5_SCENARIO").is_some(),
         })
     }
 
@@ -311,6 +314,7 @@ impl Port {
                     d: None,
                     pending: BTreeMap::new(),
                     received: None,
+                    inbox_height: None,
                 },
             );
         }
@@ -331,6 +335,7 @@ impl Port {
             feed.pending.insert(pos, record.clone());
         }
         feed.received = Some(height);
+        feed.inbox_height = block.verified_block()["cursor_at_end"]["cursor"]["height"].as_u64();
         if reader == READER {
             self.l1_a.push(block.clone());
             for job in &self.jobs {
@@ -424,10 +429,52 @@ impl Port {
                         &mut self.derivation,
                         &json!({"reader":reader,"tick_us":tick,"l1_height":height,"wait":format!("{wait:?}")}),
                     )?;
-                    return Ok(
-                        json!({"head":state.head(),"h1":state.native_hash_at(1),"h2":state.native_hash_at(2),
-                        "cuts":cuts,"wait":format!("{wait:?}")}),
-                    );
+                    let mut view = json!({"head":state.head(),"h1":state.native_hash_at(1),
+                        "h2":state.native_hash_at(2),"cuts":cuts,"wait":format!("{wait:?}")});
+                    if self.observe_resume && let Some(inbox_height) = feed.inbox_height {
+                        let d = state.head();
+                        let drained = feed.pending.is_empty()
+                            && state.pending_batches_empty()
+                            && state.complete_frontier().is_some_and(|tip| tip.height == height)
+                            && match wait.reason {
+                                poc_derivation::WaitReason::CompleteWindow { through } => through > height,
+                                poc_derivation::WaitReason::CompleteBlock(block) => block > height,
+                                _ => false,
+                            };
+                        // Recipients independently authenticate the ordinary h1 payload; no additional
+                        // batch is queued in the bounded M5 policy. An unprocessed accepted payload
+                        // invalidates this readiness/cursor envelope.
+                        let h1_commitment=state.derived_prefix().first().and_then(|row|
+                            match row.cause {
+                                poc_derivation::DerivationCause::AcceptedBatch{commitment,..} => Some(commitment),
+                                _=>None,
+                            });
+                        let da_probe=h1_commitment.is_some_and(|commitment|
+                            self.da.retrieve(Self::bump(&mut self.actor_id),commitment).is_ok());
+                        let batches_reconciled=self.jobs.iter().all(|job|self.batcher.job(*job)
+                            .is_some_and(|entry|entry.terminal().is_some()));
+                        let services_ready=feed.pending.is_empty() && da_probe
+                            && batches_reconciled && self.batcher.is_available()
+                            && self.certifier.is_available();
+                        write_row(&mut self.derivation,&json!({"reader":reader,"tick_us":tick,
+                            "l1_height":height,"service_probe":{"commitment":h1_commitment,
+                            "da_verified":da_probe,"batches_reconciled":batches_reconciled,
+                            "batcher_available":self.batcher.is_available(),
+                            "certifier_available":self.certifier.is_available()}}))?;
+                        view["observation"] = json!(super::m5::DObservation {
+                            l1_height: height,
+                            inbox_height,
+                            d_height: d.state.metadata.height,
+                            d_origin: d.state.metadata.origin,
+                            hashes: std::iter::once(state.genesis().native_hash)
+                                .chain(state.derived_prefix().iter().map(|item|item.native_hash))
+                                .collect(),
+                            drained,
+                            services_ready,
+                            pending_batch_through: (drained && batches_reconciled).then_some(inbox_height),
+                        });
+                    }
+                    return Ok(view);
                 }
                 Outcome::Reject(reason) => return Err(problem(format!("M4 D step {reason:?}"))),
             }

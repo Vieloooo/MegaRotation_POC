@@ -51,11 +51,26 @@ class CommitteeL1(baseline.L1):
         data = artifact(self.args.contracts, "CommitteeControlAuthority") + constructor
         return [self.send_transaction("deploy_committee_authority", None, data, 8_000_000, 1, 1)]
 
+    def request_digest(self, request):
+        return self.force_digest(request)
+
+    def request_calldata(self, request, packed):
+        return encode(spec.FUNCTIONS["submitForce"], FORCE_ARGS,
+                      [codec.word(request["request_id"]), request["control_seq"], request["target_beta"],
+                       self.policy(request), packed])
+
+    def submission_command(self, raw):
+        self.command += 1
+        return {"id": self.command, "op": "submit", "raw": raw}
+
+    def submission_expectation(self):
+        return {"case": "automatic_force", "status": 1, "logs": 1}
+
     def sign_request(self, signer, request):
         if type(signer) is not int or not 0 <= signer < len(self.committee):
             raise ValueError("invalid governance signer index")
         member, key = self.committee[signer]
-        digest = self.force_digest(request)
+        digest = self.request_digest(request)
         signature = codec.sign_digest(key, digest)
         return {"signer": signer, "address": member, "digest": codec.hx(digest),
                 "signature": codec.hx(signature), "request": request}
@@ -66,7 +81,7 @@ class CommitteeL1(baseline.L1):
         addresses = sorted(row["address"] for row in signers)
         if len(set(addresses)) != len(addresses):
             raise ValueError("duplicate signature")
-        digest = self.force_digest(request)
+        digest = self.request_digest(request)
         for row in signers:
             signer = row["signer"]
             if (row["request"] != request or row["digest"] != codec.hx(digest)
@@ -74,22 +89,19 @@ class CommitteeL1(baseline.L1):
                     or row["address"] != self.committee[signer][0]):
                 raise ValueError("signature output not bound to request and signer")
         packed = b"".join(codec.as_bytes(row["signature"]) for row in sorted(signers, key=lambda s: s["address"]))
-        calldata = encode(spec.FUNCTIONS["submitForce"], FORCE_ARGS,
-                          [codec.word(request["request_id"]), request["control_seq"], request["target_beta"],
-                           self.policy(request), packed])
+        calldata = self.request_calldata(request, packed)
         nonce = self.next_nonce["caller"]
         fields = [nonce, 1_000_000_000, 1_000_000, codec.as_bytes(self.authority), 0, calldata]
         tx_digest = codec.keccak256(rlp([*fields, CHAIN_ID, 0, 0]))
         sig = self.signature("caller", tx_digest)
         raw = rlp([*fields, 2 * CHAIN_ID + 35 + sig[64] - 27,
                    int.from_bytes(sig[:32], "big"), int.from_bytes(sig[32:64], "big")])
-        self.command += 1
         prepared = {
             "request": request, "signers": signers, "digest": codec.hx(digest),
             "signature_pack": codec.hx(packed), "nonce": nonce,
             "hash": codec.hx(codec.keccak256(raw)), "raw": codec.hx(raw),
             "calldata": codec.hx(calldata),
-            "driver_command": {"id": self.command, "op": "submit", "raw": codec.hx(raw)},
+            "driver_command": self.submission_command(codec.hx(raw)),
         }
         path = self.out / "governance-transaction.json"
         staged = path.with_suffix(".prepared")
@@ -107,7 +119,7 @@ class CommitteeL1(baseline.L1):
         finally:
             os.close(data_dir)
         self.next_nonce["caller"] += 1
-        self.expectations[prepared["hash"]] = {"case": "automatic_force", "status": 1, "logs": 1}
+        self.expectations[prepared["hash"]] = self.submission_expectation()
         return prepared
 
     def send_prepared(self, recovery):

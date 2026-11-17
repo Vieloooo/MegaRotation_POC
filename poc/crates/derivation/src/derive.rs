@@ -306,6 +306,11 @@ impl Derivation {
     pub fn derived_prefix(&self) -> &[DerivedItem] {
         &self.checkpoint.derived
     }
+    /// True when the verified source has no authenticated frame waiting in D.
+    pub fn pending_batches_empty(&self) -> bool {
+        self.checkpoint.pending.is_empty()
+    }
+
     pub fn current_epoch(&self) -> u64 {
         self.checkpoint.current_epoch
     }

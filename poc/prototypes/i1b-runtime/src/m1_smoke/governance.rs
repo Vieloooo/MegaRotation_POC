@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sim_espresso::{FinalizedLogReader, PublicTimeUs, ReaderState};
 
-use super::{M1Result, checked, l1, profile::{SECOND, SOURCE}, public::Public};
+use super::{M1Result, checked, l1, m5, profile::{SECOND, SOURCE}, public::Public};
 
 pub(super) const OUTAGE: u64 = 11_250_000;
 pub(super) const HEARTBEAT: u64 = 250_000;
@@ -59,6 +59,8 @@ pub(super) struct Request {
     pub signed_floor: u64,
     pub cid: Cid,
     pub head_height: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resume: Option<m5::ResumeTarget>,
 }
 
 #[derive(Clone, Copy)]
@@ -93,6 +95,8 @@ pub(super) struct Signer {
     previous: Option<(u64, PublicTimeUs)>,
     id: u8,
     clock: Option<ClockSample>,
+    pub d: Option<m5::DObservation>,
+    motion: bool,
 }
 
 impl Signer {
@@ -104,7 +108,15 @@ impl Signer {
             previous: None,
             id,
             clock: None,
+            d: None,
+            motion: false,
         })
+    }
+
+    pub fn resumable(id: u8, genesis: &ReplayState) -> M1Result<Self> {
+        let mut signer = Self::new(id, genesis)?;
+        signer.l1 = l1::Reader::resumable();
+        Ok(signer)
     }
 
     pub fn sample_clock(&mut self, as_of_us: u64, received_us: u64) {
@@ -211,9 +223,116 @@ impl Signer {
         detail["eligible"] = json!(true);
         Ok((detail, Some(Request {
             request_id: control_seq, control_seq, target_beta: state.branch, enabled_mask: new_mask,
-            order: active.order, signed_floor: state.l1_floor, cid: descriptor.cid, head_height,
+            order: active.order, signed_floor: state.l1_floor, cid: descriptor.cid, head_height, resume: None,
         })))
     }
+
+    pub fn poll_resume(
+        &mut self, public: &Public, advertised: Advertised, now: u64,
+        unresolved: bool, inclusion_slots: u64,
+    ) -> M1Result<(Value, Option<Request>)> {
+        let l1_tip = self.l1.finalized_tip().map(|row| row.height);
+        let tip = self.espresso.tip();
+        let previous = self.previous;
+        let usable = self.clock.is_some_and(|clock| clock.usable(now));
+        let mut evidence = json!({
+            "signer":self.id, "l1_advertised":advertised.l1, "l1_verified":l1_tip,
+            "espresso_advertised":espresso_json(advertised.espresso),
+            "espresso_verified":espresso_json(tip), "previous":espresso_json(previous),
+            "clock_sample_us":now, "clock_sample":self.clock, "clock_good":usable,
+            "d":self.d, "eligible":false, "replay_position":self.replay.public_state().pc,
+        });
+        macro_rules! refuse {
+            ($why:expr) => {{
+                evidence["reason"] = json!($why);
+                return Ok((evidence, None));
+            }};
+        }
+        if l1_tip != advertised.l1 || tip != advertised.espresso {
+            refuse!("INPUTS_NOT_READY");
+        }
+        let Some((q, theta)) = tip else { refuse!("INPUTS_NOT_READY"); };
+        let prefix = checked(self.espresso.require_prefix_through(q))?;
+        let row = prefix.read(q).ok_or_else(|| super::problem("missing signer tip"))?;
+        let live = row.proposal.live_at_proposal && theta.0 <= now
+            && now - theta.0 <= MAX_HEAD_AGE;
+        let bound = ReplayPosition { key_us:theta.0, kind:ReplayKind::Espresso,
+            index:ReplayIndex::Espresso(q) };
+        let advanced = public.advance_reader(&self.replay, &self.espresso, &self.l1, &bound)?;
+        if matches!(advanced.status, ReplayStatus::Reject(_) | ReplayStatus::UnsupportedControl { .. }) {
+            return Err(super::problem(format!("M5 signer replay failed: {:?}",advanced.status)));
+        }
+        self.replay = advanced.state;
+        let state = self.replay.public_state();
+        evidence["replay_position"] = json!(state.pc);
+        evidence["branch"] = json!(state.branch);
+        let halted = matches!(state.tail, Tail::Halt { .. });
+        evidence["tail"] = json!(match state.tail {
+            Tail::Next(_) => "NEXT", Tail::Pending(_) => "PENDING", Tail::Halt { .. } => "HALT",
+        });
+        if advanced.status != ReplayStatus::Ready || state.pc.as_ref() != Some(&bound) {
+            refuse!("INPUTS_NOT_READY");
+        }
+        if !live {
+            self.motion = false;
+            self.previous = None;
+        } else if self.previous != tip {
+            self.motion = previous.is_some_and(|(oldq, oldtheta)| {
+                q > oldq && theta.0 > oldtheta.0 && now - oldtheta.0 <= MAX_HEAD_AGE
+            });
+            self.previous = tip;
+        }
+        evidence["ordering_live"] = json!(self.motion && live);
+        if !usable { refuse!("CLOCK_UNSAFE"); }
+        if !self.motion || !live { refuse!("ORDERING_NOT_ADVANCING"); }
+        let Some(d)=self.d.as_ref().filter(|d| Some(d.l1_height)==l1_tip && d.drained && d.services_ready)
+            else { refuse!("RECOVERY_INPUTS_NOT_READY"); };
+        let Some(pending_batch_through) = d.pending_batch_through else { refuse!("UNBOUNDED_GROWTH"); };
+        let g: Vec<_> = std::iter::once(state.genesis.native_hash)
+            .chain(state.entries.iter().map(|row|row.block.native_hash)).collect();
+        let g_head = state.genesis.anchor.block.height + state.entries.len() as u64;
+        evidence["g_head"] = json!(g_head);
+        let Some((reason, unequal)) = m5::recovery_reason(&g,&d.hashes,halted) else {
+            refuse!("NO_RECOVERY_REASON");
+        };
+        evidence["recovery_reason"] = json!(reason);
+        evidence["common_comparison"] = json!({"through":g.len().min(d.hashes.len()) - 1,
+            "first_mismatch":unequal.map(|(h,g,d)|json!({"height":h,"g_hash":g,"d_hash":d}))});
+        let applied_seq = state.records.iter().rev().find_map(|record| {
+            match &record.input_ref {
+                poc_viewer_gfr::InputRef::L1(control) => Some(control.control_seq),
+                _ => None,
+            }
+        });
+        if unresolved || self.l1.latest_control_seq() != applied_seq { refuse!("CONTROL_IN_FLIGHT"); }
+        let cfg = &state.config;
+        let future = |now: u64| -> Option<(u64,u64)> {
+            let pending = now.checked_add(SIGN_US)?.checked_add(BROADCAST_US)?;
+            let bmin = pending.checked_sub(cfg.l1_genesis_timestamp_us)?
+                .checked_div(cfg.l1_block_us)?.checked_add(1)?;
+            let lo = cfg.l1_genesis_timestamp_us.checked_add(bmin.checked_mul(cfg.l1_block_us)?)?;
+            let hi = lo.checked_add(inclusion_slots.checked_mul(cfg.l1_block_us)?)?;
+            Some((lo,hi))
+        };
+        let Some((lo,hi)) = future(now) else { refuse!("NO_TARGET"); };
+        let head = m5::Heads { g:g_head, halted, d:d.d_height, origin:d.d_origin,
+            inbox:d.inbox_height, pending_batch_through };
+        let solution = m5::solve(cfg,state.parameters.announcement_us,head,lo,hi);
+        evidence["solution"] = json!(solution);
+        let Some(target) = solution.and_then(|plan|plan.target) else { refuse!("NO_TARGET"); };
+        let cid = state.selected.iter().rev().find(|((beta,_),_)| *beta==state.branch)
+            .map(|(_,descriptor)|descriptor.cid)
+            .ok_or_else(||super::problem("M5 no source responsibility for RESUME"))?;
+        let control_seq = self.l1.latest_control_seq().unwrap_or(0) + 1;
+        evidence["eligible"] = json!(true);
+        evidence["reason"] = json!(reason);
+        Ok((evidence, Some(Request {
+            request_id:control_seq,control_seq,target_beta:state.branch,enabled_mask:7,
+            order:[2,0,1],signed_floor:state.l1_floor,cid,head_height:g_head,
+            resume:Some(m5::ResumeTarget { target, origin:(lo-cfg.l1_genesis_timestamp_us)/cfg.l1_block_us }),
+        })))
+    }
+
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -535,6 +654,18 @@ mod tests {
             assert_eq!(detail["reason"], "NO_OPEN_DUTY");
             assert!(request.is_none());
         }
+    }
+
+    #[test]
+    fn resume_clock_uses_a_half_open_lease_and_checks_transport_order() {
+        let sample = ClockSample { as_of_us: 100, received_us: 1_100,
+            lease_end_us: 180_100, offset_us: -1_000 };
+        assert!(!sample.usable(1_099));
+        assert!(sample.usable(1_100));
+        assert!(sample.usable(180_099));
+        assert!(!sample.usable(180_100));
+        assert!(!ClockSample { offset_us: -1_001, ..sample }.usable(1_100));
+        assert!(!ClockSample { as_of_us: 1_101, ..sample }.usable(1_102));
     }
 
     #[test]
