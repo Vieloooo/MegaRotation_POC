@@ -22,6 +22,12 @@ STAGES = {
     "signer_view": ("governance", "Signer 独立观察"),
     "resume_signed": ("governance", "治理签名包"),
     "resume_prepared": ("governance", "持久准备"),
+    "resume_eligibility": ("governance", "已观察到可签 quorum"),
+    "resume_confirmation": ("l1", "提交确认"),
+    "resume_timing": ("l1", "实际收录与求解区间"),
+    "resume_held": ("governance", "保留原始交易"),
+    "publication_held": ("regional", "旧区域结果等待发布"),
+    "publication_excluded": ("regional", "旧区域结果被排除"),
 }
 require, uint = m4.require, m4.uint
 
@@ -96,6 +102,7 @@ class Replay(m4.Replay):
         self.prepared = {}
         self.submitted = {}
         self.halt_pc = None
+        self.held_publications = {}
 
     def public(self, position):
         if self.ordering_wait is not None:
@@ -120,8 +127,10 @@ class Replay(m4.Replay):
         published, verified, previous = (d[k] for k in ("published", "verified", "previous"))
         available = bool(verified and published and verified["q"] <= published["q"])
         complete = available and verified == published
-        advancing = bool(available and previous and verified["q"] > previous["q"]
-                         and verified["theta_us"] > previous["theta_us"])
+        basis = d.get("motion_basis", previous)
+        tip(basis, self.espresso)
+        advancing = bool(available and basis and verified["q"] > basis["q"]
+                         and verified["theta_us"] > basis["theta_us"])
         l1p, l1v = d["published_l1"], d["verified_l1"]
         for height in (l1p, l1v):
             require(height is None or (uint(height) and height in self.headers), "unobserved signer L1 tip")
@@ -133,12 +142,21 @@ class Replay(m4.Replay):
             require(verified is not None and verified["theta_us"] >= local["key_us"],
                     "signer pc exceeds verified watermark")
         heads = d["heads"]
-        require(all(key in heads and uint(heads[key]) for key in ("g", "d", "inbox")) and
-                heads["g"] < len(self.chains["g"]) and heads["d"] < len(self.chains["d"])
-                and heads["inbox"] <= self.inbox_cursor, "signer observation exceeds a known chain head")
+        local_d = d.get("d")
+        local_verified = d.get("d_verified") is True
+        if local_verified:
+            require(local_d and len(local_d["hashes"]) == heads["d"] + 1
+                    and local_d["inbox_height"] == heads["inbox"]
+                    and bytes(local_d["hashes"][0]).hex() == self.chains["d"][0]["native"],
+                    "verified local D prefix/Inbox inputs do not bind the observation")
+        require(all(value is None or uint(value) for value in heads.values())
+                and (heads["g"] is None or heads["g"] < len(self.chains["g"]))
+                and (heads["d"] is None or heads["d"] < len(self.chains["d"]) or local_verified)
+                and (heads["inbox"] is None or heads["inbox"] <= self.inbox_cursor or local_verified),
+                "signer observation exceeds a known chain head")
         solution = target(self.profile, d) if d.get("inclusion") is not None else None
         reason = d["reason"]
-        frozen = reason == "HALTED_D_ADVANCED" and d["tail"] == "HALT" and heads["d"] > heads["g"]
+        frozen = reason == "HALTED_D_ADVANCED" and d["tail"] == "HALT" and all(uint(heads[key]) for key in ("g","d")) and heads["d"] > heads["g"]
         if frozen:
             require(self.halt_pc is not None and local is not None and m4.order(local) >= m4.order(self.halt_pc),
                     "signer has no completed public HALT")
@@ -146,24 +164,33 @@ class Replay(m4.Replay):
         if reason == "HASH_DIVERGENCE":
             h = d["difference_height"]
             require(uint(h) and h <= min(heads["g"], heads["d"]), "signer divergence must use a common height")
-            g, derived = (self.chains[name][h]["native"] for name in ("g", "d"))
+            g = self.chains["g"][h]["native"]
+            derived = (bytes(local_d["hashes"][h]).hex() if local_verified
+                       else self.chains["d"][h]["native"])
             difference = d["g_native"] == g and d["d_native"] == derived and g != derived
         key = d.get("request")
         if d["eligible"]:
-            payload = d["payload"]
-            require(payload["target"] == d["target"] and payload["signed_origin"] == d["signed_origin"]
+            payload = d.get("payload")
+            if payload is not None:
+                require(payload["target"] == d["target"] and payload["signed_origin"] == d["signed_origin"]
                     and payload["branch"] == self.duty["branch"] and uint(payload["control_seq"]),
-                    "signer intent does not match the solving inputs")
+                        "signer intent does not match the solving inputs")
             require(heads["g"] == len(self.views[m4.order(local)]) - 1,
                     "signer G head differs from its completed public position")
-            require(d["d_origin"] == self.chains["d"][heads["d"]]["origin"],
+            if d.get("d") is not None:
+                require(d["d"]["l1_height"] == l1v and d["d"]["drained"]
+                        and d["d"]["services_ready"], "signer D is out of date or not ready")
+            origin = local_d["d_origin"] if local_verified else self.chains["d"][heads["d"]]["origin"]
+            require(d["d_origin"] == origin,
                     "solver origin differs from the observed D head")
-            require(key and m4.digest(key) and self.ordering in ("live", "recovering") and self.recovered
+            require(((key and m4.digest(key) and payload) or d.get("outside_packed_request") is True)
+                    and self.ordering in ("live", "recovering") and self.recovered
                     and advancing and complete and l1v is not None and l1v == l1p
                     and local == {"kind": "Espresso", "index": [verified["q"]], "key_us": verified["theta_us"]}
                     and d["d_drained"] and d["clock_ready"] and d["paths_ready"]
                     and not d["pending"] and solution and d["target"] is not None and (frozen or difference),
                     "signer eligible without recovered ordering, material or a feasible trigger")
+        if d["eligible"] and key:
             observed = d.get("qualified_us", event["tick_us"])
             require(uint(observed) and observed <= event["tick_us"], "eligibility observation outside recorded inputs")
             request_key = key, d["target"]
@@ -285,7 +312,25 @@ class Replay(m4.Replay):
                     and d["within_inclusion"] == (low <= observed_timestamp <= high),
                     "included request or actual inclusion timing mismatch")
             super().step(event)
-        else:
+        elif kind == "publication_held":
+            physical = d["physical_id"]
+            require(m4.digest(physical) and physical not in self.held_publications, "invalid held publication")
+            self.held_publications[physical] = (d["cid"], d["action"])
+        elif kind == "publication_excluded":
+            physical = d["physical_id"]
+            require(self.held_publications.pop(physical, None) == (d["cid"], d["action"])
+                    and (self.duty["tail"] != "NEXT" or self.duty["cid"] != d["cid"]),
+                    "publication exclusion differs from held result or public duty")
+        elif kind == "resume_eligibility":
+            request_key = d["request"], d["payload"]["target"]
+            if request_key in self.quorum:
+                require(self.quorum[request_key] == d["t_eligible_us"], "quorum raw marker differs from independent signer sequence")
+        elif kind == "resume_confirmation":
+            require(any(row["tx"] == d["tx"] for row in self.submitted.values()), "confirmation without a prior broadcast")
+        elif kind == "resume_timing":
+            require(any(row["tx"] == d["transaction_hash"] and row["inclusion"] == [d["t_l_min_us"], d["t_l_max_us"]]
+                        for row in self.submitted.values()), "L1 timing marker differs from submitted request")
+        elif kind != "resume_held":
             return super().step(event)
         return None
 

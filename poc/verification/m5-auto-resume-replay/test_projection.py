@@ -4,8 +4,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from generate_auto_resume import compact
 from model import project, target
-from sample import scenarios
+from sample import build, scenarios
 from sealed import TAPE, load, sha
 
 
@@ -30,6 +31,25 @@ class ProjectionTests(unittest.TestCase):
             next(frame["pc"]["index"][0] for frame in stopped["frames"] if frame["stage"] == "wait"),
         )
         self.assertIsNone(no_target["frames"][-1]["signer_views"][0]["target"])
+
+    def test_browser_pool_keeps_every_chain_and_signer_snapshot(self):
+        page = project(scenarios()[1], "sample", {})
+        packaged = compact(page)
+        pools = packaged["pools"]
+        self.assertLess(len(pools["chains"]), len(page["frames"]))
+        for old, frame in zip(page["frames"], packaged["frames"], strict=True):
+            self.assertEqual(frame["seq"], old["seq"])
+            self.assertEqual({name: pools["chains"][key] for name, key in frame["chains"].items()},
+                             old["chains"])
+            for who, key in frame["signer_views"].items():
+                observed = packaged["frames"][key]
+                details = {field:pools["values"][value] if field in packaged["signer_detail"] else value
+                           for field, value in observed["detail"].items()}
+                fields = {**details, **observed["observation"],
+                          "solver":pools["values"][observed["observation"]["solver"]],
+                          "refs":[pools["refs"][i] for i in observed["refs"]],
+                          "seq":observed["seq"],"suborder":observed.get("suborder",0),"tick_us":observed["tick_us"]}
+                self.assertEqual(fields, old["signer_views"][who])
 
     def test_target_recomputes_integer_bound_and_advancement(self):
         tape = scenarios()[0]
@@ -104,6 +124,16 @@ class ProjectionTests(unittest.TestCase):
             (checker/"report.json").write_text(json.dumps({**report,"candidate":"f"*40}))
             with self.assertRaisesRegex(ValueError, "candidate"):
                 load(bundle, checker)
+
+    def test_upper_slot_and_late_inclusion_keep_original_target(self):
+        for height, act, tail in ((14, 38_000_000, "NEXT"), (22, 54_000_000, "HALT")):
+            page = project(build("stopped", True, include_height=height), "sample", {})
+            receipt = next(frame for frame in page["frames"] if frame["stage"] == "included")
+            applied = next(frame for frame in page["frames"] if frame["stage"] == "resume")
+            self.assertEqual(receipt["detail"]["target"], 30)
+            self.assertEqual(receipt["detail"]["act_us"], act)
+            self.assertEqual(applied["duty"]["tail"], tail)
+            self.assertEqual(len(applied["chains"]["g"]), 31)
 
     def test_signed_window_and_derived_parent(self):
         tape = scenarios()[0]

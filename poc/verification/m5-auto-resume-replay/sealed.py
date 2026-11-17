@@ -31,6 +31,7 @@ class Sealed:
         require(read_file(self.root, "manifest.sha256").decode().split() == [self.sha, "manifest.json"],
                 "manifest does not match sidecar")
         self.files = self.manifest["files"]
+        self.entries = self.files
         self.cache = {}
         self.lines = {}
 
@@ -63,6 +64,39 @@ class Sealed:
             return True
         return False
 
+    def check_cut(self, detail, included):
+        cut = self.read(detail["cut_bytes_path"])
+        domain = b"PoC/Derivation/ResumeCutCheckpoint/v1"
+        require(sha(len(domain).to_bytes(8, "big") + domain + len(cut).to_bytes(8, "big") + cut)
+                == detail["cut_id"], "canonical cut bytes do not match digest")
+        raw_cut = json.loads(cut)
+        anchor = raw_cut["target_anchor"]
+        def pos(value):
+            return [value["block"], value["tx"], value["log"]]
+        height = raw_cut["target_height"]
+        prefix = raw_cut["derived_prefix"]
+        require(pos(raw_cut["resume_position"]) == detail["position"]
+                and pos(raw_cut["cursor_set_position"]) == detail["cursor_position"]
+                and uint(height) and 0 < height <= len(prefix) and height == detail["target"]
+                and anchor["anchor"]["block"]["height"] == height
+                and bytes(anchor["anchor"]["block"]["block_id"]).hex() == detail["anchor"]["id"]
+                and bytes(anchor["native_hash"]).hex() == detail["anchor"]["native"]
+                and anchor["anchor"]["block"]["origin"] == detail["anchor"]["origin"]
+                and bytes(prefix[height - 1]["native_block"]["post_state_root"]).hex() == detail["anchor"]["post"]
+                and [bytes(raw_cut["genesis"]["native_hash"]).hex(),
+                     *(bytes(item["native_hash"]).hex() for item in prefix)] == detail["prefix"]
+                and bytes(prefix[height - 1]["native_hash"]).hex() == detail["anchor"]["native"]
+                and anchor["state"] == prefix[height - 1]["state"],
+                "canonical cut identity differs from projection")
+        witness = raw_cut["evidence"]
+        require(bytes(witness["including_block"]["hash"]).hex() == included["header"]["hash"]
+                and witness["including_block"]["height"] == included["header"]["height"]
+                and bytes(witness["transaction_hash"]).hex() == included["tx"].removeprefix("0x")
+                and witness["cursor_set_rpc_log_index"] == included["cursor_rpc_log_index"]
+                and witness["resume_rpc_log_index"] == included["receipt_log_index"]
+                and witness["sequence"] == included["control_seq"],
+                "canonical cut does not bind the exact successful receipt")
+
 
 def load(bundle, independent):
     sealed = Sealed(bundle)
@@ -78,9 +112,24 @@ def load(bundle, independent):
     report = json.loads(report_bytes)
     require(report["status"] == "PASS" and report["candidate"] == candidate
             and report["manifest_sha256"] == sealed.sha, "checker PASS does not bind this candidate and run")
-    tape_bytes = read_file(independent, TAPE)
-    require(sha(tape_bytes) == report["auto_resume_replay_sha256"], "checker digest does not bind normalized tape")
-    tape = json.loads(tape_bytes)
+    provenance = {"candidate": candidate, "manifest": sealed.sha, "report": sha(report_bytes)}
+    if "auto_resume_replay_sha256" in report:
+        tape_bytes = read_file(independent, TAPE)
+        require(sha(tape_bytes) == report["auto_resume_replay_sha256"], "checker digest does not bind normalized tape")
+        tape = json.loads(tape_bytes)
+        provenance["checker_tape"] = sha(tape_bytes)
+    else:
+        from raw_m5 import Mapper
+        require(report["mode"] in ("stopped", "frozen"), "expected independent positive AR01 or AR03")
+        outputs = {"public":"public-replay.json", "d":"independent-D.json",
+                   "headers":"verified-l1-headers.json", "cuts":"verified-cuts.json"}
+        checker = {}
+        for key, name in outputs.items():
+            data = read_file(independent, name)
+            provenance[name] = sha(data)
+            checker[key] = json.loads(data)
+        tape = Mapper(sealed, manifest, report, checker).tape()
+        provenance["normalized_view"] = sha(json.dumps(tape, sort_keys=True, separators=(",", ":")).encode())
     require(tape["mode"] == "observed" and tape["profile"]["seed"] == seed,
             "sealed tape must be observed and use the run seed")
     inclusions = {}
@@ -91,37 +140,5 @@ def load(bundle, independent):
         if event["kind"] == "resume_included":
             inclusions[m4.l1pos(detail["position"])] = detail
         if event["kind"] == "resume_cut":
-            included = inclusions[m4.l1pos(detail["position"])]
-            cut = sealed.read(detail["cut_bytes_path"])
-            domain = b"PoC/Derivation/ResumeCutCheckpoint/v1"
-            require(sha(len(domain).to_bytes(8, "big") + domain + len(cut).to_bytes(8, "big") + cut)
-                    == detail["cut_id"], "canonical cut bytes do not match digest")
-            raw_cut = json.loads(cut)
-            anchor = raw_cut["target_anchor"]
-            def pos(value):
-                return [value["block"], value["tx"], value["log"]]
-            height = raw_cut["target_height"]
-            prefix = raw_cut["derived_prefix"]
-            require(pos(raw_cut["resume_position"]) == detail["position"]
-                    and pos(raw_cut["cursor_set_position"]) == detail["cursor_position"]
-                    and uint(height) and 0 < height <= len(prefix) and height == detail["target"]
-                    and anchor["anchor"]["block"]["height"] == height
-                    and bytes(anchor["anchor"]["block"]["block_id"]).hex() == detail["anchor"]["id"]
-                    and bytes(anchor["native_hash"]).hex() == detail["anchor"]["native"]
-                    and anchor["anchor"]["block"]["origin"] == detail["anchor"]["origin"]
-                    and bytes(prefix[height - 1]["native_block"]["post_state_root"]).hex() == detail["anchor"]["post"]
-                    and [bytes(raw_cut["genesis"]["native_hash"]).hex(),
-                         *(bytes(item["native_hash"]).hex() for item in prefix)] == detail["prefix"]
-                    and bytes(prefix[height - 1]["native_hash"]).hex() == detail["anchor"]["native"]
-                    and anchor["state"] == prefix[height - 1]["state"],
-                    "canonical cut identity differs from projection")
-            witness = raw_cut["evidence"]
-            require(bytes(witness["including_block"]["hash"]).hex() == included["header"]["hash"]
-                    and witness["including_block"]["height"] == included["header"]["height"]
-                    and bytes(witness["transaction_hash"]).hex() == included["tx"].removeprefix("0x")
-                    and witness["cursor_set_rpc_log_index"] == included["cursor_rpc_log_index"]
-                    and witness["resume_rpc_log_index"] == included["receipt_log_index"]
-                    and witness["sequence"] == included["control_seq"],
-                    "canonical cut does not bind the exact successful receipt")
-    return project(tape, "sealed", {"candidate": candidate, "manifest": sealed.sha,
-                                    "report": sha(report_bytes), "checker_tape": sha(tape_bytes)})
+            sealed.check_cut(detail, inclusions[m4.l1pos(detail["position"])])
+    return project(tape, "sealed", provenance)

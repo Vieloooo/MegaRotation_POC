@@ -16,8 +16,44 @@ if not PAGE.is_dir():
     PAGE = Path(__file__).resolve().parents[1] / "web"
 
 
+def compact(dataset):
+    """Intern repeated fields while retaining every timeline observation."""
+    shared = ("duty", "pc", "d_position", "comparison", "blocked", "watermark", "stopped")
+    signer_detail = ("published", "verified", "previous", "motion_basis", "pc", "heads",
+                     "clock_sample", "d", "common_comparison", "guard_parts", "payload",
+                     "growth_basis", "inclusion")
+    pools = {"chains": [], "values": [], "refs": []}
+    indexes = {field: {} for field in pools}
+
+    def intern(field, value):
+        key = json.dumps(value, sort_keys=True, separators=(",", ":"))
+        index = indexes[field]
+        if key not in index:
+            index[key] = len(pools[field])
+            pools[field].append(value)
+        return index[key]
+
+    views = {}
+    frames = []
+    for index, frame in enumerate(dataset["frames"]):
+        data = {**frame, **{name: intern("values", frame[name]) for name in shared},
+                "chains": {name: intern("chains", chain) for name, chain in frame["chains"].items()},
+                "refs": [intern("refs", ref) for ref in frame["refs"]]}
+        if frame["kind"] == "signer_view":
+            who = frame["detail"]["signer"]
+            view = frame["signer_views"][who]
+            data["observation"] = {name: view[name] for name in ("q_advanced", "theta_advanced", "solver")}
+            data["observation"]["solver"] = intern("values", data["observation"]["solver"])
+            data["detail"] = {name: intern("values", value) if name in signer_detail else value
+                              for name, value in frame["detail"].items()}
+            views[who] = index
+        data["signer_views"] = {who: views[who] for who in frame["signer_views"]}
+        frames.append(data)
+    return {**dataset, "frames":frames, "pools":pools, "shared":shared, "signer_detail":signer_detail}
+
+
 def render(datasets):
-    data = json.dumps(datasets, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    data = json.dumps([compact(case) for case in datasets], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
     def read(name):

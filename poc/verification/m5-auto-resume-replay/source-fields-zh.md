@@ -21,3 +21,16 @@ M5 主运行与对照分别按各自的 sealed manifest 和独立 checker 绑定
 正例的预估收录区间为 [26,28] s。以 `b_hi=ℓ14`、`W=4` 求 `E_hi=max(0,b_hi−W+1)=ℓ11`，然后按高度网格求 `h_time=ceil_slot(ts_L1(E_hi))`。输入保留 D head 的实际 origin，`extra_origin=max(0,E_hi−D_head.origin)+1`。取 `H_D=max(h_D,H_Inbox,h_time)+extra_origin`。H_Inbox 包含已知在途推进，公开 HALT 时 `H_G=h_G`，NEXT 时另按合同记录时间推进上界。取三路上界最大作为 H_guard。
 
 T_prep=12 s、T_drift=15 s、ε=1 s 使可行 timestamp 区间为 [40,40] s。若实际 H_guard 小于 30，最小合法目标是 h30，signed origin 取区间下端的 ℓ13。实际 L1 收录决定 act，起点则由对应 Cut 的 D(h30) 决定。计划后继为 R2 [31,40]。以上是运行前计划，正式回放以封存的实际输入和独立报告为准。
+
+## 开发运行已见的原始字段
+
+| 原始证据 | 映射 |
+| --- | --- |
+| OrderingFault、OrderingRecovered、OrderingWatermark、finalized PELG | 实际故障信号、q、θ、finalized tick、冻结期间空记录和服务恢复后的新水位。 |
+| GfrCoverageWait，GfrReplayRecord | WAIT 的观察包含 `pc`、本次检查的 `through` 和原始 `status/missing`。公共 Expire 由独立完成记录建立。 |
+| LocalStopped 与 AckCommitted | pid、cid、逻辑步骤、`local_time_us`、`local_stop_us`、Ack，保留与虚拟 tick 的对应。 |
+| GovernanceL1Available、GovernanceEspressoAvailable、GovernancePoll、ResumeInputEvaluation | 各 signer 自己的完成位置和前缀、其 D/Inbox 视图。本次原始观察可能重复当前 tip，判断 q/θ 严格前进时另外引用较早的完整观察。 |
+| ResumeEligibility、GovernanceSignature、GovernanceState、GovernanceSubmission | 首个 quorum 的 tick、求解量、观察时合格的成员、实际入包及独立广播/收录记录。 |
+| Anvil、CursorSet、ResumeActivated 和恢复结果 | 精确 L1 坐标和真实 act、精确 Cut、原子重新对齐、R2 新职责和首个 G 接纳。G′ 保留认证来源与历史切面重建标志。 |
+
+开发输入用于验证字段映射，正式页使用同候选的封存运行和独立 PASS。

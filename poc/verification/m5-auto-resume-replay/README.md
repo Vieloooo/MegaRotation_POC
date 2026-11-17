@@ -21,7 +21,7 @@ python3 -B poc/verification/m5-auto-resume-replay/test_projection.py
 
 ## 正式输入
 
-当前入参适配支持已封存 manifest、同运行的独立 PASS 和版本化投影。报告用 `auto_resume_replay_sha256` 绑定 `auto-resume-replay-v1.json`，各帧反查 manifest 中的原始记录 seq/tick，核对 Cut 精确字节、位置、交易和执行状态。实际 M5 logger 与 checker 出具正式结果后接入原始映射。可多次指定配对的 `--bundle` 和 `--independent`，每对作为场景在同一个离线页中切换。
+原始输入适配直接读取 M5 封存 manifest、同运行的 checker PASS 及其独立公共、D、切面和 L1 证据。原报告与所用证据各自保留摘要。已按两条 M5 开发轨迹完成映射预检。入口也支持报告以 `auto_resume_replay_sha256` 绑定 `auto-resume-replay-v1.json` 的版本化投影。各帧反查 manifest 中的原始记录 seq/tick，核对 Cut 精确字节、位置、交易和执行状态。可多次指定配对的 `--bundle` 和 `--independent`，每对作为场景在同一个离线页中切换。
 
 ```sh
 python3 -B poc/verification/m5-auto-resume-replay/generate_auto_resume.py \
@@ -34,6 +34,6 @@ M1–M4 继续使用既有封存运行与独立报告验证原生成和投影命
 
 ## 样本及回归结果
 
-样本含三条可选择的合成时间线，共 236 帧，SHA-256 为 `790dfe14d442327e3551554a31357f8bcbb44078fd56d0dab297987654dc19b4`。使用后端合同 `712c018` 的计划参数。各签名、哈希和样本阶段的局部 tick 属于合成记录。
+样本含三条可选择的合成时间线，共 236 帧，SHA-256 为 `c9d6cd11e24520e7c81fe89af3ceb43cee2e1697f3f2057376b0cae1aae598ea`。使用后端合同 `712c018` 的计划参数。各签名、哈希和样本阶段的局部 tick 属于合成记录。
 
-Firefox 158.0 离线核对了三个场景、前后单步、时间轴游标、筛选和播放/暂停。finalized 停止样本的 q/θ 与 pc 保持，冻结样本的 q 与同键 pc 前进，D 独立增长。两条恢复样本均可看到本地 stop 与公开 HALT 分离，并逐步核对 signer、求解、签名包、签署时的收录区间、公开 act 和新首块。七项投影测试核对时间预算、最小整数、恢复条件、覆盖、签名组和错误封存输入。旧页的 M1–M4 生成和投影回归通过。
+Firefox 158.0 离线核对了三个场景、前后单步、时间轴游标、筛选和播放/暂停。finalized 停止样本的 q/θ 与 pc 保持，冻结样本的 q 与同键 pc 前进，D 独立增长。两条恢复样本均可看到本地 stop 与公开 HALT 分离，并逐步核对 signer、求解、签名包、签署时的收录区间、公开 act 和新首块。九项投影测试核对时间预算、最小整数、恢复条件、覆盖、签名组、迟收录/区间端点、打包往返和错误封存输入。旧页的 M1–M4 生成和投影回归通过。

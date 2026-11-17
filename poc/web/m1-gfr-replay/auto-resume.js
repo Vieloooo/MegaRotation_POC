@@ -7,8 +7,8 @@ const lanes = [["l1", "L1 / Inbox"], ["da", "DA"], ["d", "D 派生"], ["gprime",
                ["governance", "治理"]];
 const stages = [
   ["fault", "排序故障"], ["frozen-q", "q 增而 θ 冻结"], ["d-advance", "D 前进"],
-  ["local-stop", "本地 stop"], ["wait", "公共 WAIT"], ["recovery", "排序恢复"],
-  ["expire", "公开 Expire / HALT"], ["eligible", "可签证据"], ["target", "求解目标"],
+  ["held-publication", "旧结果待发布"], ["local-stop", "本地 stop"], ["wait", "公共 WAIT"], ["recovery", "排序恢复"],
+  ["expire", "公开 Expire / HALT"], ["excluded-publication", "排除旧结果"], ["eligible", "可签证据"], ["target", "求解目标"],
   ["signed", "治理签名包"], ["prepared", "持久准备"], ["submit", "广播"],
   ["included", "L1 收录"], ["cut", "历史切面"], ["gprime-cut", "G′ 对齐"],
   ["resume", "RESUME 激活"], ["ready", "Ready"], ["enter", "Enter"], ["new-result", "新区域 Final"],
@@ -21,7 +21,7 @@ const labels = {
   inclusion: "预计 L1 收录区间", target_timestamp_us: "目标 L2 timestamp",
   lower_timestamp_us: "timestamp 下界", upper_timestamp_us: "timestamp 上界",
   minimum_height: "整数高度下界", maximum_height: "整数高度上界",
-  paths_ready: "恢复路径就绪", clock_ready: "时钟与 lease 就绪", d_drained: "D 已处理到可用边界",
+  paths_ready: "恢复路径就绪", outside_packed_request: "此观察未关联收录请求", clock_ready: "时钟与 lease 就绪", d_drained: "D 已处理到可用边界",
   t_eligible_us: "首个可签 quorum", submit_delay_us: "提交耗时", within_budget: "提交耗时在预算内",
   within_inclusion: "实际收录在原区间内", act_us: "实际公开 act", request: "请求 digest",
   published: "公布 Espresso tip", verified: "已验证 Espresso tip",
@@ -191,7 +191,7 @@ function seek(index) {
   byId("pending-position").textContent = frame.blocked ? `公共覆盖 WAIT · ${position(frame.blocked)}` : "";
   byId("signers").innerHTML = data.profile.members.map((address, i) => {
     const current = frame.signer_views[i];
-    const rows = [["address", address], ["结论", current ? (current.eligible ? "可签" : current.reason) : "尚无观察"]];
+    const rows = [["address", address], ["结论", current ? (current.eligible ? (current.outside_packed_request ? "可签 · 未关联收录请求" : "可签") : current.reason) : "尚无观察"]];
     if (current) rows.push(...pretty(current, new Set(["refs","solver","address","eligible","signer"])));
     const observed = current && frames.findIndex(candidate => candidate.seq === current.seq && (candidate.suborder ?? 0) === current.suborder && candidate.kind === "signer_view");
     return `<article class="chain-card"><h3>Signer ${i}</h3><details ${current ? "open" : ""}>
@@ -231,10 +231,32 @@ function playNext() {
   timer = setTimeout(() => { seek(cursor + 1); playNext(); }, Math.max(35, Math.min(800, gap)));
 }
 
+function expandFrames(dataset) {
+  const {pools, shared, signer_detail} = dataset;
+  const detailKeys = new Set(signer_detail);
+  const expand = (object, keys) => Object.fromEntries(Object.entries(object)
+    .map(([name, value]) => [name, keys.has(name) ? pools.values[value] : value]));
+  const common = new Set(shared);
+  const frames = dataset.frames.map(frame => ({
+    ...expand(frame, common),
+    detail: frame.kind === "signer_view" ? expand(frame.detail, detailKeys) : frame.detail,
+    chains: Object.fromEntries(Object.entries(frame.chains).map(([name, i]) => [name, pools.chains[i]])),
+    refs: frame.refs.map(i => pools.refs[i]),
+  }));
+  const observations = frames.map(frame => frame.observation ? {
+    ...frame.detail, ...frame.observation, solver: pools.values[frame.observation.solver],
+    refs: frame.refs, tick_us: frame.tick_us, seq: frame.seq, suborder: frame.suborder ?? 0,
+  } : null);
+  for (const frame of frames) {
+    frame.signer_views = Object.fromEntries(Object.entries(frame.signer_views).map(([who, i]) => [who, observations[i]]));
+  }
+  return frames;
+}
+
 function selectCase(index) {
   pause();
   data = datasets[index];
-  frames = data.frames;
+  frames = expandFrames(data);
   last = frames.length - 1;
   end = Math.max(1, frames[last].tick_us);
   fixedHeight = null;
