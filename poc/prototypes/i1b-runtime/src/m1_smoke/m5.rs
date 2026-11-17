@@ -80,7 +80,7 @@ impl Mode {
     pub fn contrast(self) -> Option<u64> {
         match self {
             Self::Short => Some(14_500_000),
-            Self::Divergence => Some(24_500_000),
+            Self::Divergence => Some(24 * SECOND),
             Self::NoTarget | Self::InputsWait => Some(26 * SECOND),
             _ => None,
         }
