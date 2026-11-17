@@ -93,7 +93,7 @@ def trace_rows(raw):
             yield row
 
 
-def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pids=()):
+def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pids=(), local_stop_ack_reuse=False):
     grant_pids = set(range(15)) if grant_pids is None else set(grant_pids)
     proto = NativeProto(proto_file)
     counts = Counter()
@@ -264,6 +264,7 @@ def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pid
     active = None
     spawn, exits = {}, {}
     close_intents = {}
+    local_stops = {}
     for r in trace:
         kind, pid, seq, detail = [r[k] for k in ("kind", "pid", "seq", "detail")]
         if kind == "WorkerSpawn":
@@ -304,12 +305,27 @@ def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pid
                     and detail["durable_step_sequence"] == ack[10], "trace Ack durable boundary")
             released[index] = seq
             active = None
+        elif kind == "LocalStopped" and local_stop_ack_reuse:
+            cid, index = bytes(detail["cid"]), detail["logical_step_id"]
+            actual_pid, grant, ack = steps[index]
+            require(actual_pid == pid and grant[3] == r["event_id"]
+                    and grant.get(4, 0) == r["tick_us"] and list(ack[11]) == detail["ack"]
+                    and released[index] < seq and (pid, cid) not in local_stops
+                    and terminal[pid, cid] == (r["tick_us"], index, r["event_id"], "LocalStop"),
+                    "local stop marker differs from its unique durable native terminal")
+            local_stops[pid, cid] = seq, index
         elif kind in {"NetworkAdmitted", "ProofObserved", "RegionalDelivered", "Ready", "Enter", "Close",
                       "CutoffRetire", "PublishScheduled", "CloseProbe"} and "logical_step_id" in detail:
             index = detail["logical_step_id"]
             actual_pid, grant, ack = steps[index]
             require(released[index] < seq and pid == actual_pid, "release before persisted Ack")
-            require(r["event_id"] == grant[3] and r["tick_us"] == grant.get(4, 0), "output mismatches grant")
+            reused = local_stop_ack_reuse and kind == "Close" and detail["cause"] == "LocalTime"
+            if reused:
+                stop_seq, stop_index = local_stops[pid, bytes(detail["cid"])]
+                require(stop_index == index and stop_seq < seq and r["tick_us"] >= grant.get(4, 0)
+                        and list(ack[11]) == detail["ack"], "Close reused a nonterminal/unrelated Ack")
+            else:
+                require(r["event_id"] == grant[3] and r["tick_us"] == grant.get(4, 0), "output mismatches grant")
             if "ack" in detail:
                 require(detail["ack"] == list(ack[11]), "output mismatches durable root")
             if kind == "Close":
@@ -317,8 +333,9 @@ def check_frames(raw, public, proto_file, trace, *, grant_pids=None, faulted_pid
                 require(terminal[pid, cid][1:3] == (index, grant[3]), "Close trace differs from worker terminal")
                 action = json.dumps(detail["action"], sort_keys=True)
                 intent_seq, intent_body = close_intents[action]
-                require(intent_seq < released[index] and detail["cause"] in intent_body,
-                        "Close released before terminal Manager commit")
+                ordered = stop_seq < intent_seq < seq if reused else intent_seq < released[index]
+                require(ordered and detail["cause"] in intent_body,
+                        "Close released before terminal Manager commit or unrelated local stop")
                 counts["durable_close_intents"] += 1
             counts["after_ack_outputs"] += 1
     require(active is None and len(released) == len(steps), "trace omits grants or Ack commits")

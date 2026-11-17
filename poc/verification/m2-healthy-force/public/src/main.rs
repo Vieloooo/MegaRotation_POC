@@ -380,9 +380,11 @@ fn append(
 fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
     assert!(
-        (6..=8).contains(&args.len()),
-        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US [ACTUAL_L1_JSON [VERIFIED_RESUME_JSON]]"
+        (6..=8).contains(&args.len())
+            || (args.len() == 9 && args[8] == "--timer-history"),
+        "usage: RAW CONTROLS_JSON ANNOUNCEMENT_US GRACE_US EXPIRY_US INIT_US [ACTUAL_L1_JSON [VERIFIED_RESUME_JSON [--timer-history]]]"
     );
+    let track_timers = args.len() == 9;
     let headers: Option<Vec<Header>> = args.get(6).map(|path| {
         serde_json::from_slice(&fs::read(path).unwrap()).expect("actual L1 header projection")
     });
@@ -461,7 +463,13 @@ fn main() {
         let theta = row.proposal.theta_us.0;
         let producer = row.proposal.proposed_at_us.0;
         let finalize = row.finalized_at_us.0;
-        assert!(row.proposal.live_at_proposal);
+        if !row.proposal.live_at_proposal {
+            assert!(
+                track_timers && row.proposal.messages.is_empty()
+                    && previous.as_ref().is_some_and(|(_, old, _, _)| *old == theta),
+                "non-live M5 rows must be empty at the unchanged public key"
+            );
+        }
         assert!(producer <= finalize);
         if let Some((last_q, last_theta, last_finalize, last_source)) = &previous {
             assert_eq!(q, last_q + 1);
@@ -471,9 +479,13 @@ fn main() {
             assert_eq!(q, 0);
         }
         previous = Some((q, theta, finalize, source));
-        espresso.push(
-            json!({"q":q, "theta_us":theta, "proposed_us":producer, "finalized_us":finalize}),
-        );
+        let mut row_evidence =
+            json!({"q":q, "theta_us":theta, "proposed_us":producer, "finalized_us":finalize});
+        if track_timers {
+            row_evidence["messages"] = json!(row.proposal.messages.len());
+            row_evidence["live_at_proposal"] = json!(row.proposal.live_at_proposal);
+        }
+        espresso.push(row_evidence);
         for (message, log_message) in row.proposal.messages.into_iter().enumerate() {
             assert_eq!(log_message.codec, PUBLICATION_CODEC);
             let mut input = log_message.bytes.as_slice();
@@ -547,6 +559,7 @@ fn main() {
     let mut final_accepted = BTreeSet::new();
     let mut resume_events = Vec::new();
     let mut regional_entries = Vec::new();
+    let mut timers = Vec::new();
 
     for (q, &theta) in q_thetas.iter().enumerate() {
         let q = q as u64;
@@ -713,8 +726,26 @@ fn main() {
                 };
                 force.push(result);
             } else if next == expire {
+                if track_timers {
+                    timers.push(json!({
+                        "kind": "Expire",
+                        "key_us": expire,
+                        "height": global.head.block.height + 1,
+                        "branch": duty.beta,
+                        "q_star": q,
+                    }));
+                }
                 halted = true;
             } else {
+                if track_timers {
+                    timers.push(json!({
+                        "kind": "SessionEnd",
+                        "key_us": end,
+                        "branch": duty.beta,
+                        "r": duty.r,
+                        "q_star": q,
+                    }));
+                }
                 regular.push(json!({"cause":"SessionEnd","key_us":end,"beta":duty.beta,
                     "r":duty.r,"anchor":global.head,"old_max":duty.max}));
                 duty = duty.regular(&global.head);
@@ -831,6 +862,9 @@ fn main() {
         assert!(resumes.next().is_none(), "Resume still missing Espresso coverage");
         output["resumes"] = json!(resume_events);
         output["regional_entries"] = json!(regional_entries);
+    }
+    if track_timers {
+        output["timers"] = json!(timers);
     }
     println!("{}", serde_json::to_string_pretty(&output).unwrap());
 }
