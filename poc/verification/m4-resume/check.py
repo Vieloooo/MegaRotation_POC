@@ -576,7 +576,7 @@ def main():
         repeat = args.repeat.resolve(strict=True)
         repeated, digest = sealed(repeat, repository, args.candidate)
         report["repeat"] = check_repeat(
-            run, repeat, manifest, repeated, cut_paths, da_index_path, da_index, legacy,
+            run, repeat, manifest, repeated, cut_paths, da_root, da_index, legacy,
         )
         report["repeat"]["manifest_sha256"] = digest
     save(args.output / "report.json", report)
