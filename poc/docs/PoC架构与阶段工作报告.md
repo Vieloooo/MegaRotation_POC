@@ -14,45 +14,50 @@
 | **M4 · 预设 RESUME** | h2 出现 G/D 分歧。GFR 于虚拟 28.001 s 采用历史 D(h20)，R2 的 h21 于 **31.0525 s** 进入 G。 |
 | **M5 · 自动 RESUME** | Espresso 停止 finalized 或冻结 θ 后恢复。治理自动选 h30，GFR 于虚拟 36.001 s 采用历史 D(h30)，两组的 R2 h31 均于 **41.084 s** 进入 G。 |
 
-M1 的通过范围是健康满窗 smoke。完整 SessionEnd、多 seed、候选切换及官方 Espresso 同字节读回仍单独跟踪，完整 I1/I1b 跨崩溃恢复验收也仍开放。下文的时点和间隔是固定场景的虚拟时间。真实跨地区网络、吞吐和 handoff 性能 benchmark 尚未执行。[M1–M5 实施与验收计划](milestones/M1-M5-implementation-plan-zh.md)
 
 ## 2. 单机运行架构
 
 - 三区各有五个等权 replica。每个区域证书需要四个不同的合法 BLS signer。
 - M1/M2 的静态选区按 `(β+r) mod 3`，M3–M5 的新职责按生效 policy 和历史 L1 状态选区。区内 leader 按 `(view−1) mod 5` 轮转。
 
-下图展示 M1–M4 的基础拓扑。图中 Region 是逻辑划分，15 个子进程都在同一台机器上。M3 在此基础上增加 Hub 内的三个治理 signer 状态机。M4 保留 15 个 OS worker，增设批次和派生 port 进程及 A/B 两套 D 状态。M5 复用该布置，另在同一 port 内为三个治理 signer 提供 S0/S1/S2 三套独立 D feed。
+单机启动 15 个 replica 子进程，地区是逻辑划分。Hub 中的治理委员会由三个独立 signer 状态机组成。每名 signer 根据各自已验证的 L1、Espresso、D 和时钟作出决定，Anvil 控制合约核验同一请求的两份成员签名。
 
-![Sequencer Rotation PoC 单机运行拓扑](figures/poc-runtime-topology.svg)
+![单机运行拓扑，包括三地区 replica 和 2-of-3 治理委员会](figures/poc-runtime-topology.svg)
 
 <details>
 <summary>Mermaid 源码</summary>
 
 ```mermaid
-flowchart LR
-    W["15 个 OS worker<br/>3 区 × 5、Session Program / Simplex"]
-    subgraph H["m1-smoke 父进程"]
-        S["Hub<br/>虚拟时间、调度、模拟链路"]
+flowchart TB
+    W["15 个 OS worker<br/>3 区 × 5 · Session Program / Simplex<br/>区域 Final：4 个合法 BLS signer"]
+    subgraph H["Hub 父进程"]
+        S["虚拟时钟与受控调度"]
         P["Publisher"]
-        E["SimEspresso + 本地 reader"]
-        G["现场 GFR → 全局链 G"]
-        M["按 worker 保存的 15 份 Manager 状态"]
-        L["公共 L1 reader"]
+        E["SimEspresso<br/>已公开的排序前缀"]
+        G["GFR<br/>重放规则并更新全局链 G"]
+        M["15 份 Session Manager 状态"]
+        L["已交付的 L1 前缀"]
+        V["治理委员会 · 2-of-3<br/>S0 / S1 / S2 各自核验<br/>L1 / Espresso / D / 时钟<br/>独立判断并签署同一请求"]
         P --> E --> G --> M
         L --> G
         M --> S
         S --> P
+        E --> V
+        L --> V
     end
-    S -->|"管道 Grant"| W
-    W -->|"持久化后回 Ack，包含区域证明和交付"| S
-    F["M1：finalized L1 fixture"] --> L
-    A["M2–M4：真实 Anvil + L1 driver<br/>模拟 finality / 交付"] --> L
-    G -->|"M4：已提交 G 位置和批次源"| B["M4 port：Batcher / Certifier / DA"]
+    W <-->|"Grant / 持久化 Ack"| S
+    F["finalized L1 fixture<br/>健康轮转可用的 L1 输入"] --> L
+    A["L1 driver + 真实 Anvil<br/>控制合约验证 2-of-3<br/>Inbox 接纳批次与 CursorSet"] -->|"finalized L1"| L
+    V -->|"签名后的 Force / RESUME"| A
+    G -->|"已提交的 G 与批次来源"| B["批次服务进程<br/>Batcher / Certifier / DA"]
     B -->|"SubmitBatch"| A
-    A -->|"各 reader 的 finalized Inbox 输入"| D["M4：A/B 各自派生 D"]
-    B -->|"按 commitment 读取 DA"| D
-    D -->|"按 L1 位置提供历史 ResumeCut"| G
-    G -. "封存原始证据" .-> C["独立 checker / 离线回放"]
+    A -->|"各读者的 Inbox 收据"| D["独立派生 D<br/>A / B 及 S0 / S1 / S2"]
+    B -->|"按 commitment 取 DA"| D
+    D -->|"历史 ResumeCut"| G
+    D -->|"每名 signer 的 D / Inbox 视图"| V
+    G -. 封存证据 .-> C["独立 checker / 离线回放"]
+    classDef governance fill:#fff0d3,stroke:#ad7426,color:#172b44
+    class V governance
 ```
 
 </details>
@@ -60,7 +65,7 @@ flowchart LR
 | 模块 | 实际职责与接线 |
 | --- | --- |
 | **Session Program / Regional BFT** | 使用 Commonware Simplex 2026.10.0 和 BLS 多签。节点在实际窗口、父链和执行状态上 Build/Accept，签名前核对本地 Clock、租约、stop 与 terminal。区域 Final 与区块正文分别到达，Hub 拿到足够材料后构造完整区域结果。Regional BFT 子模块固定在 `691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6`，历史 15 成员 benchmark 与这里的三个独立委员会使用不同拓扑。 |
-| **Session Manager** | smoke 把 15 份绑定各逻辑 worker 的 Manager 实例放在 **Hub 父进程**。GFR 提交 `ReplayRecord` 后，Hub 按节点调度应用，Manager 持久化对应决定和动作，再经受控步骤送出 Prepare、Enter、Close 等动作。子进程在收到本节点的动作后运行或关闭实际引擎。每节点自己的 Ready/Enter 分开记录。 |
+| **Session Manager** | In simulation, Manager 实例放在 **Hub 父进程**。GFR 提交 `ReplayRecord` 后，Hub 按节点调度应用，Manager 持久化对应决定和动作，再经受控步骤送出 Prepare、Enter、Close 等动作。子进程在收到本节点的动作后运行或关闭实际引擎。每节点自己的 Ready/Enter 分开记录。 |
 | **Publisher、SimEspresso、GFR** | 同在 Hub 进程内。持久发布任务携带完整区域证明和正文，SimEspresso 给它确定的 `(q,index,θ)`。本地 reader 收到 finalized 块后，GFR 按公共键重放并验签、验父链和执行。区域 Final、公开完整和进入 `G` 是不同的事件。公共材料缺失时规则返回 `WAIT`。健康 smoke runner 要求预设路径的重放返回 `Ready`，WAIT 后补齐的行为另用规则向量验收。单个节点的本地计时到期只约束该节点，公共 SessionEnd 由 GFR 重放。 |
 | **L1** | M1 的公共 GFR 读取已达到 fixture finalized 时刻的 header 和空控制覆盖。M2–M5 由 Hub 调用 L1 driver，driver 经 loopback 调用真实 Anvil，手动出块并按虚拟时程交付 finalized 前缀。现场 GFR 消费 reader A，reader B 有独立、较慢的 L1 交付。worker 的执行元数据仍使用按 Grant tick 暴露的高度/时间戳 fixture 投影，M2 在 Hub 核对投影可见上界的高度与时间戳在 A 的真实前缀中可读。 |
 | **worker 怎样读公共输入** | 已跑通的版本由 Hub 读取公共 L1/Espresso、执行一份现场 GFR，并把生命周期记录应用到 Hub 中各 worker 的 Manager。子进程收到由此派生的受控动作，使用自己的 L1 元数据视图。每节点独立下载、重放与现场位置一致性属于完整 M1 的后续接线和验收范围。 |
