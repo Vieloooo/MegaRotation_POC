@@ -320,9 +320,9 @@ impl Signer {
         let solution = m5::solve(cfg,state.parameters.announcement_us,head,lo,hi);
         evidence["solution"] = json!(solution);
         let Some(target) = solution.and_then(|plan|plan.target) else { refuse!("NO_TARGET"); };
-        let cid = state.selected.iter().rev().find(|((beta,_),_)| *beta==state.branch)
+        let Some(cid) = state.selected.iter().rev().find(|((beta,_),_)| *beta==state.branch)
             .map(|(_,descriptor)|descriptor.cid)
-            .ok_or_else(||super::problem("M5 no source responsibility for RESUME"))?;
+        else { refuse!("NO_SOURCE_RESPONSIBILITY"); };
         let control_seq = self.l1.latest_control_seq().unwrap_or(0) + 1;
         evidence["eligible"] = json!(true);
         evidence["reason"] = json!(reason);

@@ -2098,6 +2098,9 @@ impl Hub {
     }
 
     fn m5_poll(&mut self, poll: bool) -> M1Result<()> {
+        if self.governance_applied {
+            return Ok(());
+        }
         let advertised=self.advertised();
         let slots=if self.m5==Some(m5::Mode::NoTarget) {2} else {1};
         let mut votes=Vec::new();
@@ -2107,7 +2110,7 @@ impl Hub {
             if let Some(request)=request { votes.push((id,request,detail["solution"].clone())); }
             self.log(if poll {"GovernancePoll"} else {"ResumeInputEvaluation"},None,detail)?;
         }
-        if self.pending_control || self.governance_applied {return Ok(());}
+        if self.pending_control {return Ok(());}
         let Some((_,request,solution))=votes.iter().find(|(_,request,_)| {
             votes.iter().filter(|(_,other,_)|other==request).count()>=gov::THRESHOLD
         }).cloned() else {
