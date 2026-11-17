@@ -64,10 +64,10 @@ flowchart TB
 
 | 模块 | 实际职责与接线 |
 | --- | --- |
-| **Session Program / Regional BFT** | 使用 Commonware Simplex 2026.10.0 和 BLS 多签。节点在实际窗口、父链和执行状态上 Build/Accept，签名前核对本地 Clock、租约、stop 与 terminal。区域 Final 与区块正文分别到达，Hub 拿到足够材料后构造完整区域结果。Regional BFT 子模块固定在 `691cfc14daaa53c1a08cbd87dd3fe0cd60a214e6`，历史 15 成员 benchmark 与这里的三个独立委员会使用不同拓扑。 |
-| **Session Manager** | In simulation, Manager 实例放在 **Hub 父进程**。GFR 提交 `ReplayRecord` 后，Hub 按节点调度应用，Manager 持久化对应决定和动作，再经受控步骤送出 Prepare、Enter、Close 等动作。子进程在收到本节点的动作后运行或关闭实际引擎。每节点自己的 Ready/Enter 分开记录。 |
+| **Session Program / Regional BFT** | 使用 Commonware Simplex + BLS 多签。 |
+| **Session Manager** | In simulation, Manager 实例放在 **Hub 父进程**。GFR 提交 `ReplayRecord` 后，Hub 按节点调度应用，Manager 持久化对应决定和动作，再经受控步骤送出 cmd like Prepare、Enter、Close to the session program. In current design, one replica runs at most 1 BFT at one time.  |
 | **Publisher、SimEspresso、GFR** | 同在 Hub 进程内。持久发布任务携带完整区域证明和正文，SimEspresso 给它确定的 `(q,index,θ)`。本地 reader 收到 finalized 块后，GFR 按公共键重放并验签、验父链和执行。区域 Final、公开完整和进入 `G` 是不同的事件。公共材料缺失时规则返回 `WAIT`。健康 smoke runner 要求预设路径的重放返回 `Ready`，WAIT 后补齐的行为另用规则向量验收。单个节点的本地计时到期只约束该节点，公共 SessionEnd 由 GFR 重放。 |
-| **L1** | M1 的公共 GFR 读取已达到 fixture finalized 时刻的 header 和空控制覆盖。M2–M5 由 Hub 调用 L1 driver，driver 经 loopback 调用真实 Anvil，手动出块并按虚拟时程交付 finalized 前缀。现场 GFR 消费 reader A，reader B 有独立、较慢的 L1 交付。worker 的执行元数据仍使用按 Grant tick 暴露的高度/时间戳 fixture 投影，M2 在 Hub 核对投影可见上界的高度与时间戳在 A 的真实前缀中可读。 |
+| **L1** | Hub 调用 L1 driver，driver 经 loopback 调用真实 Anvil，手动出块并按虚拟时程交付 finalized 前缀。现场 GFR 消费 reader A，reader B 有独立、较慢的 L1 交付。worker 的执行元数据仍使用按 Grant tick 暴露的高度/时间戳 fixture 投影，M2 在 Hub 核对投影可见上界的高度与时间戳在 A 的真实前缀中可读。 |
 | **worker 怎样读公共输入** | 已跑通的版本由 Hub 读取公共 L1/Espresso、执行一份现场 GFR，并把生命周期记录应用到 Hub 中各 worker 的 Manager。子进程收到由此派生的受控动作，使用自己的 L1 元数据视图。每节点独立下载、重放与现场位置一致性属于完整 M1 的后续接线和验收范围。 |
 | **M3 治理与历史 Plan** | 三名 signer 在 Hub 内各自维护 L1、Espresso 和 GFR 视图，根据实际已验证位置、时钟和公开进展独立作出决定。同一请求的两份不同成员签名由真实 Anvil 上的 2-of-3 合约核验。GFR 按公开键激活控制，再用当时生效的 policy 和历史 L1 header 算 Plan。治理签名门槛为 2-of-3，区域 BLS Final 仍需四个合法 signer。 |
 | **M4 批次、Inbox 与 DA** | Hub 记录已提交 G 的位置和真实执行输入。M4 port 进程托管 Batcher、Certifier 和 DA，并使用现有 L1 driver。Batcher 生成带来源位置的封闭 DA frame，经 DA 持久化和 Certifier 签署后，向 Anvil 上的 Inbox 提交。reader 分别读取各自已交付的 finalized 收据，并按 commitment 取回和验证 DA 字节。 |
