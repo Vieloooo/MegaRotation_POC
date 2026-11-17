@@ -11,8 +11,8 @@ from evidence import (
 from governance import check_authorization
 from timeline import check_g, check_resume, check_rpc, check_stall, events, hx
 
-POSITIVE = {"stopped", "frozen", "slow-rpc", "divergence"}
-CASES = POSITIVE | {"late", "short", "inputs-wait", "no-target"}
+ACTIVATES = {"stopped", "frozen", "slow-rpc", "late"}
+CASES = ACTIVATES | {"divergence", "short", "inputs-wait", "no-target"}
 
 
 def read_mode(manifest, requested):
@@ -26,9 +26,9 @@ def check_main(args, repository, run, manifest, manifest_hash, m4, legacy, wire)
     from wire import frames
 
     mode = read_mode(manifest, args.mode)
-    has_resume = mode in POSITIVE or mode == "late"
+    has_receipt = mode in ACTIVATES or mode == "divergence"
     (raw, bundle, config, credits, genesis, committee, abi, headers, times, batches, resumes,
-     driver, da_index) = source_inputs(run, manifest, wire, legacy, expect_resume=has_resume)
+     driver, da_index) = source_inputs(run, manifest, wire, legacy, expect_resume=has_receipt)
     need(config["genesis"]["timestamp_us"] == 10 * US and config["l1_block_us"] == 2 * US
          and config["l2_slot_us"] == US and config["t_drift_us"] == 15 * US,
          "frozen M5 clock/slot/drift configuration")
@@ -46,9 +46,11 @@ def check_main(args, repository, run, manifest, manifest_hash, m4, legacy, wire)
     checker = args.public_checker.resolve(strict=True)
     driver_config = read(raw / "l1/driver-config.json")
     refs = replay_d(raw, config, genesis, credits, times, batches, resumes, driver)
+    finalized = [r for r in resumes if r.position[0] in driver["finalized_us"]]
+    need(len(finalized) == int(mode in ACTIVATES), "unexpected finalized RESUME at test cutoff")
     args.output.mkdir()
     public, cuts, cut_paths = public_replay(
-        args.output, raw, checker, config, genesis, bundle, driver_config, refs, resumes, headers, times,
+        args.output, raw, checker, config, genesis, bundle, driver_config, refs, finalized, headers, times,
     )
     old_g = {item["height"]: item for item in public["regional_entries"] if item["beta"] == 0}
     need(1 in old_g and refs["A"].blocks and old_g[1]["native"] == refs["A"].blocks[0]["native_hash"]
@@ -76,24 +78,23 @@ def check_main(args, repository, run, manifest, manifest_hash, m4, legacy, wire)
         "independently_verified_cuts": cuts,
     }
 
-    if has_resume:
-        [resume], [cut] = resumes, cuts
+    if mode in ACTIVATES:
+        [resume], [cut] = finalized, cuts
         # Every application decision must use its own reader's persisted compact
         # cut bytes. A new later D head can never substitute for this witness.
         name = f"cut-A-{'-'.join(map(str, resume.position))}.json"
         canonical = read(raw / "derivation" / name)
         resumed = check_resume(raw, trace, public, resume, cut, canonical, driver, lifecycle, config, mode)
-        if mode != "divergence":
-            need(resume.target == 30 and resume.signed_origin == 13 and
-                 resumed["common_height"] == resumed["old_head"] == 1
-                 and resumed["live_d_at_act"] >= 30,
-                 "principal cases did not recover the compatible frozen h1 from target h30")
+        need(resume.target == 30 and resume.signed_origin == 13 and
+             resumed["common_height"] == resumed["old_head"] == 1
+             and resumed["live_d_at_act"] >= 30,
+             "principal cases did not recover the compatible frozen h1 from target h30")
         if mode != "late":
             need(resumed["first_global_accept_us"] <= 60 * US, "runtime exceeded virtual cutoff")
         report["protocol"] = resumed
     else:
         need(not list(events(trace, "GReset")) and not list(events(trace, "ResumeActivated")),
-             "negative run altered G through an unauthorised RESUME")
+             "RESUME altered G before verified finality and activation")
     return report, cut_paths, da_index
 
 
@@ -109,6 +110,7 @@ def check_repeat(run, repeat, manifest, second, cuts, da_index, legacy):
     raw_der = raw / "derivation"
     paths = {
         raw / "frames.bin", raw / "l1/raw-rpc-bundle.json", raw / "l1/driver-trace.json",
+        raw / "l1/hub-l1.jsonl", raw / "l1/governance-transaction.json", raw / "governance.jsonl",
         raw / "derivation/trace.jsonl", raw / "derivation/cursor-reads.jsonl",
         *cuts, *raw_der.glob("cut-*.json"), *raw_der.glob("batch-h*.json"),
         *raw_der.glob("accepted-*.json"), *raw_der.glob("da/0x*.receipt"),

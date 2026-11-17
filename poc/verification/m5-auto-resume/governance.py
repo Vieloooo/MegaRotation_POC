@@ -329,8 +329,16 @@ def check_authorization(raw, trace, public, refs, driver, genesis, bundle, batch
     need(journal == [{"phase": r["detail"]["phase"], "tick_us": r["tick_us"],
                       "detail": r["detail"]["evidence"]} for r in all_states],
          "durable governance journal is not the actual staged observation")
-    phases = {phase: next(r for r in all_states if r["detail"]["phase"] == phase)
-              for phase in ("Proposed", "Signed", "Prepared", "Submitted", "Included", "Finalized", "Applied")}
+    required_phases = ("Proposed", "Signed", "Prepared", "Submitted", "Included")
+    if mode != "divergence":
+        required_phases += ("Finalized", "Applied")
+    else:
+        need(not {"Finalized", "Applied"} & {row["detail"]["phase"] for row in all_states},
+             "bounded divergence credited an unfinalized control")
+    phases = {
+        phase: next(row for row in all_states if row["detail"]["phase"] == phase)
+        for phase in required_phases
+    }
     need([r["seq"] for r in phases.values()] == sorted({r["seq"] for r in phases.values()})
          and phases["Prepared"]["detail"]["evidence"] == prepared
          and phases["Prepared"]["seq"] < submitted["seq"],
@@ -426,4 +434,18 @@ def check_authorization(raw, trace, public, refs, driver, genesis, bundle, batch
                    "submitted_us": actual_submit, "actual_include_us": actual_include,
                    "inclusion_interval_us": [lower, upper], "target": target, "signed_origin": origin,
                    "reason": proper_mode, "votes": len(votes), "late": hold})
+    if mode == "divergence":
+        need((lower, upper, target, origin) == (24 * US, 26 * US, 28, 12)
+             and resume.position[0] == 12 and actual_include == 24 * US
+             and resume.position[0] not in driver["finalized_us"] and trace[-1]["tick_us"] == actual_include,
+             "bounded divergence did not close at actual unfinalized b12 inclusion")
+        conflicts = {
+            (comparison["height"], hx(comparison["g_hash"]), hx(comparison["d_hash"]))
+            for member in packed_addresses
+            for comparison in [observed_votes[member][2]["common_comparison"]["first_mismatch"]]
+        }
+        height, g_hash, d_hash = one(conflicts, "shared independent signer native mismatch")
+        need(height == 2 and g_hash != d_hash, "contrast lacks a real common-height native divergence")
+        report["native_mismatch"] = {"height": height, "g_hash": g_hash, "d_hash": d_hash}
+        report["unfinalized_cutoff_us"] = actual_include
     return report
