@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<title>M5 自动 RESUME 回放</title>
+<style>/* INLINE_CSS */</style>
+</head>
+<body>
+<main>
+<header class="masthead">
+  <div>
+    <p class="eyebrow">SEQUENCER ROTATION POC / M5</p>
+    <h1>自动 RESUME 回放</h1>
+    <p class="subtitle">排序停滞、公共覆盖、治理求解和恢复首块。</p>
+  </div>
+  <nav class="masthead-links" aria-label="其他回放">
+    <a href="index.html">M1 Regular</a>
+    <a href="force.html">M2 Force</a>
+    <a href="auto-force.html">M3 自动 Force</a>
+    <a href="resume.html">M4 RESUME</a>
+  </nav>
+</header>
+<label class="case-picker">场景<select id="scenario"></select></label>
+<p id="mode" class="mode"></p>
+<section class="dashboard resume-dashboard" aria-label="当前状态">
+  <div><span>虚拟时间 τ</span><strong id="clock"></strong></div>
+  <div><span>G head</span><strong id="g-head"></strong></div>
+  <div><span>G′ head</span><strong id="gprime-head"></strong></div>
+  <div><span>D head</span><strong id="d-head"></strong></div>
+  <div><span>当前职责</span><strong id="context"></strong></div>
+  <div><span>GFR 公开位置</span><strong id="position"></strong></div>
+  <div><span>Espresso q / 水位 θ</span><strong id="watermark"></strong></div>
+</section>
+<section class="console panel" aria-labelledby="timeline-title">
+  <div class="panel-head">
+    <div><h2 id="timeline-title">回放时间轴</h2><p>横轴为虚拟秒。同一时刻按事件 seq 单步。</p></div>
+    <div id="filters" class="filter-list"></div>
+  </div>
+  <div class="timeline-scroll"><div id="timeline" class="timeline resume-timeline"></div></div>
+  <div class="transport">
+    <div class="buttons">
+      <button id="reset" aria-label="起点">↺ 起点</button>
+      <button id="previous" aria-label="上一步">‹</button>
+      <button id="play" class="primary" aria-pressed="false">▶ 播放</button>
+      <button id="next" aria-label="下一步">›</button>
+    </div>
+    <div class="scrubber"><input type="range" id="scrub" min="0" value="0" aria-label="回放游标"><output id="step-label"></output></div>
+  </div>
+  <div class="jump-list" id="stages"></div>
+  <p class="comparison-status" id="pending-position" role="status"></p>
+</section>
+<section class="panel provenance" aria-labelledby="compare-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="compare-title">逐高核对 G、G′、D</h2>
+      <p>在 G 和 D 的共同高度比较 native hash，G′ 显示 Inbox 已物化的认证来源。</p>
+    </div>
+    <label class="choose-height">选取高度 <select id="compare-height"></select></label>
+  </div>
+  <p class="comparison-status" id="comparison-status"></p>
+  <div id="chain-comparison" class="chain-comparison"></div>
+</section>
+<section id="inspector" class="inspector panel" aria-label="事件详情"></section>
+<section class="panel provenance"><h2>各 signer 的最新独立观察</h2><div id="signers" class="chain-comparison"></div></section>
+<section class="provenance panel">
+  <h2>证据和时间坐标</h2>
+  <p class="subtitle">虚拟 tick 记录调度中的实际时点。公开键用于 GFR 排序。L1 timestamp 来自收录 header。</p>
+  <dl id="source" class="facts"></dl>
+</section>
+</main>
+<script type="application/json" id="replay-data">INLINE_JSON</script>
+<script>/* INLINE_JS */</script>
+</body>
+</html>
